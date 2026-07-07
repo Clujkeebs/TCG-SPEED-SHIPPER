@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TCG Speed Shipper — Paste Addresses</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <h1>TCG Speed Shipper</h1>
+    <nav class="site-nav">
+      <a href="index.html">Label Generator</a>
+      <a href="import.html" class="active">Paste Addresses</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="panel no-print">
+      <h2>Ship From (optional)</h2>
+      <p class="hint">Shown as the return address in the top-left of every label.</p>
+      <div class="field-grid">
+        <div class="field full">
+          <label for="from-name">Name</label>
+          <input type="text" id="from-name" placeholder="Your Name / Store" />
+        </div>
+        <div class="field full">
+          <label for="from-street1">Street Address</label>
+          <input type="text" id="from-street1" placeholder="123 Main St" />
+        </div>
+        <div class="field full">
+          <label for="from-street2">Apt / Suite (optional)</label>
+          <input type="text" id="from-street2" placeholder="Unit 4" />
+        </div>
+        <div class="field">
+          <label for="from-city">City</label>
+          <input type="text" id="from-city" placeholder="Springfield" />
+        </div>
+        <div class="field">
+          <label for="from-state">State</label>
+          <input type="text" id="from-state" maxlength="2" placeholder="IL" />
+        </div>
+        <div class="field">
+          <label for="from-zip">Zip Code</label>
+          <input type="text" id="from-zip" class="zip-input" placeholder="62704" />
+        </div>
+      </div>
+    </section>
+
+    <section class="panel no-print">
+      <h2>Paste Address(es)</h2>
+      <p class="hint">
+        One address per block. Separate multiple addresses with a blank line. Each block should look like:
+      </p>
+      <pre class="hint" style="margin-top:-4px">Jane Doe
+456 Oak Ave
+Apt 2B
+Chicago, IL 60601</pre>
+      <div class="field">
+        <textarea id="address-text" rows="10" placeholder="Paste one or more addresses here, separated by a blank line between each..."></textarea>
+      </div>
+      <div class="button-row">
+        <button type="button" class="primary" id="parse-btn">Parse &amp; Preview Labels</button>
+      </div>
+      <div id="parse-issues"></div>
+    </section>
+
+    <section class="panel no-print" id="results-panel" style="display:none">
+      <h2>Parsed Labels</h2>
+      <p class="hint" id="results-summary"></p>
+      <div class="button-row">
+        <button type="button" class="primary" id="print-btn">Print Labels</button>
+      </div>
+    </section>
+
+    <div id="label-sheet"></div>
+  </main>
+
+  <script src="js/labels.js"></script>
+  <script src="js/import.js"></script>
+</body>
+</html>
