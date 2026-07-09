@@ -267,6 +267,22 @@ input[type=text]::placeholder { color: var(--hint); }
   margin-top: 12px; animation: fadeInUp .3s ease;
 }
 
+/* ── Paste-address tab ── */
+.paste-example {
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  color: var(--muted); background: var(--surface-raised);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 10px 12px; margin-bottom: 12px; white-space: pre-wrap; line-height: 1.6;
+}
+.paste-textarea {
+  width: 100%; font-family: 'Source Serif 4', serif; font-size: 14px;
+  color: var(--text); background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 10px 12px; resize: vertical; outline: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+.paste-textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(45,106,79,.1); }
+
 /* ── Options bar ── */
 .options-bar {
   background: var(--surface); border: 1px solid var(--border);
@@ -608,6 +624,7 @@ input[type=text]::placeholder { color: var(--hint); }
   <div class="nav-brand">TCG Speed Shipper <span>&nbsp;· Clujkeebs</span></div>
   <div class="nav-tabs">
     <button class="nav-tab active" data-tab="home">Home</button>
+    <button class="nav-tab" data-tab="paste">Paste Address</button>
     <button class="nav-tab" data-tab="hiw">How It Works</button>
     <button class="nav-tab" data-tab="faq">FAQ</button>
     <button class="nav-tab" data-tab="guide">Guide</button>
@@ -788,6 +805,33 @@ input[type=text]::placeholder { color: var(--hint); }
     </div>
 
   </div><!-- end home tab -->
+
+  <!-- ══ PASTE ADDRESS TAB ══ -->
+  <div class="tab-panel" id="tab-paste">
+
+    <div class="home-hero fade-in-up">
+      <h1>Paste an Address</h1>
+      <p>No CSV? Paste one or more shipping addresses below and turn them into the same print-ready labels — return address, format, and packing slips all included.</p>
+    </div>
+
+    <div class="section fade-in-up">
+      <div class="section-label">Paste Address(es)</div>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:10px;line-height:1.6;">
+        One address per block. Separate multiple addresses with a blank line, like this:
+      </p>
+      <div class="paste-example">Jane Doe
+456 Oak Ave
+Apt 2B
+Chicago, IL 60601</div>
+      <textarea id="paste-input" class="paste-textarea" rows="10" placeholder="Paste one or more addresses here, separated by a blank line between each..."></textarea>
+      <div id="paste-issues"></div>
+      <div class="btn-row">
+        <button class="btn-dl" id="paste-generate-btn">Generate Labels</button>
+      </div>
+      <p class="tip">Uses the return address and format/packing-slip settings from the Home tab.</p>
+    </div>
+
+  </div><!-- end paste tab -->
 
   <!-- ══ HOW IT WORKS TAB ══ -->
   <div class="tab-panel" id="tab-hiw">
@@ -1403,6 +1447,32 @@ function parseCSV(text) {
   return orderList;
 }
 
+/* ── Paste-address parsing ── */
+var CITY_STATE_ZIP_RE = /^(.+?),?\s+([A-Za-z]{2})\s+(\d{5}(?:-\d{4})?)$/;
+
+function parsePastedAddresses(text) {
+  var blocks = text.split(/\n\s*\n/).map(function(b){ return b.trim(); }).filter(Boolean);
+  var good = [], bad = [];
+  blocks.forEach(function(block){
+    var lines = block.split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
+    if (lines.length < 2) { bad.push({ raw: block, error: 'Needs a name line and a "City, ST ZIP" line.' }); return; }
+    var last = lines[lines.length - 1];
+    var m = last.match(CITY_STATE_ZIP_RE);
+    if (!m) { bad.push({ raw: block, error: 'Last line "' + last + '" doesn\'t look like "City, ST ZIP".' }); return; }
+    var nameParts = lines[0].split(/\s+/);
+    var streetLines = lines.slice(1, lines.length - 1);
+    good.push({
+      firstName: nameParts[0] || '',
+      lastName: nameParts.slice(1).join(' ') || '',
+      addr1: streetLines[0] || '',
+      addr2: streetLines.slice(1).join(', '),
+      city: m[1], state: m[2].toUpperCase(), zip: m[3],
+      country: '', orderNumber: '', items: []
+    });
+  });
+  return { good: good, bad: bad };
+}
+
 function addrLines(o) {
   var lines=[];
   if (o.addr1) lines.push(o.addr1);
@@ -1598,6 +1668,36 @@ document.getElementById('upload-zone').addEventListener('click',function(){ docu
 document.getElementById('csv-input').addEventListener('change',function(e){
   var file=e.target.files[0]; if(!file) return;
   handleFile(file);
+});
+
+document.getElementById('paste-generate-btn').addEventListener('click', function () {
+  var result = parsePastedAddresses(document.getElementById('paste-input').value);
+  var issues = document.getElementById('paste-issues');
+  issues.innerHTML = '';
+
+  result.bad.forEach(function (b) {
+    var div = document.createElement('div');
+    div.className = 'error-box';
+    div.style.marginBottom = '8px';
+    div.textContent = 'Skipped a block — ' + b.error + ' (starts with "' + b.raw.split('\n')[0] + '")';
+    issues.appendChild(div);
+  });
+
+  if (!result.good.length) {
+    if (!result.bad.length) {
+      issues.innerHTML = '<div class="error-box">Paste at least one address, then try again.</div>';
+    }
+    return;
+  }
+
+  orders = result.good;
+  document.getElementById('csv-input').value = '';
+  document.getElementById('upload-text').textContent = 'Drop your CSV here, or tap to browse';
+  document.getElementById('error-msg').innerHTML = '';
+  document.getElementById('loaded-msg').innerHTML = '<div class="loaded-state"><span>✓ ' + orders.length + ' address' + (orders.length !== 1 ? 'es' : '') + ' parsed</span></div>';
+  renderPreviews();
+  switchTab('home');
+  document.getElementById('preview-area').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
 FIELDS.forEach(function(id){
