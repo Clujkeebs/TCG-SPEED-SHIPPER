@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy — TCG Speed Shipper</title>
+<meta name="description" content="Privacy policy for TCG Speed Shipper. Learn how we handle your data — spoiler: we don't collect any." />
+<meta name="robots" content="index, follow" />
+<link rel="canonical" href="https://tcg-speed-shipper.netlify.app/privacy.html" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3526440256333845" crossorigin="anonymous"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f7f5f0;
+  --surface: #ffffff;
+  --border: #e4e0d8;
+  --text: #1c1b18;
+  --text-secondary: #4a473e;
+  --muted: #6b6960;
+  --hint: #9e9a90;
+  --accent: #2d6a4f;
+  --accent-light: #40916c;
+  --radius: 12px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+}
+body { font-family: 'Source Serif 4', Georgia, serif; background: var(--bg); color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+.top-nav {
+  background: var(--text); display: flex; align-items: center;
+  height: 56px; padding: 0 20px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.3);
+}
+.nav-brand {
+  font-family: 'DM Serif Display', serif;
+  font-size: 14px; font-weight: 600; color: #fff;
+  text-decoration: none;
+}
+.page-wrap { max-width: 760px; margin: 0 auto; padding: 2.5rem 16px 4rem; }
+h1 {
+  font-family: 'DM Serif Display', serif;
+  font-size: clamp(28px, 5vw, 36px); font-weight: 400;
+  color: var(--text); margin-bottom: .5rem; letter-spacing: -.02em;
+}
+.updated {
+  font-size: 12px; color: var(--hint);
+  font-family: 'JetBrains Mono', monospace;
+  margin-bottom: 2.5rem;
+}
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.75rem;
+  margin-bottom: 1rem; box-shadow: var(--shadow-sm);
+}
+h2 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 20px; font-weight: 400;
+  color: var(--text); margin-bottom: .75rem; letter-spacing: -.01em;
+}
+p { font-size: 15px; color: var(--text-secondary); line-height: 1.8; margin-bottom: .75rem; }
+p:last-child { margin-bottom: 0; }
+ul { padding-left: 1.4rem; margin-bottom: .75rem; }
+li { font-size: 15px; color: var(--text-secondary); line-height: 1.75; margin-bottom: 4px; }
+a { color: var(--accent); }
+.highlight {
+  background: #edf7f1; border: 1px solid #b7e4c7;
+  border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.5rem;
+  font-size: 15px; color: var(--text-secondary); line-height: 1.75;
+}
+.site-footer {
+  text-align: center; padding: 2rem 1rem;
+  font-size: 12px; color: var(--hint);
+  font-family: 'JetBrains Mono', monospace;
+  border-top: 1px solid var(--border); margin-top: 3rem;
+}
+.site-footer a { color: var(--muted); text-decoration: none; margin: 0 6px; }
+.site-footer a:hover { color: var(--accent); text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <a href="/" class="nav-brand">TCG Speed Shipper</a>
+</nav>
+
+<div class="page-wrap">
+
+  <h1>Privacy Policy</h1>
+  <p class="updated">Last updated: May 2, 2026</p>
+
+  <div class="highlight">
+    <strong>Short version:</strong> TCG Speed Shipper processes everything locally in your browser. No CSV data, buyer addresses, or order information is ever sent to any server. We do not collect, store, or sell your personal data.
+  </div>
+
+  <div class="card">
+    <h2>What This Site Does</h2>
+    <p>TCG Speed Shipper is a free, client-side web tool that converts TCGPlayer packing list CSV files into printable PDF shipping labels. The tool runs entirely in your web browser using JavaScript.</p>
+    <p>When you upload a CSV file, it is read by your browser's built-in FileReader API and processed locally. The resulting PDF is generated in your browser using the jsPDF library and downloaded directly to your device. At no point does your CSV file — or any data it contains — leave your computer.</p>
+  </div>
+
+  <div class="card">
+    <h2>Information We Do Not Collect</h2>
+    <p>We do not collect, transmit, or store:</p>
+    <ul>
+      <li>CSV file contents or buyer order data</li>
+      <li>Buyer names or shipping addresses from your packing list</li>
+      <li>Your return address or store name</li>
+      <li>Any personally identifiable information from your orders</li>
+    </ul>
+    <p>Your return address is saved to your own browser's <code>localStorage</code> — a private storage area on your device that only your browser can access. It never leaves your machine.</p>
+  </div>
+
+  <div class="card">
+    <h2>Google AdSense</h2>
+    <p>This site displays advertisements served by Google AdSense. Google may use cookies and similar technologies to show you relevant ads based on your browsing history and interests. This is governed by <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's Privacy Policy</a>.</p>
+    <p>You can opt out of personalized advertising by visiting <a href="https://www.google.com/settings/ads" target="_blank" rel="noopener">Google's Ad Settings</a> or by visiting <a href="https://www.aboutads.info" target="_blank" rel="noopener">aboutads.info</a>.</p>
+    <p>Google AdSense uses the DoubleClick cookie to serve ads. You can opt out of the DoubleClick cookie by visiting the <a href="https://www.google.com/settings/ads/plugin" target="_blank" rel="noopener">Google advertising opt-out page</a>.</p>
+  </div>
+
+  <div class="card">
+    <h2>Cookies</h2>
+    <p>TCG Speed Shipper itself does not set any cookies. Google AdSense and any third-party advertising partners may set cookies on your device in order to serve relevant advertisements. These cookies are subject to the privacy policies of those third parties.</p>
+  </div>
+
+  <div class="card">
+    <h2>Third-Party Services</h2>
+    <p>This site loads resources from the following third-party services:</p>
+    <ul>
+      <li><strong>Google Fonts</strong> — to load the fonts used in the site design. Google's font CDN may log your IP address per their <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">privacy policy</a>.</li>
+      <li><strong>Cloudflare CDN</strong> — the jsPDF library is loaded from a Cloudflare-hosted CDN. Cloudflare may log standard HTTP request data.</li>
+      <li><strong>Google AdSense</strong> — as described above.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Children's Privacy</h2>
+    <p>TCG Speed Shipper is not directed at children under 13. We do not knowingly collect personal information from children. Since this tool collects no personal data at all, there is nothing to disclose under COPPA or similar regulations.</p>
+  </div>
+
+  <div class="card">
+    <h2>Changes to This Policy</h2>
+    <p>If this privacy policy changes, the updated version will be posted at this URL with a revised "last updated" date. Because we collect no personal data, changes are unlikely to affect your privacy in any meaningful way.</p>
+  </div>
+
+  <div class="card">
+    <h2>Contact</h2>
+    <p>Questions about this privacy policy? Reach out via the contact information on <a href="https://clujkeebs.com" target="_blank" rel="noopener">clujkeebs.com</a>.</p>
+  </div>
+
+</div>
+
+<footer class="site-footer">
+  <a href="/">← Back to TCG Speed Shipper</a> ·
+  <a href="https://clujkeebs.com" target="_blank" rel="noopener">clujkeebs.com</a>
+</footer>
+
+</body>
+</html>

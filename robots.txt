@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /viewsitemapsxml
+
+Sitemap: https://tcg-speed-shipper.netlify.app/sitemap.xml

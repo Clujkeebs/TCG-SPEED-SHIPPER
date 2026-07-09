@@ -1,0 +1,1624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TCGPlayer Speed Shipper — Free Shipping Label Generator</title>
+<meta name="description" content="The fastest free tool for TCGPlayer sellers. Upload your packing list CSV and instantly download print-ready 4x6 PDF shipping labels. No account needed." />
+<meta name="keywords" content="TCGPlayer shipping labels, TCGPlayer packing list CSV, TCG shipping label generator, TCGPlayer seller tools, trading card shipping labels, MTG shipping labels, Pokemon card shipping, print shipping labels TCGPlayer" />
+<meta name="author" content="Clujkeebs" />
+<meta name="robots" content="index, follow" />
+<meta name="google-adsense-account" content="ca-pub-3526440256333845" />
+<link rel="canonical" href="https://tcg-speed-shipper.netlify.app/" />
+<meta name="theme-color" content="#2d6a4f" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://tcg-speed-shipper.netlify.app/" />
+<meta property="og:title" content="TCGPlayer Speed Shipper — Free Shipping Label Generator" />
+<meta property="og:description" content="Upload your TCGPlayer packing list CSV and get print-ready PDF shipping labels in seconds. 100% free. No signup." />
+<meta property="og:site_name" content="TCG Speed Shipper" />
+<meta property="og:locale" content="en_US" />
+<meta property="og:image" content="https://tcg-speed-shipper.netlify.app/og-image.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="TCGPlayer Speed Shipper — Free Shipping Label Generator" />
+<meta name="twitter:description" content="Upload your TCGPlayer packing list CSV and get print-ready PDF shipping labels in seconds. Free, private, instant." />
+<meta name="twitter:image" content="https://tcg-speed-shipper.netlify.app/og-image.png" />
+
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"TCGPlayer Speed Shipper","url":"https://tcg-speed-shipper.netlify.app/","description":"Free shipping label generator for TCGPlayer sellers. Upload your packing list CSV and get print-ready 4x6 or 8.5x11 PDF labels in seconds.","applicationCategory":"UtilitiesApplication","operatingSystem":"Any","browserRequirements":"Requires JavaScript","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"author":{"@type":"Person","name":"Clujkeebs","url":"https://clujkeebs.com","sameAs":["https://clujkeebs.com","https://www.ebay.com/str/clujkeebs","https://www.whatnot.com/user/clujkeebs","https://www.tcgplayer.com/search/all/product?seller=ad430346&view=grid"]},"screenshot":"https://tcg-speed-shipper.netlify.app/og-image.png","featureList":"CSV to PDF labels, 4x6 thermal labels, 8.5x11 multi-up labels, packing slips, local processing, no signup required"}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"How do I export my TCGPlayer packing list?","acceptedAnswer":{"@type":"Answer","text":"Log in to TCGPlayer, go to Orders, click Packing List, then hit Export to download your CSV file."}},{"@type":"Question","name":"Is TCGPlayer Speed Shipper free?","acceptedAnswer":{"@type":"Answer","text":"Yes, completely free with no account or signup required."}},{"@type":"Question","name":"What printers work with 4x6 labels?","acceptedAnswer":{"@type":"Answer","text":"Any 4x6 thermal label printer — Rollo, Dymo 4XL, MUNBYN. For 8.5x11, any home printer works."}},{"@type":"Question","name":"Can I print multiple labels per page?","acceptedAnswer":{"@type":"Answer","text":"Yes. Choose 8.5x11 format and select 1, 2, 3, or 4 labels per page."}},{"@type":"Question","name":"Does it include packing slips?","acceptedAnswer":{"@type":"Answer","text":"Yes. Toggle packing slips on before downloading and each label will be followed by a matching slip."}}]}
+</script>
+
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3526440256333845" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f7f5f0;
+  --bg-warm: #efeade;
+  --surface: #ffffff;
+  --surface-raised: #fafaf8;
+  --border: #e4e0d8;
+  --border-mid: #ccc7bb;
+  --text: #1c1b18;
+  --text-secondary: #4a473e;
+  --muted: #6b6960;
+  --hint: #9e9a90;
+  --accent: #2d6a4f;
+  --accent-light: #40916c;
+  --accent-bg: #edf7f1;
+  --accent-border: #b7e4c7;
+  --success-bg: #edfaf3;
+  --success: #1a7a45;
+  --danger-bg: #fff0ef;
+  --danger: #c0392b;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-xs: 5px;
+  --nav-h: 56px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.07), 0 1px 4px rgba(0,0,0,.04);
+  --shadow-lg: 0 10px 30px rgba(0,0,0,.08), 0 2px 8px rgba(0,0,0,.04);
+}
+html, body { overflow-x: hidden; width: 100%; }
+body { font-family: 'Source Serif 4', Georgia, serif; background: var(--bg); color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+
+/* ── Animations ── */
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+.fade-in-up { animation: fadeInUp .5s ease both; }
+.fade-in { animation: fadeIn .4s ease both; }
+
+/* ── Top nav ── */
+.top-nav {
+  position: sticky; top: 0; z-index: 300;
+  background: var(--text);
+  display: flex; align-items: stretch;
+  height: var(--nav-h);
+  box-shadow: 0 2px 12px rgba(0,0,0,.3);
+}
+.nav-brand {
+  display: flex; align-items: center;
+  padding: 0 20px;
+  font-size: 14px; font-weight: 600; color: #fff;
+  white-space: nowrap; letter-spacing: -.02em;
+  border-right: 1px solid rgba(255,255,255,.08);
+  flex-shrink: 0;
+  font-family: 'DM Serif Display', serif;
+}
+.nav-brand span { opacity: .45; font-weight: normal; display: none; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+@media (min-width: 480px) { .nav-brand span { display: inline; } }
+.nav-tabs { display: flex; flex: 1; }
+.nav-tab {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; color: rgba(255,255,255,.45);
+  font-family: 'JetBrains Mono', monospace; font-weight: 500;
+  cursor: pointer; border: none; background: none;
+  border-bottom: 2px solid transparent;
+  transition: color .2s, border-color .2s;
+  padding: 0 8px; text-align: center;
+  white-space: nowrap; letter-spacing: .02em;
+  text-transform: uppercase;
+}
+.nav-tab:hover { color: rgba(255,255,255,.75); }
+.nav-tab.active { color: #fff; border-bottom-color: var(--accent-light); }
+
+/* ── Sticky download bar ── */
+.sticky-bar {
+  position: sticky; top: var(--nav-h); z-index: 200;
+  background: linear-gradient(135deg, #2d6a4f 0%, #1b4332 100%);
+  padding: 10px 16px;
+  display: none; align-items: center;
+  justify-content: space-between; gap: 12px;
+  flex-wrap: wrap;
+  box-shadow: 0 4px 12px rgba(45,106,79,.3);
+  animation: slideDown .3s ease;
+}
+.sticky-bar.visible { display: flex; }
+.sticky-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.sticky-count { font-size: 12px; color: rgba(255,255,255,.75); font-family: 'JetBrains Mono', monospace; white-space: nowrap; }
+.tog-wrap { display: flex; align-items: center; gap: 6px; }
+.tog-label { font-size: 11px; color: rgba(255,255,255,.75); font-family: 'JetBrains Mono', monospace; white-space: nowrap; text-transform: uppercase; letter-spacing: .04em; }
+.tog { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+.tog input { opacity: 0; width: 0; height: 0; }
+.tog-sl { position: absolute; cursor: pointer; inset: 0; background: rgba(255,255,255,.2); border-radius: 20px; transition: background .2s; }
+.tog-sl::before { content:''; position:absolute; width:14px; height:14px; border-radius:50%; background:#fff; left:3px; top:3px; transition:transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+.tog input:checked + .tog-sl { background: #4ade80; }
+.tog input:checked + .tog-sl::before { transform: translateX(16px); }
+.fmt-select { background: rgba(255,255,255,.12); color: #fff; border: 1px solid rgba(255,255,255,.2); border-radius: var(--radius-xs); padding: 5px 10px; font-size: 11px; font-family: 'JetBrains Mono', monospace; cursor: pointer; outline: none; }
+.fmt-select option { background: #1a1a18; color: #fff; }
+.btn-dl-top {
+  background: #fff; color: var(--accent); border: none;
+  border-radius: var(--radius-sm); padding: 8px 20px;
+  font-size: 13px; font-family: 'Source Serif 4', serif; font-weight: 600;
+  cursor: pointer; white-space: nowrap; flex-shrink: 0;
+  transition: transform .15s, box-shadow .15s;
+  box-shadow: 0 2px 6px rgba(0,0,0,.15);
+}
+.btn-dl-top:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,.2); }
+.btn-dl-top:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+/* ── Page layout ── */
+.page-wrap { max-width: 800px; margin: 0 auto; padding: 0 16px; }
+
+/* ── Tabs ── */
+/* Without JS all panels are visible so crawlers index everything.
+   .js-ready is added immediately by inline script, so real users
+   still get the tab UI with zero flash. */
+.js-ready .tab-panel { display: none; }
+.js-ready .tab-panel.active { display: block; }
+
+/* ── Hero section for Home ── */
+.home-hero {
+  padding: 2.5rem 0 1.5rem;
+  text-align: center;
+}
+.home-hero h1 {
+  font-family: 'DM Serif Display', serif;
+  font-size: clamp(28px, 5vw, 38px);
+  font-weight: 400;
+  color: var(--text);
+  margin-bottom: .6rem;
+  letter-spacing: -.02em;
+  line-height: 1.2;
+}
+.home-hero p {
+  font-size: 16px;
+  color: var(--muted);
+  line-height: 1.65;
+  max-width: 540px;
+  margin: 0 auto;
+}
+.home-hero .badge-row {
+  display: flex; justify-content: center; gap: 8px; margin-top: 1rem; flex-wrap: wrap;
+}
+.home-hero .badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-family: 'JetBrains Mono', monospace;
+  color: var(--accent); background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  border-radius: 20px; padding: 5px 12px;
+  font-weight: 500; letter-spacing: .02em;
+}
+.badge svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+/* ── Sections ── */
+.section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow .2s;
+}
+.section:hover { box-shadow: var(--shadow-md); }
+.section-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; font-weight: 600;
+  letter-spacing: .08em; text-transform: uppercase;
+  color: var(--hint); margin-bottom: 1rem;
+}
+.section-label-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+.saved-badge { font-size: 11px; color: var(--success); font-family: 'JetBrains Mono', monospace; opacity: 0; transition: opacity .4s; font-weight: 500; }
+.saved-badge.show { opacity: 1; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.grid-3 { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; }
+@media (max-width: 440px) { .grid-2 { grid-template-columns: 1fr; } .grid-3 { grid-template-columns: 1fr 1fr; } }
+.field { display: flex; flex-direction: column; }
+.field label { font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-bottom: 5px; font-weight: 500; letter-spacing: .02em; }
+.mb { margin-bottom: 12px; }
+input[type=text] {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px; font-size: 14px;
+  font-family: 'Source Serif 4', serif;
+  color: var(--text); background: var(--surface);
+  outline: none; transition: border-color .2s, box-shadow .2s;
+  width: 100%; min-width: 0;
+}
+input[type=text]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(45,106,79,.1); }
+input[type=text]::placeholder { color: var(--hint); }
+
+/* ── Upload zone ── */
+.upload-zone {
+  border: 2px dashed var(--border-mid);
+  border-radius: var(--radius);
+  padding: 2.5rem 1.5rem; text-align: center;
+  cursor: pointer; transition: all .25s;
+  position: relative; overflow: hidden;
+}
+.upload-zone::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(45,106,79,.03) 0%, rgba(45,106,79,.06) 100%);
+  opacity: 0; transition: opacity .25s;
+}
+.upload-zone:hover, .upload-zone.dragover {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+.upload-zone:hover::before, .upload-zone.dragover::before { opacity: 1; }
+.upload-icon { font-size: 36px; display: block; margin-bottom: 10px; position: relative; }
+.upload-zone p { font-size: 15px; color: var(--text-secondary); margin-bottom: 4px; font-weight: 600; position: relative; }
+.upload-zone small { font-size: 11px; color: var(--hint); font-family: 'JetBrains Mono', monospace; position: relative; }
+#csv-input { display: none; }
+.loaded-state {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; background: var(--success-bg);
+  border: 1px solid #b6e8cc; border-radius: var(--radius-sm);
+  margin-top: 12px; animation: fadeInUp .3s ease;
+}
+.loaded-state span { font-size: 13px; color: var(--success); font-family: 'JetBrains Mono', monospace; font-weight: 500; }
+.error-box {
+  padding: 10px 14px; background: var(--danger-bg);
+  border: 1px solid #f5c0bb; border-radius: var(--radius-sm);
+  font-size: 13px; color: var(--danger); font-family: 'JetBrains Mono', monospace;
+  margin-top: 12px; animation: fadeInUp .3s ease;
+}
+
+/* ── Options bar ── */
+.options-bar {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1rem 1.25rem;
+  margin-bottom: 1rem; display: none; flex-wrap: wrap;
+  gap: 16px; align-items: center; box-shadow: var(--shadow-sm);
+  animation: fadeInUp .3s ease;
+}
+.options-bar.visible { display: flex; }
+.opt-group { display: flex; align-items: center; gap: 8px; }
+.opt-label { font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; white-space: nowrap; font-weight: 500; text-transform: uppercase; letter-spacing: .04em; }
+.opt-select {
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 8px 12px; font-size: 13px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text); background: var(--surface);
+  cursor: pointer; outline: none; transition: border-color .2s;
+}
+.opt-select:focus { border-color: var(--accent); }
+.tog-light .tog-sl { background: #d0cdc6; }
+.tog-light .tog-label { color: var(--muted); }
+
+/* ── Preview ── */
+#preview-area { display: none; }
+.preview-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: .75rem; }
+.preview-header h2 { font-size: 16px; font-weight: 600; color: var(--text); font-family: 'DM Serif Display', serif; }
+.preview-header span { font-size: 12px; color: var(--hint); font-family: 'JetBrains Mono', monospace; }
+.label-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.1rem 1.25rem;
+  margin-bottom: 8px; font-family: 'JetBrains Mono', monospace;
+  position: relative; box-shadow: var(--shadow-sm);
+  transition: transform .15s, box-shadow .15s;
+  animation: fadeInUp .3s ease both;
+}
+.label-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.label-num { position: absolute; top: 10px; right: 14px; font-size: 10px; color: var(--hint); font-weight: 600; }
+.label-from { font-size: 11px; color: var(--muted); line-height: 1.6; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 12px; }
+.label-from strong { font-size: 12px; color: var(--text); display: block; margin-bottom: 2px; }
+.label-to { text-align: center; line-height: 1.7; }
+.label-to strong { font-size: 14px; color: var(--text); display: block; margin-bottom: 3px; font-family: 'Source Serif 4', serif; }
+.label-to span { font-size: 12px; color: var(--muted); }
+.slip-tag {
+  display: inline-block; margin-top: 8px;
+  font-size: 10px; color: var(--accent);
+  border: 1px solid var(--accent-border); background: var(--accent-bg);
+  border-radius: 20px; padding: 3px 9px; font-weight: 500;
+}
+
+/* ── Buttons ── */
+.btn-row { display: flex; gap: 10px; margin-top: 1.5rem; flex-wrap: wrap; }
+.btn-dl {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: linear-gradient(135deg, #2d6a4f 0%, #1b4332 100%);
+  color: #fff; border: none; border-radius: var(--radius-sm);
+  padding: 12px 26px; font-size: 15px;
+  font-family: 'Source Serif 4', serif; font-weight: 600;
+  cursor: pointer; transition: transform .15s, box-shadow .15s;
+  box-shadow: 0 3px 10px rgba(45,106,79,.3);
+}
+.btn-dl:hover { transform: translateY(-1px); box-shadow: 0 5px 16px rgba(45,106,79,.35); }
+.btn-dl:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.btn-ghost {
+  display: inline-flex; align-items: center;
+  background: transparent; color: var(--muted);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 11px 18px; font-size: 14px;
+  font-family: 'Source Serif 4', serif;
+  cursor: pointer; transition: background .15s, border-color .15s;
+}
+.btn-ghost:hover { background: var(--bg); border-color: var(--border-mid); }
+.tip { font-size: 12px; color: var(--hint); font-family: 'JetBrains Mono', monospace; margin-top: 8px; }
+
+/* ── Publisher content section (fixes AdSense policy) ── */
+.content-section {
+  margin-top: 2.5rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border);
+}
+.content-section h2 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 22px; font-weight: 400;
+  color: var(--text); margin-bottom: 1rem;
+  letter-spacing: -.01em;
+}
+.content-section p {
+  font-size: 15px; color: var(--text-secondary);
+  line-height: 1.75; margin-bottom: 1rem;
+}
+.content-section h3 {
+  font-size: 16px; font-weight: 600;
+  color: var(--text); margin-top: 1.5rem; margin-bottom: .5rem;
+}
+.quick-steps {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px; margin: 1.25rem 0;
+}
+.quick-step {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.1rem;
+  box-shadow: var(--shadow-sm);
+  transition: transform .15s, box-shadow .15s;
+}
+.quick-step:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.quick-step-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 20px; font-weight: 600;
+  color: var(--accent); margin-bottom: 6px;
+}
+.quick-step h4 { font-size: 14px; color: var(--text); margin-bottom: 4px; }
+.quick-step p { font-size: 13px; color: var(--muted); line-height: 1.55; margin: 0; }
+
+/* ── Ad placement (policy-compliant) ── */
+.ad-container {
+  margin: 2rem 0;
+  padding: 1rem 0;
+  min-height: 100px;
+  text-align: center;
+}
+.ad-container .ad-label {
+  font-size: 9px; color: var(--hint);
+  font-family: 'JetBrains Mono', monospace;
+  text-transform: uppercase; letter-spacing: .08em;
+  margin-bottom: 6px;
+}
+
+/* ── How It Works tab ── */
+.hiw-hero { padding: 2.5rem 0 1rem; }
+.hiw-hero h1 {
+  font-family: 'DM Serif Display', serif;
+  font-size: clamp(26px, 5vw, 34px);
+  font-weight: 400; color: var(--text);
+  margin-bottom: .6rem; letter-spacing: -.02em;
+}
+.hiw-hero p { font-size: 16px; color: var(--muted); line-height: 1.75; margin-bottom: 1rem; max-width: 560px; }
+.steps { display: flex; flex-direction: column; gap: 10px; margin-bottom: 2rem; }
+.step {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.25rem 1.5rem;
+  display: flex; gap: 16px; align-items: flex-start;
+  box-shadow: var(--shadow-sm);
+  transition: transform .15s, box-shadow .15s;
+}
+.step:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.step-num {
+  font-size: 24px; font-weight: 600;
+  color: var(--accent); font-family: 'JetBrains Mono', monospace;
+  flex-shrink: 0; line-height: 1; margin-top: 2px;
+  opacity: .6;
+}
+.step-body h3 { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 5px; }
+.step-body p { font-size: 14px; color: var(--muted); line-height: 1.7; margin: 0; }
+.why-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px; margin-top: 1.25rem;
+}
+.why-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.2rem;
+  box-shadow: var(--shadow-sm);
+  transition: transform .15s, box-shadow .15s;
+}
+.why-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.why-icon { font-size: 24px; margin-bottom: 8px; }
+.why-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.why-desc { font-size: 13px; color: var(--muted); line-height: 1.65; }
+.section-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 22px; font-weight: 400;
+  color: var(--text); margin: 2.5rem 0 1rem;
+  letter-spacing: -.01em;
+}
+
+/* ── Compatibility section ── */
+.compat-section { margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid var(--border); }
+.compat-section h2 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 22px; font-weight: 400;
+  color: var(--text); margin-bottom: .5rem;
+}
+.compat-section > p { font-size: 15px; color: var(--muted); line-height: 1.7; margin-bottom: 1.25rem; }
+.compat-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+.compat-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1rem;
+  text-align: center; box-shadow: var(--shadow-sm);
+  transition: transform .15s, box-shadow .15s;
+}
+.compat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.compat-card .emoji { font-size: 26px; margin-bottom: 6px; }
+.compat-card .name { font-size: 13px; font-weight: 600; color: var(--text); }
+.compat-card .sub { font-size: 11px; color: var(--hint); font-family: 'JetBrains Mono', monospace; }
+
+/* ── FAQ tab ── */
+.faq-hero { padding: 2.5rem 0 1rem; }
+.faq-hero h1 {
+  font-family: 'DM Serif Display', serif;
+  font-size: clamp(26px, 5vw, 34px);
+  font-weight: 400; color: var(--text);
+  margin-bottom: .5rem; letter-spacing: -.02em;
+}
+.faq-hero p { font-size: 15px; color: var(--muted); }
+.faq-item {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); margin-bottom: 8px;
+  overflow: hidden; box-shadow: var(--shadow-sm);
+  transition: box-shadow .15s;
+}
+.faq-item:hover { box-shadow: var(--shadow-md); }
+.faq-q {
+  width: 100%; background: none; border: none; text-align: left;
+  padding: 1.1rem 1.25rem; font-size: 15px;
+  font-family: 'Source Serif 4', serif; font-weight: 600;
+  color: var(--text); cursor: pointer;
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px; transition: background .15s;
+}
+.faq-q:hover { background: var(--surface-raised); }
+.faq-arrow { font-size: 11px; color: var(--hint); flex-shrink: 0; transition: transform .25s; }
+.faq-item.open .faq-arrow { transform: rotate(180deg); }
+.faq-a {
+  display: none; padding: .75rem 1.25rem 1.15rem;
+  font-size: 14px; color: var(--muted);
+  line-height: 1.75; border-top: 1px solid var(--border);
+}
+.faq-item.open .faq-a { display: block; animation: fadeIn .2s ease; }
+.faq-cta {
+  background: linear-gradient(135deg, var(--accent-bg) 0%, #e0f5e9 100%);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius); padding: 1.5rem; text-align: center; margin-top: 2rem;
+}
+.faq-cta p { font-size: 15px; color: var(--text-secondary); margin-bottom: .75rem; }
+.faq-cta button {
+  background: linear-gradient(135deg, #2d6a4f 0%, #1b4332 100%);
+  color: #fff; border: none; border-radius: var(--radius-sm);
+  padding: 11px 28px; font-size: 14px;
+  font-family: 'Source Serif 4', serif; font-weight: 600;
+  cursor: pointer; transition: transform .15s, box-shadow .15s;
+  box-shadow: 0 3px 10px rgba(45,106,79,.25);
+}
+.faq-cta button:hover { transform: translateY(-1px); box-shadow: 0 5px 16px rgba(45,106,79,.3); }
+
+/* ── Guide tab ── */
+.guide-hero { padding: 2.5rem 0 1rem; }
+.guide-hero h1 {
+  font-family: 'DM Serif Display', serif;
+  font-size: clamp(26px, 5vw, 34px);
+  font-weight: 400; color: var(--text);
+  margin-bottom: .6rem; letter-spacing: -.02em;
+}
+.guide-hero p { font-size: 16px; color: var(--muted); line-height: 1.75; max-width: 560px; margin-bottom: .5rem; }
+.guide-section {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.5rem;
+  margin-bottom: 1rem; box-shadow: var(--shadow-sm);
+}
+.guide-section h2 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 20px; font-weight: 400;
+  color: var(--text); margin-bottom: .75rem;
+  letter-spacing: -.01em;
+}
+.guide-section h3 {
+  font-size: 15px; font-weight: 600;
+  color: var(--text); margin: 1.25rem 0 .4rem;
+}
+.guide-section p { font-size: 14px; color: var(--text-secondary); line-height: 1.8; margin-bottom: .75rem; }
+.guide-section ul, .guide-section ol {
+  padding-left: 1.4rem; margin-bottom: .75rem;
+}
+.guide-section li { font-size: 14px; color: var(--text-secondary); line-height: 1.75; margin-bottom: 4px; }
+.guide-section li strong { color: var(--text); }
+.supply-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px; margin: 1rem 0;
+}
+.supply-card {
+  background: var(--surface-raised); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 1rem;
+  box-shadow: var(--shadow-sm);
+}
+.supply-card .supply-icon { font-size: 22px; margin-bottom: 6px; }
+.supply-card .supply-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+.supply-card .supply-note { font-size: 12px; color: var(--muted); line-height: 1.55; }
+.printer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px; margin: 1rem 0;
+}
+.printer-card {
+  background: var(--surface-raised); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 1.1rem;
+  box-shadow: var(--shadow-sm);
+}
+.printer-card .printer-name { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.printer-card .printer-price { font-size: 12px; color: var(--accent); font-family: 'JetBrains Mono', monospace; margin-bottom: 6px; font-weight: 600; }
+.printer-card .printer-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
+.callout {
+  background: var(--accent-bg); border: 1px solid var(--accent-border);
+  border-radius: var(--radius-sm); padding: 1rem 1.25rem;
+  margin: 1rem 0;
+}
+.callout p { font-size: 14px; color: var(--text-secondary); line-height: 1.75; margin: 0; }
+.callout strong { color: var(--accent); }
+.guide-section .step-row {
+  display: flex; gap: 14px; margin-bottom: 12px;
+  align-items: flex-start;
+}
+.guide-section .step-num-sm {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px; font-weight: 600;
+  color: var(--accent); flex-shrink: 0; min-width: 22px; margin-top: 1px;
+}
+.guide-section .step-text { font-size: 14px; color: var(--text-secondary); line-height: 1.75; }
+.guide-section .step-text strong { color: var(--text); }
+
+/* ── Footer ── */
+.site-footer {
+  text-align: center; padding: 2.5rem 1rem;
+  font-size: 12px; color: var(--hint);
+  font-family: 'JetBrains Mono', monospace;
+  border-top: 1px solid var(--border); margin-top: 3rem;
+}
+.site-footer a { color: var(--muted); text-decoration: none; margin: 0 6px; transition: color .15s; }
+.site-footer a:hover { color: var(--accent); text-decoration: underline; }
+.footer-built { margin-bottom: 6px; }
+.footer-built a { color: var(--accent); text-decoration: underline; }
+.footer-links { margin: 8px 0 10px; }
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="top-nav">
+  <div class="nav-brand">TCG Speed Shipper <span>&nbsp;· Clujkeebs</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" data-tab="home">Home</button>
+    <button class="nav-tab" data-tab="hiw">How It Works</button>
+    <button class="nav-tab" data-tab="faq">FAQ</button>
+    <button class="nav-tab" data-tab="guide">Guide</button>
+  </div>
+</nav>
+
+<!-- Sticky download bar -->
+<div class="sticky-bar" id="sticky-bar">
+  <div class="sticky-left">
+    <span class="sticky-count" id="sticky-count"></span>
+    <div class="tog-wrap">
+      <span class="tog-label">Slips</span>
+      <label class="tog"><input type="checkbox" id="slip-top" /><span class="tog-sl"></span></label>
+    </div>
+    <select class="fmt-select" id="fmt-top">
+      <option value="4x6">4×6 Thermal</option>
+      <option value="letter1">8.5×11 — 1 up</option>
+      <option value="letter2">8.5×11 — 2 up</option>
+      <option value="letter3">8.5×11 — 3 up</option>
+      <option value="letter4">8.5×11 — 4 up</option>
+    </select>
+  </div>
+  <button class="btn-dl-top" id="dl-btn-top">⬇ Download PDF</button>
+</div>
+
+<div class="page-wrap">
+
+  <!-- ══ HOME TAB ══ -->
+  <div class="tab-panel active" id="tab-home">
+
+    <div class="home-hero fade-in-up">
+      <h1>Ship Cards Faster</h1>
+      <p>Upload your TCGPlayer packing list CSV and get print-ready PDF shipping labels in seconds. Free forever, no signup required.</p>
+      <div class="badge-row">
+        <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> 100% Free</span>
+        <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Private</span>
+        <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10"/></svg> Instant</span>
+      </div>
+    </div>
+
+    <!-- Return address -->
+    <div class="section fade-in-up" style="animation-delay:.1s">
+      <div class="section-label-row">
+        <span class="section-label" style="margin-bottom:0;">Return Address</span>
+        <span class="saved-badge" id="saved-badge">✓ Saved</span>
+      </div>
+      <div class="grid-2 mb">
+        <div class="field">
+          <label>Store / Your Name</label>
+          <input type="text" id="s-name" placeholder="Dragon's Hoard Cards" autocomplete="organization" />
+        </div>
+        <div class="field">
+          <label>Phone (optional)</label>
+          <input type="text" id="s-phone" placeholder="" autocomplete="tel" />
+        </div>
+      </div>
+      <div class="field mb">
+        <label>Street Address</label>
+        <input type="text" id="s-addr1" placeholder="123 Main St" autocomplete="address-line1" />
+      </div>
+      <div class="field mb">
+        <label>Apt / Suite (optional)</label>
+        <input type="text" id="s-addr2" placeholder="" autocomplete="address-line2" />
+      </div>
+      <div class="grid-3">
+        <div class="field">
+          <label>City</label>
+          <input type="text" id="s-city" placeholder="Springfield" autocomplete="address-level2" />
+        </div>
+        <div class="field">
+          <label>State</label>
+          <input type="text" id="s-state" placeholder="IL" autocomplete="address-level1" />
+        </div>
+        <div class="field">
+          <label>ZIP</label>
+          <input type="text" id="s-zip" placeholder="62701" autocomplete="postal-code" />
+        </div>
+      </div>
+    </div>
+
+    <!-- CSV upload -->
+    <div class="section fade-in-up" style="animation-delay:.15s">
+      <div class="section-label">TCGPlayer Packing List CSV</div>
+      <div class="upload-zone" id="upload-zone">
+        <span class="upload-icon">📦</span>
+        <p id="upload-text">Drop your CSV here, or tap to browse</p>
+        <small>TCGPlayer → Orders → Packing List → Export</small>
+      </div>
+      <input type="file" id="csv-input" accept=".csv,.txt" />
+      <div id="loaded-msg"></div>
+      <div id="error-msg"></div>
+    </div>
+
+    <!-- Options (shown after CSV loaded) -->
+    <div class="options-bar" id="options-bar">
+      <div class="opt-group">
+        <span class="opt-label">Format</span>
+        <select class="opt-select" id="fmt-main">
+          <option value="4x6">4×6 Thermal</option>
+          <option value="letter1">8.5×11 — 1 per page</option>
+          <option value="letter2">8.5×11 — 2 per page</option>
+          <option value="letter3">8.5×11 — 3 per page</option>
+          <option value="letter4">8.5×11 — 4 per page</option>
+        </select>
+      </div>
+      <div class="opt-group tog-light">
+        <span class="opt-label tog-label">Packing Slips</span>
+        <label class="tog"><input type="checkbox" id="slip-main" /><span class="tog-sl"></span></label>
+      </div>
+    </div>
+
+    <!-- Preview -->
+    <div id="preview-area">
+      <div class="preview-header">
+        <h2>Preview</h2>
+        <span id="count-label"></span>
+      </div>
+      <div id="preview-list"></div>
+      <div class="btn-row">
+        <button class="btn-dl" id="dl-btn">⬇ Download PDF</button>
+        <button class="btn-ghost" id="clear-btn">Clear</button>
+      </div>
+      <p class="tip">4×6: print on thermal, margins none  ·  8.5×11: any printer, cut on lines</p>
+    </div>
+
+    <!-- Publisher content below tool — fixes AdSense "no content" policy violation -->
+    <div class="content-section">
+      <h2>The Fastest Way to Ship TCGPlayer Orders</h2>
+      <p>If you sell trading cards on TCGPlayer, you already know the bottleneck: getting labels printed. Handwriting addresses is slow, error-prone, and frankly miserable when you have dozens of orders to fulfill. TCGPlayer Speed Shipper eliminates that friction entirely.</p>
+      <p>This tool reads the CSV file that TCGPlayer generates from your Packing List page and converts it into properly formatted, print-ready PDF shipping labels — either for a 4×6 thermal printer like the Rollo or MUNBYN, or for standard 8.5×11 paper on any home printer. The whole process takes about ten seconds.</p>
+
+      <h3>Quick Start</h3>
+      <div class="quick-steps">
+        <div class="quick-step">
+          <div class="quick-step-num">01</div>
+          <h4>Export from TCGPlayer</h4>
+          <p>Orders → Packing List → Export to download your CSV.</p>
+        </div>
+        <div class="quick-step">
+          <div class="quick-step-num">02</div>
+          <h4>Enter Return Address</h4>
+          <p>Fill it in once — it auto-saves to your browser.</p>
+        </div>
+        <div class="quick-step">
+          <div class="quick-step-num">03</div>
+          <h4>Upload &amp; Download</h4>
+          <p>Upload the CSV, hit Download, and print your labels.</p>
+        </div>
+      </div>
+
+      <h3>Why Sellers Trust This Tool</h3>
+      <p>Everything runs in your browser. Your buyer names, addresses, and order data are never uploaded to any server — the CSV is parsed locally and the PDF is built entirely on your device. There is no account to create, nothing to install, and no fees. This is a tool built by a seller, for sellers.</p>
+      <p>Whether you sell Magic: The Gathering singles, sealed Pokémon product, Yu-Gi-Oh cards, Flesh and Blood, or any other TCG, the packing list format is the same. Upload it, choose your label format, and start shipping.</p>
+
+      <h3>Supported Printers &amp; Label Sizes</h3>
+      <p>TCGPlayer Speed Shipper supports two main label formats. The 4×6 thermal format is designed for dedicated label printers like the Rollo, Dymo LabelWriter 4XL, and MUNBYN 4×6. Set your printer margins to zero and your paper size to 4×6 for best results. The 8.5×11 format works with any standard inkjet or laser printer and lets you fit one, two, three, or four labels per page with cut lines printed between them.</p>
+    </div>
+
+    <!-- Ad placed BELOW substantial publisher content (policy compliant) -->
+    <div class="ad-container">
+      <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3526440256333845" data-ad-slot="9475255362" data-ad-format="auto" data-full-width-responsive="true"></ins>
+      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    </div>
+
+    <!-- More publisher content -->
+    <div class="content-section" style="border-top:none; margin-top:0; padding-top:0;">
+      <h3>Packing Slips for a Professional Touch</h3>
+      <p>Toggle packing slips on before downloading and each label in your PDF will be followed by a matching packing slip. Each slip includes the shipping address, your return address, the order number, and a full list of items from that order. It is a small detail that makes your store look more professional and helps buyers confirm they received the correct cards.</p>
+
+      <h3>Privacy by Design</h3>
+      <p>Your data stays on your device. TCGPlayer Speed Shipper does not send any information to a server. The CSV is read by your browser, the PDF is built in JavaScript using jsPDF, and the result is downloaded directly to your computer. No analytics on your order data, no tracking of buyer information, and no server-side processing. Your customers' personal information stays exactly where it should — with you.</p>
+    </div>
+
+    <!-- Second ad after more content -->
+    <div class="ad-container">
+      <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3526440256333845" data-ad-slot="8381966863" data-ad-format="auto" data-full-width-responsive="true"></ins>
+      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    </div>
+
+  </div><!-- end home tab -->
+
+  <!-- ══ HOW IT WORKS TAB ══ -->
+  <div class="tab-panel" id="tab-hiw">
+
+    <div class="hiw-hero">
+      <h1>How It Works</h1>
+      <p>TCGPlayer Speed Shipper turns your packing list CSV into print-ready PDF shipping labels in under two minutes. Here's every step from export to print.</p>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-body">
+          <h3>Export your packing list from TCGPlayer</h3>
+          <p>Log in to your TCGPlayer seller account → Orders → Packing List → Export. This gives you a CSV file with all your buyer names and shipping addresses.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-body">
+          <h3>Enter your return address once</h3>
+          <p>Type in your store name and address on the Home tab. It saves automatically to your browser — you'll never have to type it again.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-body">
+          <h3>Upload the CSV file</h3>
+          <p>Tap the upload zone or drag and drop your file. The tool reads every order instantly — no waiting, no processing, no server.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <div class="step-body">
+          <h3>Choose your format</h3>
+          <p>Pick 4×6 thermal for a label printer, or 8.5×11 with 1, 2, 3, or 4 labels per sheet for a regular printer. Toggle packing slips on or off.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">05</div>
+        <div class="step-body">
+          <h3>Download and print</h3>
+          <p>Hit Download PDF. Open the file and send it to your printer. For thermal printers, set margins to none and match your label size. Done.</p>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="section-title">Why Sellers Choose This Tool</h2>
+
+    <div class="why-grid">
+      <div class="why-card">
+        <div class="why-icon">⚡</div>
+        <div class="why-title">Fast</div>
+        <div class="why-desc">CSV to PDF in seconds, even with hundreds of orders.</div>
+      </div>
+      <div class="why-card">
+        <div class="why-icon">🆓</div>
+        <div class="why-title">100% Free</div>
+        <div class="why-desc">No subscription, no account, no catch.</div>
+      </div>
+      <div class="why-card">
+        <div class="why-icon">🔒</div>
+        <div class="why-title">Private</div>
+        <div class="why-desc">Your order data never leaves your device.</div>
+      </div>
+      <div class="why-card">
+        <div class="why-icon">🖨️</div>
+        <div class="why-title">Any Printer</div>
+        <div class="why-desc">Thermal 4×6 or standard 8.5×11 — your choice.</div>
+      </div>
+      <div class="why-card">
+        <div class="why-icon">📦</div>
+        <div class="why-title">Packing Slips</div>
+        <div class="why-desc">One toggle adds a slip to every order.</div>
+      </div>
+      <div class="why-card">
+        <div class="why-icon">💾</div>
+        <div class="why-title">Remembers You</div>
+        <div class="why-desc">Return address auto-saves in your browser.</div>
+      </div>
+    </div>
+
+    <!-- Compatibility section — more publisher content -->
+    <div class="compat-section">
+      <h2>Works with Every TCG</h2>
+      <p>TCGPlayer Speed Shipper works with the standard packing list CSV format. It doesn't matter which game you sell — the export is the same across all categories.</p>
+      <div class="compat-grid">
+        <div class="compat-card">
+          <div class="emoji">🧙</div>
+          <div class="name">Magic: The Gathering</div>
+          <div class="sub">Singles &amp; Sealed</div>
+        </div>
+        <div class="compat-card">
+          <div class="emoji">⚡</div>
+          <div class="name">Pokémon</div>
+          <div class="sub">Cards &amp; Packs</div>
+        </div>
+        <div class="compat-card">
+          <div class="emoji">🌀</div>
+          <div class="name">Yu-Gi-Oh!</div>
+          <div class="sub">Singles &amp; Structure</div>
+        </div>
+        <div class="compat-card">
+          <div class="emoji">⚔️</div>
+          <div class="name">Flesh &amp; Blood</div>
+          <div class="sub">Singles &amp; Sealed</div>
+        </div>
+        <div class="compat-card">
+          <div class="emoji">🏴‍☠️</div>
+          <div class="name">One Piece TCG</div>
+          <div class="sub">Cards &amp; Boosters</div>
+        </div>
+        <div class="compat-card">
+          <div class="emoji">🎴</div>
+          <div class="name">All Other TCGs</div>
+          <div class="sub">Same CSV Format</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ad placed after substantial content -->
+    <div class="ad-container">
+      <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3526440256333845" data-ad-slot="8381966863" data-ad-format="auto" data-full-width-responsive="true"></ins>
+      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    </div>
+
+  </div><!-- end hiw tab -->
+
+  <!-- ══ FAQ TAB ══ -->
+  <div class="tab-panel" id="tab-faq">
+
+    <div class="faq-hero">
+      <h1>Frequently Asked Questions</h1>
+      <p>Everything you need to know about using TCGPlayer Speed Shipper.</p>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">How do I export my packing list from TCGPlayer? <span class="faq-arrow">▼</span></button>
+      <div class="faq-a">Log in to your TCGPlayer seller account. Navigate to Orders in your seller dashboard, click Packing List, and look for the Export button. TCGPlayer will generate a CSV file with all your current orders. Save it to your device and upload it on the Home tab.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">What thermal printer should I use for 4×6 labels? <span class="faq-arrow">▼</span></button>
+      <div class="faq-a">The most popular options among TCGPlayer sellers are the Rollo Wireless, Dymo LabelWriter 4XL, and MUNBYN 4×6 printer. All three produce clean labels and are available on Amazon. Make sure to set margins to zero and select 4×6 as your paper size when printing.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">Can I print multiple labels on one page? <span class="faq-arrow">▼</span></button>
+      <div class="faq-a">Yes. In the format selector choose 8.5×11 and pick 1, 2, 3, or 4 labels per page. The tool lays them out in a grid with light border lines so you know where to cut. Works great if you don't have a thermal printer.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">Is my order data safe? Does it get uploaded anywhere? <span class="faq-arrow">▼</span></button>
+      <div class="faq-a">Your data never leaves your browser. The CSV is read locally and the PDF is generated entirely on your device using JavaScript. Nothing is sent to any server. Your buyer addresses stay completely private.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">Why isn't my return address being saved between visits? <span class="faq-arrow">▼</span></button>
+      <div class="faq-a">The tool saves your return address to your browser's localStorage automatically. If it's not persisting, you may be using private/incognito mode (which clears localStorage on close) or your browser settings may block local storage. Use a regular browser window and it will save reliably.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">How do packing slips work? <span class="faq-arrow">▼</span></button>
+      <div class="faq-a">Toggle Packing Slips on before downloading. The tool inserts a matching packing slip page after every shipping label in the PDF. Each slip shows the ship-to address, your return address, the order number if available, and a list of items. It's a professional touch buyers appreciate.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">Does this work for MTG, Pokémon, Yu-Gi-Oh, and other games? <span class="faq-arrow">▼</span></button>
+      <div class="faq-a">Absolutely. TCGPlayer hosts sellers for Magic: The Gathering, Pokémon, Yu-Gi-Oh, Flesh and Blood, One Piece TCG, and more. As long as you export the standard TCGPlayer packing list CSV, this tool works the same regardless of what you sell.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">What if my CSV has different column names? <span class="faq-arrow">▼</span></button>
+      <div class="faq-a">The tool recognizes a wide range of column header variations including "First Name," "Buyer First Name," "Ship To Address 1," and many more. It intelligently maps your columns even if they don't match TCGPlayer's exact naming. If it can't find the required name and address columns, it will tell you which headers it found so you can adjust your file.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">Can I use this on my phone or tablet? <span class="faq-arrow">▼</span></button>
+      <div class="faq-a">Yes. TCGPlayer Speed Shipper is fully responsive and works on mobile devices. Upload your CSV, configure your labels, and download the PDF — all from your phone's browser. The PDF can then be printed from any connected printer or saved for later.</div>
+    </div>
+
+    <div class="faq-cta">
+      <p>Ready to start shipping faster?</p>
+      <button onclick="switchTab('home')">Go to the Tool</button>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">What is a PWE and when should I use it? <span class="faq-arrow">▼</span></button>
+      <div class="faq-a">PWE stands for Plain White Envelope. It is the lowest-cost shipping method on TCGPlayer and is typically used for cheap single cards worth a few dollars or less. A PWE offers no tracking and no insurance, so it is best for low-value transactions where the buyer accepts the risk. For cards worth $5 or more, most sellers use a bubble mailer with tracking (BMWT) to protect themselves and their buyers.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">What supplies do I need to start selling cards? <span class="faq-arrow">▼</span></button>
+      <div class="faq-a">The essentials are penny sleeves (to protect card surfaces), standard 3×4 top loaders (to keep cards rigid), team bags (to seal the top loader), and envelopes or bubble mailers for shipping. For a thermal printer setup you'll also need 4×6 direct thermal label rolls. As your volume grows, consider a label printer like the Rollo or MUNBYN so you can stop handwriting addresses.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">How do I handle a lost package claim? <span class="faq-arrow">▼</span></button>
+      <div class="faq-a">If a buyer reports a lost package, first verify the tracking status through USPS or the carrier. If the package shows delivered, ask the buyer to check with neighbors and their local post office. If it shows in transit beyond a reasonable timeframe, file a missing mail search with USPS. For orders shipped with tracking and insurance, you can file a claim. For PWE orders without tracking, TCGPlayer's seller protection policies apply — refer to their help documentation for the current terms.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">Can I use TCGPlayer Speed Shipper with eBay or other platforms? <span class="faq-arrow">▼</span></button>
+      <div class="faq-a">This tool is specifically designed for the TCGPlayer packing list CSV format. Other platforms like eBay, Amazon, or Whatnot use different export formats with different column names. The tool does attempt to detect common column name variations, so it may work partially with some exports, but it is not guaranteed. Full support for other platforms is not currently planned.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">What is the best way to pack a single card for shipping? <span class="faq-arrow">▼</span></button>
+      <div class="faq-a">The standard method for a PWE is: sleeve the card in a penny sleeve, slide it into a standard 3×4 top loader, seal the top of the top loader with a small strip of tape or slide it into a team bag, then insert it into the envelope between two pieces of cardboard or an index card for rigidity. For BMWT, use the same steps but place the top-loaded card in a bubble mailer and seal it securely. Never bend the flap over a stiff card — it will crease the card.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">How do I add tracking to my TCGPlayer shipments? <span class="faq-arrow">▼</span></button>
+      <div class="faq-a">When you ship via TCGPlayer's marketplace system, you can purchase a shipping label directly through their platform using USPS Click-N-Ship or a similar integration. Alternatively, you can purchase labels through Pirateship.com (which offers commercial pricing on USPS labels) and manually enter the tracking number into your TCGPlayer order. Always enter tracking numbers before the shipment deadline to keep your account in good standing.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">Why does my CSV have extra blank rows or errors? <span class="faq-arrow">▼</span></button>
+      <div class="faq-a">This can happen if your CSV has trailing blank lines, special characters in addresses, or inconsistent quoting from the TCGPlayer export. The tool filters out blank rows automatically. If you're getting an error about unrecognized columns, open the CSV in a text editor to check the actual header row. Common issues include invisible BOM characters at the start of the file or extra spaces in column names — the tool handles most of these cases, but a severely malformed file may need to be re-exported from TCGPlayer.</div>
+    </div>
+
+    <div class="faq-cta">
+      <p>Ready to start shipping faster?</p>
+      <button onclick="switchTab('home')">Go to the Tool</button>
+    </div>
+
+    <!-- Ad placed after substantial FAQ content -->
+    <div class="ad-container">
+      <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3526440256333845" data-ad-slot="8162173696" data-ad-format="auto" data-full-width-responsive="true"></ins>
+      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    </div>
+
+  </div><!-- end faq tab -->
+
+  <!-- ══ GUIDE TAB ══ -->
+  <div class="tab-panel" id="tab-guide">
+
+    <div class="guide-hero">
+      <h1>TCGPlayer Seller's Shipping Guide</h1>
+      <p>Everything you need to know about shipping trading cards sold on TCGPlayer — supplies, printers, packing techniques, and how to protect yourself when things go wrong.</p>
+    </div>
+
+    <!-- Section 1: Shipping Tiers -->
+    <div class="guide-section">
+      <h2>Understanding TCGPlayer Shipping Tiers</h2>
+      <p>TCGPlayer uses a tiered shipping system that determines how much the buyer pays and what level of service you're expected to provide. Knowing which tier applies to each order is fundamental to running a healthy TCGPlayer store.</p>
+
+      <h3>PWE — Plain White Envelope</h3>
+      <p>The cheapest option, typically assigned to orders under a certain value threshold. A PWE offers no tracking number and no insurance. You slide the card (in a sleeve and top loader) into a standard #10 envelope and drop it in any mailbox. Fast and cheap, but the buyer bears the risk if the envelope goes missing. Because there's no proof of delivery, sellers can be held responsible for lost PWE shipments under some circumstances — always check TCGPlayer's current policy.</p>
+
+      <h3>BMWT — Bubble Mailer with Tracking</h3>
+      <p>Required for higher-value orders. You purchase a tracked USPS label (usually First Class Package), place the packaged card into a bubble mailer, and attach the label. The buyer can follow the package in real time and you have proof of delivery. This is the right choice for anything worth $10 or more, and most experienced sellers default to BMWT even on cheaper orders for peace of mind.</p>
+
+      <h3>Standard / Media Mail</h3>
+      <p>Occasionally applicable for large sealed product orders. Standard rates vary and Media Mail is generally not appropriate for trading cards alone — read TCGPlayer's shipping guidelines carefully before using it. When in doubt, First Class Package with tracking is the reliable default.</p>
+
+      <div class="callout">
+        <p><strong>Pro tip:</strong> Pirateship.com offers commercial USPS rates with no monthly fee. A First Class Package label that costs $4.00 at the post office counter often runs under $3.50 through Pirateship — meaningful savings if you ship dozens of orders a week.</p>
+      </div>
+    </div>
+
+    <!-- Section 2: Supplies -->
+    <div class="guide-section">
+      <h2>Essential Supplies for Card Sellers</h2>
+      <p>The right supplies protect your cards in transit and keep your buyers happy. Here's what every TCGPlayer seller should have on hand.</p>
+
+      <div class="supply-grid">
+        <div class="supply-card">
+          <div class="supply-icon">🛡️</div>
+          <div class="supply-name">Penny Sleeves</div>
+          <div class="supply-note">First layer of protection. Prevents scratching during handling and packing. Buy in bulk — 1000-count bags are most economical.</div>
+        </div>
+        <div class="supply-card">
+          <div class="supply-icon">📐</div>
+          <div class="supply-name">Top Loaders</div>
+          <div class="supply-note">Standard 3×4 fits most singles. Keeps the card rigid so it can't bend in transit. Ultra Pro and BCW are reliable brands.</div>
+        </div>
+        <div class="supply-card">
+          <div class="supply-icon">🔒</div>
+          <div class="supply-name">Team Bags</div>
+          <div class="supply-note">Resealable poly bags that go over the top loader, sealing out moisture and keeping everything together. Also called "card saver bags."</div>
+        </div>
+        <div class="supply-card">
+          <div class="supply-icon">✉️</div>
+          <div class="supply-name">#10 Envelopes</div>
+          <div class="supply-note">Standard business envelope for PWE shipments. Buy plain white without windows. 500-count boxes last a long time.</div>
+        </div>
+        <div class="supply-card">
+          <div class="supply-icon">📦</div>
+          <div class="supply-name">Bubble Mailers</div>
+          <div class="supply-note">4×8 inch self-sealing bubble mailers for BMWT shipments. The bubble padding protects against bending and moisture.</div>
+        </div>
+        <div class="supply-card">
+          <div class="supply-icon">🏷️</div>
+          <div class="supply-name">Label Rolls</div>
+          <div class="supply-note">4×6 direct thermal rolls for label printers. No ink required — the heat from the printer head activates the coating. 450-count rolls are standard.</div>
+        </div>
+        <div class="supply-card">
+          <div class="supply-icon">📋</div>
+          <div class="supply-name">Rigid Mailers</div>
+          <div class="supply-note">Cardboard "stay flat" mailers for high-value cards. Add extra rigidity beyond a standard bubble mailer. Worth it for anything over $50.</div>
+        </div>
+        <div class="supply-card">
+          <div class="supply-icon">✂️</div>
+          <div class="supply-name">Card Savers</div>
+          <div class="supply-note">Semi-rigid holders used by grading companies and preferred by some buyers. Good alternative to top loaders for valuable cards.</div>
+        </div>
+      </div>
+
+      <h3>Where to Buy</h3>
+      <p>Amazon is convenient for small restocks. For bulk purchasing, BCW Supplies (bcwsupplies.com) and Bulk Card Supplies offer significant discounts on sleeves, top loaders, and mailers when bought in case quantities. If you're shipping more than 20 orders a week, buying in bulk almost always pays off.</p>
+    </div>
+
+    <!-- Ad after first two sections -->
+    <div class="ad-container">
+      <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3526440256333845" data-ad-slot="9475255362" data-ad-format="auto" data-full-width-responsive="true"></ins>
+      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    </div>
+
+    <!-- Section 3: Thermal Printers -->
+    <div class="guide-section">
+      <h2>Thermal Printer Comparison</h2>
+      <p>A thermal label printer is one of the best investments a TCGPlayer seller can make. Once you're printing instead of handwriting addresses, you save two to five minutes per order — which adds up fast. Here are the most popular options among card sellers.</p>
+
+      <div class="printer-grid">
+        <div class="printer-card">
+          <div class="printer-name">Rollo Wireless</div>
+          <div class="printer-price">~$149–$179</div>
+          <div class="printer-desc">The most popular choice among high-volume TCG sellers. Wi-Fi connectivity means no USB cable required. Works with Mac, Windows, iOS, and Android. Prints crisp labels quickly with zero ink cost. The Rollo app makes setup straightforward.</div>
+        </div>
+        <div class="printer-card">
+          <div class="printer-name">MUNBYN 4×6</div>
+          <div class="printer-price">~$79–$109</div>
+          <div class="printer-desc">Excellent value for the price. USB connection is reliable and setup is plug-and-play on most systems. Print quality is very good. A solid choice for sellers who don't need wireless and want to keep costs down.</div>
+        </div>
+        <div class="printer-card">
+          <div class="printer-name">Dymo LabelWriter 4XL</div>
+          <div class="printer-price">~$229–$269</div>
+          <div class="printer-desc">A long-established workhorse with broad software compatibility. Slightly slower than the Rollo but very reliable. Dymo's own label rolls tend to be more expensive, but generic rolls work fine and cut costs significantly.</div>
+        </div>
+        <div class="printer-card">
+          <div class="printer-name">Zebra ZP450 / ZD410</div>
+          <div class="printer-price">~$60–$150 used</div>
+          <div class="printer-desc">Commercial-grade printers that appear frequently on eBay and Facebook Marketplace at steep discounts. Require slightly more setup but are built to last. A great option if you're comfortable sourcing used equipment.</div>
+        </div>
+        <div class="printer-card">
+          <div class="printer-name">Standard Inkjet / Laser</div>
+          <div class="printer-price">Already own it</div>
+          <div class="printer-desc">Using TCGPlayer Speed Shipper's 8.5×11 format, any regular printer works. Print 1–4 labels per page, cut along the lines, and tape them on. Not as fast as a thermal setup, but zero additional cost.</div>
+        </div>
+      </div>
+
+      <h3>Print Settings</h3>
+      <p>For 4×6 thermal printers: set your paper size to 4×6 inches, set margins to zero (or "borderless"), and disable any "fit to page" scaling. The PDF generated by TCGPlayer Speed Shipper is already sized to fill a 4×6 label exactly. For 8.5×11 printing, use "actual size" rather than "fit to page" to preserve the cut-line alignment.</p>
+    </div>
+
+    <!-- Section 4: Packing Cards -->
+    <div class="guide-section">
+      <h2>How to Pack Cards Safely</h2>
+      <p>A card that arrives damaged or bent is a guaranteed negative experience for the buyer — and potentially a dispute or refund. These packing methods, used consistently, will keep your defect rate near zero.</p>
+
+      <h3>Standard Single Card (PWE)</h3>
+      <div class="step-row"><div class="step-num-sm">1</div><div class="step-text"><strong>Penny sleeve</strong> — slide the card face-first into a penny sleeve. This protects the surface from scratching against the top loader.</div></div>
+      <div class="step-row"><div class="step-num-sm">2</div><div class="step-text"><strong>Top loader</strong> — slide the sleeved card into a standard 3×4 top loader. The card should fit snugly without being forced.</div></div>
+      <div class="step-row"><div class="step-num-sm">3</div><div class="step-text"><strong>Team bag</strong> — place the loaded top loader into a resealable team bag. Seal it to keep moisture out and the top loader from sliding out.</div></div>
+      <div class="step-row"><div class="step-num-sm">4</div><div class="step-text"><strong>Stiffen the envelope</strong> — fold a sheet of paper or cut an index card to fit inside the envelope, then place the team bag between two layers. This prevents the card from bending when the envelope goes through postal machinery.</div></div>
+      <div class="step-row"><div class="step-num-sm">5</div><div class="step-text"><strong>Seal and label</strong> — seal the envelope, apply your shipping label centered on the front, and you're done.</div></div>
+
+      <h3>BMWT Packing Method</h3>
+      <p>Follow steps 1–3 above, then add the team-bagged top loader to a bubble mailer. Make sure the label is flat and fully adhered to the mailer — bubbles or peeling labels can delay delivery or cause misrouting. Seal the mailer completely and reinforce the seal with tape on high-value orders.</p>
+
+      <h3>For Valuable Cards ($50+)</h3>
+      <p>For expensive cards, use a card saver instead of a top loader (graders prefer them and they're less likely to cause corner damage), double-bag the card, and place it inside a rigid cardboard mailer. Write "Do Not Bend" visibly on the outside. For cards worth hundreds of dollars, consider adding shipping insurance through USPS or a third-party insurer.</p>
+
+      <div class="callout">
+        <p><strong>Common mistake to avoid:</strong> Never fold the flap of a #10 envelope over the top of a top loader. The fold can transfer directly to the card. Always make sure the top loader sits fully inside the envelope with room to spare.</p>
+      </div>
+    </div>
+
+    <!-- Section 5: Workflow -->
+    <div class="guide-section">
+      <h2>Efficient Shipping Workflow</h2>
+      <p>Sellers who process a high volume of orders consistently use a batched workflow rather than handling each order individually from start to finish. Here's a proven approach.</p>
+
+      <h3>Batch at End of Day</h3>
+      <p>Instead of shipping each order as it comes in, set a daily cutoff time (e.g., 5 PM) and process everything that arrived before that point together. This means one trip to generate labels, one printing session, one packing session, and one post office run or pickup. It's far more efficient than handling orders one at a time throughout the day.</p>
+
+      <h3>Assemble Before Labeling</h3>
+      <p>Pull all your orders' cards, sleeve and top-load them all first, then print labels in one batch using TCGPlayer Speed Shipper. Match labels to packages by order number, then seal and label everything in one pass. This avoids context-switching and reduces mistakes.</p>
+
+      <h3>USPS Pickup vs Drop-Off</h3>
+      <p>USPS offers free scheduled package pickups from your mailbox or door. For BMWT shipments, this eliminates the post office trip entirely. Schedule your pickup the evening before so everything gets collected the next morning. Note that USPS pickup requires at least one package with postage — they will not pick up PWE envelopes alone.</p>
+
+      <h3>Tracking Entry</h3>
+      <p>Enter tracking numbers into TCGPlayer as soon as you print labels, not after you drop them off. Buyers appreciate seeing the tracking number appear quickly, and it protects you against "item not shipped" claims. TCGPlayer Speed Shipper generates your address labels; you still need to enter tracking separately in the TCGPlayer seller portal or through your shipping software.</p>
+    </div>
+
+    <!-- Ad mid-guide -->
+    <div class="ad-container">
+      <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3526440256333845" data-ad-slot="8381966863" data-ad-format="auto" data-full-width-responsive="true"></ins>
+      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    </div>
+
+    <!-- Section 6: Building Reputation -->
+    <div class="guide-section">
+      <h2>Building Your Seller Reputation</h2>
+      <p>On TCGPlayer, your feedback score and seller rating directly affect your visibility in search results and buyers' willingness to purchase from you. A few consistent habits keep your metrics strong.</p>
+
+      <h3>Ship On Time, Every Time</h3>
+      <p>TCGPlayer tracks your handling time — the gap between when an order is placed and when tracking shows movement. If you commit to a 1-business-day handling time, meet it consistently. Late shipments trigger automated warnings and eventually can lead to account restrictions. If you know you'll be unavailable (vacation, illness), use TCGPlayer's vacation mode to pause your store rather than letting orders pile up.</p>
+
+      <h3>Accurate Condition Grading</h3>
+      <p>The single biggest driver of negative feedback is condition disputes. A card listed as Near Mint that arrives with visible play wear will generate a complaint. When in doubt, grade down. A "Lightly Played" card that arrives looking better than expected delights the buyer; a "Near Mint" card that looks beat up creates a dispute. Be conservative with NM grades, especially on older or rarer cards.</p>
+
+      <h3>Packaging That Impresses</h3>
+      <p>Buyers notice when a card arrives well-packaged. A properly sleeved, top-loaded card in a clean bubble mailer with a neat label signals that the seller takes their store seriously. Some sellers include a small thank-you note or a bonus common card. These small touches earn repeat customers in a marketplace where buyer loyalty is otherwise rare.</p>
+
+      <h3>Responding to Issues</h3>
+      <p>When a buyer contacts you about a problem, respond within 24 hours. Even if you believe you're not at fault, a calm and professional response usually de-escalates the situation. Offer a refund or replacement for legitimate complaints rather than arguing — the cost of one refund is far less than the cost of a negative feedback score dragging down your listings.</p>
+    </div>
+
+    <!-- Section 7: Troubleshooting -->
+    <div class="guide-section">
+      <h2>Troubleshooting Common Issues</h2>
+
+      <h3>CSV Won't Parse</h3>
+      <p>If TCGPlayer Speed Shipper shows an error about unrecognized columns, open your CSV file in a plain text editor (Notepad on Windows, TextEdit on Mac in plain-text mode) and look at the first line. The header names need to include recognizable terms like "First Name," "Address 1," etc. If TCGPlayer changed their export format, the header row will reveal exactly what column names they're now using. You can also try re-exporting — sometimes the first export from a session is malformed.</p>
+
+      <h3>Labels Print Too Small or Too Large</h3>
+      <p>This is almost always a print settings issue. In your PDF viewer (Adobe Acrobat, Preview, Chrome's built-in viewer), find the print dialog and select "Actual Size" or set scaling to 100%. Never use "Fit to Page" — this rescales the label to match your paper size rather than printing at the intended dimensions. For thermal printers, also confirm your paper size is set to exactly 4 × 6 inches in the printer driver settings.</p>
+
+      <h3>Return Address Not Saving</h3>
+      <p>The return address saves to your browser's localStorage. Private/incognito mode clears localStorage when the window closes, so switch to a regular browser window. Some browser privacy extensions (like certain ad blockers or fingerprinting blockers) also block localStorage access — check your extension settings if the problem persists in a regular window.</p>
+
+      <h3>PDF Download Fails</h3>
+      <p>The PDF is built using the jsPDF library loaded from a CDN. If the library hasn't finished loading when you click Download (usually on very slow connections), you'll see an error. Wait a few seconds and try again. If downloads are consistently failing, check your browser console for errors — an ad blocker or content security policy may be blocking the CDN script.</p>
+
+      <h3>Some Orders Are Missing from the CSV</h3>
+      <p>TCGPlayer's packing list CSV only includes orders that have not yet been marked as shipped. If an order is missing, it may already be marked shipped in your seller dashboard, or it may have been cancelled. You can also check if your TCGPlayer packing list filter is set to show all pending orders rather than just today's orders.</p>
+    </div>
+
+    <!-- Final ad -->
+    <div class="ad-container">
+      <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3526440256333845" data-ad-slot="8162173696" data-ad-format="auto" data-full-width-responsive="true"></ins>
+      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    </div>
+
+  </div><!-- end guide tab -->
+
+  <footer class="site-footer">
+    <p class="footer-built">Built by <a href="https://clujkeebs.com" target="_blank" rel="noopener">Clujkeebs</a> — TCGPlayer seller &amp; keyboard enthusiast</p>
+    <div class="footer-links">
+      <a href="https://www.tcgplayer.com/search/all/product?seller=ad430346&view=grid" target="_blank" rel="noopener">TCGPlayer</a> ·
+      <a href="https://www.ebay.com/str/clujkeebs" target="_blank" rel="noopener">eBay</a> ·
+      <a href="https://www.whatnot.com/user/clujkeebs" target="_blank" rel="noopener">Whatnot</a> ·
+      <a href="https://clujkeebs.com" target="_blank" rel="noopener">clujkeebs.com</a> ·
+      <a href="/privacy.html">Privacy Policy</a>
+    </div>
+    <p>Free TCGPlayer shipping label generator — works with any 4×6 thermal printer</p>
+  </footer>
+
+</div><!-- end page-wrap -->
+
+<script>
+document.documentElement.classList.add('js-ready');
+(function () {
+'use strict';
+
+var orders = [];
+var slipsOn = false;
+var format = '4x6';
+
+/* ── Tab switching ── */
+function switchTab(name) {
+  document.querySelectorAll('.nav-tab').forEach(function(t){ t.classList.remove('active'); });
+  document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelector('[data-tab="'+name+'"]').classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+  window.scrollTo(0, 0);
+}
+window.switchTab = switchTab;
+
+document.querySelectorAll('.nav-tab').forEach(function(btn){
+  btn.addEventListener('click', function(){ switchTab(this.dataset.tab); });
+});
+
+/* ── FAQ accordion ── */
+document.querySelectorAll('.faq-q').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    var item = this.parentElement;
+    var wasOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item').forEach(function(i){ i.classList.remove('open'); });
+    if (!wasOpen) item.classList.add('open');
+  });
+});
+
+/* ── Drag and drop ── */
+var uploadZone = document.getElementById('upload-zone');
+['dragenter','dragover'].forEach(function(evt){
+  uploadZone.addEventListener(evt, function(e){
+    e.preventDefault(); e.stopPropagation();
+    uploadZone.classList.add('dragover');
+  });
+});
+['dragleave','drop'].forEach(function(evt){
+  uploadZone.addEventListener(evt, function(e){
+    e.preventDefault(); e.stopPropagation();
+    uploadZone.classList.remove('dragover');
+  });
+});
+uploadZone.addEventListener('drop', function(e){
+  var file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+
+/* ── localStorage ── */
+var LS_KEY = 'tcgss_addr_v2';
+var FIELDS = ['s-name','s-phone','s-addr1','s-addr2','s-city','s-state','s-zip'];
+
+function saveAddr() {
+  try {
+    var d = {};
+    FIELDS.forEach(function(id){ d[id] = document.getElementById(id).value; });
+    localStorage.setItem(LS_KEY, JSON.stringify(d));
+    var b = document.getElementById('saved-badge');
+    b.classList.add('show');
+    setTimeout(function(){ b.classList.remove('show'); }, 1600);
+  } catch(e) {}
+}
+
+function loadAddr() {
+  try {
+    var raw = localStorage.getItem(LS_KEY);
+    if (!raw) return;
+    var d = JSON.parse(raw);
+    FIELDS.forEach(function(id){
+      var el = document.getElementById(id);
+      if (el && d[id] != null) el.value = d[id];
+    });
+  } catch(e) {}
+}
+
+/* ── CSV parsing ── */
+var MAPS = {
+  firstName:   ['first name','firstname','buyer first name'],
+  lastName:    ['last name','lastname','buyer last name'],
+  fullName:    ['name','buyer name','recipient name','ship to name','customer name','full name'],
+  addr1:       ['address 1','address1','street address','address line 1','ship address 1','shipping address 1','street','ship to address 1'],
+  addr2:       ['address 2','address2','address line 2','ship address 2','ship to address 2'],
+  city:        ['city','ship city','shipping city','ship to city'],
+  state:       ['state','province','ship state','shipping state','ship to state'],
+  zip:         ['zip','postal code','zip code','ship zip','shipping zip','postcode','ship to zip'],
+  country:     ['country','ship country','ship to country'],
+  orderNumber: ['order #','order number','order id','ordernumber'],
+  item:        ['product name','product','item name','item','card','description']
+};
+
+function splitLine(line) {
+  var out=[], cur='', inQ=false, i;
+  for (i=0;i<line.length;i++) {
+    if (line[i]==='"') { inQ=!inQ; }
+    else if (line[i]===',' && !inQ) { out.push(cur.trim()); cur=''; }
+    else { cur+=line[i]; }
+  }
+  out.push(cur.trim());
+  return out;
+}
+
+function parseCSV(text) {
+  var lines = text.split(/\r?\n/).filter(function(l){ return l.trim(); });
+  if (lines.length < 2) return { error: 'File appears empty.' };
+  var headers = splitLine(lines[0]).map(function(h){ return h.toLowerCase().replace(/"/g,'').trim(); });
+
+  function findCol(candidates) {
+    var ci, hi, c;
+    for (ci=0;ci<candidates.length;ci++) {
+      c=candidates[ci];
+      for (hi=0;hi<headers.length;hi++) {
+        if (headers[hi]===c || headers[hi].indexOf(c)!==-1) return hi;
+      }
+    }
+    return -1;
+  }
+
+  var cols = {};
+  for (var k in MAPS) cols[k] = findCol(MAPS[k]);
+  var hasName = cols.fullName!==-1 || (cols.firstName!==-1 && cols.lastName!==-1);
+  if (!hasName || cols.addr1===-1) return { error: 'Cannot find name/address columns. Found: '+headers.join(', ') };
+
+  var orderMap={}, orderList=[], i;
+  for (i=1;i<lines.length;i++) {
+    if (!lines[i].trim()) continue;
+    var cells = splitLine(lines[i]);
+    function get(key) {
+      if (cols[key]===-1||cols[key]>=cells.length||!cells[cols[key]]) return '';
+      return cells[cols[key]].replace(/^"|"$/g,'').trim();
+    }
+    var fn='', ln='';
+    if (cols.firstName!==-1 && cols.lastName!==-1) { fn=get('firstName'); ln=get('lastName'); }
+    else { var parts=get('fullName').trim().split(/\s+/); fn=parts[0]||''; ln=parts.slice(1).join(' ')||''; }
+    if (!fn&&!ln) continue;
+    var onum=get('orderNumber');
+    var mapKey=onum||(fn+'|'+ln+'|'+get('addr1'));
+    if (!orderMap[mapKey]) {
+      var entry={ firstName:fn, lastName:ln, addr1:get('addr1'), addr2:get('addr2'),
+        city:get('city'), state:get('state'), zip:get('zip'), country:get('country'),
+        orderNumber:onum, items:[] };
+      orderMap[mapKey]=entry; orderList.push(entry);
+    }
+    var item=get('item');
+    if (item && orderMap[mapKey].items.indexOf(item)===-1) orderMap[mapKey].items.push(item);
+  }
+  return orderList;
+}
+
+function addrLines(o) {
+  var lines=[];
+  if (o.addr1) lines.push(o.addr1);
+  if (o.addr2) lines.push(o.addr2);
+  var csz=[o.city,o.state].filter(Boolean).join(', ')+(o.zip?' '+o.zip:'');
+  if (csz.trim()) lines.push(csz.trim());
+  var c=o.country;
+  if (c&&['us','usa','united states'].indexOf(c.toLowerCase())===-1) lines.push(c);
+  return lines;
+}
+
+function getSender() {
+  return {
+    name:  document.getElementById('s-name').value.trim(),
+    addr1: document.getElementById('s-addr1').value.trim(),
+    addr2: document.getElementById('s-addr2').value.trim(),
+    city:  document.getElementById('s-city').value.trim(),
+    state: document.getElementById('s-state').value.trim(),
+    zip:   document.getElementById('s-zip').value.trim()
+  };
+}
+
+function renderPreviews() {
+  var s=getSender();
+  var sLine2=[s.city,s.state].filter(Boolean).join(', ')+(s.zip?' '+s.zip:'');
+  var total=orders.length;
+  var txt=total+' label'+(total!==1?'s':'');
+  if (slipsOn) txt+=' + '+total+' slip'+(total!==1?'s':'');
+  document.getElementById('count-label').textContent=txt;
+  document.getElementById('sticky-count').textContent=txt;
+  document.getElementById('preview-area').style.display='block';
+  document.getElementById('options-bar').classList.add('visible');
+  document.getElementById('sticky-bar').classList.add('visible');
+
+  var list=document.getElementById('preview-list');
+  list.innerHTML='';
+  orders.forEach(function(o,i){
+    var al=addrLines(o);
+    var div=document.createElement('div');
+    div.className='label-card';
+    div.style.animationDelay = (i * 0.04) + 's';
+    var slip=slipsOn?'<div class="slip-tag">+ packing slip</div>':'';
+    div.innerHTML='<div class="label-num">#'+(i+1)+'</div>'+
+      '<div class="label-from"><strong>'+(s.name||'Your Name')+'</strong>'+
+      (s.addr1||'')+(s.addr2?', '+s.addr2:'')+'<br>'+sLine2+'</div>'+
+      '<div class="label-to"><strong>'+o.firstName+' '+o.lastName+'</strong>'+
+      '<span>'+al.join('<br>')+'</span>'+slip+'</div>';
+    list.appendChild(div);
+  });
+}
+
+/* ── PDF ── */
+function drawLabel(doc,o,s,bx,by,bw,bh){
+  var al=addrLines(o);
+  var sLine1=s.addr1+(s.addr2?', '+s.addr2:'');
+  var sLine2=[s.city,s.state].filter(Boolean).join(', ')+(s.zip?' '+s.zip:'');
+
+  var padX=bw*0.07, padY=bh*0.05;
+  var rx=bx+padX, ry=by+padY;
+
+  if(s.name){
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(10);
+    doc.setTextColor(0,0,0);
+    doc.text(s.name,rx,ry);
+    ry+=14;
+  }
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(9);
+  doc.setTextColor(100,100,100);
+  if(sLine1){ doc.text(sLine1,rx,ry); ry+=12; }
+  if(sLine2){ doc.text(sLine2,rx,ry); ry+=12; }
+
+  ry+=8;
+  doc.setDrawColor(200,200,200);
+  doc.setLineWidth(0.5);
+  doc.line(bx+padX, ry, bx+bw-padX, ry);
+  ry+=8;
+
+  var nameSize=22, addrSize=15;
+  var nameGap=nameSize*1.6, lineGap=addrSize*1.65;
+  var blockH=nameGap+(al.length*lineGap);
+  var remaining=(by+bh-padY)-ry;
+  var cy=ry+((remaining-blockH)/2)+nameSize;
+
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(nameSize);
+  doc.setTextColor(0,0,0);
+  doc.text(o.firstName+' '+o.lastName, bx+(bw/2), cy, {align:'center'});
+  cy+=nameGap;
+
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(addrSize);
+  doc.setTextColor(30,30,30);
+  al.forEach(function(line){ doc.text(line, bx+(bw/2), cy, {align:'center'}); cy+=lineGap; });
+}
+
+function drawPackingSlip(doc,o,s,W,H){
+  var px=24,py=28;
+  var sLine1=s.addr1+(s.addr2?', '+s.addr2:'');
+  var sLine2=[s.city,s.state].filter(Boolean).join(', ')+(s.zip?' '+s.zip:'');
+  var al=addrLines(o);
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(0,0,0);
+  doc.text('Packing Slip',W/2,py,{align:'center'}); py+=16;
+  doc.setDrawColor(200,200,200); doc.setLineWidth(0.5); doc.line(px,py,W-px,py); py+=12;
+  doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(130,130,130);
+  doc.text('SHIP TO',px,py); py+=12;
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(0,0,0);
+  doc.text(o.firstName+' '+o.lastName,px,py); py+=13;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(40,40,40);
+  al.forEach(function(l){ doc.text(l,px,py); py+=12; }); py+=6;
+  doc.setDrawColor(220,220,220); doc.line(px,py,W-px,py); py+=12;
+  doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(130,130,130);
+  doc.text('FROM',px,py); py+=12;
+  if(s.name){ doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(0,0,0); doc.text(s.name,px,py); py+=12; }
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(60,60,60);
+  if(sLine1){ doc.text(sLine1,px,py); py+=12; }
+  if(sLine2){ doc.text(sLine2,px,py); py+=12; } py+=6;
+  if(o.orderNumber){ doc.setDrawColor(220,220,220); doc.line(px,py,W-px,py); py+=12; doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(130,130,130); doc.text('ORDER',px,py); py+=12; doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(0,0,0); doc.text('#'+o.orderNumber,px,py); py+=14; }
+  if(o.items&&o.items.length){ doc.setDrawColor(220,220,220); doc.line(px,py,W-px,py); py+=12; doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(130,130,130); doc.text('ITEMS',px,py); py+=12; doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(0,0,0); o.items.forEach(function(item){ var wr=doc.splitTextToSize('\u2022 '+item,W-px*2); wr.forEach(function(l){ doc.text(l,px,py); py+=12; }); }); }
+  py+=10; doc.setFont('helvetica','italic'); doc.setFontSize(8); doc.setTextColor(160,160,160);
+  doc.text('Thank you for your order!',W/2,py,{align:'center'});
+}
+
+function buildPDF(fmt){
+  var jsPDF=window.jspdf.jsPDF, s=getSender();
+  var PW=fmt==='4x6'?432:612, PH=fmt==='4x6'?288:792;
+  var doc=new jsPDF({unit:'pt',format:[PW,PH],orientation:fmt==='4x6'?'landscape':'portrait'});
+  var pageNum=0, margin=36, uW=PW-2*margin, uH=PH-2*margin;
+  var gc=1,gr=1;
+  if(fmt==='letter2'){gc=1;gr=2;}
+  else if(fmt==='letter3'){gc=1;gr=3;}
+  else if(fmt==='letter4'){gc=2;gr=2;}
+  var cW=fmt==='4x6'?PW:uW/gc, cH=fmt==='4x6'?PH:uH/gr;
+  var scl=fmt==='4x6'?1:Math.min(1,cW/432,cH/288);
+  var lW=432*scl, lH=288*scl, lpp=gc*gr, si=0;
+
+  orders.forEach(function(o){
+    if(fmt==='4x6'){
+      if(pageNum>0) doc.addPage([PW,PH]); pageNum++;
+      drawLabel(doc,o,s,0,0,PW,PH);
+    } else {
+      if(si===0){ if(pageNum>0) doc.addPage([PW,PH]); pageNum++; }
+      var col=si%gc, row=Math.floor(si/gc);
+      var bx=margin+col*cW+(cW-lW)/2, by=margin+row*cH+(cH-lH)/2;
+      drawLabel(doc,o,s,bx,by,lW,lH);
+      doc.setDrawColor(220,220,220); doc.setLineWidth(0.5); doc.rect(margin+col*cW,margin+row*cH,cW,cH);
+      si=(si+1)%lpp;
+    }
+    if(slipsOn){ doc.addPage([PW,PH]); pageNum++; drawPackingSlip(doc,o,s,PW,PH); if(fmt!=='4x6') si=0; }
+  });
+  return doc;
+}
+
+function triggerDownload(btn){
+  if(!orders.length){ alert('Please upload a CSV file first.'); return; }
+  if(!window.jspdf||!window.jspdf.jsPDF){ alert('PDF library not ready — wait a moment.'); return; }
+  btn.textContent='Building PDF...'; btn.disabled=true;
+  setTimeout(function(){
+    try{ buildPDF(format).save('shipping-labels.pdf'); }
+    catch(err){ alert('PDF error: '+err.message); }
+    btn.textContent='\u2B07 Download PDF'; btn.disabled=false;
+  },60);
+}
+
+function setFormat(val){ format=val; document.getElementById('fmt-top').value=val; document.getElementById('fmt-main').value=val; }
+function setSlips(val){ slipsOn=val; document.getElementById('slip-top').checked=val; document.getElementById('slip-main').checked=val; if(orders.length) renderPreviews(); }
+
+function handleFile(file) {
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    var result=parseCSV(ev.target.result);
+    document.getElementById('error-msg').innerHTML='';
+    document.getElementById('loaded-msg').innerHTML='';
+    if(result&&result.error){ document.getElementById('error-msg').innerHTML='<div class="error-box">'+result.error+'</div>'; return; }
+    if(!result||!result.length){ document.getElementById('error-msg').innerHTML='<div class="error-box">No valid orders found.</div>'; return; }
+    orders=result;
+    document.getElementById('upload-text').textContent='\u2713 '+file.name;
+    document.getElementById('loaded-msg').innerHTML='<div class="loaded-state"><span>\u2713 '+orders.length+' order'+(orders.length!==1?'s':'')+' loaded</span></div>';
+    renderPreviews();
+  };
+  reader.readAsText(file);
+}
+
+document.getElementById('fmt-top').addEventListener('change',function(){ setFormat(this.value); });
+document.getElementById('fmt-main').addEventListener('change',function(){ setFormat(this.value); });
+document.getElementById('slip-top').addEventListener('change',function(){ setSlips(this.checked); });
+document.getElementById('slip-main').addEventListener('change',function(){ setSlips(this.checked); });
+document.getElementById('dl-btn').addEventListener('click',function(){ triggerDownload(this); });
+document.getElementById('dl-btn-top').addEventListener('click',function(){ triggerDownload(this); });
+document.getElementById('upload-zone').addEventListener('click',function(){ document.getElementById('csv-input').click(); });
+
+document.getElementById('csv-input').addEventListener('change',function(e){
+  var file=e.target.files[0]; if(!file) return;
+  handleFile(file);
+});
+
+FIELDS.forEach(function(id){
+  document.getElementById(id).addEventListener('input',function(){ saveAddr(); if(orders.length) renderPreviews(); });
+});
+
+document.getElementById('clear-btn').addEventListener('click',function(){
+  orders=[];
+  document.getElementById('csv-input').value='';
+  document.getElementById('upload-text').textContent='Drop your CSV here, or tap to browse';
+  document.getElementById('loaded-msg').innerHTML='';
+  document.getElementById('error-msg').innerHTML='';
+  document.getElementById('preview-area').style.display='none';
+  document.getElementById('preview-list').innerHTML='';
+  document.getElementById('options-bar').classList.remove('visible');
+  document.getElementById('sticky-bar').classList.remove('visible');
+});
+
+loadAddr();
+
+})();
+</script>
+</body>
+</html>
