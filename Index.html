@@ -1341,17 +1341,21 @@ function splitLine(line) {
   return out;
 }
 
+function normHeader(s) { return s.replace(/[^a-z0-9]/g,''); }
+
 function parseCSV(text) {
   var lines = text.split(/\r?\n/).filter(function(l){ return l.trim(); });
   if (lines.length < 2) return { error: 'File appears empty.' };
   var headers = splitLine(lines[0]).map(function(h){ return h.toLowerCase().replace(/"/g,'').trim(); });
+  var headersNorm = headers.map(normHeader);
 
   function findCol(candidates) {
-    var ci, hi, c;
+    var ci, hi, c, cNorm;
     for (ci=0;ci<candidates.length;ci++) {
       c=candidates[ci];
+      cNorm=normHeader(c);
       for (hi=0;hi<headers.length;hi++) {
-        if (headers[hi]===c || headers[hi].indexOf(c)!==-1) return hi;
+        if (headers[hi]===c || headersNorm[hi].indexOf(cNorm)!==-1) return hi;
       }
     }
     return -1;
