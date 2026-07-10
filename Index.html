@@ -28,10 +28,11 @@
 {"@context":"https://schema.org","@type":"WebApplication","name":"TCGPlayer Speed Shipper","url":"https://tcg-speed-shipper.netlify.app/","description":"Free shipping label generator for TCGPlayer sellers. Upload your packing list CSV and get print-ready 4x6 or 8.5x11 PDF labels in seconds.","applicationCategory":"UtilitiesApplication","operatingSystem":"Any","browserRequirements":"Requires JavaScript","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"author":{"@type":"Person","name":"Clujkeebs","url":"https://clujkeebs.com","sameAs":["https://clujkeebs.com","https://www.ebay.com/str/clujkeebs","https://www.whatnot.com/user/clujkeebs","https://www.tcgplayer.com/search/all/product?seller=ad430346&view=grid"]},"screenshot":"https://tcg-speed-shipper.netlify.app/og-image.png","featureList":"CSV to PDF labels, 4x6 thermal labels, 8.5x11 multi-up labels, packing slips, local processing, no signup required"}
 </script>
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"How do I export my TCGPlayer packing list?","acceptedAnswer":{"@type":"Answer","text":"Log in to TCGPlayer, go to Orders, click Packing List, then hit Export to download your CSV file."}},{"@type":"Question","name":"Is TCGPlayer Speed Shipper free?","acceptedAnswer":{"@type":"Answer","text":"Yes, completely free with no account or signup required."}},{"@type":"Question","name":"What printers work with 4x6 labels?","acceptedAnswer":{"@type":"Answer","text":"Any 4x6 thermal label printer — Rollo, Dymo 4XL, MUNBYN. For 8.5x11, any home printer works."}},{"@type":"Question","name":"Can I print multiple labels per page?","acceptedAnswer":{"@type":"Answer","text":"Yes. Choose 8.5x11 format and select 1, 2, 3, or 4 labels per page."}},{"@type":"Question","name":"Does it include packing slips?","acceptedAnswer":{"@type":"Answer","text":"Yes. Toggle packing slips on before downloading and each label will be followed by a matching slip."}}]}
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"How do I export my TCGPlayer packing list?","acceptedAnswer":{"@type":"Answer","text":"Log in to TCGPlayer, go to Orders, click Packing List, then hit Export to download your CSV file."}},{"@type":"Question","name":"Is TCGPlayer Speed Shipper free?","acceptedAnswer":{"@type":"Answer","text":"You can try it free with no account (3 labels), get 10 labels every month with a free account, or go Pro for $8/month for unlimited labels and seller tools."}},{"@type":"Question","name":"What printers work with 4x6 labels?","acceptedAnswer":{"@type":"Answer","text":"Any 4x6 thermal label printer — Rollo, Dymo 4XL, MUNBYN. For 8.5x11, any home printer works."}},{"@type":"Question","name":"Can I print multiple labels per page?","acceptedAnswer":{"@type":"Answer","text":"Yes. Choose 8.5x11 format and select 1, 2, 3, or 4 labels per page."}},{"@type":"Question","name":"Does it include packing slips?","acceptedAnswer":{"@type":"Answer","text":"Yes. Toggle packing slips on before downloading and each label will be followed by a matching slip."}}]}
 </script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
@@ -280,6 +281,93 @@ input[type=text]::placeholder { color: var(--hint); }
   transition: border-color .2s, box-shadow .2s;
 }
 .paste-textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(45,106,79,.1); }
+
+/* ── Account & plans ── */
+.plan-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 600;
+  border-radius: 20px; padding: 4px 12px; letter-spacing: .04em; text-transform: uppercase;
+}
+.plan-badge.free { color: var(--muted); background: var(--bg-warm); border: 1px solid var(--border-mid); }
+.plan-badge.pro { color: #fff; background: linear-gradient(135deg, #2d6a4f 0%, #1b4332 100%); border: 1px solid #1b4332; }
+.plan-badge.owner { color: #7a5900; background: #fdf3d7; border: 1px solid #ecd692; }
+.usage-meter { margin: 14px 0 4px; }
+.usage-meter-track {
+  height: 8px; border-radius: 6px; background: var(--bg-warm);
+  border: 1px solid var(--border); overflow: hidden;
+}
+.usage-meter-fill {
+  height: 100%; background: linear-gradient(90deg, #40916c, #2d6a4f);
+  border-radius: 6px; transition: width .3s; min-width: 0;
+}
+.usage-meter-fill.warn { background: linear-gradient(90deg, #e0a13a, #c0392b); }
+.usage-meter-label { font-size: 12px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 6px; }
+.auth-form input[type=password] {
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 10px 12px; font-size: 14px; font-family: 'Source Serif 4', serif;
+  color: var(--text); background: var(--surface); outline: none;
+  transition: border-color .2s, box-shadow .2s; width: 100%; min-width: 0;
+}
+.auth-form input[type=password]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(45,106,79,.1); }
+.auth-msg { font-size: 13px; font-family: 'JetBrains Mono', monospace; margin-top: 10px; display: none; }
+.auth-msg.ok { color: var(--success); display: block; }
+.auth-msg.err { color: var(--danger); display: block; }
+.pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 1rem 0; }
+.price-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.25rem; box-shadow: var(--shadow-sm);
+  display: flex; flex-direction: column;
+}
+.price-card.featured { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(45,106,79,.15), var(--shadow-md); }
+.price-card .price-name { font-size: 13px; font-weight: 600; color: var(--muted); font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: .05em; }
+.price-card .price-amount { font-family: 'DM Serif Display', serif; font-size: 30px; color: var(--text); margin: 8px 0 2px; }
+.price-card .price-amount small { font-size: 13px; color: var(--hint); font-family: 'JetBrains Mono', monospace; }
+.price-card ul { list-style: none; padding: 0; margin: 10px 0 0; flex: 1; }
+.price-card li { font-size: 13px; color: var(--text-secondary); line-height: 1.7; padding-left: 20px; position: relative; }
+.price-card li::before { content: '✓'; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+.price-card li.na { color: var(--hint); }
+.price-card li.na::before { content: '—'; color: var(--hint); }
+.lock-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; font-family: 'JetBrains Mono', monospace; font-weight: 600;
+  color: #7a5900; background: #fdf3d7; border: 1px solid #ecd692;
+  border-radius: 20px; padding: 2px 8px; text-transform: uppercase; letter-spacing: .04em;
+  cursor: pointer;
+}
+.pro-tools { border-top: 1px dashed var(--border); margin-top: 16px; padding-top: 14px; }
+.pro-tools-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+.pro-tools-row .opt-select { flex: 1; min-width: 140px; }
+.btn-sm {
+  background: transparent; color: var(--muted); border: 1px solid var(--border);
+  border-radius: var(--radius-xs); padding: 7px 12px; font-size: 12px;
+  font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: background .15s;
+}
+.btn-sm:hover { background: var(--bg); }
+.logo-preview { display: flex; align-items: center; gap: 10px; }
+.logo-preview img { max-height: 40px; max-width: 140px; border: 1px solid var(--border); border-radius: 4px; background: #fff; padding: 3px; }
+#logo-input { display: none; }
+
+/* ── Modal ── */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(28,27,24,.55);
+  display: none; align-items: center; justify-content: center; padding: 16px;
+  animation: fadeIn .2s ease;
+}
+.modal-overlay.visible { display: flex; }
+.modal-box {
+  background: var(--surface); border-radius: var(--radius);
+  max-width: 460px; width: 100%; padding: 1.75rem;
+  box-shadow: var(--shadow-lg); animation: fadeInUp .25s ease;
+  max-height: 90vh; overflow-y: auto;
+}
+.modal-box h3 { font-family: 'DM Serif Display', serif; font-size: 22px; font-weight: 400; margin-bottom: .5rem; }
+.modal-box p { font-size: 14px; color: var(--text-secondary); line-height: 1.7; margin-bottom: .75rem; }
+.modal-actions { display: flex; gap: 10px; margin-top: 1.25rem; flex-wrap: wrap; }
+.modal-close-x {
+  float: right; background: none; border: none; font-size: 18px;
+  color: var(--hint); cursor: pointer; line-height: 1; padding: 2px 6px;
+}
 
 /* ── Options bar ── */
 .options-bar {
@@ -612,6 +700,7 @@ input[type=text]::placeholder { color: var(--hint); }
     <button class="nav-tab" data-tab="hiw">How It Works</button>
     <button class="nav-tab" data-tab="faq">FAQ</button>
     <button class="nav-tab" data-tab="guide">Guide</button>
+    <button class="nav-tab" data-tab="account" id="nav-account">Account</button>
   </div>
 </nav>
 
@@ -641,9 +730,9 @@ input[type=text]::placeholder { color: var(--hint); }
 
     <div class="home-hero fade-in-up">
       <h1>Ship Cards Faster</h1>
-      <p>Upload your TCGPlayer packing list CSV and get print-ready PDF shipping labels in seconds. Free forever, no signup required.</p>
+      <p>Upload your TCGPlayer packing list CSV and get print-ready PDF shipping labels in seconds. Try it instantly — no signup required.</p>
       <div class="badge-row">
-        <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> 100% Free</span>
+        <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Free to Start</span>
         <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Private</span>
         <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10"/></svg> Instant</span>
       </div>
@@ -685,6 +774,28 @@ input[type=text]::placeholder { color: var(--hint); }
         <div class="field">
           <label>ZIP</label>
           <input type="text" id="s-zip" placeholder="62701" autocomplete="postal-code" />
+        </div>
+      </div>
+
+      <div class="pro-tools">
+        <div class="section-label-row" style="margin-bottom:10px">
+          <span class="section-label" style="margin-bottom:0">Address Book</span>
+          <span class="lock-chip" id="addr-lock" style="display:none">🔒 Pro</span>
+        </div>
+        <div class="pro-tools-row" id="addr-book-row">
+          <select class="opt-select" id="addr-select"><option value="">— Saved addresses —</option></select>
+          <button class="btn-sm" id="addr-save">Save Current</button>
+          <button class="btn-sm" id="addr-delete">Delete</button>
+        </div>
+        <div class="section-label-row" style="margin:14px 0 10px">
+          <span class="section-label" style="margin-bottom:0">Logo on Labels</span>
+          <span class="lock-chip" id="logo-lock" style="display:none">🔒 Pro</span>
+        </div>
+        <div class="pro-tools-row">
+          <div class="logo-preview" id="logo-preview" style="display:none"><img id="logo-img" alt="Your logo" /></div>
+          <button class="btn-sm" id="logo-upload">Upload Logo</button>
+          <button class="btn-sm" id="logo-remove" style="display:none">Remove</button>
+          <input type="file" id="logo-input" accept="image/png,image/jpeg" />
         </div>
       </div>
     </div>
@@ -759,7 +870,7 @@ input[type=text]::placeholder { color: var(--hint); }
       </div>
 
       <h3>Why Sellers Trust This Tool</h3>
-      <p>Everything runs in your browser. Your buyer names, addresses, and order data are never uploaded to any server — the CSV is parsed locally and the PDF is built entirely on your device. There is no account to create, nothing to install, and no fees. This is a tool built by a seller, for sellers.</p>
+      <p>Everything runs in your browser. Your buyer names, addresses, and order data are never uploaded to any server — the CSV is parsed locally and the PDF is built entirely on your device. There is nothing to install, and you can start without an account. This is a tool built by a seller, for sellers.</p>
       <p>Whether you sell Magic: The Gathering singles, sealed Pokémon product, Yu-Gi-Oh cards, Flesh and Blood, or any other TCG, the packing list format is the same. Upload it, choose your label format, and start shipping.</p>
 
       <h3>Supported Printers &amp; Label Sizes</h3>
@@ -803,6 +914,85 @@ Chicago, IL 60601</div>
     </div>
 
   </div><!-- end paste tab -->
+
+  <!-- ══ ACCOUNT TAB ══ -->
+  <div class="tab-panel" id="tab-account">
+
+    <div class="home-hero fade-in-up">
+      <h1>Your Account</h1>
+      <p>Try it free with no account. Create a free account for more labels each month, or go Pro for unlimited labels and seller tools.</p>
+    </div>
+
+    <div class="pricing-grid">
+      <div class="price-card">
+        <div class="price-name">Guest</div>
+        <div class="price-amount">$0 <small>no account</small></div>
+        <ul>
+          <li>3 free labels to try it out</li>
+          <li>4×6 &amp; 8.5×11 formats</li>
+          <li>Packing slips</li>
+        </ul>
+      </div>
+      <div class="price-card">
+        <div class="price-name">Free Account</div>
+        <div class="price-amount">$0 <small>/ month</small></div>
+        <ul>
+          <li>10 labels every month</li>
+          <li>4×6 &amp; 8.5×11 formats</li>
+          <li>Packing slips</li>
+        </ul>
+      </div>
+      <div class="price-card featured">
+        <div class="price-name">Pro</div>
+        <div class="price-amount">$8 <small>/ month</small></div>
+        <ul>
+          <li><strong>Unlimited</strong> labels</li>
+          <li>Multiple saved return addresses</li>
+          <li>Your logo on labels &amp; slips</li>
+          <li>Priority support</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Signed OUT -->
+    <div class="section" id="auth-signed-out">
+      <div class="section-label">Sign In / Create Account</div>
+      <div class="auth-form">
+        <div class="grid-2 mb">
+          <div class="field">
+            <label>Email</label>
+            <input type="text" id="auth-email" placeholder="you@example.com" autocomplete="email" />
+          </div>
+          <div class="field">
+            <label>Password</label>
+            <input type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password" />
+          </div>
+        </div>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-dl" id="btn-signin">Sign In</button>
+          <button class="btn-ghost" id="btn-signup">Create Free Account</button>
+        </div>
+        <div class="auth-msg" id="auth-msg"></div>
+      </div>
+    </div>
+
+    <!-- Signed IN -->
+    <div class="section" id="auth-signed-in" style="display:none">
+      <div class="section-label-row">
+        <span class="section-label" style="margin-bottom:0;">Signed in as <span id="acct-email" style="text-transform:none;color:var(--text)"></span></span>
+        <span class="plan-badge free" id="acct-plan">Free</span>
+      </div>
+      <div class="usage-meter" id="usage-meter">
+        <div class="usage-meter-track"><div class="usage-meter-fill" id="usage-fill" style="width:0%"></div></div>
+        <div class="usage-meter-label" id="usage-label">—</div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-dl" id="btn-upgrade" style="display:none">Upgrade to Pro — $8/mo</button>
+        <button class="btn-ghost" id="btn-signout">Sign Out</button>
+      </div>
+    </div>
+
+  </div><!-- end account tab -->
 
   <!-- ══ HOW IT WORKS TAB ══ -->
   <div class="tab-panel" id="tab-hiw">
@@ -860,8 +1050,8 @@ Chicago, IL 60601</div>
       </div>
       <div class="why-card">
         <div class="why-icon">🆓</div>
-        <div class="why-title">100% Free</div>
-        <div class="why-desc">No subscription, no account, no catch.</div>
+        <div class="why-title">Free to Start</div>
+        <div class="why-desc">3 labels free instantly, 10/month with a free account.</div>
       </div>
       <div class="why-card">
         <div class="why-icon">🔒</div>
@@ -1236,6 +1426,19 @@ Chicago, IL 60601</div>
 
 </div><!-- end page-wrap -->
 
+<!-- Limit / upgrade modal -->
+<div class="modal-overlay" id="limit-modal">
+  <div class="modal-box">
+    <button class="modal-close-x" id="modal-x">✕</button>
+    <h3 id="modal-title">Label limit reached</h3>
+    <p id="modal-body"></p>
+    <div class="modal-actions">
+      <button class="btn-dl" id="modal-primary"></button>
+      <button class="btn-ghost" id="modal-cancel">Not Now</button>
+    </div>
+  </div>
+</div>
+
 <script>
 document.documentElement.classList.add('js-ready');
 (function () {
@@ -1244,6 +1447,23 @@ document.documentElement.classList.add('js-ready');
 var orders = [];
 var slipsOn = false;
 var format = '4x6';
+
+/* ── Plans & account config ── */
+var TCGSS_CONFIG = {
+  supabaseUrl: 'https://hbjuibuktblpbundhuah.supabase.co',
+  supabaseKey: 'sb_publishable_vcKtTSzBoN_LVw8yRzPvbg__DvJ-FFe',
+  // Paste a Stripe Payment Link here (https://buy.stripe.com/...) to enable Pro checkout.
+  stripePaymentLink: ''
+};
+var ANON_LIMIT = 3;
+
+var sb = null;
+if (window.supabase && window.supabase.createClient) {
+  sb = window.supabase.createClient(TCGSS_CONFIG.supabaseUrl, TCGSS_CONFIG.supabaseKey);
+}
+var accountState = { session: null, status: null };
+var paidSigs = {};
+try { paidSigs = JSON.parse(localStorage.getItem('tcgss_paid_sigs') || '{}') || {}; } catch(e) {}
 
 /* ── Tab switching ── */
 function switchTab(name) {
@@ -1470,6 +1690,16 @@ function renderPreviews() {
 }
 
 /* ── PDF ── */
+function proLogo() {
+  if (!isPro()) return null;
+  try {
+    var data = localStorage.getItem('tcgss_logo');
+    var dim = JSON.parse(localStorage.getItem('tcgss_logo_dim') || 'null');
+    if (data && dim && dim.w > 0 && dim.h > 0) return { data: data, w: dim.w, h: dim.h };
+  } catch(e) {}
+  return null;
+}
+
 function drawLabel(doc,o,s,bx,by,bw,bh){
   var al=addrLines(o);
   var sLine1=s.addr1+(s.addr2?', '+s.addr2:'');
@@ -1477,6 +1707,12 @@ function drawLabel(doc,o,s,bx,by,bw,bh){
 
   var padX=bw*0.07, padY=bh*0.05;
   var rx=bx+padX, ry=by+padY;
+
+  var logo = proLogo();
+  if (logo) {
+    var lmW=bw*0.28, lmH=bh*0.16, lsc=Math.min(lmW/logo.w, lmH/logo.h);
+    try { doc.addImage(logo.data, 'PNG', bx+bw-padX-logo.w*lsc, by+padY, logo.w*lsc, logo.h*lsc); } catch(e) {}
+  }
 
   if(s.name){
     doc.setFont('helvetica','bold');
@@ -1517,6 +1753,14 @@ function drawLabel(doc,o,s,bx,by,bw,bh){
 
 function drawPackingSlip(doc,o,s,W,H){
   var px=24,py=28;
+  var logo = proLogo();
+  if (logo) {
+    var lmH=36, lsc=Math.min((W*0.35)/logo.w, lmH/logo.h);
+    try {
+      doc.addImage(logo.data, 'PNG', (W-logo.w*lsc)/2, py-14, logo.w*lsc, logo.h*lsc);
+      py += logo.h*lsc + 2;
+    } catch(e) {}
+  }
   var sLine1=s.addr1+(s.addr2?', '+s.addr2:'');
   var sLine2=[s.city,s.state].filter(Boolean).join(', ')+(s.zip?' '+s.zip:'');
   var al=addrLines(o);
@@ -1575,12 +1819,107 @@ function buildPDF(fmt){
 function triggerDownload(btn){
   if(!orders.length){ alert('Please upload a CSV file first.'); return; }
   if(!window.jspdf||!window.jspdf.jsPDF){ alert('PDF library not ready — wait a moment.'); return; }
-  btn.textContent='Building PDF...'; btn.disabled=true;
-  setTimeout(function(){
-    try{ buildPDF(format).save('shipping-labels.pdf'); }
-    catch(err){ alert('PDF error: '+err.message); }
-    btn.textContent='\u2B07 Download PDF'; btn.disabled=false;
-  },60);
+  btn.textContent='Checking plan...'; btn.disabled=true;
+  var restore=function(){ btn.textContent='\u2B07 Download PDF'; btn.disabled=false; };
+  requestLabels(orders.length, batchSig(), function(allowed){
+    if(!allowed){ restore(); return; }
+    btn.textContent='Building PDF...';
+    setTimeout(function(){
+      try{ buildPDF(format).save('shipping-labels.pdf'); }
+      catch(err){ alert('PDF error: '+err.message); }
+      restore();
+    },60);
+  });
+}
+
+/* \u2500\u2500 Plan gating \u2500\u2500 */
+function isPro(){
+  var st=accountState.status;
+  return !!(st && (st.plan==='pro' || st.plan==='owner'));
+}
+
+function batchSig(){
+  var str=JSON.stringify(orders), h=5381, i;
+  for(i=0;i<str.length;i++){ h=((h<<5)+h+str.charCodeAt(i))|0; }
+  return 'v1_'+(h>>>0).toString(36)+'_'+orders.length;
+}
+
+function markPaid(sig){
+  paidSigs[sig]=Date.now();
+  var keys=Object.keys(paidSigs);
+  if(keys.length>20){
+    keys.sort(function(a,b){ return paidSigs[a]-paidSigs[b]; });
+    keys.slice(0,keys.length-20).forEach(function(k){ delete paidSigs[k]; });
+  }
+  try { localStorage.setItem('tcgss_paid_sigs', JSON.stringify(paidSigs)); } catch(e) {}
+}
+
+function anonUsed(){
+  var v=parseInt(localStorage.getItem('tcgss_anon_used')||'0',10);
+  return isNaN(v)?0:v;
+}
+
+function showModal(title, body, primaryLabel, primaryFn){
+  document.getElementById('modal-title').textContent=title;
+  document.getElementById('modal-body').textContent=body;
+  var p=document.getElementById('modal-primary');
+  p.textContent=primaryLabel;
+  p.onclick=function(){ hideModal(); primaryFn(); };
+  document.getElementById('limit-modal').classList.add('visible');
+}
+function hideModal(){ document.getElementById('limit-modal').classList.remove('visible'); }
+
+function goUpgrade(){
+  if (TCGSS_CONFIG.stripePaymentLink) { window.open(TCGSS_CONFIG.stripePaymentLink, '_blank'); return; }
+  showModal('Pro checkout coming soon',
+    'Online checkout for the Pro plan is being finalized. Reach out through clujkeebs.com and we\u2019ll upgrade your account manually in the meantime.',
+    'OK', function(){});
+}
+
+function goSignup(){
+  switchTab('account');
+  var e=document.getElementById('auth-email');
+  if(e) e.focus();
+}
+
+/* Checks the caller's allowance for n labels, then calls cb(true/false).
+   Re-downloads of the exact same batch are free. */
+function requestLabels(n, sig, cb){
+  if (sig && paidSigs[sig]) { cb(true); return; }
+
+  if (accountState.session && sb) {
+    sb.rpc('tcgss_use_labels', { n: n }).then(function(res){
+      if (res.error) {
+        showModal('Connection problem',
+          'Could not verify your label allowance ('+res.error.message+'). Check your connection and try again.',
+          'OK', function(){});
+        cb(false); return;
+      }
+      var d=res.data||{};
+      if (d.allowed) { markPaid(sig); refreshStatus(); cb(true); return; }
+      if (d.reason==='limit_exceeded') {
+        showModal('Monthly limit reached',
+          'You\u2019ve used '+d.used+' of your '+d.limit+' free labels this month'+
+          (n>d.remaining?' and this batch needs '+n+' more':'')+
+          '. Pro is $8/month for unlimited labels, saved return addresses, and your logo on every label.',
+          'Upgrade to Pro \u2014 $8/mo', goUpgrade);
+      }
+      cb(false);
+    });
+    return;
+  }
+
+  // Guest: 3 labels total, tracked in this browser.
+  var used=anonUsed();
+  if (used + n > ANON_LIMIT) {
+    showModal('Free trial limit reached',
+      'You\u2019ve used your '+ANON_LIMIT+' free guest labels. Create a free account to get 10 labels every month \u2014 no credit card needed.',
+      'Create Free Account', goSignup);
+    cb(false); return;
+  }
+  try { localStorage.setItem('tcgss_anon_used', String(used+n)); } catch(e) {}
+  markPaid(sig);
+  cb(true);
 }
 
 function setFormat(val){ format=val; document.getElementById('fmt-top').value=val; document.getElementById('fmt-main').value=val; }
@@ -1662,6 +2001,223 @@ document.getElementById('clear-btn').addEventListener('click',function(){
 });
 
 loadAddr();
+
+/* ── Account UI ── */
+function authMsg(text, ok){
+  var m=document.getElementById('auth-msg');
+  m.textContent=text;
+  m.className='auth-msg '+(ok?'ok':'err');
+}
+
+function renderAccount(){
+  var signedIn=!!accountState.session;
+  document.getElementById('auth-signed-out').style.display=signedIn?'none':'block';
+  document.getElementById('auth-signed-in').style.display=signedIn?'block':'none';
+  var st=accountState.status||{};
+
+  if(signedIn){
+    document.getElementById('acct-email').textContent=(accountState.session.user&&accountState.session.user.email)||'';
+    var plan=st.plan||'free';
+    var badge=document.getElementById('acct-plan');
+    badge.className='plan-badge '+plan;
+    badge.textContent=plan==='owner'?'Owner':plan==='pro'?'Pro':'Free';
+    document.getElementById('btn-upgrade').style.display=plan==='free'?'inline-flex':'none';
+
+    var fill=document.getElementById('usage-fill');
+    var label=document.getElementById('usage-label');
+    if(st.unlimited){
+      fill.style.width='100%';
+      fill.className='usage-meter-fill';
+      label.textContent='Unlimited labels — '+(st.used||0)+' printed this month';
+    } else {
+      var used=st.used||0, lim=st.limit||10;
+      var pct=Math.min(100, Math.round(used/lim*100));
+      fill.style.width=pct+'%';
+      fill.className='usage-meter-fill'+(pct>=80?' warn':'');
+      label.textContent=used+' of '+lim+' free labels used this month';
+    }
+  }
+
+  // Pro tool locks
+  var pro=isPro();
+  document.getElementById('addr-lock').style.display=pro?'none':'inline-flex';
+  document.getElementById('logo-lock').style.display=pro?'none':'inline-flex';
+  document.getElementById('nav-account').textContent=signedIn?'Account ●':'Account';
+  renderAddrBook();
+  renderLogo();
+}
+
+function refreshStatus(cb){
+  if(!sb||!accountState.session){ accountState.status=null; renderAccount(); if(cb)cb(); return; }
+  sb.rpc('tcgss_get_status').then(function(res){
+    accountState.status=res.data||null;
+    renderAccount(); if(cb)cb();
+  });
+}
+
+if(sb){
+  sb.auth.onAuthStateChange(function(evt, session){
+    accountState.session=session;
+    refreshStatus();
+  });
+  sb.auth.getSession().then(function(r){
+    accountState.session=(r.data&&r.data.session)||null;
+    refreshStatus();
+  });
+} else {
+  renderAccount();
+}
+
+document.getElementById('btn-signup').addEventListener('click', function(){
+  if(!sb){ authMsg('Account service failed to load. Disable ad blockers for this site and refresh.', false); return; }
+  var email=document.getElementById('auth-email').value.trim();
+  var pw=document.getElementById('auth-password').value;
+  if(!email||email.indexOf('@')===-1){ authMsg('Enter a valid email address.', false); return; }
+  if(pw.length<8){ authMsg('Password must be at least 8 characters.', false); return; }
+  var btn=this; btn.disabled=true;
+  sb.auth.signUp({ email: email, password: pw }).then(function(res){
+    btn.disabled=false;
+    if(res.error){ authMsg(res.error.message, false); return; }
+    if(res.data&&res.data.session){ authMsg('Account created — you’re signed in!', true); }
+    else { authMsg('Account created! Check your email for a confirmation link, then sign in.', true); }
+  });
+});
+
+document.getElementById('btn-signin').addEventListener('click', function(){
+  if(!sb){ authMsg('Account service failed to load. Disable ad blockers for this site and refresh.', false); return; }
+  var email=document.getElementById('auth-email').value.trim();
+  var pw=document.getElementById('auth-password').value;
+  if(!email||!pw){ authMsg('Enter your email and password.', false); return; }
+  var btn=this; btn.disabled=true;
+  sb.auth.signInWithPassword({ email: email, password: pw }).then(function(res){
+    btn.disabled=false;
+    if(res.error){ authMsg(res.error.message, false); return; }
+    authMsg('Signed in!', true);
+    document.getElementById('auth-password').value='';
+  });
+});
+
+document.getElementById('btn-signout').addEventListener('click', function(){
+  if(sb) sb.auth.signOut();
+});
+
+document.getElementById('btn-upgrade').addEventListener('click', goUpgrade);
+document.getElementById('modal-cancel').addEventListener('click', hideModal);
+document.getElementById('modal-x').addEventListener('click', hideModal);
+document.getElementById('limit-modal').addEventListener('click', function(e){
+  if(e.target===this) hideModal();
+});
+
+/* ── Pro: address book ── */
+function getAddrBook(){
+  try { return JSON.parse(localStorage.getItem('tcgss_addr_book')||'[]')||[]; } catch(e){ return []; }
+}
+function setAddrBook(list){
+  try { localStorage.setItem('tcgss_addr_book', JSON.stringify(list)); } catch(e){}
+}
+function renderAddrBook(){
+  var sel=document.getElementById('addr-select');
+  var cur=sel.value;
+  sel.innerHTML='<option value="">— Saved addresses —</option>';
+  getAddrBook().forEach(function(a,i){
+    var o=document.createElement('option');
+    o.value=String(i); o.textContent=a.label;
+    sel.appendChild(o);
+  });
+  if(cur) sel.value=cur;
+}
+
+document.getElementById('addr-select').addEventListener('change', function(){
+  if(!isPro()){ this.value=''; goUpgradePitch('Saved return addresses'); return; }
+  var idx=this.value; if(idx==='') return;
+  var entry=getAddrBook()[parseInt(idx,10)];
+  if(!entry) return;
+  FIELDS.forEach(function(id){
+    var el=document.getElementById(id);
+    if(el&&entry.fields[id]!=null) el.value=entry.fields[id];
+  });
+  saveAddr();
+  if(orders.length) renderPreviews();
+});
+
+document.getElementById('addr-save').addEventListener('click', function(){
+  if(!isPro()){ goUpgradePitch('Saved return addresses'); return; }
+  var name=prompt('Name this address (e.g. "Home", "Warehouse"):');
+  if(!name) return;
+  var fields={};
+  FIELDS.forEach(function(id){ fields[id]=document.getElementById(id).value; });
+  var book=getAddrBook();
+  book.push({ label: name.trim(), fields: fields });
+  setAddrBook(book);
+  renderAddrBook();
+  document.getElementById('addr-select').value=String(book.length-1);
+});
+
+document.getElementById('addr-delete').addEventListener('click', function(){
+  if(!isPro()){ goUpgradePitch('Saved return addresses'); return; }
+  var sel=document.getElementById('addr-select');
+  if(sel.value==='') return;
+  var book=getAddrBook();
+  book.splice(parseInt(sel.value,10),1);
+  setAddrBook(book);
+  sel.value='';
+  renderAddrBook();
+});
+
+function goUpgradePitch(feature){
+  showModal(feature+' is a Pro feature',
+    'Pro is $8/month and includes unlimited labels, multiple saved return addresses, and your logo printed on every label and packing slip.',
+    accountState.session?'Upgrade to Pro — $8/mo':'Create Free Account',
+    accountState.session?goUpgrade:goSignup);
+}
+
+/* ── Pro: logo ── */
+function renderLogo(){
+  var data=null;
+  try { data=localStorage.getItem('tcgss_logo'); } catch(e){}
+  var has=!!data;
+  document.getElementById('logo-preview').style.display=has?'flex':'none';
+  document.getElementById('logo-remove').style.display=has?'inline-flex':'none';
+  if(has) document.getElementById('logo-img').src=data;
+}
+
+document.getElementById('logo-upload').addEventListener('click', function(){
+  if(!isPro()){ goUpgradePitch('Logo on labels'); return; }
+  document.getElementById('logo-input').click();
+});
+
+document.getElementById('logo-input').addEventListener('change', function(e){
+  var file=e.target.files[0]; if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    var img=new Image();
+    img.onload=function(){
+      // Downscale to keep localStorage small; normalize to PNG for jsPDF.
+      var maxW=600, scale=Math.min(1, maxW/img.width);
+      var c=document.createElement('canvas');
+      c.width=Math.round(img.width*scale); c.height=Math.round(img.height*scale);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      try {
+        localStorage.setItem('tcgss_logo', c.toDataURL('image/png'));
+        localStorage.setItem('tcgss_logo_dim', JSON.stringify({w:c.width,h:c.height}));
+      } catch(err){ alert('Logo too large to save — try a smaller image.'); }
+      renderLogo();
+    };
+    img.src=ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  e.target.value='';
+});
+
+document.getElementById('logo-remove').addEventListener('click', function(){
+  try {
+    localStorage.removeItem('tcgss_logo');
+    localStorage.removeItem('tcgss_logo_dim');
+  } catch(e){}
+  renderLogo();
+});
+
+renderAccount();
 
 })();
 </script>
