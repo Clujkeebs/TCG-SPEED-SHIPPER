@@ -112,6 +112,11 @@ body { font-family: 'Source Serif 4', Georgia, serif; background: var(--bg); col
 }
 .nav-tab:hover { color: rgba(255,255,255,.75); }
 .nav-tab.active { color: #fff; border-bottom-color: var(--accent-light); }
+@media (max-width: 700px) {
+  .nav-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .nav-tabs::-webkit-scrollbar { display: none; }
+  .nav-tab { flex: 0 0 auto; font-size: 11px; padding: 0 10px; }
+}
 
 /* ── Sticky download bar ── */
 .sticky-bar {
@@ -1912,8 +1917,12 @@ function requestLabels(n, sig, cb){
   // Guest: 3 labels total, tracked in this browser.
   var used=anonUsed();
   if (used + n > ANON_LIMIT) {
+    var left=Math.max(ANON_LIMIT-used, 0);
     showModal('Free trial limit reached',
-      'You\u2019ve used your '+ANON_LIMIT+' free guest labels. Create a free account to get 10 labels every month \u2014 no credit card needed.',
+      (left===0
+        ? 'You\u2019ve used all '+ANON_LIMIT+' free guest labels.'
+        : 'You have '+left+' free guest label'+(left===1?'':'s')+' left, but this batch needs '+n+'.')+
+      ' Create a free account to get 10 labels every month \u2014 no credit card needed.',
       'Create Free Account', goSignup);
     cb(false); return;
   }
@@ -2075,7 +2084,7 @@ document.getElementById('btn-signup').addEventListener('click', function(){
   if(!email||email.indexOf('@')===-1){ authMsg('Enter a valid email address.', false); return; }
   if(pw.length<8){ authMsg('Password must be at least 8 characters.', false); return; }
   var btn=this; btn.disabled=true;
-  sb.auth.signUp({ email: email, password: pw }).then(function(res){
+  sb.auth.signUp({ email: email, password: pw, options: { emailRedirectTo: location.origin } }).then(function(res){
     btn.disabled=false;
     if(res.error){ authMsg(res.error.message, false); return; }
     if(res.data&&res.data.session){ authMsg('Account created — you’re signed in!', true); }
