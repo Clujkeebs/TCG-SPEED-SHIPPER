@@ -86,52 +86,59 @@ a { color: var(--accent); }
 <div class="page-wrap">
 
   <h1>Privacy Policy</h1>
-  <p class="updated">Last updated: May 2, 2026</p>
+  <p class="updated">Last updated: August 2, 2026</p>
 
   <div class="highlight">
-    <strong>Short version:</strong> TCG Speed Shipper processes everything locally in your browser. No CSV data, buyer addresses, or order information is ever sent to any server. We do not collect, store, or sell your personal data.
+    <strong>Short version:</strong> Your CSV file, buyer names, shipping addresses, and order contents never leave your browser — that part hasn't changed. If you create an account to use a paid plan, we additionally store your email address and a monthly label count (not order contents) to run your subscription, and Stripe processes your payment details on our behalf.
   </div>
 
   <div class="card">
     <h2>What This Site Does</h2>
-    <p>TCG Speed Shipper is a free, client-side web tool that converts TCGPlayer packing list CSV files into printable PDF shipping labels. The tool runs entirely in your web browser using JavaScript.</p>
-    <p>When you upload a CSV file, it is read by your browser's built-in FileReader API and processed locally. The resulting PDF is generated in your browser using the jsPDF library and downloaded directly to your device. At no point does your CSV file — or any data it contains — leave your computer.</p>
+    <p>TCG Speed Shipper converts TCGPlayer packing list CSV files (or pasted addresses, on Premium) into printable PDF shipping labels. Label generation runs entirely in your browser using JavaScript.</p>
+    <p>When you upload a CSV file, it is read by your browser's built-in FileReader API and processed locally. The resulting PDF is generated in your browser using the jsPDF library and downloaded directly to your device. At no point does your CSV file, buyer names, or shipping addresses get sent to our server or any third party.</p>
   </div>
 
   <div class="card">
-    <h2>Information We Do Not Collect</h2>
-    <p>We do not collect, transmit, or store:</p>
+    <h2>Free Plan — No Account, Nothing Collected</h2>
+    <p>You can use the Free plan (5 labels/month) without creating an account. In that mode we do not collect, transmit, or store anything: no CSV contents, no buyer data, no return address. Your return address, design preferences, and monthly label count are saved only in your own browser's <code>localStorage</code>, which never leaves your device.</p>
+  </div>
+
+  <div class="card">
+    <h2>What We Store If You Create an Account</h2>
+    <p>Signing in is only needed to use a paid plan (Base or Premium) or to check usage from another device. If you sign in, we store:</p>
     <ul>
-      <li>CSV file contents or buyer order data</li>
-      <li>Buyer names or shipping addresses from your packing list</li>
-      <li>Your return address or store name</li>
-      <li>Any personally identifiable information from your orders</li>
+      <li>Your email address (via our authentication provider, Supabase)</li>
+      <li>Your plan (Free/Base/Premium) and subscription status</li>
+      <li>A count of how many labels you've generated this month — not the buyer names, addresses, or order contents behind that count</li>
+      <li>A Stripe customer/subscription ID, so we can manage billing</li>
     </ul>
-    <p>Your return address is saved to your own browser's <code>localStorage</code> — a private storage area on your device that only your browser can access. It never leaves your machine.</p>
+    <p>Your CSV, buyer names, and shipping addresses are never uploaded as part of this — labels are still built entirely in your browser, whether or not you're signed in.</p>
   </div>
 
   <div class="card">
-    <h2>Cookies</h2>
-    <p>TCG Speed Shipper does not set any cookies.</p>
+    <h2>Cookies &amp; Local Storage</h2>
+    <p>We use your browser's <code>localStorage</code> to keep you signed in between visits, remember your return address and design preferences, and (for anonymous Free-plan use) track your monthly label count. This is standard browser storage, not third-party tracking cookies, and it stays on your device.</p>
   </div>
 
   <div class="card">
     <h2>Third-Party Services</h2>
-    <p>This site loads resources from the following third-party services:</p>
+    <p>This site uses the following third-party services:</p>
     <ul>
+      <li><strong>Supabase</strong> — authentication and account/plan storage, if you sign in.</li>
+      <li><strong>Stripe</strong> — payment processing for paid plans. We never see or store your full card number; see <a href="https://stripe.com/privacy" target="_blank" rel="noopener">Stripe's privacy policy</a>.</li>
       <li><strong>Google Fonts</strong> — to load the fonts used in the site design. Google's font CDN may log your IP address per their <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">privacy policy</a>.</li>
-      <li><strong>Cloudflare CDN</strong> — the jsPDF library is loaded from a Cloudflare-hosted CDN. Cloudflare may log standard HTTP request data.</li>
+      <li><strong>Cloudflare CDN</strong> — the jsPDF and QR code libraries are loaded from Cloudflare/jsDelivr-hosted CDNs. These may log standard HTTP request data.</li>
     </ul>
   </div>
 
   <div class="card">
     <h2>Children's Privacy</h2>
-    <p>TCG Speed Shipper is not directed at children under 13. We do not knowingly collect personal information from children. Since this tool collects no personal data at all, there is nothing to disclose under COPPA or similar regulations.</p>
+    <p>TCG Speed Shipper is not directed at children under 13. We do not knowingly collect personal information from children.</p>
   </div>
 
   <div class="card">
     <h2>Changes to This Policy</h2>
-    <p>If this privacy policy changes, the updated version will be posted at this URL with a revised "last updated" date. Because we collect no personal data, changes are unlikely to affect your privacy in any meaningful way.</p>
+    <p>If this privacy policy changes, the updated version will be posted at this URL with a revised "last updated" date.</p>
   </div>
 
   <div class="card">
