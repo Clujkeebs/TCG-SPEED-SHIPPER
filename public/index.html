@@ -116,6 +116,25 @@ body { font-family: 'Source Serif 4', Georgia, serif; background: var(--bg); col
 @media (max-width: 760px) { .nav-tab { font-size: 10px; padding: 0 4px; } }
 @media (max-width: 560px) { .nav-brand span { display: none; } }
 
+/* ── "More" dropdown (groups secondary content tabs) ── */
+.nav-more { position: relative; flex: 1; display: flex; }
+.nav-more-btn { flex: 1; }
+.nav-more-menu {
+  display: none; position: absolute; top: 100%; right: 0; min-width: 170px;
+  background: var(--text); border-radius: 0 0 8px 8px; overflow: hidden;
+  box-shadow: 0 10px 24px rgba(0,0,0,.35); z-index: 400;
+}
+.nav-more-menu.open { display: block; }
+.nav-more-item {
+  display: block; width: 100%; text-align: left; padding: 11px 16px;
+  background: none; border: none; color: rgba(255,255,255,.7);
+  font-size: 12px; font-family: 'JetBrains Mono', monospace; font-weight: 500;
+  cursor: pointer; text-transform: uppercase; letter-spacing: .02em;
+  transition: background .15s, color .15s;
+}
+.nav-more-item:hover { background: rgba(255,255,255,.08); color: #fff; }
+.nav-more-item.active { color: #fff; }
+
 /* ── Sticky download bar ── */
 .sticky-bar {
   position: sticky; top: var(--nav-h); z-index: 200;
@@ -697,12 +716,17 @@ input[type=text]::placeholder { color: var(--hint); }
   <div class="nav-brand">TCG Speed Shipper <span>&nbsp;· Clujkeebs</span></div>
   <div class="nav-tabs">
     <button class="nav-tab active" data-tab="home">Home</button>
-    <button class="nav-tab" data-tab="paste" id="nav-tab-paste">Paste Address</button>
+    <button class="nav-tab" data-tab="paste" id="nav-tab-paste">Paste</button>
     <button class="nav-tab" data-tab="design" id="nav-tab-design">Design</button>
     <button class="nav-tab" data-tab="pricing">Pricing</button>
-    <button class="nav-tab" data-tab="hiw">How It Works</button>
-    <button class="nav-tab" data-tab="faq">FAQ</button>
-    <button class="nav-tab" data-tab="guide">Guide</button>
+    <div class="nav-more" id="nav-more">
+      <button class="nav-tab nav-more-btn" id="nav-more-btn" type="button">More ▾</button>
+      <div class="nav-more-menu" id="nav-more-menu">
+        <button class="nav-more-item" data-tab="hiw">How It Works</button>
+        <button class="nav-more-item" data-tab="faq">FAQ</button>
+        <button class="nav-more-item" data-tab="guide">Guide</button>
+      </div>
+    </div>
   </div>
   <div class="nav-account">
     <span class="plan-pill" id="nav-plan-pill">Free</span>
@@ -1605,7 +1629,7 @@ function applyGating() {
 
   var pasteTab = document.getElementById('nav-tab-paste');
   var designTab = document.getElementById('nav-tab-design');
-  if (pasteTab) pasteTab.textContent = 'Paste Address' + (premium ? '' : ' 🔒');
+  if (pasteTab) pasteTab.textContent = 'Paste' + (premium ? '' : ' 🔒');
   if (designTab) designTab.textContent = 'Design' + (premium ? '' : ' 🔒');
 
   if (premium) renderProfileList();
@@ -1752,18 +1776,39 @@ function renderProfileList() {
 }
 
 /* ── Tab switching ── */
+var MORE_TABS = ['hiw', 'faq', 'guide'];
+function closeMoreMenu() {
+  var m = document.getElementById('nav-more-menu');
+  if (m) m.classList.remove('open');
+}
 function switchTab(name) {
   document.querySelectorAll('.nav-tab').forEach(function(t){ t.classList.remove('active'); });
+  document.querySelectorAll('.nav-more-item').forEach(function(t){ t.classList.remove('active'); });
   document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
-  document.querySelector('[data-tab="'+name+'"]').classList.add('active');
+  var navTrigger = document.querySelector('.nav-tab[data-tab="'+name+'"]');
+  if (navTrigger) navTrigger.classList.add('active');
+  var moreItem = document.querySelector('.nav-more-item[data-tab="'+name+'"]');
+  if (moreItem) moreItem.classList.add('active');
+  var moreBtn = document.getElementById('nav-more-btn');
+  if (moreBtn) moreBtn.classList.toggle('active', MORE_TABS.indexOf(name) !== -1);
   document.getElementById('tab-'+name).classList.add('active');
+  closeMoreMenu();
   window.scrollTo(0, 0);
 }
 window.switchTab = switchTab;
 
 document.querySelectorAll('.nav-tab').forEach(function(btn){
+  if (btn.id === 'nav-more-btn') return;
   btn.addEventListener('click', function(){ switchTab(this.dataset.tab); });
 });
+document.querySelectorAll('.nav-more-item').forEach(function(btn){
+  btn.addEventListener('click', function(){ switchTab(this.dataset.tab); });
+});
+document.getElementById('nav-more-btn').addEventListener('click', function(e){
+  e.stopPropagation();
+  document.getElementById('nav-more-menu').classList.toggle('open');
+});
+document.addEventListener('click', closeMoreMenu);
 
 /* ── FAQ accordion ── */
 document.querySelectorAll('.faq-q').forEach(function(btn){
