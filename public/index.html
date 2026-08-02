@@ -1533,6 +1533,11 @@ var orders = [];
 var slipsOn = false;
 var format = '4x6';
 
+var ESC_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ESC_MAP[c]; });
+}
+
 /* ── Supabase (accounts / billing) ── */
 var SUPABASE_URL = 'https://lwqnsvlfffugyvwblqaz.supabase.co';
 var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3cW5zdmxmZmZ1Z3l2d2JscWF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU2Mjc0MjUsImV4cCI6MjEwMTIwMzQyNX0.72n_-XinwN3FxMzLRH8_d-pmPu6AMgIywOAQ0_rRXCQ';
@@ -1599,6 +1604,8 @@ function updateAccountUI() {
 
   updatePricingButtons();
   applyGating();
+  // Keep the "N left this month" hint in the preview in sync with the plan.
+  if (orders.length) renderPreviews();
 }
 
 function updatePricingButtons() {
@@ -1667,6 +1674,15 @@ function addLocalUsage(n) {
   return u;
 }
 
+/* A batch is charged once. Re-downloading the same orders (to switch format,
+   re-print, or retry) must not burn more of the monthly allowance. */
+var paidBatchKey = null;
+function batchKey() {
+  return orders.map(function (o) {
+    return [o.firstName, o.lastName, o.addr1, o.addr2, o.city, o.state, o.zip, o.orderNumber].join('');
+  }).join('');
+}
+
 async function checkAndConsumeCredits(count) {
   if (session && sb) {
     try {
@@ -1676,7 +1692,9 @@ async function checkAndConsumeCredits(count) {
       updateAccountUI();
       return res.data;
     } catch (e) {
-      return { allowed: false, plan: currentPlan(), limit: PLAN_LIMITS.free, used: 0, remaining: 0 };
+      // A network blip must not look like "you hit your limit" — especially for
+      // unlimited plans, where there is no limit to hit.
+      return { allowed: false, failed: true, plan: currentPlan(), limit: serverStatus ? serverStatus.limit : null, used: serverStatus ? serverStatus.used : 0 };
     }
   }
   var usage = getLocalUsage();
@@ -1687,16 +1705,29 @@ async function checkAndConsumeCredits(count) {
   return { allowed: true, plan: 'free', limit: PLAN_LIMITS.free, used: updated.count, remaining: PLAN_LIMITS.free - updated.count };
 }
 
-function showUpgradePrompt(gate) {
-  var msg;
-  if (gate.plan === 'free' && !session) {
-    msg = 'You’ve used all ' + gate.limit + ' free labels this month. Sign in and upgrade to Base (500/mo) or Premium (unlimited) to keep shipping.';
+function showBlockedMessage(gate, count) {
+  var msg, isLimit = !gate.failed;
+  if (gate.failed) {
+    msg = 'Could not reach the server to verify your plan. Check your connection and try again — you have not been charged any labels.';
+  } else if (gate.plan === 'free' && !session) {
+    msg = 'This batch is ' + count + ' label' + (count !== 1 ? 's' : '') + ', but you have ' +
+      Math.max(gate.limit - gate.used, 0) + ' of your ' + gate.limit + ' free labels left this month. ' +
+      'Sign in and upgrade to Base (500/mo) or Premium (unlimited) to keep shipping.';
   } else {
-    msg = 'You’ve used ' + gate.used + ' of ' + gate.limit + ' labels on the ' + capitalize(gate.plan) + ' plan this month. Upgrade for more.';
+    msg = 'This batch is ' + count + ' label' + (count !== 1 ? 's' : '') + ', but you have ' +
+      Math.max(gate.limit - gate.used, 0) + ' left on the ' + capitalize(gate.plan) + ' plan this month.';
   }
+
+  // Shown on the Home tab, where the Download button lives, so the user
+  // actually sees it instead of it being buried on a tab they were navigated
+  // away from.
   var box = document.getElementById('error-msg');
-  if (box) box.innerHTML = '<div class="error-box">' + msg + ' <a href="#" onclick="switchTab(\'pricing\');return false;" style="color:inherit;text-decoration:underline;">See plans</a></div>';
-  switchTab('pricing');
+  if (box) {
+    box.innerHTML = '<div class="error-box">' + esc(msg) +
+      (isLimit ? ' <a href="#" onclick="switchTab(\'pricing\');return false;" style="color:inherit;text-decoration:underline;">See plans</a>' : '') +
+      '</div>';
+    box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 }
 
 /* ── Design prefs (Premium) ── */
@@ -1748,10 +1779,10 @@ function renderProfileList() {
   if (!list.length) { wrap.innerHTML = '<p class="tip">No saved profiles yet.</p>'; return; }
   wrap.innerHTML = '';
   list.forEach(function (p, i) {
-    var line2 = [p.city, p.state].filter(Boolean).join(', ') + (p.zip ? ' ' + p.zip : '');
+    var line2 = [p['s-city'], p['s-state']].filter(Boolean).join(', ') + (p['s-zip'] ? ' ' + p['s-zip'] : '');
     var div = document.createElement('div');
     div.className = 'profile-item';
-    div.innerHTML = '<div><div class="profile-name">' + p.label + '</div><div class="profile-addr">' + (p.addr1 || '') + (line2 ? ', ' + line2 : '') + '</div></div>' +
+    div.innerHTML = '<div><div class="profile-name">' + esc(p.label) + '</div><div class="profile-addr">' + esc(p['s-addr1'] || '') + (line2 ? ', ' + esc(line2) : '') + '</div></div>' +
       '<div class="profile-actions"><button data-load="' + i + '">Load</button><button data-del="' + i + '">Delete</button></div>';
     wrap.appendChild(div);
   });
@@ -1983,6 +2014,7 @@ function addrLines(o) {
 function getSender() {
   return {
     name:  document.getElementById('s-name').value.trim(),
+    phone: document.getElementById('s-phone').value.trim(),
     addr1: document.getElementById('s-addr1').value.trim(),
     addr2: document.getElementById('s-addr2').value.trim(),
     city:  document.getElementById('s-city').value.trim(),
@@ -1991,14 +2023,33 @@ function getSender() {
   };
 }
 
+function remainingLabels() {
+  if (session) {
+    if (!serverStatus) return null;
+    if (serverStatus.limit === null || serverStatus.limit === undefined) return Infinity;
+    return Math.max(serverStatus.limit - serverStatus.used, 0);
+  }
+  return Math.max(PLAN_LIMITS.free - getLocalUsage().count, 0);
+}
+
 function renderPreviews() {
   var s=getSender();
   var sLine2=[s.city,s.state].filter(Boolean).join(', ')+(s.zip?' '+s.zip:'');
   var total=orders.length;
   var txt=total+' label'+(total!==1?'s':'');
   if (slipsOn) txt+=' + '+total+' slip'+(total!==1?'s':'');
-  document.getElementById('count-label').textContent=txt;
-  document.getElementById('sticky-count').textContent=txt;
+
+  // Surface the remaining allowance up front, so hitting the limit is never a
+  // surprise that only appears after clicking Download.
+  var left = remainingLabels();
+  var quota = '';
+  if (paidBatchKey === batchKey()) {
+    quota = ' · already counted';
+  } else if (left !== null && left !== Infinity) {
+    quota = ' · ' + left + ' left this month';
+  }
+  document.getElementById('count-label').textContent=txt+quota;
+  document.getElementById('sticky-count').textContent=txt+quota;
   document.getElementById('preview-area').style.display='block';
   document.getElementById('options-bar').classList.add('visible');
   document.getElementById('sticky-bar').classList.add('visible');
@@ -2006,15 +2057,15 @@ function renderPreviews() {
   var list=document.getElementById('preview-list');
   list.innerHTML='';
   orders.forEach(function(o,i){
-    var al=addrLines(o);
+    var al=addrLines(o).map(esc);
     var div=document.createElement('div');
     div.className='label-card';
     div.style.animationDelay = (i * 0.04) + 's';
     var slip=slipsOn?'<div class="slip-tag">+ packing slip</div>':'';
     div.innerHTML='<div class="label-num">#'+(i+1)+'</div>'+
-      '<div class="label-from"><strong>'+(s.name||'Your Name')+'</strong>'+
-      (s.addr1||'')+(s.addr2?', '+s.addr2:'')+'<br>'+sLine2+'</div>'+
-      '<div class="label-to"><strong>'+o.firstName+' '+o.lastName+'</strong>'+
+      '<div class="label-from"><strong>'+esc(s.name||'Your Name')+'</strong>'+
+      esc(s.addr1||'')+(s.addr2?', '+esc(s.addr2):'')+'<br>'+esc(sLine2)+'</div>'+
+      '<div class="label-to"><strong>'+esc(o.firstName+' '+o.lastName)+'</strong>'+
       '<span>'+al.join('<br>')+'</span>'+slip+'</div>';
     list.appendChild(div);
   });
@@ -2088,7 +2139,8 @@ function drawPackingSlip(doc,o,s,W,H,design){
   if(s.name){ doc.setFont(font,'bold'); doc.setFontSize(9); doc.setTextColor(0,0,0); doc.text(s.name,px,py); py+=12; }
   doc.setFont(font,'normal'); doc.setFontSize(9); doc.setTextColor(60,60,60);
   if(sLine1){ doc.text(sLine1,px,py); py+=12; }
-  if(sLine2){ doc.text(sLine2,px,py); py+=12; } py+=6;
+  if(sLine2){ doc.text(sLine2,px,py); py+=12; }
+  if(s.phone){ doc.text(s.phone,px,py); py+=12; } py+=6;
   if(o.orderNumber){ doc.setDrawColor(220,220,220); doc.line(px,py,W-px,py); py+=12; doc.setFont(font,'bold'); doc.setFontSize(8); doc.setTextColor(130,130,130); doc.text('ORDER',px,py); py+=12; doc.setFont(font,'normal'); doc.setFontSize(9); doc.setTextColor(0,0,0); doc.text('#'+o.orderNumber,px,py); py+=14; }
   if(o.items&&o.items.length){ doc.setDrawColor(220,220,220); doc.line(px,py,W-px,py); py+=12; doc.setFont(font,'bold'); doc.setFontSize(8); doc.setTextColor(130,130,130); doc.text('ITEMS',px,py); py+=12; doc.setFont(font,'normal'); doc.setFontSize(9); doc.setTextColor(0,0,0); o.items.forEach(function(item){ var wr=doc.splitTextToSize('• '+item,W-px*2); wr.forEach(function(l){ doc.text(l,px,py); py+=12; }); }); }
   py+=10;
@@ -2146,20 +2198,40 @@ function buildPDF(fmt){
 function triggerDownload(btn){
   if(!orders.length){ alert('Please upload a CSV file first.'); return; }
   if(!window.jspdf||!window.jspdf.jsPDF){ alert('PDF library not ready — wait a moment.'); return; }
-  btn.disabled=true; var orig=btn.textContent; btn.textContent='Checking plan...';
-  checkAndConsumeCredits(orders.length).then(function(gate){
-    if(!gate.allowed){
-      btn.textContent=orig; btn.disabled=false;
-      showUpgradePrompt(gate);
+
+  var orig = btn.dataset.label || btn.textContent;
+  btn.dataset.label = orig;
+  btn.disabled = true;
+  document.getElementById('error-msg').innerHTML = '';
+
+  function done(){ btn.textContent = orig; btn.disabled = false; }
+
+  // Build first: it is local and fast, and this way a PDF failure never costs
+  // the user any of their monthly allowance.
+  btn.textContent = 'Building PDF...';
+  setTimeout(function(){
+    var doc;
+    try { doc = buildPDF(format); }
+    catch (err) { done(); alert('PDF error: ' + err.message); return; }
+
+    var key = batchKey();
+    if (paidBatchKey === key) {
+      // Already paid for this exact set of orders — re-downloading in another
+      // format or after a printer jam is free.
+      doc.save('shipping-labels.pdf');
+      done();
       return;
     }
-    btn.textContent='Building PDF...';
-    setTimeout(function(){
-      try{ buildPDF(format).save('shipping-labels.pdf'); }
-      catch(err){ alert('PDF error: '+err.message); }
-      btn.textContent=orig; btn.disabled=false;
-    },60);
-  });
+
+    btn.textContent = 'Checking plan...';
+    checkAndConsumeCredits(orders.length).then(function(gate){
+      if (!gate.allowed) { done(); showBlockedMessage(gate, orders.length); return; }
+      paidBatchKey = key;
+      doc.save('shipping-labels.pdf');
+      renderPreviews();
+      done();
+    });
+  }, 60);
 }
 
 function setFormat(val){ format=val; document.getElementById('fmt-top').value=val; document.getElementById('fmt-main').value=val; }
@@ -2271,7 +2343,19 @@ document.getElementById('clear-btn').addEventListener('click',function(){
   }
 
   colorPicker.addEventListener('input', function(){ colorInput.value = this.value; persistDesignForm(); });
-  [colorInput, fontSelect, messageInput, qrInput].forEach(function(el){
+
+  // Typing a hex by hand should drive the swatch too; an unparseable value
+  // snaps back to the last good colour instead of silently reverting to green
+  // only once a PDF is generated.
+  colorInput.addEventListener('change', function(){
+    var v = this.value.trim();
+    if (v && !/^#/.test(v)) v = '#' + v;
+    if (/^#[0-9a-f]{6}$/i.test(v)) { this.value = v; colorPicker.value = v; }
+    else { this.value = colorPicker.value; }
+    persistDesignForm();
+  });
+
+  [fontSelect, messageInput, qrInput].forEach(function(el){
     el.addEventListener('change', persistDesignForm);
   });
 
@@ -2361,12 +2445,30 @@ document.getElementById('clear-btn').addEventListener('click',function(){
   });
 })();
 
+/* After Stripe checkout the plan only changes once the webhook lands, which can
+   take a few seconds. Poll briefly rather than showing the old plan and looking
+   like the payment failed. */
+function awaitPlanUpgrade(attempt) {
+  attempt = attempt || 0;
+  var line = document.getElementById('account-plan-line');
+  if (currentPlan() !== 'free' || attempt >= 8) {
+    if (currentPlan() === 'free' && line) {
+      line.textContent = 'Payment received — still confirming your upgrade. Refresh in a moment if this does not update.';
+    }
+    return;
+  }
+  if (line) line.textContent = 'Confirming your upgrade…';
+  setTimeout(function () {
+    refreshSession().then(function () { awaitPlanUpgrade(attempt + 1); });
+  }, 1500);
+}
+
 loadAddr();
 refreshSession().then(function(){
   var params = new URLSearchParams(window.location.search);
   if (params.get('checkout') === 'success') {
     switchTab('pricing');
-    setTimeout(function(){ refreshSession(); }, 1500);
+    awaitPlanUpgrade(0);
   }
   if (params.has('checkout')) {
     params.delete('checkout');

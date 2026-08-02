@@ -18,7 +18,7 @@ const app = express();
 app.set('trust proxy', 1);
 
 function periodEndOf(subscription) {
-  var ts = subscription.current_period_end ||
+  const ts = subscription.current_period_end ||
     (subscription.items && subscription.items.data[0] && subscription.items.data[0].current_period_end);
   return ts ? new Date(ts * 1000).toISOString() : null;
 }
@@ -44,9 +44,43 @@ async function applySubscriptionToProfile(subscription) {
   if (error) console.error('Failed to update profile from subscription event:', error);
 }
 
-// Stripe requires the raw body for signature verification, so this route is
-// registered before the JSON body parser below.
-app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+async function requireUser(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    if (!token) return res.status(401).json({ error: 'Missing auth token' });
+    const { data, error } = await supabaseAdmin.auth.getUser(token);
+    if (error || !data.user) return res.status(401).json({ error: 'Invalid or expired session' });
+    req.user = data.user;
+    next();
+  } catch (err) {
+    console.error('Auth check failed:', err);
+    res.status(500).json({ error: 'Could not verify your session' });
+  }
+}
+
+const router = express.Router();
+
+router.get('/health', (req, res) => {
+  // Reports which env vars are present (never their values) so a broken
+  // deploy can be diagnosed without guessing.
+  res.json({
+    ok: true,
+    config: {
+      stripe_secret: !!process.env.STRIPE_SECRET_KEY,
+      stripe_webhook_secret: !!process.env.STRIPE_WEBHOOK_SECRET,
+      price_base: !!process.env.STRIPE_PRICE_BASE,
+      price_premium: !!process.env.STRIPE_PRICE_PREMIUM,
+      supabase_url: !!process.env.SUPABASE_URL,
+      supabase_service_key: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      site_url: SITE_URL,
+    },
+  });
+});
+
+// Stripe signature verification needs the exact raw bytes, so this route gets
+// express.raw instead of the JSON parser used by the routes below.
+router.post('/stripe-webhook', express.raw({ type: '*/*' }), async (req, res) => {
   let event;
   try {
     event = stripe.webhooks.constructEvent(req.body, req.headers['stripe-signature'], process.env.STRIPE_WEBHOOK_SECRET);
@@ -105,19 +139,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
   res.json({ received: true });
 });
 
-app.use(express.json());
-
-async function requireUser(req, res, next) {
-  const authHeader = req.headers.authorization || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  if (!token) return res.status(401).json({ error: 'Missing auth token' });
-  const { data, error } = await supabaseAdmin.auth.getUser(token);
-  if (error || !data.user) return res.status(401).json({ error: 'Invalid or expired session' });
-  req.user = data.user;
-  next();
-}
-
-app.post('/api/create-checkout-session', requireUser, async (req, res) => {
+router.post('/create-checkout-session', express.json(), requireUser, async (req, res) => {
   try {
     const plan = req.body && req.body.plan;
     const priceId = plan === 'premium' ? process.env.STRIPE_PRICE_PREMIUM
@@ -129,7 +151,7 @@ app.post('/api/create-checkout-session', requireUser, async (req, res) => {
       .from('tcgss_profiles')
       .select('stripe_customer_id, is_lifetime_free')
       .eq('id', req.user.id)
-      .single();
+      .maybeSingle();
     if (profileErr) throw profileErr;
 
     if (profile && profile.is_lifetime_free) {
@@ -143,7 +165,12 @@ app.post('/api/create-checkout-session', requireUser, async (req, res) => {
         metadata: { supabase_user_id: req.user.id },
       });
       customerId = customer.id;
-      await supabaseAdmin.from('tcgss_profiles').update({ stripe_customer_id: customerId }).eq('id', req.user.id);
+      // upsert: the profile row is normally created by a signup trigger, but
+      // this keeps checkout working even if that row is somehow missing.
+      const { error: upsertErr } = await supabaseAdmin
+        .from('tcgss_profiles')
+        .upsert({ id: req.user.id, email: req.user.email, stripe_customer_id: customerId }, { onConflict: 'id' });
+      if (upsertErr) throw upsertErr;
     }
 
     const session = await stripe.checkout.sessions.create({
@@ -163,13 +190,13 @@ app.post('/api/create-checkout-session', requireUser, async (req, res) => {
   }
 });
 
-app.post('/api/create-portal-session', requireUser, async (req, res) => {
+router.post('/create-portal-session', express.json(), requireUser, async (req, res) => {
   try {
     const { data: profile, error } = await supabaseAdmin
       .from('tcgss_profiles')
       .select('stripe_customer_id')
       .eq('id', req.user.id)
-      .single();
+      .maybeSingle();
     if (error) throw error;
     if (!profile || !profile.stripe_customer_id) {
       return res.status(400).json({ error: 'No billing account yet — upgrade to a paid plan first.' });
@@ -187,9 +214,18 @@ app.post('/api/create-portal-session', requireUser, async (req, res) => {
   }
 });
 
-// Netlify's CDN serves public/ directly in production. This listener only
-// runs when the file is executed directly (`node server.js`), for local
-// testing of the API routes — it's not used by the Netlify Function.
+// Netlify rewrites /api/* to /.netlify/functions/api/:splat. Depending on the
+// deploy, the function can receive either the original or the rewritten path,
+// so both are mounted — otherwise every API call 404s.
+app.use('/api', router);
+app.use('/.netlify/functions/api', router);
+
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not found', path: req.path });
+});
+
+// Netlify's CDN serves public/ in production. This listener only runs when the
+// file is executed directly (`node server.js`) for local API testing.
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log('TCG Speed Shipper API listening on port ' + PORT);
