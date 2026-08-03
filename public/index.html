@@ -1046,6 +1046,20 @@ Chicago, IL 60601</div>
       </div>
     </div>
 
+    <div class="section fade-in-up" id="promo-section">
+      <div class="section-label">Promo Code</div>
+      <div class="grid-2 mb" style="align-items:end;">
+        <div class="field">
+          <label>Code</label>
+          <input type="text" id="promo-input" placeholder="e.g. LAUNCH20" autocapitalize="characters" />
+        </div>
+        <div class="field">
+          <button class="btn-ghost" id="promo-apply-btn" type="button" style="height:42px;width:100%;justify-content:center;">Apply Code</button>
+        </div>
+      </div>
+      <p class="tip" id="promo-msg"></p>
+    </div>
+
     <div class="pricing-grid fade-in-up">
       <div class="price-card">
         <h3>Free</h3>
@@ -2404,6 +2418,45 @@ document.getElementById('clear-btn').addEventListener('click',function(){
     updateAccountUI();
   });
 
+  var appliedPromo = null; // { code, description }
+  var promoInput = document.getElementById('promo-input');
+  var promoMsg = document.getElementById('promo-msg');
+  var promoBtn = document.getElementById('promo-apply-btn');
+
+  function setPromoMsg(text, kind) {
+    promoMsg.textContent = text;
+    promoMsg.style.color = kind === 'ok' ? 'var(--success)' : kind === 'err' ? 'var(--danger)' : '';
+  }
+
+  promoBtn.addEventListener('click', async function () {
+    var code = promoInput.value.trim();
+    if (!code) { setPromoMsg('Enter a code first.', 'err'); return; }
+    promoBtn.disabled = true; var orig = promoBtn.textContent; promoBtn.textContent = 'Checking...';
+    try {
+      var res = await fetch('/api/validate-promo-code?code=' + encodeURIComponent(code));
+      var json = await res.json();
+      if (json.valid) {
+        appliedPromo = { code: code, description: json.description };
+        setPromoMsg('✓ ' + json.description + ' — will be applied at checkout.', 'ok');
+      } else {
+        appliedPromo = null;
+        setPromoMsg(json.error || 'That code is not valid.', 'err');
+      }
+    } catch (e) {
+      appliedPromo = null;
+      setPromoMsg('Could not check that code — try again.', 'err');
+    }
+    promoBtn.disabled = false; promoBtn.textContent = orig;
+  });
+
+  // Editing the code after it was applied invalidates the stale "applied" state.
+  promoInput.addEventListener('input', function () {
+    if (appliedPromo && promoInput.value.trim() !== appliedPromo.code) {
+      appliedPromo = null;
+      setPromoMsg('', null);
+    }
+  });
+
   document.getElementById('manage-billing-btn').addEventListener('click', async function(){
     if (!session) return;
     this.disabled = true; var orig = this.textContent; this.textContent = 'Opening...';
@@ -2435,10 +2488,17 @@ document.getElementById('clear-btn').addEventListener('click',function(){
         var res = await fetch('/api/create-checkout-session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
-          body: JSON.stringify({ plan: plan })
+          body: JSON.stringify({ plan: plan, promoCode: appliedPromo ? appliedPromo.code : undefined })
         });
         var json = await res.json();
-        if (json.url) { window.location.href = json.url; return; }
+        if (json.url) {
+          if (appliedPromo && !json.promoApplied) {
+            var proceed = confirm('The promo code "' + appliedPromo.code + '" doesn\'t apply to this plan. Continue without the discount?');
+            if (!proceed) { this.disabled = false; this.textContent = orig; return; }
+          }
+          window.location.href = json.url;
+          return;
+        }
         throw new Error(json.error || 'Checkout failed');
       } catch (e) {
         alert('Could not start checkout: ' + e.message);

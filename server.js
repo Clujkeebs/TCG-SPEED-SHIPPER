@@ -44,6 +44,30 @@ async function applySubscriptionToProfile(subscription) {
   if (error) console.error('Failed to update profile from subscription event:', error);
 }
 
+async function findPromotionCode(rawCode) {
+  const code = (rawCode || '').trim();
+  if (!code) return null;
+  // Stripe's `code` filter is documented as case-insensitive, so no need to
+  // normalize case ourselves.
+  const list = await stripe.promotionCodes.list({ code, active: true, limit: 1 });
+  return list.data[0] || null;
+}
+
+function describeCoupon(coupon) {
+  let desc;
+  if (coupon.percent_off) desc = coupon.percent_off + '% off';
+  else if (coupon.amount_off) desc = '$' + (coupon.amount_off / 100).toFixed(2) + ' off';
+  else desc = 'Discount';
+  if (coupon.duration === 'repeating') {
+    desc += ' for ' + coupon.duration_in_months + ' month' + (coupon.duration_in_months === 1 ? '' : 's');
+  } else if (coupon.duration === 'forever') {
+    desc += ', forever';
+  } else {
+    desc += ' (first payment)';
+  }
+  return desc;
+}
+
 async function requireUser(req, res, next) {
   try {
     const authHeader = req.headers.authorization || '';
@@ -139,6 +163,17 @@ router.post('/stripe-webhook', express.raw({ type: '*/*' }), async (req, res) =>
   res.json({ received: true });
 });
 
+router.get('/validate-promo-code', async (req, res) => {
+  try {
+    const promo = await findPromotionCode(req.query.code);
+    if (!promo) return res.json({ valid: false, error: 'That code is not valid or has expired.' });
+    res.json({ valid: true, code: promo.code, description: describeCoupon(promo.coupon) });
+  } catch (err) {
+    console.error('validate-promo-code failed:', err);
+    res.status(500).json({ valid: false, error: 'Could not check that code right now.' });
+  }
+});
+
 router.post('/create-checkout-session', express.json(), requireUser, async (req, res) => {
   try {
     const plan = req.body && req.body.plan;
@@ -173,17 +208,35 @@ router.post('/create-checkout-session', express.json(), requireUser, async (req,
       if (upsertErr) throw upsertErr;
     }
 
-    const session = await stripe.checkout.sessions.create({
+    // Re-validate the code server-side — never trust the client's earlier check.
+    const appliedPromo = await findPromotionCode(req.body && req.body.promoCode);
+
+    const sessionParams = {
       mode: 'subscription',
       customer: customerId,
       client_reference_id: req.user.id,
       line_items: [{ price: priceId, quantity: 1 }],
-      allow_promotion_codes: true,
       success_url: SITE_URL + '/?checkout=success',
       cancel_url: SITE_URL + '/?checkout=cancelled',
-    });
+    };
+    if (appliedPromo) sessionParams.discounts = [{ promotion_code: appliedPromo.id }];
+    else sessionParams.allow_promotion_codes = true;
 
-    res.json({ url: session.url });
+    let session;
+    try {
+      session = await stripe.checkout.sessions.create(sessionParams);
+    } catch (stripeErr) {
+      if (!appliedPromo) throw stripeErr;
+      // The code is valid but doesn't apply to this particular plan (e.g. it's
+      // restricted to a different product) — fall back rather than blocking
+      // checkout entirely; the client tells the user the discount didn't apply.
+      console.error('Checkout with promo code failed, retrying without it:', stripeErr.message);
+      delete sessionParams.discounts;
+      sessionParams.allow_promotion_codes = true;
+      session = await stripe.checkout.sessions.create(sessionParams);
+    }
+
+    res.json({ url: session.url, promoApplied: !!appliedPromo });
   } catch (err) {
     console.error('create-checkout-session failed:', err);
     res.status(500).json({ error: 'Could not create checkout session' });
