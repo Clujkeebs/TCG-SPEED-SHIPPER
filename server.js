@@ -56,7 +56,10 @@ async function findPromotionCode(rawCode) {
 function describeCoupon(coupon) {
   let desc;
   if (coupon.percent_off) desc = coupon.percent_off + '% off';
-  else if (coupon.amount_off) desc = '$' + (coupon.amount_off / 100).toFixed(2) + ' off';
+  else if (coupon.amount_off) {
+    const symbol = (coupon.currency || 'usd').toUpperCase() === 'USD' ? '$' : (coupon.currency || '').toUpperCase() + ' ';
+    desc = symbol + (coupon.amount_off / 100).toFixed(2) + ' off';
+  }
   else desc = 'Discount';
   if (coupon.duration === 'repeating') {
     desc += ' for ' + coupon.duration_in_months + ' month' + (coupon.duration_in_months === 1 ? '' : 's');
@@ -182,6 +185,15 @@ router.post('/create-checkout-session', express.json(), requireUser, async (req,
       : null;
     if (!priceId) return res.status(400).json({ error: 'Unknown plan' });
 
+    // Kicked off now (in parallel with the profile/customer setup below) since
+    // it depends on none of that work — re-validated server-side regardless of
+    // what the client claimed earlier. The no-op .catch keeps a rejection here
+    // from becoming an unhandled rejection if we return early (e.g. the
+    // is_lifetime_free check below); the real error still surfaces at the
+    // `await promoLookup` further down.
+    const promoLookup = findPromotionCode(req.body && req.body.promoCode);
+    promoLookup.catch(() => {});
+
     const { data: profile, error: profileErr } = await supabaseAdmin
       .from('tcgss_profiles')
       .select('stripe_customer_id, is_lifetime_free')
@@ -208,8 +220,7 @@ router.post('/create-checkout-session', express.json(), requireUser, async (req,
       if (upsertErr) throw upsertErr;
     }
 
-    // Re-validate the code server-side — never trust the client's earlier check.
-    const appliedPromo = await findPromotionCode(req.body && req.body.promoCode);
+    const appliedPromo = await promoLookup;
 
     const sessionParams = {
       mode: 'subscription',
@@ -223,6 +234,7 @@ router.post('/create-checkout-session', express.json(), requireUser, async (req,
     else sessionParams.allow_promotion_codes = true;
 
     let session;
+    let promoApplied = !!appliedPromo;
     try {
       session = await stripe.checkout.sessions.create(sessionParams);
     } catch (stripeErr) {
@@ -234,9 +246,10 @@ router.post('/create-checkout-session', express.json(), requireUser, async (req,
       delete sessionParams.discounts;
       sessionParams.allow_promotion_codes = true;
       session = await stripe.checkout.sessions.create(sessionParams);
+      promoApplied = false;
     }
 
-    res.json({ url: session.url, promoApplied: !!appliedPromo });
+    res.json({ url: session.url, promoApplied: promoApplied });
   } catch (err) {
     console.error('create-checkout-session failed:', err);
     res.status(500).json({ error: 'Could not create checkout session' });
