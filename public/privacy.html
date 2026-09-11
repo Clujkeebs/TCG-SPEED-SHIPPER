@@ -110,7 +110,7 @@ a { color: var(--accent); }
     <h2>What We Store If You Create an Account</h2>
     <p>Signing in is only needed to use a paid plan (Base or Premium) or to check usage from another device. If you sign in, we store:</p>
     <ul>
-      <li>Your email address (via our authentication provider, Supabase)</li>
+      <li>Your email address and password, via our authentication provider, Supabase — your password is hashed (never stored as plain text, never visible to us) using Supabase's standard authentication system, the same way any reputable login system handles passwords</li>
       <li>Your plan (Free/Base/Premium) and subscription status</li>
       <li>A count of how many labels you've generated this month — not the buyer names, addresses, or order contents behind that count</li>
       <li>A Stripe customer/subscription ID, so we can manage billing</li>
