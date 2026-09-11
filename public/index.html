@@ -1053,7 +1053,11 @@ Chicago, IL 60601</div>
           <button class="btn-ghost" id="auth-signup-btn">Create Account</button>
         </div>
         <p class="tip" id="auth-msg"></p>
-        <p class="tip"><a href="#" id="auth-forgot-link" style="color:inherit;">Forgot your password?</a></p>
+        <p class="tip">
+          <a href="#" id="auth-forgot-link" style="color:inherit;">Forgot your password?</a>
+          &nbsp;·&nbsp;
+          <a href="#" id="auth-magic-link" style="color:inherit;">Or email me a sign-in link</a>
+        </p>
       </div>
       <div id="account-signed-in" style="display:none;">
         <div class="section-label-row">
@@ -2431,6 +2435,7 @@ document.getElementById('clear-btn').addEventListener('click',function(){
   if (!loginBtn) return;
   var signupBtn = document.getElementById('auth-signup-btn');
   var forgotLink = document.getElementById('auth-forgot-link');
+  var magicLink = document.getElementById('auth-magic-link');
   var emailField = document.getElementById('auth-email');
   var passwordField = document.getElementById('auth-password');
   var authMsg = document.getElementById('auth-msg');
@@ -2494,6 +2499,26 @@ document.getElementById('clear-btn').addEventListener('click',function(){
     } catch (err) {
       authMsg.textContent = 'Could not send a reset email right now.';
     }
+  });
+
+  magicLink.addEventListener('click', async function (e) {
+    e.preventDefault();
+    var email = emailField.value.trim().toLowerCase();
+    if (!email) { authMsg.textContent = 'Enter your email above first.'; return; }
+    if (!sb) { authMsg.textContent = 'Accounts are unavailable right now — try again later.'; return; }
+    var orig = magicLink.textContent; magicLink.textContent = 'Sending...';
+    try {
+      // shouldCreateUser: false — magic link is sign-in only, for accounts
+      // that already have a password. It must never silently create a new
+      // unconfirmed, passwordless account: that's the exact stuck state the
+      // Create Account repair logic (server.js) had to be built to fix.
+      var res = await sb.auth.signInWithOtp({ email: email, options: { shouldCreateUser: false, emailRedirectTo: window.location.origin + '/' } });
+      if (res.error) throw res.error;
+      authMsg.textContent = 'Link sent to ' + email + ' if that account exists. Email delivery can be delayed or fail — if it doesn’t arrive, use Log In / Create Account with a password instead.';
+    } catch (err) {
+      authMsg.textContent = 'Could not send a sign-in link right now — try password login instead.';
+    }
+    magicLink.textContent = orig;
   });
 
   document.getElementById('auth-signout').addEventListener('click', async function(){
