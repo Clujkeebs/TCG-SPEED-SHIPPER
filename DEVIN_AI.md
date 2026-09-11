@@ -46,13 +46,12 @@ custom slip message, QR codes, saved return-address profiles, no branding).
 
 ## Auth model (changed recently — read this carefully)
 
-Originally magic-link only (passwordless OTP). Email+password is now the
-**primary** path, added because Supabase's shared email sender was
-unreliably not delivering the magic-link emails, silently blocking signup.
-Magic link was then **re-added as a secondary, optional** sign-in method
-("Or email me a sign-in link") at the owner's request — it is NOT the
-primary path and NOT guaranteed reliable; see the caveat below. Key points
-for whoever touches auth next:
+**Email + password is the only auth path.** Magic link (passwordless OTP)
+was the original design, was briefly kept as a secondary option, and has
+now been removed entirely — it depended on Supabase's shared email sender,
+which was unreliably not delivering, and having two paths confused users.
+Do not add it back without first configuring custom SMTP. Key points for
+whoever touches auth next:
 
 - Signup goes through `POST /api/signup` (server-side, using the Supabase
   **admin** API: `auth.admin.createUser({ email, password, email_confirm:
@@ -78,16 +77,18 @@ for whoever touches auth next:
   automatically on signup, enforced at the RPC layer so Stripe can never
   downgrade it even accidentally (webhook handlers filter
   `is_lifetime_free = false`).
-- Magic link (`signInWithOtp`) is called with `shouldCreateUser: false`
-  intentionally — it can only sign in to an account that already has a
-  password, never silently create a new unconfirmed/passwordless one. If you
-  ever change that to `true`, you will reintroduce the exact stuck-account
-  bug the `password_set_by_user` repair logic exists to fix.
-- **Magic link's reliability has not actually changed.** Re-adding it did
-  not fix the underlying cause (Supabase's shared/default email sender). If
-  it's flaky again, the real fix is configuring custom SMTP in Supabase Auth
-  settings (Resend/Postmark/SendGrid, a verified sending domain) — that's a
-  dashboard + third-party-provider setup only the owner can do.
+- `LEGACY_ACCOUNT_CUTOFF` (`server.js`) is the other half of that check: the
+  repair path also requires `created_at` to be **before** the cutoff. The tag
+  alone is not sufficient, because the client-side fast signup path
+  (`sb.auth.signUp`) creates accounts through Supabase's public endpoint,
+  which does not set the tag. Without the date condition, a brand-new account
+  could be taken over by anyone re-registering that email. Keep both
+  conditions.
+- If anyone ever asks for magic link / passwordless sign-in back, configure
+  custom SMTP in Supabase Auth settings first (Resend/Postmark/SendGrid with
+  a verified sending domain). Supabase's shared default sender is what broke
+  it the first time, and nothing about that has changed. That's a dashboard +
+  third-party-provider setup only the owner can do.
 
 ## Known-good, verified this session
 
