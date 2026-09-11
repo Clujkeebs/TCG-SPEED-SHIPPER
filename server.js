@@ -5,10 +5,47 @@ const { createClient } = require('@supabase/supabase-js');
 const PORT = process.env.PORT || 3000;
 const SITE_URL = (process.env.PUBLIC_SITE_URL || '').replace(/\/$/, '') || 'http://localhost:' + PORT;
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-const supabaseAdmin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
+// These used to be constructed unconditionally at module load. If an env var
+// was missing, the constructor threw and took the WHOLE function down with it,
+// so every /api/* route returned an HTML 500 instead of JSON — which looked
+// exactly like "signup is broken" while browser-direct Supabase calls (login)
+// kept working. Build them defensively instead and let each route report the
+// real reason.
+const MISSING_SUPABASE = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'].filter((k) => !process.env[k]);
+
+let stripe = null;
+try {
+  if (process.env.STRIPE_SECRET_KEY) stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+} catch (err) {
+  console.error('Stripe client init failed:', err.message);
+}
+
+let supabaseAdmin = null;
+try {
+  if (!MISSING_SUPABASE.length) {
+    supabaseAdmin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+  }
+} catch (err) {
+  console.error('Supabase admin client init failed:', err.message);
+}
+
+function requireSupabase(req, res, next) {
+  if (!supabaseAdmin) {
+    console.error('Request to ' + req.path + ' with Supabase unconfigured. Missing: ' + (MISSING_SUPABASE.join(', ') || 'client init failed'));
+    return res.status(503).json({ error: 'The server is not configured correctly (Supabase). This is a server-side problem, not your account.' });
+  }
+  next();
+}
+
+function requireStripe(req, res, next) {
+  if (!stripe) {
+    console.error('Request to ' + req.path + ' with Stripe unconfigured.');
+    return res.status(503).json({ error: 'The server is not configured correctly (Stripe). This is a server-side problem, not your account.' });
+  }
+  next();
+}
 
 const PRICE_TO_PLAN = {};
 if (process.env.STRIPE_PRICE_BASE) PRICE_TO_PLAN[process.env.STRIPE_PRICE_BASE] = 'base';
@@ -114,23 +151,27 @@ const router = express.Router();
 router.get('/health', (req, res) => {
   // Reports which env vars are present (never their values) so a broken
   // deploy can be diagnosed without guessing.
+  const config = {
+    stripe_secret: !!process.env.STRIPE_SECRET_KEY,
+    stripe_webhook_secret: !!process.env.STRIPE_WEBHOOK_SECRET,
+    price_base: !!process.env.STRIPE_PRICE_BASE,
+    price_premium: !!process.env.STRIPE_PRICE_PREMIUM,
+    supabase_url: !!process.env.SUPABASE_URL,
+    supabase_service_key: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    site_url: SITE_URL,
+  };
+  const missing = Object.keys(config).filter((k) => config[k] === false);
   res.json({
-    ok: true,
-    config: {
-      stripe_secret: !!process.env.STRIPE_SECRET_KEY,
-      stripe_webhook_secret: !!process.env.STRIPE_WEBHOOK_SECRET,
-      price_base: !!process.env.STRIPE_PRICE_BASE,
-      price_premium: !!process.env.STRIPE_PRICE_PREMIUM,
-      supabase_url: !!process.env.SUPABASE_URL,
-      supabase_service_key: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-      site_url: SITE_URL,
-    },
+    ok: missing.length === 0,
+    clients: { stripe: !!stripe, supabase_admin: !!supabaseAdmin },
+    missing,
+    config,
   });
 });
 
 // Stripe signature verification needs the exact raw bytes, so this route gets
 // express.raw instead of the JSON parser used by the routes below.
-router.post('/stripe-webhook', express.raw({ type: '*/*' }), async (req, res) => {
+router.post('/stripe-webhook', express.raw({ type: '*/*' }), requireStripe, requireSupabase, async (req, res) => {
   let event;
   try {
     event = stripe.webhooks.constructEvent(req.body, req.headers['stripe-signature'], process.env.STRIPE_WEBHOOK_SECRET);
@@ -189,7 +230,7 @@ router.post('/stripe-webhook', express.raw({ type: '*/*' }), async (req, res) =>
   res.json({ received: true });
 });
 
-router.post('/signup', express.json(), async (req, res) => {
+router.post('/signup', express.json(), requireSupabase, async (req, res) => {
   try {
     const ip = req.headers['x-forwarded-for'] || req.ip || 'unknown';
     if (tooManySignupAttempts(ip)) {
@@ -255,7 +296,7 @@ router.post('/signup', express.json(), async (req, res) => {
   }
 });
 
-router.get('/validate-promo-code', async (req, res) => {
+router.get('/validate-promo-code', requireStripe, async (req, res) => {
   try {
     const promo = await findPromotionCode(req.query.code);
     if (!promo) return res.json({ valid: false, error: 'That code is not valid or has expired.' });
@@ -266,7 +307,7 @@ router.get('/validate-promo-code', async (req, res) => {
   }
 });
 
-router.post('/create-checkout-session', express.json(), requireUser, async (req, res) => {
+router.post('/create-checkout-session', express.json(), requireStripe, requireSupabase, requireUser, async (req, res) => {
   try {
     const plan = req.body && req.body.plan;
     const priceId = plan === 'premium' ? process.env.STRIPE_PRICE_PREMIUM
@@ -345,7 +386,7 @@ router.post('/create-checkout-session', express.json(), requireUser, async (req,
   }
 });
 
-router.post('/create-portal-session', express.json(), requireUser, async (req, res) => {
+router.post('/create-portal-session', express.json(), requireStripe, requireSupabase, requireUser, async (req, res) => {
   try {
     const { data: profile, error } = await supabaseAdmin
       .from('tcgss_profiles')

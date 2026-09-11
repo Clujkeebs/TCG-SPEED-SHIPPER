@@ -711,6 +711,11 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
 .footer-built a { color: var(--accent); text-decoration: underline; }
 .footer-links { margin: 8px 0 10px; }
 
+/* ── Auth messages ── */
+.auth-note { margin: 10px 0 0; font-size: 13px; line-height: 1.5; border-radius: var(--radius-sm); padding: 10px 12px; }
+.auth-note.err { background: var(--danger-bg); border: 1px solid #f5c0bb; color: var(--danger); }
+.auth-note.ok { background: var(--success-bg); border: 1px solid #b6e8cc; color: var(--success); }
+
 /* ── Newsletter signup ── */
 .newsletter-box { max-width: 360px; margin: 1.75rem auto 0; }
 .newsletter-label {
@@ -1052,12 +1057,8 @@ Chicago, IL 60601</div>
           <button class="btn-dl" id="auth-login-btn">Log In</button>
           <button class="btn-ghost" id="auth-signup-btn">Create Account</button>
         </div>
-        <p class="tip" id="auth-msg"></p>
-        <p class="tip">
-          <a href="#" id="auth-forgot-link" style="color:inherit;">Forgot your password?</a>
-          &nbsp;·&nbsp;
-          <a href="#" id="auth-magic-link" style="color:inherit;">Or email me a sign-in link</a>
-        </p>
+        <div id="auth-msg"></div>
+        <p class="tip"><a href="#" id="auth-forgot-link" style="color:inherit;">Forgot your password?</a></p>
       </div>
       <div id="account-signed-in" style="display:none;">
         <div class="section-label-row">
@@ -2435,90 +2436,109 @@ document.getElementById('clear-btn').addEventListener('click',function(){
   if (!loginBtn) return;
   var signupBtn = document.getElementById('auth-signup-btn');
   var forgotLink = document.getElementById('auth-forgot-link');
-  var magicLink = document.getElementById('auth-magic-link');
   var emailField = document.getElementById('auth-email');
   var passwordField = document.getElementById('auth-password');
   var authMsg = document.getElementById('auth-msg');
 
+  function setMsg(text, kind) {
+    if (!text) { authMsg.className = ''; authMsg.textContent = ''; return; }
+    authMsg.className = 'auth-note ' + (kind === 'ok' ? 'ok' : 'err');
+    authMsg.textContent = text;
+  }
+
   function friendlyAuthError(e) {
     var m = (e && e.message) || '';
-    if (/invalid login credentials/i.test(m)) return 'Wrong email or password.';
-    if (/email not confirmed/i.test(m)) return 'That account needs to be re-created — click Create Account with the same email to fix it.';
+    if (/invalid login credentials/i.test(m)) return 'Wrong email or password. If you have never set a password here, use Create Account instead — it will set one for you.';
+    if (/email not confirmed/i.test(m)) return 'That account needs a password set — click Create Account with the same email.';
+    if (/failed to fetch|networkerror/i.test(m)) return 'Could not reach the server. Check your connection and try again.';
     return m || 'Something went wrong.';
   }
 
+  function readCredentials() {
+    return { email: emailField.value.trim().toLowerCase(), password: passwordField.value };
+  }
+
+  // Creates-or-repairs the account through our own endpoint. Used when the
+  // direct Supabase signup can't finish on its own (email confirmation is
+  // enabled, or the email belongs to an older passwordless account).
+  async function serverSignup(email, password) {
+    var res;
+    try {
+      res = await fetch('/api/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, password: password })
+      });
+    } catch (netErr) {
+      throw new Error('Could not reach the server. Check your connection and try again.');
+    }
+    var json = {};
+    try { json = await res.json(); } catch (parseErr) {
+      // A crashed function returns an HTML error page, not JSON. Say so
+      // plainly instead of surfacing a confusing JSON parse error.
+      throw new Error('The server returned an unexpected response (HTTP ' + res.status + '). This is a server-side problem, not your account.');
+    }
+    if (!res.ok) throw new Error(json.error || 'Could not create account.');
+    return json;
+  }
+
   loginBtn.addEventListener('click', async function () {
-    var email = emailField.value.trim().toLowerCase();
-    var password = passwordField.value;
-    if (!email || !password) { authMsg.textContent = 'Enter your email and password.'; return; }
-    if (!sb) { authMsg.textContent = 'Accounts are unavailable right now — try again later.'; return; }
+    var c = readCredentials();
+    if (!c.email || !c.password) { setMsg('Enter your email and password.', 'err'); return; }
+    if (!sb) { setMsg('Accounts are unavailable right now — try again later.', 'err'); return; }
     loginBtn.disabled = true; var orig = loginBtn.textContent; loginBtn.textContent = 'Logging in...';
     try {
-      var res = await sb.auth.signInWithPassword({ email: email, password: password });
+      var res = await sb.auth.signInWithPassword({ email: c.email, password: c.password });
       if (res.error) throw res.error;
-      authMsg.textContent = '';
+      setMsg('', null);
     } catch (e) {
-      authMsg.textContent = friendlyAuthError(e);
+      setMsg(friendlyAuthError(e), 'err');
     }
     loginBtn.disabled = false; loginBtn.textContent = orig;
   });
 
   signupBtn.addEventListener('click', async function () {
-    var email = emailField.value.trim().toLowerCase();
-    var password = passwordField.value;
-    if (!email || !password) { authMsg.textContent = 'Enter your email and password.'; return; }
-    if (password.length < 8) { authMsg.textContent = 'Password must be at least 8 characters.'; return; }
-    if (!sb) { authMsg.textContent = 'Accounts are unavailable right now — try again later.'; return; }
+    var c = readCredentials();
+    if (!c.email || !c.password) { setMsg('Enter your email and password.', 'err'); return; }
+    if (c.password.length < 8) { setMsg('Password must be at least 8 characters.', 'err'); return; }
+    if (!sb) { setMsg('Accounts are unavailable right now — try again later.', 'err'); return; }
     signupBtn.disabled = true; var orig = signupBtn.textContent; signupBtn.textContent = 'Creating account...';
     try {
-      var res = await fetch('/api/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email, password: password })
-      });
-      var json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Could not create account');
-      var signInRes = await sb.auth.signInWithPassword({ email: email, password: password });
-      if (signInRes.error) throw signInRes.error;
-      authMsg.textContent = '';
+      // Try Supabase directly first: when the project doesn't require email
+      // confirmation this signs the user straight in and never touches our
+      // own API, so signup keeps working even if the function is down.
+      var signedInDirectly = false;
+      try {
+        var direct = await sb.auth.signUp({ email: c.email, password: c.password });
+        if (!direct.error && direct.data && direct.data.session) signedInDirectly = true;
+      } catch (ignored) { /* fall through to the server path below */ }
+
+      if (!signedInDirectly) {
+        // Covers: confirmation required, email already registered, and older
+        // passwordless accounts that need a password set.
+        await serverSignup(c.email, c.password);
+        var signInRes = await sb.auth.signInWithPassword({ email: c.email, password: c.password });
+        if (signInRes.error) throw signInRes.error;
+      }
+      setMsg('', null);
     } catch (e) {
-      authMsg.textContent = e.message;
+      setMsg(friendlyAuthError(e), 'err');
     }
     signupBtn.disabled = false; signupBtn.textContent = orig;
   });
 
   forgotLink.addEventListener('click', async function (e) {
     e.preventDefault();
-    var email = emailField.value.trim().toLowerCase();
-    if (!email) { authMsg.textContent = 'Enter your email above first, then click Forgot password.'; return; }
-    if (!sb) { authMsg.textContent = 'Accounts are unavailable right now — try again later.'; return; }
+    var c = readCredentials();
+    if (!c.email) { setMsg('Enter your email above first, then click Forgot password.', 'err'); return; }
+    if (!sb) { setMsg('Accounts are unavailable right now — try again later.', 'err'); return; }
     try {
-      var res = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/' });
+      var res = await sb.auth.resetPasswordForEmail(c.email, { redirectTo: window.location.origin + '/' });
       if (res.error) throw res.error;
-      authMsg.textContent = 'If that email has an account, a reset link was sent. (Email delivery can be unreliable — contact support if it never arrives.)';
+      setMsg('If that email has an account, a reset link was sent. Reset emails can be slow or land in spam.', 'ok');
     } catch (err) {
-      authMsg.textContent = 'Could not send a reset email right now.';
+      setMsg('Could not send a reset email right now.', 'err');
     }
-  });
-
-  magicLink.addEventListener('click', async function (e) {
-    e.preventDefault();
-    var email = emailField.value.trim().toLowerCase();
-    if (!email) { authMsg.textContent = 'Enter your email above first.'; return; }
-    if (!sb) { authMsg.textContent = 'Accounts are unavailable right now — try again later.'; return; }
-    var orig = magicLink.textContent; magicLink.textContent = 'Sending...';
-    try {
-      // shouldCreateUser: false — magic link is sign-in only, for accounts
-      // that already have a password. It must never silently create a new
-      // unconfirmed, passwordless account: that's the exact stuck state the
-      // Create Account repair logic (server.js) had to be built to fix.
-      var res = await sb.auth.signInWithOtp({ email: email, options: { shouldCreateUser: false, emailRedirectTo: window.location.origin + '/' } });
-      if (res.error) throw res.error;
-      authMsg.textContent = 'Link sent to ' + email + ' if that account exists. Email delivery can be delayed or fail — if it doesn’t arrive, use Log In / Create Account with a password instead.';
-    } catch (err) {
-      authMsg.textContent = 'Could not send a sign-in link right now — try password login instead.';
-    }
-    magicLink.textContent = orig;
   });
 
   document.getElementById('auth-signout').addEventListener('click', async function(){
