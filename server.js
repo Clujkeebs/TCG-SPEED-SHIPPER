@@ -204,9 +204,11 @@ router.post('/signup', express.json(), async (req, res) => {
     // email_confirm: true creates the account already-verified — no email is
     // sent or required. Supabase Auth hashes the password (bcrypt) before
     // storing it in auth.users; we never see or store the plaintext, here or
-    // anywhere else.
+    // anywhere else. password_set_by_user marks that a real, user-chosen
+    // password exists — see the repair branch below for why this matters.
     const { error: createErr } = await supabaseAdmin.auth.admin.createUser({
       email, password, email_confirm: true,
+      user_metadata: { password_set_by_user: true },
     });
     if (!createErr) return res.json({ ok: true });
 
@@ -214,26 +216,39 @@ router.post('/signup', express.json(), async (req, res) => {
       throw createErr;
     }
 
-    // Email already registered. This also covers the exact case reported: an
-    // account stuck from the old magic-link flow, where signInWithOtp creates
-    // the auth.users row immediately but leaves it unconfirmed with no
-    // password until an email (that never arrived) is clicked. Repair that
-    // transparently by setting a password and confirming it now.
+    // Email already registered. Two different stuck states can land here,
+    // both from before password auth existed on this app, and both get
+    // repaired the same way: set the password they just chose and confirm.
+    //   1. Unconfirmed: signInWithOtp creates the auth.users row immediately
+    //      but leaves it unconfirmed with no password until a magic-link
+    //      email (that may never have arrived) is clicked.
+    //   2. Confirmed but no real password: the user *did* complete the old
+    //      magic-link flow, so the account is confirmed — but no password
+    //      they know was ever set (OTP/magic-link is passwordless). This is
+    //      the case for real users who signed up before this feature shipped.
+    // Either way, this is only safe to repair because no account on this app
+    // could have a real, user-chosen password before today — every one
+    // created going forward is tagged password_set_by_user above, so an
+    // account that already has that tag is a genuine collision (someone else
+    // owns that password) and must NOT be silently overwritten here.
     const existingId = await findAuthUserId(email);
     if (!existingId) throw createErr;
 
     const { data: userRec, error: getErr } = await supabaseAdmin.auth.admin.getUserById(existingId);
     if (getErr) throw getErr;
 
-    if (userRec && userRec.user && !userRec.user.email_confirmed_at) {
+    const alreadyHasRealPassword = !!(userRec && userRec.user && userRec.user.user_metadata && userRec.user.user_metadata.password_set_by_user);
+    if (!alreadyHasRealPassword) {
+      const existingMeta = (userRec && userRec.user && userRec.user.user_metadata) || {};
       const { error: updateErr } = await supabaseAdmin.auth.admin.updateUserById(existingId, {
         password, email_confirm: true,
+        user_metadata: Object.assign({}, existingMeta, { password_set_by_user: true }),
       });
       if (updateErr) throw updateErr;
       return res.json({ ok: true, repaired: true });
     }
 
-    return res.status(409).json({ error: 'An account with that email already exists — try logging in instead.' });
+    return res.status(409).json({ error: 'An account with that email already has a password set — try logging in, or use Forgot Password.' });
   } catch (err) {
     console.error('signup failed:', err);
     res.status(500).json({ error: 'Could not create account' });

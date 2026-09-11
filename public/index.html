@@ -243,17 +243,17 @@ body { font-family: 'Source Serif 4', Georgia, serif; background: var(--bg); col
 .field { display: flex; flex-direction: column; }
 .field label { font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-bottom: 5px; font-weight: 500; letter-spacing: .02em; }
 .mb { margin-bottom: 12px; }
-input[type=text] {
+input[type=text], input[type=password], input[type=email] {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 10px 12px; font-size: 14px;
   font-family: 'Source Serif 4', serif;
   color: var(--text); background: var(--surface);
   outline: none; transition: border-color .2s, box-shadow .2s;
-  width: 100%; min-width: 0;
+  width: 100%; min-width: 0; box-sizing: border-box;
 }
-input[type=text]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(45,106,79,.1); }
-input[type=text]::placeholder { color: var(--hint); }
+input[type=text]:focus, input[type=password]:focus, input[type=email]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(45,106,79,.1); }
+input[type=text]::placeholder, input[type=password]::placeholder, input[type=email]::placeholder { color: var(--hint); }
 
 /* ── Upload zone ── */
 .upload-zone {
@@ -2443,7 +2443,7 @@ document.getElementById('clear-btn').addEventListener('click',function(){
   }
 
   loginBtn.addEventListener('click', async function () {
-    var email = emailField.value.trim();
+    var email = emailField.value.trim().toLowerCase();
     var password = passwordField.value;
     if (!email || !password) { authMsg.textContent = 'Enter your email and password.'; return; }
     if (!sb) { authMsg.textContent = 'Accounts are unavailable right now — try again later.'; return; }
@@ -2459,7 +2459,7 @@ document.getElementById('clear-btn').addEventListener('click',function(){
   });
 
   signupBtn.addEventListener('click', async function () {
-    var email = emailField.value.trim();
+    var email = emailField.value.trim().toLowerCase();
     var password = passwordField.value;
     if (!email || !password) { authMsg.textContent = 'Enter your email and password.'; return; }
     if (password.length < 8) { authMsg.textContent = 'Password must be at least 8 characters.'; return; }
@@ -2484,7 +2484,7 @@ document.getElementById('clear-btn').addEventListener('click',function(){
 
   forgotLink.addEventListener('click', async function (e) {
     e.preventDefault();
-    var email = emailField.value.trim();
+    var email = emailField.value.trim().toLowerCase();
     if (!email) { authMsg.textContent = 'Enter your email above first, then click Forgot password.'; return; }
     if (!sb) { authMsg.textContent = 'Accounts are unavailable right now — try again later.'; return; }
     try {
