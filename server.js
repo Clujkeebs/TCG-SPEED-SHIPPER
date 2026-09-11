@@ -71,6 +71,29 @@ function describeCoupon(coupon) {
   return desc;
 }
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Best-effort, in-process throttle on account creation. Netlify Functions are
+// not guaranteed to stay warm between invocations, so this is not a strong
+// guarantee — it only helps within a warm container — but it's a cheap first
+// line of defense against obvious abuse without adding external infra.
+const signupAttempts = new Map();
+function tooManySignupAttempts(ip) {
+  const now = Date.now();
+  const windowMs = 10 * 60 * 1000;
+  const maxAttempts = 8;
+  const recent = (signupAttempts.get(ip) || []).filter((t) => now - t < windowMs);
+  recent.push(now);
+  signupAttempts.set(ip, recent);
+  return recent.length > maxAttempts;
+}
+
+async function findAuthUserId(email) {
+  const { data, error } = await supabaseAdmin.rpc('tcgss_find_auth_user_id', { p_email: email });
+  if (error) throw error;
+  return data || null;
+}
+
 async function requireUser(req, res, next) {
   try {
     const authHeader = req.headers.authorization || '';
@@ -164,6 +187,57 @@ router.post('/stripe-webhook', express.raw({ type: '*/*' }), async (req, res) =>
   }
 
   res.json({ received: true });
+});
+
+router.post('/signup', express.json(), async (req, res) => {
+  try {
+    const ip = req.headers['x-forwarded-for'] || req.ip || 'unknown';
+    if (tooManySignupAttempts(ip)) {
+      return res.status(429).json({ error: 'Too many attempts — try again in a few minutes.' });
+    }
+
+    const email = ((req.body && req.body.email) || '').trim().toLowerCase();
+    const password = (req.body && req.body.password) || '';
+    if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'Enter a valid email.' });
+    if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+
+    // email_confirm: true creates the account already-verified — no email is
+    // sent or required. Supabase Auth hashes the password (bcrypt) before
+    // storing it in auth.users; we never see or store the plaintext, here or
+    // anywhere else.
+    const { error: createErr } = await supabaseAdmin.auth.admin.createUser({
+      email, password, email_confirm: true,
+    });
+    if (!createErr) return res.json({ ok: true });
+
+    if (!/already.*registered|already.*exists/i.test(createErr.message || '')) {
+      throw createErr;
+    }
+
+    // Email already registered. This also covers the exact case reported: an
+    // account stuck from the old magic-link flow, where signInWithOtp creates
+    // the auth.users row immediately but leaves it unconfirmed with no
+    // password until an email (that never arrived) is clicked. Repair that
+    // transparently by setting a password and confirming it now.
+    const existingId = await findAuthUserId(email);
+    if (!existingId) throw createErr;
+
+    const { data: userRec, error: getErr } = await supabaseAdmin.auth.admin.getUserById(existingId);
+    if (getErr) throw getErr;
+
+    if (userRec && userRec.user && !userRec.user.email_confirmed_at) {
+      const { error: updateErr } = await supabaseAdmin.auth.admin.updateUserById(existingId, {
+        password, email_confirm: true,
+      });
+      if (updateErr) throw updateErr;
+      return res.json({ ok: true, repaired: true });
+    }
+
+    return res.status(409).json({ error: 'An account with that email already exists — try logging in instead.' });
+  } catch (err) {
+    console.error('signup failed:', err);
+    res.status(500).json({ error: 'Could not create account' });
+  }
 });
 
 router.get('/validate-promo-code', async (req, res) => {
