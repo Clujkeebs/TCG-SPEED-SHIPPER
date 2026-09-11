@@ -40,7 +40,10 @@ const stripeStub = {
     },
     retrieve: async (id) => { calls.push(['subscriptions.retrieve', id]); return state.subscriptions[0] || sub({ id }); },
   },
-  customers: { create: async (p) => { calls.push(['customers.create', p]); return { id: 'cus_new' }; } },
+  customers: {
+    create: async (p) => { calls.push(['customers.create', p]); return { id: 'cus_new' }; },
+    list: async (p) => { calls.push(['customers.list', p]); return { data: state.stripeCustomers || [] }; },
+  },
   checkout: { sessions: { create: async (p) => { calls.push(['checkout.sessions.create', p]); return { url: 'https://checkout.stripe.com/x' }; } } },
   promotionCodes: { list: async (p) => { calls.push(['promotionCodes.list', p]); return { data: state.promo ? [state.promo] : [] }; } },
   billingPortal: { sessions: { create: async () => ({ url: 'https://billing.stripe.com/x' }) } },
@@ -113,8 +116,9 @@ function check(name, cond, detail) {
 
 const AUTH = { Authorization: 'Bearer stub-token' };
 
-function reset(profile, subs, promo) {
+function reset(profile, subs, promo, stripeCustomers) {
   state.profile = profile; state.subscriptions = subs || []; state.promo = promo || null;
+  state.stripeCustomers = stripeCustomers || [];
   state.updates.length = 0; calls.length = 0;
 }
 
@@ -226,6 +230,34 @@ function reset(profile, subs, promo) {
   reset({ stripe_customer_id: 'cus_1', is_lifetime_free: false }, [sub()]);
   res = await req('POST', '/.netlify/functions/api/create-checkout-session', { plan: 'premium' }, AUTH);
   check('rewritten path resolves too', res.status === 200 && res.body.switched === true);
+
+  console.log('\n-- Recovering a payment whose webhook never arrived --');
+  reset({ stripe_customer_id: 'cus_1', is_lifetime_free: false }, [sub({ items: { data: [{ id: 'si_1', price: { id: 'price_premium' } }] } })]);
+  res = await req('POST', '/api/sync-subscription', {}, AUTH);
+  check('reads the live subscription from Stripe', res.status === 200 && res.body.synced === true && res.body.plan === 'premium', JSON.stringify(res.body));
+  check('and writes the plan the customer paid for', state.updates.some((u) => u.vals.plan === 'premium'));
+
+  reset({ stripe_customer_id: 'cus_1', is_lifetime_free: false }, []);
+  res = await req('POST', '/api/sync-subscription', {}, AUTH);
+  check('a customer with no subscription stays free', res.status === 200 && res.body.synced === false && res.body.plan === 'free');
+  check('and nothing is written', state.updates.length === 0);
+
+  reset(null, [sub()], null, [{ id: 'cus_lost', metadata: { supabase_user_id: 'user_1' } }]);
+  res = await req('POST', '/api/sync-subscription', {}, AUTH);
+  check('a profile that lost its billing link is relinked by user id',
+    calls.some((c) => c[0] === 'profiles.upsert' && c[1].stripe_customer_id === 'cus_lost'), JSON.stringify(calls));
+
+  reset(null, [sub()], null, [{ id: 'cus_someone_else', metadata: { supabase_user_id: 'a_different_user' } }]);
+  res = await req('POST', '/api/sync-subscription', {}, AUTH);
+  check('a Stripe customer belonging to someone else is never claimed',
+    res.body.synced === false && !calls.some((c) => c[0] === 'profiles.upsert'), JSON.stringify(res.body));
+
+  reset({ stripe_customer_id: null, is_lifetime_free: true }, []);
+  res = await req('POST', '/api/sync-subscription', {}, AUTH);
+  check('the owner account is left alone', res.body.synced === false && res.body.plan === 'premium' && state.updates.length === 0);
+
+  res = await req('POST', '/api/sync-subscription', {});
+  check('rejected without a token', res.status === 401);
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   server.close();

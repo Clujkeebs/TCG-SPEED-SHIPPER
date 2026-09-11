@@ -2663,13 +2663,30 @@ document.getElementById('clear-btn').addEventListener('click',function(){
 /* After Stripe checkout the plan only changes once the webhook lands, which can
    take a few seconds. Poll briefly rather than showing the old plan and looking
    like the payment failed. */
+async function syncSubscription() {
+  if (!session) return;
+  try {
+    await fetch('/api/sync-subscription', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token }
+    });
+  } catch (e) { /* offline; the plan line falls back to the message below */ }
+  await refreshSession();
+}
+
 function awaitPlanUpgrade(attempt) {
   attempt = attempt || 0;
   var line = document.getElementById('account-plan-line');
-  if (currentPlan() !== 'free' || attempt >= 8) {
-    if (currentPlan() === 'free' && line) {
-      line.textContent = 'Payment received — still confirming your upgrade. Refresh in a moment if this does not update.';
-    }
+  if (currentPlan() !== 'free') return;
+  if (attempt >= 8) {
+    // The webhook still hasn't landed. Rather than leaving someone who just
+    // paid sitting on the Free plan, ask the server to read their subscription
+    // straight from Stripe.
+    syncSubscription().then(function () {
+      if (currentPlan() === 'free' && line) {
+        line.textContent = 'Payment received — still confirming your upgrade. Refresh in a moment if this does not update.';
+      }
+    });
     return;
   }
   if (line) line.textContent = 'Confirming your upgrade…';

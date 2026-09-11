@@ -473,6 +473,47 @@ router.post('/create-checkout-session', express.json(), requireStripe, requireSu
   }
 });
 
+// Safety net for a webhook that never arrived — a misconfigured endpoint, a
+// Stripe outage, or a delivery Stripe eventually stopped retrying. Asks Stripe
+// what this customer is actually subscribed to and writes that to the profile,
+// so somebody who has paid is never stranded on the Free plan with no way out.
+// Only ever touches the caller's own row, from the caller's own Stripe data.
+router.post('/sync-subscription', express.json(), requireStripe, requireSupabase, requireUser, async (req, res) => {
+  try {
+    const { data: profile, error } = await supabaseAdmin
+      .from('tcgss_profiles')
+      .select('stripe_customer_id, is_lifetime_free')
+      .eq('id', req.user.id)
+      .maybeSingle();
+    if (error) throw error;
+    if (profile && profile.is_lifetime_free) return res.json({ synced: false, plan: 'premium' });
+
+    let customerId = profile && profile.stripe_customer_id;
+    if (!customerId) {
+      // The profile has no billing link. Recover it from Stripe using the
+      // supabase_user_id we stamp on every customer at creation, rather than
+      // trusting the email alone.
+      const candidates = await stripe.customers.list({ email: req.user.email, limit: 20 });
+      const match = candidates.data.find((c) => c.metadata && c.metadata.supabase_user_id === req.user.id);
+      if (!match) return res.json({ synced: false, plan: 'free' });
+      customerId = match.id;
+      const { error: upsertErr } = await supabaseAdmin
+        .from('tcgss_profiles')
+        .upsert({ id: req.user.id, email: req.user.email, stripe_customer_id: customerId }, { onConflict: 'id' });
+      if (upsertErr) throw upsertErr;
+    }
+
+    const subscription = await liveSubscriptionFor(customerId);
+    if (!subscription) return res.json({ synced: false, plan: 'free' });
+
+    await applySubscriptionToProfile(subscription);
+    res.json({ synced: true, plan: PRICE_TO_PLAN[subscription.items.data[0].price.id] || null });
+  } catch (err) {
+    console.error('sync-subscription failed:', err);
+    res.status(500).json({ error: 'Could not check your subscription' });
+  }
+});
+
 router.post('/create-portal-session', express.json(), requireStripe, requireSupabase, requireUser, async (req, res) => {
   try {
     const { data: profile, error } = await supabaseAdmin
