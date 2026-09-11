@@ -90,6 +90,43 @@ whoever touches auth next:
   it the first time, and nothing about that has changed. That's a dashboard +
   third-party-provider setup only the owner can do.
 
+## Billing rules that are easy to break
+
+- **Never send a customer who already has a live subscription through Stripe
+  Checkout.** Checkout creates a *new* subscription next to the existing one
+  and bills for both. `create-checkout-session` checks Stripe (not our own
+  table, which can be stale) for a subscription in `active`/`trialing`/
+  `past_due`/`unpaid`, and if there is one it changes the price on that
+  subscription instead, returning `{ switched: true }` with no redirect URL.
+- **Never write `plan: 'free'` for an active subscription on an unrecognised
+  price.** That turns a wrong or swapped price id into "everyone who paid
+  loses access." The handlers log and leave the plan untouched instead.
+- **Cancellation is matched on subscription id, not just customer id.** A
+  customer who cancelled and resubscribed has two subscriptions; a delayed
+  cancellation event for the old one must not downgrade the new one.
+- `POST /api/sync-subscription` is the escape hatch for a webhook that never
+  arrived: it reads the caller's live subscription from Stripe and writes the
+  plan. The client calls it automatically when the post-checkout poll gives
+  up. It relinks a profile to a Stripe customer only by the `supabase_user_id`
+  stamped in customer metadata — never by email, which would let one account
+  claim another's subscription.
+
+## Tests
+
+`npm test` runs three suites (`test/`) with stubbed Stripe and Supabase
+clients. No network, no live keys, runs in this sandbox:
+
+- `signup.test.js` — pins both conditions gating the password-repair path, so
+  the account takeover cannot be reopened. Also email normalisation, input
+  validation, throttle.
+- `checkout.test.js` — the upgrade/switch/first-purchase/owner paths and the
+  webhook handlers.
+- `webhook-signature.test.js` — drives the real Netlify function handler with
+  genuine Stripe signatures, plain and base64 bodies, both path prefixes.
+  Forged, unsigned and tampered deliveries are confirmed to write nothing.
+
+Run it before pushing anything that touches billing or auth.
+
 ## Known-good, verified this session
 
 - Supabase RLS on every `tcgss_*` table: tested directly (not just read from
@@ -228,3 +265,42 @@ Still open: the leaked-password-protection toggle in Supabase Auth (owner
 action), custom SMTP for password-reset reliability (owner action), and the
 end-to-end paid checkout, which the owner has reviewed but which still has
 not been run for real.
+
+### 2026-09-11 — Claude (Opus 5), later the same evening
+Owner asked for a robustness pass before emailing their existing users. No
+live payment test was run (still deferred to the owner); this was code and
+database work only.
+
+User counts at this entry: **5 signed up, 0 paying** — 1 owner
+(lifetime-free Premium), 4 on Free. Checked every one of the 4 untagged
+legacy accounts against `LEGACY_ACCOUNT_CUTOFF`: all were created
+2026-08-31 or earlier, so all 4 will self-repair when they click Create
+Account. That matters because those are exactly the people about to be
+emailed. The login error message already points them at Create Account
+when their password fails.
+
+Found and fixed a real double-charge: a Base subscriber clicking "Upgrade
+to Premium" was sent through Checkout, which starts a second subscription
+next to the first. They would have paid $1.99 *and* $5.99 every month. See
+the billing rules section above — that whole section is new and is there so
+nobody reintroduces any of it.
+
+Also closed two ways a paying customer could have been recorded as Free (an
+unmapped price id, and a stale cancellation event), and added
+`/api/sync-subscription` so a webhook that never arrives no longer strands
+someone who has paid.
+
+Added the `test/` suites described above — 74 assertions, all passing. The
+webhook one is the useful one: it proves the raw request body survives
+Netlify → serverless-http → Express with real Stripe signature
+verification. If that plumbing ever broke, every payment would silently
+stop converting to a paid plan with no error anywhere.
+
+Supabase security advisors unchanged: the two `SECURITY DEFINER` warnings
+are intentional (both functions derive identity from `auth.uid()`, so a
+caller can only affect their own row), plus the leaked-password toggle,
+which is still an owner dashboard action.
+
+Still open and unchanged: leaked-password protection (owner), custom SMTP
+for password reset (owner), and the end-to-end live paid checkout, which
+still has not been run for real.
