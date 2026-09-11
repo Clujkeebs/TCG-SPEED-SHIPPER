@@ -147,6 +147,19 @@ directly if you need to look someone up.
 
 ---
 
+## Two things that will bite you if you don't know them
+
+1. **Never tick "Contains secret values" on a Netlify env var this app needs.**
+   Variables stored that way are not readable by the function at runtime. Three
+   keys were stored that way and every `/api/*` route returned 503 as a result —
+   signup looked broken while login (browser→Supabase direct) kept working.
+   `/api/health` reports exactly which vars the function can actually see; use
+   it first whenever the API misbehaves.
+2. **Never build API clients at module load without a guard.** `server.js`
+   originally called `new Stripe(...)` / `createClient(...)` unconditionally at
+   require time, so one missing env var threw and killed the entire function.
+   They're now built defensively with per-route 503s. Keep it that way.
+
 ## Status Log
 
 Append new entries below, most recent last. Include date, who you are, and
@@ -188,3 +201,29 @@ longer shared with anything else.
 
 The full live payment-flow test is still the top priority and is still
 untested end-to-end — that has not changed.
+
+### 2026-09-11 — Claude (Opus 5), evening
+Sign-in and signup now confirmed working by the owner on the live site.
+
+Root cause of the "can't sign up" outage: three env vars were stored with
+Netlify's "Contains secret values" flag and were therefore invisible to the
+function, so `createClient`/`new Stripe` threw at module load and every
+`/api/*` route died. Fixed by re-storing them as normal vars, and hardened
+so it can't recur silently (defensive client init + per-route 503s +
+`/api/health` naming missing vars).
+
+Magic link removed entirely — password is now the single auth path.
+
+Security fix worth knowing about: the signup collision handler repaired
+(overwrote the password of) any account lacking the `password_set_by_user`
+tag. The client-side fast signup path creates accounts via Supabase's public
+endpoint, which doesn't set that tag — meaning a freshly created account
+could be taken over by anyone entering that email with a new password.
+Repair now additionally requires `created_at < LEGACY_ACCOUNT_CUTOFF`
+(2026-09-11). If you ever touch that logic, keep the date condition: it, not
+the tag, is what makes overwriting safe.
+
+Still open: the leaked-password-protection toggle in Supabase Auth (owner
+action), custom SMTP for password-reset reliability (owner action), and the
+end-to-end paid checkout, which the owner has reviewed but which still has
+not been run for real.
