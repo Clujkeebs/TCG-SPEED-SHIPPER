@@ -26,9 +26,12 @@ custom slip message, QR codes, saved return-address profiles, no branding).
   hand the function either path depending on the deploy, and mounting only
   one previously 404'd everything. Don't "simplify" this to one prefix.
 - **Database/Auth**: Supabase project `lwqnsvlfffugyvwblqaz` (dashboard name
-  "vischeck" — **this project is shared with an unrelated app**, not ours.
-  Every one of our tables/functions is prefixed `tcgss_` to stay isolated.
-  Don't touch anything in `public` schema without that prefix.
+  "vischeck" — that was originally another, unrelated app's project; its
+  tables have since been dropped at the owner's request, since they were
+  fully empty/abandoned. The project itself is kept — it's where this app's
+  data lives now, under the `tcgss_` prefix. New tables should still use that
+  prefix as a matter of hygiene, but there's no longer another live app to
+  collide with.
 - **Billing**: Stripe, **live mode** (real charges, not test mode).
   - Base price: `price_1U00soPpFiI6sg2WQvzev0Rm`
   - Premium price: `price_1U00srPpFiI6sg2W7Ps9Z7qK`
@@ -43,10 +46,13 @@ custom slip message, QR codes, saved return-address profiles, no branding).
 
 ## Auth model (changed recently — read this carefully)
 
-Originally magic-link (passwordless OTP). **Replaced with email+password**
-because Supabase's shared email sender was unreliably not delivering the
-magic-link emails, silently blocking signup. Key points for whoever touches
-auth next:
+Originally magic-link only (passwordless OTP). Email+password is now the
+**primary** path, added because Supabase's shared email sender was
+unreliably not delivering the magic-link emails, silently blocking signup.
+Magic link was then **re-added as a secondary, optional** sign-in method
+("Or email me a sign-in link") at the owner's request — it is NOT the
+primary path and NOT guaranteed reliable; see the caveat below. Key points
+for whoever touches auth next:
 
 - Signup goes through `POST /api/signup` (server-side, using the Supabase
   **admin** API: `auth.admin.createUser({ email, password, email_confirm:
@@ -72,6 +78,16 @@ auth next:
   automatically on signup, enforced at the RPC layer so Stripe can never
   downgrade it even accidentally (webhook handlers filter
   `is_lifetime_free = false`).
+- Magic link (`signInWithOtp`) is called with `shouldCreateUser: false`
+  intentionally — it can only sign in to an account that already has a
+  password, never silently create a new unconfirmed/passwordless one. If you
+  ever change that to `true`, you will reintroduce the exact stuck-account
+  bug the `password_set_by_user` repair logic exists to fix.
+- **Magic link's reliability has not actually changed.** Re-adding it did
+  not fix the underlying cause (Supabase's shared/default email sender). If
+  it's flaky again, the real fix is configuring custom SMTP in Supabase Auth
+  settings (Resend/Postmark/SendGrid, a verified sending domain) — that's a
+  dashboard + third-party-provider setup only the owner can do.
 
 ## Known-good, verified this session
 
@@ -155,3 +171,20 @@ themselves in the morning with a 100%-off promo code) and to leave this
 handoff doc in case their usage limit cuts the session short before that
 happens. If you're reading this because that happened: the payment flow
 top-priority item above is genuinely untested end-to-end — start there.
+
+### 2026-09-11 — Claude (Sonnet 5), same day, follow-up
+User counts as of this entry: **5 signed up, 0 paying** (4 on Free, 1 the
+owner's lifetime-free account). Re-added magic link as an optional,
+secondary sign-in method per the owner's request (see Auth model section —
+`shouldCreateUser: false`, does not fix underlying email reliability, just
+restores it as a convenience alongside the reliable password path). Dropped
+all of the old "vischeck" app's tables (`businesses`, `scans`, `queries`,
+`results`, `subscriptions`, `alerts`, `scan_requests`, plus the orphaned
+`scan_status` enum) at the owner's explicit request — verified every one
+was genuinely empty (0 rows) immediately before dropping, and confirmed via
+`get_advisors` that the "RLS enabled, no policy" warnings for all seven are
+gone post-drop with nothing new introduced. The Supabase project is no
+longer shared with anything else.
+
+The full live payment-flow test is still the top priority and is still
+untested end-to-end — that has not changed.
