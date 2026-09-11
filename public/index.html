@@ -2510,7 +2510,13 @@ document.getElementById('clear-btn').addEventListener('click',function(){
       var signedInDirectly = false;
       try {
         var direct = await sb.auth.signUp({ email: c.email, password: c.password });
-        if (!direct.error && direct.data && direct.data.session) signedInDirectly = true;
+        if (!direct.error && direct.data && direct.data.session) {
+          signedInDirectly = true;
+          // Tag the account the same way the server does. The server also
+          // refuses to overwrite anything created after password auth shipped,
+          // so this is belt-and-braces rather than the only protection.
+          try { await sb.auth.updateUser({ data: { password_set_by_user: true } }); } catch (tagErr) { /* non-fatal */ }
+        }
       } catch (ignored) { /* fall through to the server path below */ }
 
       if (!signedInDirectly) {

@@ -110,6 +110,13 @@ function describeCoupon(coupon) {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Password auth shipped on 2026-09-11. Accounts created before this could only
+// have come from the old passwordless magic-link flow, so they have no password
+// their owner knows and are safe to set one on. Anything created at or after it
+// has a real password and must never be overwritten by a signup collision.
+// Every pre-existing account at cutoff time was created 2026-08-31 or earlier.
+const LEGACY_ACCOUNT_CUTOFF = new Date('2026-09-11T00:00:00Z');
+
 // Best-effort, in-process throttle on account creation. Netlify Functions are
 // not guaranteed to stay warm between invocations, so this is not a strong
 // guarantee — it only helps within a warm container — but it's a cheap first
@@ -267,20 +274,29 @@ router.post('/signup', express.json(), requireSupabase, async (req, res) => {
     //      magic-link flow, so the account is confirmed — but no password
     //      they know was ever set (OTP/magic-link is passwordless). This is
     //      the case for real users who signed up before this feature shipped.
-    // Either way, this is only safe to repair because no account on this app
-    // could have a real, user-chosen password before today — every one
-    // created going forward is tagged password_set_by_user above, so an
-    // account that already has that tag is a genuine collision (someone else
-    // owns that password) and must NOT be silently overwritten here.
+    // Repairing means overwriting a password, so it is gated on TWO
+    // independent conditions — either one alone is not enough:
+    //   a) no password_set_by_user tag, and
+    //   b) the account predates password auth existing on this app.
+    // (b) is the one that actually makes this safe. The tag alone is not
+    // sufficient: an account created through Supabase's own public signup
+    // endpoint (the client-side fast path in index.html) has a real,
+    // user-chosen password but carries no tag — without the date check,
+    // anyone could "Create Account" with someone else's email and a password
+    // of their choosing and take that account over.
     const existingId = await findAuthUserId(email);
     if (!existingId) throw createErr;
 
     const { data: userRec, error: getErr } = await supabaseAdmin.auth.admin.getUserById(existingId);
     if (getErr) throw getErr;
 
-    const alreadyHasRealPassword = !!(userRec && userRec.user && userRec.user.user_metadata && userRec.user.user_metadata.password_set_by_user);
-    if (!alreadyHasRealPassword) {
-      const existingMeta = (userRec && userRec.user && userRec.user.user_metadata) || {};
+    const existingUser = (userRec && userRec.user) || null;
+    const existingMeta = (existingUser && existingUser.user_metadata) || {};
+    const hasPasswordTag = !!existingMeta.password_set_by_user;
+    const createdAt = existingUser && existingUser.created_at ? new Date(existingUser.created_at) : null;
+    const predatesPasswordAuth = !!createdAt && createdAt < LEGACY_ACCOUNT_CUTOFF;
+
+    if (!hasPasswordTag && predatesPasswordAuth) {
       const { error: updateErr } = await supabaseAdmin.auth.admin.updateUserById(existingId, {
         password, email_confirm: true,
         user_metadata: Object.assign({}, existingMeta, { password_set_by_user: true }),
@@ -289,7 +305,7 @@ router.post('/signup', express.json(), requireSupabase, async (req, res) => {
       return res.json({ ok: true, repaired: true });
     }
 
-    return res.status(409).json({ error: 'An account with that email already has a password set — try logging in, or use Forgot Password.' });
+    return res.status(409).json({ error: 'An account with that email already exists — log in instead, or use Forgot Password if you don’t know the password.' });
   } catch (err) {
     console.error('signup failed:', err);
     res.status(500).json({ error: 'Could not create account' });
