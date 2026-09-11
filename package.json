@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "node server.js",
-    "test": "node test/checkout.test.js"
+    "test": "node test/run.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
