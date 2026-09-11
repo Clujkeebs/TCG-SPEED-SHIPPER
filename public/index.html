@@ -2609,6 +2609,13 @@ document.getElementById('clear-btn').addEventListener('click',function(){
     this.disabled = false; this.textContent = orig;
   });
 
+  // Shown next to the plan buttons the user just clicked. Deliberately does not
+  // overwrite the account plan line, which refreshSession() has already set to
+  // the real, newly-updated plan and usage.
+  function setPlanSwitchMsg(text) {
+    setPromoMsg(text || '', 'ok');
+  }
+
   document.querySelectorAll('[data-plan]').forEach(function(btn){
     btn.addEventListener('click', async function(){
       var plan = this.dataset.plan;
@@ -2626,6 +2633,16 @@ document.getElementById('clear-btn').addEventListener('click',function(){
           body: JSON.stringify({ plan: plan, promoCode: appliedPromo ? appliedPromo.code : undefined })
         });
         var json = await res.json();
+        // Already paying for another plan: the server switched the price on the
+        // existing subscription rather than starting a second one, so there is
+        // no Stripe Checkout page to send them to.
+        if (json.switched) {
+          await refreshSession();
+          setPlanSwitchMsg('You are now on the ' + capitalize(json.plan) + ' plan. Your existing subscription was changed, not duplicated — Stripe credits the unused part of your old plan against the new one.');
+          this.disabled = false; this.textContent = orig;
+          updatePricingButtons();
+          return;
+        }
         if (json.url) {
           if (appliedPromo && !json.promoApplied) {
             var proceed = confirm('The promo code "' + appliedPromo.code + '" doesn\'t apply to this plan. Continue without the discount?');

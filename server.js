@@ -63,7 +63,15 @@ function periodEndOf(subscription) {
 async function applySubscriptionToProfile(subscription) {
   const priceId = subscription.items.data[0].price.id;
   const active = ['active', 'trialing'].includes(subscription.status);
-  const plan = active ? (PRICE_TO_PLAN[priceId] || 'free') : 'free';
+  // An active subscription on a price we don't recognise means our price env
+  // vars are wrong or a price was swapped in the Stripe dashboard. Refuse to
+  // write a plan at all in that case rather than silently recording a paying
+  // customer as 'free' and cutting off the thing they just paid for.
+  if (active && !PRICE_TO_PLAN[priceId]) {
+    console.error('Active subscription ' + subscription.id + ' is on unrecognised price ' + priceId + ' — leaving plan untouched. Check STRIPE_PRICE_BASE/STRIPE_PRICE_PREMIUM.');
+    return;
+  }
+  const plan = active ? PRICE_TO_PLAN[priceId] : 'free';
   // is_lifetime_free accounts (the owner) are never touched by Stripe events,
   // even in a freak stripe_customer_id collision.
   const { error } = await supabaseAdmin
@@ -79,6 +87,20 @@ async function applySubscriptionToProfile(subscription) {
     .eq('stripe_customer_id', subscription.customer)
     .eq('is_lifetime_free', false);
   if (error) console.error('Failed to update profile from subscription event:', error);
+}
+
+// Statuses that mean "Stripe is still billing this subscription". A customer in
+// any of these already has a live subscription and must never be sent through
+// Checkout again.
+const LIVE_SUBSCRIPTION_STATUSES = ['active', 'trialing', 'past_due', 'unpaid'];
+
+// Asks Stripe directly rather than trusting stripe_subscription_id in our own
+// table, which can be stale or missing if a webhook was ever dropped. Stripe is
+// the source of truth for what the customer is actually being billed for.
+async function liveSubscriptionFor(customerId) {
+  if (!customerId) return null;
+  const list = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 20 });
+  return list.data.find((sub) => LIVE_SUBSCRIPTION_STATUSES.includes(sub.status)) || null;
 }
 
 async function findPromotionCode(rawCode) {
@@ -195,13 +217,19 @@ router.post('/stripe-webhook', express.raw({ type: '*/*' }), requireStripe, requ
         if (userId && session.subscription) {
           const subscription = await stripe.subscriptions.retrieve(session.subscription);
           const priceId = subscription.items.data[0].price.id;
+          if (!PRICE_TO_PLAN[priceId]) {
+            // Someone just paid for a price we can't map to a plan. Record the
+            // billing link so support can see it, but never write plan: 'free'
+            // over a completed payment.
+            console.error('Checkout completed on unrecognised price ' + priceId + ' for user ' + userId + ' — plan not set. Check STRIPE_PRICE_BASE/STRIPE_PRICE_PREMIUM.');
+          }
           const { error } = await supabaseAdmin
             .from('tcgss_profiles')
             .update({
               stripe_customer_id: session.customer,
               stripe_subscription_id: subscription.id,
               stripe_price_id: priceId,
-              plan: PRICE_TO_PLAN[priceId] || 'free',
+              plan: PRICE_TO_PLAN[priceId] || undefined,
               subscription_status: subscription.status,
               current_period_end: periodEndOf(subscription),
               updated_at: new Date().toISOString(),
@@ -218,10 +246,15 @@ router.post('/stripe-webhook', express.raw({ type: '*/*' }), requireStripe, requ
         break;
       case 'customer.subscription.deleted': {
         const subscription = event.data.object;
+        // Matched on the subscription id, not just the customer: a customer who
+        // cancelled and then resubscribed has two subscriptions, and a delayed
+        // or retried cancellation event for the OLD one must not downgrade the
+        // new one they are currently paying for.
         const { error } = await supabaseAdmin
           .from('tcgss_profiles')
           .update({ plan: 'free', subscription_status: 'canceled', updated_at: new Date().toISOString() })
           .eq('stripe_customer_id', subscription.customer)
+          .eq('stripe_subscription_id', subscription.id)
           .eq('is_lifetime_free', false);
         if (error) console.error('Failed to downgrade profile on cancellation:', error);
         break;
@@ -349,6 +382,44 @@ router.post('/create-checkout-session', express.json(), requireStripe, requireSu
 
     if (profile && profile.is_lifetime_free) {
       return res.status(400).json({ error: 'This account already has Premium free, permanently — no checkout needed.' });
+    }
+
+    // Someone who already pays for a plan must NOT be sent through Checkout
+    // again: Checkout creates a brand new subscription alongside the existing
+    // one and bills them for both. "Upgrade to Premium" while on Base means
+    // change the price on the subscription they already have.
+    const existingSub = await liveSubscriptionFor(profile && profile.stripe_customer_id);
+    if (existingSub) {
+      const existingItem = existingSub.items.data[0];
+      if (existingItem.price.id === priceId) {
+        return res.status(400).json({ error: 'You are already on that plan.' });
+      }
+
+      const switchParams = {
+        items: [{ id: existingItem.id, price: priceId }],
+        // Stripe credits the unused part of the old plan against the new one,
+        // so switching mid-cycle does not charge twice for the same days.
+        proration_behavior: 'create_prorations',
+        cancel_at_period_end: false,
+      };
+
+      const promoForSwitch = await promoLookup;
+      let switched;
+      try {
+        switched = await stripe.subscriptions.update(
+          existingSub.id,
+          promoForSwitch ? Object.assign({ promotion_code: promoForSwitch.id }, switchParams) : switchParams
+        );
+      } catch (switchErr) {
+        if (!promoForSwitch) throw switchErr;
+        console.error('Plan switch with promo code failed, retrying without it:', switchErr.message);
+        switched = await stripe.subscriptions.update(existingSub.id, switchParams);
+      }
+
+      // Write the new plan now instead of waiting on the webhook, so the plan
+      // shown to the user is correct the moment this response lands.
+      await applySubscriptionToProfile(switched);
+      return res.json({ switched: true, plan: PRICE_TO_PLAN[priceId] || plan });
     }
 
     let customerId = profile && profile.stripe_customer_id;
