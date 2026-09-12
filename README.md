@@ -8,7 +8,7 @@ A fast tool that converts TCGplayer CSV order exports (or pasted addresses) into
 3. Print and ship
 
 ## Plans
-- **Free** — 5 labels/month, no account required
+- **Free** — 10 labels/month, no account required
 - **Base ($1.99/mo)** — 500 labels/month
 - **Premium ($5.99/mo)** — unlimited labels, paste-address labels, Design Studio (custom colors/fonts/message/QR code), multiple saved return-address profiles, no "Powered by" branding on packing slips
 

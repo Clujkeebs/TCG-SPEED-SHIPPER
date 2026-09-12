@@ -13,7 +13,7 @@ addresses) into print-ready PDF shipping labels and packing slips, entirely
 client-side. Free plan needs no account. Paid plans add higher volume and a
 Design Studio. Live at **https://tcg-speed-shipper.netlify.app**.
 
-Plans: Free (5 labels/mo, no account) · Base $1.99/mo (500/mo) · Premium
+Plans: Free (10 labels/mo, no account) · Base $1.99/mo (500/mo) · Premium
 $5.99/mo (unlimited + paste-address mode + Design Studio: colors/fonts,
 custom slip message, QR codes, saved return-address profiles, no branding).
 

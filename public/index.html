@@ -31,7 +31,7 @@
 {"@context":"https://schema.org","@type":"WebApplication","name":"TCGPlayer Speed Shipper","url":"https://tcg-speed-shipper.netlify.app/","description":"Shipping label generator for TCGPlayer sellers. Upload your packing list CSV and get print-ready 4x6 or 8.5x11 PDF labels in seconds.","applicationCategory":"UtilitiesApplication","operatingSystem":"Any","browserRequirements":"Requires JavaScript","offers":[{"@type":"Offer","name":"Free","price":"0","priceCurrency":"USD"},{"@type":"Offer","name":"Base","price":"1.99","priceCurrency":"USD","priceSpecification":{"@type":"UnitPriceSpecification","price":"1.99","priceCurrency":"USD","billingDuration":"P1M"}},{"@type":"Offer","name":"Premium","price":"5.99","priceCurrency":"USD","priceSpecification":{"@type":"UnitPriceSpecification","price":"5.99","priceCurrency":"USD","billingDuration":"P1M"}}],"author":{"@type":"Person","name":"Clujkeebs","url":"https://clujkeebs.com","sameAs":["https://clujkeebs.com","https://www.ebay.com/str/clujkeebs","https://www.whatnot.com/user/clujkeebs","https://www.tcgplayer.com/search/all/product?seller=ad430346&view=grid"]},"screenshot":"https://tcg-speed-shipper.netlify.app/og-image.png","featureList":"CSV to PDF labels, 4x6 thermal labels, 8.5x11 multi-up labels, packing slips, paste-address labels, custom label design, local processing"}
 </script>
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"How do I export my TCGPlayer packing list?","acceptedAnswer":{"@type":"Answer","text":"Log in to TCGPlayer, go to Orders, click Packing List, then hit Export to download your CSV file."}},{"@type":"Question","name":"Is TCGPlayer Speed Shipper free?","acceptedAnswer":{"@type":"Answer","text":"The Free plan needs no account and includes 5 labels a month. Paid plans start at $1.99/mo for 500 labels a month, and $5.99/mo for unlimited labels plus paste-address labels and custom design tools."}},{"@type":"Question","name":"What printers work with 4x6 labels?","acceptedAnswer":{"@type":"Answer","text":"Any 4x6 thermal label printer — Rollo, Dymo 4XL, MUNBYN. For 8.5x11, any home printer works."}},{"@type":"Question","name":"Can I print multiple labels per page?","acceptedAnswer":{"@type":"Answer","text":"Yes. Choose 8.5x11 format and select 1, 2, 3, or 4 labels per page."}},{"@type":"Question","name":"Does it include packing slips?","acceptedAnswer":{"@type":"Answer","text":"Yes. Toggle packing slips on before downloading and each label will be followed by a matching slip."}}]}
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"How do I export my TCGPlayer packing list?","acceptedAnswer":{"@type":"Answer","text":"Log in to TCGPlayer, go to Orders, click Packing List, then hit Export to download your CSV file."}},{"@type":"Question","name":"Is TCGPlayer Speed Shipper free?","acceptedAnswer":{"@type":"Answer","text":"The Free plan needs no account and includes 10 labels a month. Paid plans start at $1.99/mo for 500 labels a month, and $5.99/mo for unlimited labels plus paste-address labels and custom design tools."}},{"@type":"Question","name":"What printers work with 4x6 labels?","acceptedAnswer":{"@type":"Answer","text":"Any 4x6 thermal label printer — Rollo, Dymo 4XL, MUNBYN. For 8.5x11, any home printer works."}},{"@type":"Question","name":"Can I print multiple labels per page?","acceptedAnswer":{"@type":"Answer","text":"Yes. Choose 8.5x11 format and select 1, 2, 3, or 4 labels per page."}},{"@type":"Question","name":"Does it include packing slips?","acceptedAnswer":{"@type":"Answer","text":"Yes. Toggle packing slips on before downloading and each label will be followed by a matching slip."}}]}
 </script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -1095,7 +1095,7 @@ Chicago, IL 60601</div>
         <h3>Free</h3>
         <div class="price-amt">$0<span>/mo</span></div>
         <ul>
-          <li>5 labels / month</li>
+          <li>10 labels / month</li>
           <li>CSV upload</li>
           <li>4×6 &amp; 8.5×11 print formats</li>
           <li>Packing slips</li>
@@ -1191,7 +1191,7 @@ Chicago, IL 60601</div>
       <div class="why-card">
         <div class="why-icon">🆓</div>
         <div class="why-title">Free to Start</div>
-        <div class="why-desc">5 labels a month, no account or subscription needed.</div>
+        <div class="why-desc">10 labels a month, no account or subscription needed.</div>
       </div>
       <div class="why-card">
         <div class="why-icon">🔒</div>
@@ -1265,7 +1265,7 @@ Chicago, IL 60601</div>
 
     <div class="faq-item">
       <button class="faq-q">What do the paid plans include? <span class="faq-arrow">▼</span></button>
-      <div class="faq-a">The Free plan needs no account and includes 5 labels a month. Base is $1.99/mo for 500 labels a month — plenty for most small sellers. Premium is $5.99/mo for unlimited labels, plus paste-address label generation, the Design Studio (custom colors, fonts, a custom packing-slip message, QR codes, and multiple saved return-address profiles), and no "Powered by" branding on packing slips. See the <a href="#" onclick="switchTab('pricing');return false;">Pricing</a> tab for details.</div>
+      <div class="faq-a">The Free plan needs no account and includes 10 labels a month. Base is $1.99/mo for 500 labels a month — plenty for most small sellers. Premium is $5.99/mo for unlimited labels, plus paste-address label generation, the Design Studio (custom colors, fonts, a custom packing-slip message, QR codes, and multiple saved return-address profiles), and no "Powered by" branding on packing slips. See the <a href="#" onclick="switchTab('pricing');return false;">Pricing</a> tab for details.</div>
     </div>
 
     <div class="faq-item">
@@ -1599,7 +1599,7 @@ var SUPABASE_URL = 'https://lwqnsvlfffugyvwblqaz.supabase.co';
 var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3cW5zdmxmZmZ1Z3l2d2JscWF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU2Mjc0MjUsImV4cCI6MjEwMTIwMzQyNX0.72n_-XinwN3FxMzLRH8_d-pmPu6AMgIywOAQ0_rRXCQ';
 var sb = (window.supabase && window.supabase.createClient) ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
-var PLAN_LIMITS = { free: 5, base: 500, premium: null };
+var PLAN_LIMITS = { free: 10, base: 500, premium: null };
 var session = null;
 var serverStatus = null; // { plan, limit, used }
 
