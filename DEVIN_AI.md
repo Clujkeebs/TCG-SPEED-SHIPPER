@@ -220,6 +220,64 @@ handling automatically, no app changes needed:
   accounts on one connection, not repeat use by one already-existing
   customer).
 
+## SEO: the /guide/ pages
+
+The site's long-form shipping-guide content used to live entirely inside
+`public/index.html`, in a "Guide" tab (`#tab-guide`) rendered by client-side
+JS with no URL of its own — reachable only by clicking through the nav's
+"More" menu, no hash, no history entry. That meant Google had one single
+title/meta description/canonical/H1 covering the tool AND the guide AND the
+FAQ AND everything else, and nobody could link directly to, say, the printer
+comparison. The content itself was already genuinely good; it just had no
+way to rank for its own specific searches.
+
+Fixed by extracting it into real static pages under `public/guide/`, each
+with its own `<title>`, meta description, canonical URL, single `<h1>`,
+Article/HowTo/BreadcrumbList JSON-LD, and cross-links to the others and back
+to the app:
+
+- `/guide/` — hub page, links to all of the below.
+- `/guide/tcgplayer-shipping-guide.html` — the original guide content
+  (tiers, supplies, packing, workflow, reputation, troubleshooting), minus
+  the printer section, which now lives on its own page and is linked from
+  here instead of duplicated.
+- `/guide/thermal-printer-comparison.html` — Rollo vs. Dymo vs. MUNBYN vs.
+  Zebra, now a dedicated comparison page with a real table.
+- `/guide/how-to-print-tcgplayer-shipping-labels.html` — new, tool-usage
+  focused, carries `HowTo` schema.
+- `/guide/tcgplayer-packing-list-csv-format.html` — new, explains the CSV
+  export and the most common parsing/missing-order problems.
+- `/guide/free-vs-paid-tcgplayer-shipping-tools.html` — new, honest
+  comparison of manual/free/Base/Premium, mentions the 1MFREE promo code.
+
+All five share `public/guide/guide.css` (one stylesheet, cached once,
+instead of duplicating a `<style>` block six times).
+
+**If you touch guide content again: edit it in `/guide/`, not back inside
+`index.html`.** The in-app "Guide" tab is now deliberately just a teaser
+linking out to these pages — pasting the full content back into the tab
+would create duplicate content competing with the real pages for ranking,
+undoing the entire point of this change.
+
+Also fixed while in here, both real (not cosmetic) SEO issues:
+- **`index.html` had seven `<h1>` tags** — one per tab, all present in the
+  DOM regardless of which tab was visually active. A page should have
+  exactly one. All but the Home tab's ("Ship Cards Faster") are now
+  demoted to `<h2>`/`<h3>` as appropriate.
+- **The SPA had no hash routing at all** — `switchTab()` never touched the
+  URL, so there was no way to link directly to a specific tab from
+  anywhere, including the new `/guide/` pages' own CTAs. `switchTab` now
+  syncs `location.hash` (e.g. `/#pricing`), and `openTabFromHash()` runs on
+  boot and on `hashchange` so a link like `/#pricing` actually opens that
+  tab instead of silently landing on Home. `VALID_TABS` in `index.html`
+  lists the tab names this recognizes — keep it in sync with any new
+  `tab-panel` id.
+
+`sitemap.xml` was updated with all five new URLs. `robots.txt` already
+allows everything under `/guide/` (`Allow: /`), no change needed there.
+`googleff1e1a4a0e2eceaf.html` is the live Google Search Console
+verification file — do not delete or rename it.
+
 ## Tests
 
 `npm test` runs five suites (`test/`) with stubbed Stripe and Supabase

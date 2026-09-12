@@ -7,11 +7,52 @@
 
 <url>
   <loc>https://tcg-speed-shipper.netlify.app/</loc>
-  <lastmod>2026-03-22T14:52:27+00:00</lastmod>
+  <lastmod>2026-09-13T00:00:00+00:00</lastmod>
   <changefreq>weekly</changefreq>
   <priority>1.0</priority>
 </url>
 
+<url>
+  <loc>https://tcg-speed-shipper.netlify.app/guide/</loc>
+  <lastmod>2026-09-13T00:00:00+00:00</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.8</priority>
+</url>
+
+<url>
+  <loc>https://tcg-speed-shipper.netlify.app/guide/how-to-print-tcgplayer-shipping-labels.html</loc>
+  <lastmod>2026-09-13T00:00:00+00:00</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.8</priority>
+</url>
+
+<url>
+  <loc>https://tcg-speed-shipper.netlify.app/guide/thermal-printer-comparison.html</loc>
+  <lastmod>2026-09-13T00:00:00+00:00</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.8</priority>
+</url>
+
+<url>
+  <loc>https://tcg-speed-shipper.netlify.app/guide/tcgplayer-packing-list-csv-format.html</loc>
+  <lastmod>2026-09-13T00:00:00+00:00</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.7</priority>
+</url>
+
+<url>
+  <loc>https://tcg-speed-shipper.netlify.app/guide/free-vs-paid-tcgplayer-shipping-tools.html</loc>
+  <lastmod>2026-09-13T00:00:00+00:00</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.7</priority>
+</url>
+
+<url>
+  <loc>https://tcg-speed-shipper.netlify.app/guide/tcgplayer-shipping-guide.html</loc>
+  <lastmod>2026-09-13T00:00:00+00:00</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.8</priority>
+</url>
 
 <url>
   <loc>https://tcg-speed-shipper.netlify.app/privacy.html</loc>

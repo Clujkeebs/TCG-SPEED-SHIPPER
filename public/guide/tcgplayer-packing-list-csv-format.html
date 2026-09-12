@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TCGPlayer Packing List CSV Format Explained</title>
+<meta name="description" content="What's actually inside a TCGPlayer packing list CSV export — the columns, what each one means, and how to fix the most common parsing and missing-order problems." />
+<meta name="keywords" content="TCGPlayer packing list CSV format, TCGPlayer CSV export, TCGPlayer packing list columns, TCGPlayer CSV won't parse" />
+<meta name="author" content="Clujkeebs" />
+<meta name="robots" content="index, follow" />
+<link rel="canonical" href="https://tcg-speed-shipper.netlify.app/guide/tcgplayer-packing-list-csv-format.html" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="/favicon.ico" sizes="32x32" />
+<link rel="apple-touch-icon" href="/favicon.ico" />
+<meta name="theme-color" content="#2d6a4f" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://tcg-speed-shipper.netlify.app/guide/tcgplayer-packing-list-csv-format.html" />
+<meta property="og:title" content="TCGPlayer Packing List CSV Format Explained" />
+<meta property="og:description" content="What's actually inside a TCGPlayer packing list CSV export, and how to fix the most common parsing problems." />
+<meta property="og:site_name" content="TCG Speed Shipper" />
+<meta property="og:image" content="https://tcg-speed-shipper.netlify.app/og-image.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="TCGPlayer Packing List CSV Format Explained" />
+<meta name="twitter:description" content="What's actually inside a TCGPlayer packing list CSV export, and how to fix common parsing problems." />
+<meta name="twitter:image" content="https://tcg-speed-shipper.netlify.app/og-image.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=JetBrains+Mono:wght@400;500;700&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/guide/guide.css">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Article","headline":"TCGPlayer Packing List CSV Format Explained","description":"What's actually inside a TCGPlayer packing list CSV export, the columns, and how to fix common parsing problems.","image":"https://tcg-speed-shipper.netlify.app/og-image.png","author":{"@type":"Person","name":"Clujkeebs","url":"https://clujkeebs.com"},"publisher":{"@type":"Organization","name":"TCG Speed Shipper","logo":{"@type":"ImageObject","url":"https://tcg-speed-shipper.netlify.app/favicon.ico"}},"datePublished":"2026-09-13","dateModified":"2026-09-13","mainEntityOfPage":"https://tcg-speed-shipper.netlify.app/guide/tcgplayer-packing-list-csv-format.html"}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Why won't my TCGPlayer CSV parse?","acceptedAnswer":{"@type":"Answer","text":"Usually a changed column header or a malformed first export. Open the file in a plain text editor and check the header row, or simply re-export once — the second export is often clean."}},{"@type":"Question","name":"Why are some orders missing from my packing list CSV?","acceptedAnswer":{"@type":"Answer","text":"The export only includes orders not yet marked shipped. A missing order may already be marked shipped, cancelled, or excluded by your dashboard's order filter."}},{"@type":"Question","name":"Does the CSV include buyer payment or card information?","acceptedAnswer":{"@type":"Answer","text":"No. The packing list CSV contains shipping and order details only — buyer name, address, and order/item information — never payment details."}}]}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://tcg-speed-shipper.netlify.app/"},{"@type":"ListItem","position":2,"name":"Seller's Guide","item":"https://tcg-speed-shipper.netlify.app/guide/"},{"@type":"ListItem","position":3,"name":"Packing List CSV Format Explained","item":"https://tcg-speed-shipper.netlify.app/guide/tcgplayer-packing-list-csv-format.html"}]}
+</script>
+</head>
+<body>
+
+<nav class="top-nav">
+  <a href="/" class="nav-brand">TCG Speed Shipper</a>
+  <a href="/" class="nav-cta">Generate labels free →</a>
+</nav>
+
+<div class="page-wrap">
+  <div class="breadcrumb"><a href="/">Home</a> › <a href="/guide/">Seller's Guide</a> › Packing List CSV Format</div>
+
+  <div class="kicker">Seller's Guide · Reference</div>
+  <h1>TCGPlayer Packing List CSV Format Explained</h1>
+  <p class="dek">A plain-language breakdown of what's actually in the file TCGPlayer hands you, so a parsing error stops being a mystery.</p>
+  <p class="meta-line">Updated September 2026 · 4 min read</p>
+
+  <article>
+    <h2>Where the file comes from</h2>
+    <p>In your TCGPlayer seller dashboard, go to <strong>Orders</strong>, click <strong>Packing List</strong>, then <strong>Export</strong>. TCGPlayer generates a CSV (comma-separated values — a plain text spreadsheet format any tool can read) containing every order that hasn't yet been marked shipped.</p>
+
+    <h2>What's in each row</h2>
+    <p>Every row represents one order. The columns that matter for shipping are the buyer's name, their address split across several fields (address line 1, address line 2, city, state, ZIP code), and an order number that ties the row back to that specific TCGPlayer order. Depending on your export settings, item-level details (card names, quantities) may also be included — these aren't needed for a shipping label but are useful if you want a packing slip that lists what's inside.</p>
+    <p>Nothing in the file includes payment information. TCGPlayer's export is strictly shipping and order data — buyer name, address, and order contents — which is also why a tool that reads this file entirely in your browser, the way <a href="/">TCG Speed Shipper</a> does, never needs to send anything to a server to work.</p>
+
+    <h2>Why the CSV sometimes won't parse</h2>
+    <p>This almost always comes down to one of two things:</p>
+    <ul>
+      <li><strong>TCGPlayer changed a column header.</strong> Marketplaces update their export format occasionally. Open the file in a plain text editor — Notepad on Windows, TextEdit in plain-text mode on Mac — and look at the first line. It should contain recognizable headers like "First Name" and "Address 1." If those look different or missing, TCGPlayer's format has likely shifted.</li>
+      <li><strong>A malformed first export.</strong> Occasionally the very first export in a session comes out incomplete or truncated. Re-exporting once usually produces a clean file.</li>
+    </ul>
+
+    <h2>Why some orders are missing</h2>
+    <p>The packing list export only includes orders that haven't been marked shipped yet. If an order you expected isn't in the file, check whether it's already marked shipped in your dashboard, whether it was cancelled, or whether your order filter is set to something other than "all pending."</p>
+
+    <div class="callout">
+      <p><strong>Quick sanity check:</strong> open the CSV in a spreadsheet program (Excel, Google Sheets, Numbers) first. If it opens cleanly into columns there, the file itself is fine and the issue is almost certainly a header-naming mismatch rather than a corrupted export.</p>
+    </div>
+
+    <div class="cta-box">
+      <div class="msg"><strong>Got a clean CSV?</strong> Upload it and get print-ready labels in seconds — free for the first 10 a month, no account needed.</div>
+      <a class="btn" href="/">Try it now →</a>
+    </div>
+
+    <div class="related-nav">
+      <div class="label">Keep reading</div>
+      <div class="related-grid">
+        <a class="related-card" href="/guide/how-to-print-tcgplayer-shipping-labels.html">
+          <div class="t">How to Print TCGPlayer Shipping Labels Fast</div>
+          <div class="d">The full workflow from export to printed label in under five minutes.</div>
+        </a>
+        <a class="related-card" href="/guide/thermal-printer-comparison.html">
+          <div class="t">Rollo vs. Dymo vs. MUNBYN</div>
+          <div class="d">Which thermal printer fits your order volume and budget.</div>
+        </a>
+        <a class="related-card" href="/guide/free-vs-paid-tcgplayer-shipping-tools.html">
+          <div class="t">Free vs. Paid Shipping Tools</div>
+          <div class="d">What you actually get for $1.99 or $5.99 a month.</div>
+        </a>
+      </div>
+    </div>
+  </article>
+</div>
+
+<footer class="site-footer">
+  <a href="/">← Back to TCG Speed Shipper</a> ·
+  <a href="/guide/">Seller's Guide</a> ·
+  <a href="https://clujkeebs.com" target="_blank" rel="noopener">clujkeebs.com</a>
+</footer>
+
+</body>
+</html>

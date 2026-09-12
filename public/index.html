@@ -623,80 +623,41 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
 .usage-bar-fill.warn { background: #d97706; }
 .usage-bar-fill.full { background: var(--danger); }
 
-/* ── Guide tab ── */
+/* ── Guide tab ──
+   The full long-form content that used to live here now lives at /guide/ as
+   real, individually indexable pages (own title, meta description, and a
+   single H1 each) — much better for search than one giant tab buried behind
+   client-side-only navigation with no URL of its own. This tab is now just a
+   teaser pointing to them, so don't paste the old content back in here;
+   duplicating it would just compete with the real pages for ranking. */
 .guide-hero { padding: 2.5rem 0 1rem; }
-.guide-hero h1 {
+.guide-hero h2 {
   font-family: 'DM Serif Display', serif;
   font-size: clamp(26px, 5vw, 34px);
   font-weight: 400; color: var(--text);
   margin-bottom: .6rem; letter-spacing: -.02em;
 }
 .guide-hero p { font-size: 16px; color: var(--muted); line-height: 1.75; max-width: 560px; margin-bottom: .5rem; }
-.guide-section {
+.guide-section { margin-bottom: 1rem; }
+.guide-link-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px; margin: 1rem 0;
+}
+.guide-link-card {
+  display: block; text-decoration: none; color: inherit;
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 1.5rem;
-  margin-bottom: 1rem; box-shadow: var(--shadow-sm);
-}
-.guide-section h2 {
-  font-family: 'DM Serif Display', serif;
-  font-size: 20px; font-weight: 400;
-  color: var(--text); margin-bottom: .75rem;
-  letter-spacing: -.01em;
-}
-.guide-section h3 {
-  font-size: 15px; font-weight: 600;
-  color: var(--text); margin: 1.25rem 0 .4rem;
-}
-.guide-section p { font-size: 14px; color: var(--text-secondary); line-height: 1.8; margin-bottom: .75rem; }
-.guide-section ul, .guide-section ol {
-  padding-left: 1.4rem; margin-bottom: .75rem;
-}
-.guide-section li { font-size: 14px; color: var(--text-secondary); line-height: 1.75; margin-bottom: 4px; }
-.guide-section li strong { color: var(--text); }
-.supply-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 10px; margin: 1rem 0;
-}
-.supply-card {
-  background: var(--surface-raised); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); padding: 1rem;
+  border-radius: var(--radius); padding: 1.1rem 1.25rem;
   box-shadow: var(--shadow-sm);
 }
-.supply-card .supply-icon { font-size: 22px; margin-bottom: 6px; }
-.supply-card .supply-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
-.supply-card .supply-note { font-size: 12px; color: var(--muted); line-height: 1.55; }
-.printer-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 10px; margin: 1rem 0;
+.guide-link-card:hover { border-color: var(--accent); }
+.guide-link-card .glc-tag {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--accent); background: var(--accent-bg); display: inline-block;
+  padding: 3px 8px; border-radius: 100px; margin-bottom: 8px;
 }
-.printer-card {
-  background: var(--surface-raised); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); padding: 1.1rem;
-  box-shadow: var(--shadow-sm);
-}
-.printer-card .printer-name { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
-.printer-card .printer-price { font-size: 12px; color: var(--accent); font-family: 'JetBrains Mono', monospace; margin-bottom: 6px; font-weight: 600; }
-.printer-card .printer-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
-.callout {
-  background: var(--accent-bg); border: 1px solid var(--accent-border);
-  border-radius: var(--radius-sm); padding: 1rem 1.25rem;
-  margin: 1rem 0;
-}
-.callout p { font-size: 14px; color: var(--text-secondary); line-height: 1.75; margin: 0; }
-.callout strong { color: var(--accent); }
-.guide-section .step-row {
-  display: flex; gap: 14px; margin-bottom: 12px;
-  align-items: flex-start;
-}
-.guide-section .step-num-sm {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 14px; font-weight: 600;
-  color: var(--accent); flex-shrink: 0; min-width: 22px; margin-top: 1px;
-}
-.guide-section .step-text { font-size: 14px; color: var(--text-secondary); line-height: 1.75; }
-.guide-section .step-text strong { color: var(--text); }
+.guide-link-card .glc-title { font-family: 'DM Serif Display', serif; font-size: 16px; color: var(--text); margin-bottom: 5px; }
+.guide-link-card .glc-desc { font-size: 13px; color: var(--muted); line-height: 1.55; }
 
 /* ── Footer ── */
 .site-footer {
@@ -925,14 +886,14 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
   <div class="tab-panel" id="tab-paste">
 
     <div class="home-hero fade-in-up">
-      <h1>Paste an Address</h1>
+      <h2>Paste an Address</h2>
       <p>No CSV? Paste one or more shipping addresses below and turn them into the same print-ready labels — return address, format, and packing slips all included.</p>
     </div>
 
     <div class="section fade-in-up" id="paste-locked" style="display:none;">
       <div class="lock-card">
         <div class="lock-icon">🔒</div>
-        <h2>Paste Address is a Premium feature</h2>
+        <h3>Paste Address is a Premium feature</h3>
         <p>Skip the CSV entirely and paste addresses straight in. Included with the Premium plan ($5.99/mo), along with unlimited labels and the Design Studio.</p>
         <button class="btn-dl" onclick="switchTab('pricing')">See Plans</button>
       </div>
@@ -963,14 +924,14 @@ Chicago, IL 60601</div>
   <div class="tab-panel" id="tab-design">
 
     <div class="home-hero fade-in-up">
-      <h1>Design Studio</h1>
+      <h2>Design Studio</h2>
       <p>Customize how your labels and packing slips look, and manage multiple return-address profiles.</p>
     </div>
 
     <div class="section fade-in-up" id="design-locked" style="display:none;">
       <div class="lock-card">
         <div class="lock-icon">🔒</div>
-        <h2>Design Studio is a Premium feature</h2>
+        <h3>Design Studio is a Premium feature</h3>
         <p>Change your accent color and font, add a custom packing-slip message, drop in a QR code, and save multiple return-address profiles. Included with Premium ($5.99/mo).</p>
         <button class="btn-dl" onclick="switchTab('pricing')">See Plans</button>
       </div>
@@ -1033,7 +994,7 @@ Chicago, IL 60601</div>
   <div class="tab-panel" id="tab-pricing">
 
     <div class="home-hero fade-in-up">
-      <h1>Simple Plans for Every Seller</h1>
+      <h2>Simple Plans for Every Seller</h2>
       <p>Start free, no account required. Upgrade any time as your order volume grows.</p>
     </div>
 
@@ -1149,7 +1110,7 @@ Chicago, IL 60601</div>
   <div class="tab-panel" id="tab-hiw">
 
     <div class="hiw-hero">
-      <h1>How It Works</h1>
+      <h2>How It Works</h2>
       <p>TCGPlayer Speed Shipper turns your packing list CSV into print-ready PDF shipping labels in under two minutes. Here's every step from export to print.</p>
     </div>
 
@@ -1191,7 +1152,7 @@ Chicago, IL 60601</div>
       </div>
     </div>
 
-    <h2 class="section-title">Why Sellers Choose This Tool</h2>
+    <h3 class="section-title">Why Sellers Choose This Tool</h3>
 
     <div class="why-grid">
       <div class="why-card">
@@ -1228,7 +1189,7 @@ Chicago, IL 60601</div>
 
     <!-- Compatibility section — more publisher content -->
     <div class="compat-section">
-      <h2>Works with Every TCG</h2>
+      <h3>Works with Every TCG</h3>
       <p>TCGPlayer Speed Shipper works with the standard packing list CSV format. It doesn't matter which game you sell — the export is the same across all categories.</p>
       <div class="compat-grid">
         <div class="compat-card">
@@ -1270,7 +1231,7 @@ Chicago, IL 60601</div>
   <div class="tab-panel" id="tab-faq">
 
     <div class="faq-hero">
-      <h1>Frequently Asked Questions</h1>
+      <h2>Frequently Asked Questions</h2>
       <p>Everything you need to know about using TCGPlayer Speed Shipper.</p>
     </div>
 
@@ -1380,195 +1341,43 @@ Chicago, IL 60601</div>
   <div class="tab-panel" id="tab-guide">
 
     <div class="guide-hero">
-      <h1>TCGPlayer Seller's Shipping Guide</h1>
-      <p>Everything you need to know about shipping trading cards sold on TCGPlayer — supplies, printers, packing techniques, and how to protect yourself when things go wrong.</p>
+      <h2>TCGPlayer Seller's Guide</h2>
+      <p>Shipping tiers, supplies, printers, packing technique, and how to protect your seller rating — now published as full standalone guides you can bookmark, share, or find from Google directly.</p>
     </div>
 
-    <!-- Section 1: Shipping Tiers -->
     <div class="guide-section">
-      <h2>Understanding TCGPlayer Shipping Tiers</h2>
-      <p>TCGPlayer uses a tiered shipping system that determines how much the buyer pays and what level of service you're expected to provide. Knowing which tier applies to each order is fundamental to running a healthy TCGPlayer store.</p>
-
-      <h3>PWE — Plain White Envelope</h3>
-      <p>The cheapest option, typically assigned to orders under a certain value threshold. A PWE offers no tracking number and no insurance. You slide the card (in a sleeve and top loader) into a standard #10 envelope and drop it in any mailbox. Fast and cheap, but the buyer bears the risk if the envelope goes missing. Because there's no proof of delivery, sellers can be held responsible for lost PWE shipments under some circumstances — always check TCGPlayer's current policy.</p>
-
-      <h3>BMWT — Bubble Mailer with Tracking</h3>
-      <p>Required for higher-value orders. You purchase a tracked USPS label (usually First Class Package), place the packaged card into a bubble mailer, and attach the label. The buyer can follow the package in real time and you have proof of delivery. This is the right choice for anything worth $10 or more, and most experienced sellers default to BMWT even on cheaper orders for peace of mind.</p>
-
-      <h3>Standard / Media Mail</h3>
-      <p>Occasionally applicable for large sealed product orders. Standard rates vary and Media Mail is generally not appropriate for trading cards alone — read TCGPlayer's shipping guidelines carefully before using it. When in doubt, First Class Package with tracking is the reliable default.</p>
-
-      <div class="callout">
-        <p><strong>Pro tip:</strong> Pirateship.com offers commercial USPS rates with no monthly fee. A First Class Package label that costs $4.00 at the post office counter often runs under $3.50 through Pirateship — meaningful savings if you ship dozens of orders a week.</p>
+      <div class="guide-link-grid">
+        <a class="guide-link-card" href="/guide/how-to-print-tcgplayer-shipping-labels.html">
+          <div class="glc-tag">How-to</div>
+          <div class="glc-title">How to Print TCGPlayer Shipping Labels Fast</div>
+          <div class="glc-desc">The full workflow, from CSV export to printed label, in under five minutes.</div>
+        </a>
+        <a class="guide-link-card" href="/guide/thermal-printer-comparison.html">
+          <div class="glc-tag">Hardware</div>
+          <div class="glc-title">Rollo vs. Dymo vs. MUNBYN</div>
+          <div class="glc-desc">Price, connectivity, and print quality compared across the printers sellers actually use.</div>
+        </a>
+        <a class="guide-link-card" href="/guide/tcgplayer-packing-list-csv-format.html">
+          <div class="glc-tag">Reference</div>
+          <div class="glc-title">Packing List CSV Format Explained</div>
+          <div class="glc-desc">What's in the export, and how to fix parsing and missing-order problems.</div>
+        </a>
+        <a class="guide-link-card" href="/guide/free-vs-paid-tcgplayer-shipping-tools.html">
+          <div class="glc-tag">Buying Guide</div>
+          <div class="glc-title">Free vs. Paid Shipping Tools</div>
+          <div class="glc-desc">What you actually get at each step up, and when paying starts to make sense.</div>
+        </a>
+        <a class="guide-link-card" href="/guide/tcgplayer-shipping-guide.html">
+          <div class="glc-tag">Complete Reference</div>
+          <div class="glc-title">TCGPlayer Seller's Shipping Guide</div>
+          <div class="glc-desc">Shipping tiers, supplies, packing technique, workflow, and seller reputation — the full guide.</div>
+        </a>
+        <a class="guide-link-card" href="/guide/">
+          <div class="glc-tag">Index</div>
+          <div class="glc-title">Browse All Guides →</div>
+          <div class="glc-desc">The full seller's guide hub, outside the app.</div>
+        </a>
       </div>
-    </div>
-
-    <!-- Section 2: Supplies -->
-    <div class="guide-section">
-      <h2>Essential Supplies for Card Sellers</h2>
-      <p>The right supplies protect your cards in transit and keep your buyers happy. Here's what every TCGPlayer seller should have on hand.</p>
-
-      <div class="supply-grid">
-        <div class="supply-card">
-          <div class="supply-icon">🛡️</div>
-          <div class="supply-name">Penny Sleeves</div>
-          <div class="supply-note">First layer of protection. Prevents scratching during handling and packing. Buy in bulk — 1000-count bags are most economical.</div>
-        </div>
-        <div class="supply-card">
-          <div class="supply-icon">📐</div>
-          <div class="supply-name">Top Loaders</div>
-          <div class="supply-note">Standard 3×4 fits most singles. Keeps the card rigid so it can't bend in transit. Ultra Pro and BCW are reliable brands.</div>
-        </div>
-        <div class="supply-card">
-          <div class="supply-icon">🔒</div>
-          <div class="supply-name">Team Bags</div>
-          <div class="supply-note">Resealable poly bags that go over the top loader, sealing out moisture and keeping everything together. Also called "card saver bags."</div>
-        </div>
-        <div class="supply-card">
-          <div class="supply-icon">✉️</div>
-          <div class="supply-name">#10 Envelopes</div>
-          <div class="supply-note">Standard business envelope for PWE shipments. Buy plain white without windows. 500-count boxes last a long time.</div>
-        </div>
-        <div class="supply-card">
-          <div class="supply-icon">📦</div>
-          <div class="supply-name">Bubble Mailers</div>
-          <div class="supply-note">4×8 inch self-sealing bubble mailers for BMWT shipments. The bubble padding protects against bending and moisture.</div>
-        </div>
-        <div class="supply-card">
-          <div class="supply-icon">🏷️</div>
-          <div class="supply-name">Label Rolls</div>
-          <div class="supply-note">4×6 direct thermal rolls for label printers. No ink required — the heat from the printer head activates the coating. 450-count rolls are standard.</div>
-        </div>
-        <div class="supply-card">
-          <div class="supply-icon">📋</div>
-          <div class="supply-name">Rigid Mailers</div>
-          <div class="supply-note">Cardboard "stay flat" mailers for high-value cards. Add extra rigidity beyond a standard bubble mailer. Worth it for anything over $50.</div>
-        </div>
-        <div class="supply-card">
-          <div class="supply-icon">✂️</div>
-          <div class="supply-name">Card Savers</div>
-          <div class="supply-note">Semi-rigid holders used by grading companies and preferred by some buyers. Good alternative to top loaders for valuable cards.</div>
-        </div>
-      </div>
-
-      <h3>Where to Buy</h3>
-      <p>Amazon is convenient for small restocks. For bulk purchasing, BCW Supplies (bcwsupplies.com) and Bulk Card Supplies offer significant discounts on sleeves, top loaders, and mailers when bought in case quantities. If you're shipping more than 20 orders a week, buying in bulk almost always pays off.</p>
-    </div>
-
-    <!-- Section 3: Thermal Printers -->
-    <div class="guide-section">
-      <h2>Thermal Printer Comparison</h2>
-      <p>A thermal label printer is one of the best investments a TCGPlayer seller can make. Once you're printing instead of handwriting addresses, you save two to five minutes per order — which adds up fast. Here are the most popular options among card sellers.</p>
-
-      <div class="printer-grid">
-        <div class="printer-card">
-          <div class="printer-name">Rollo Wireless</div>
-          <div class="printer-price">~$149–$179</div>
-          <div class="printer-desc">The most popular choice among high-volume TCG sellers. Wi-Fi connectivity means no USB cable required. Works with Mac, Windows, iOS, and Android. Prints crisp labels quickly with zero ink cost. The Rollo app makes setup straightforward.</div>
-        </div>
-        <div class="printer-card">
-          <div class="printer-name">MUNBYN 4×6</div>
-          <div class="printer-price">~$79–$109</div>
-          <div class="printer-desc">Excellent value for the price. USB connection is reliable and setup is plug-and-play on most systems. Print quality is very good. A solid choice for sellers who don't need wireless and want to keep costs down.</div>
-        </div>
-        <div class="printer-card">
-          <div class="printer-name">Dymo LabelWriter 4XL</div>
-          <div class="printer-price">~$229–$269</div>
-          <div class="printer-desc">A long-established workhorse with broad software compatibility. Slightly slower than the Rollo but very reliable. Dymo's own label rolls tend to be more expensive, but generic rolls work fine and cut costs significantly.</div>
-        </div>
-        <div class="printer-card">
-          <div class="printer-name">Zebra ZP450 / ZD410</div>
-          <div class="printer-price">~$60–$150 used</div>
-          <div class="printer-desc">Commercial-grade printers that appear frequently on eBay and Facebook Marketplace at steep discounts. Require slightly more setup but are built to last. A great option if you're comfortable sourcing used equipment.</div>
-        </div>
-        <div class="printer-card">
-          <div class="printer-name">Standard Inkjet / Laser</div>
-          <div class="printer-price">Already own it</div>
-          <div class="printer-desc">Using TCGPlayer Speed Shipper's 8.5×11 format, any regular printer works. Print 1–4 labels per page, cut along the lines, and tape them on. Not as fast as a thermal setup, but zero additional cost.</div>
-        </div>
-      </div>
-
-      <h3>Print Settings</h3>
-      <p>For 4×6 thermal printers: set your paper size to 4×6 inches, set margins to zero (or "borderless"), and disable any "fit to page" scaling. The PDF generated by TCGPlayer Speed Shipper is already sized to fill a 4×6 label exactly. For 8.5×11 printing, use "actual size" rather than "fit to page" to preserve the cut-line alignment.</p>
-    </div>
-
-    <!-- Section 4: Packing Cards -->
-    <div class="guide-section">
-      <h2>How to Pack Cards Safely</h2>
-      <p>A card that arrives damaged or bent is a guaranteed negative experience for the buyer — and potentially a dispute or refund. These packing methods, used consistently, will keep your defect rate near zero.</p>
-
-      <h3>Standard Single Card (PWE)</h3>
-      <div class="step-row"><div class="step-num-sm">1</div><div class="step-text"><strong>Penny sleeve</strong> — slide the card face-first into a penny sleeve. This protects the surface from scratching against the top loader.</div></div>
-      <div class="step-row"><div class="step-num-sm">2</div><div class="step-text"><strong>Top loader</strong> — slide the sleeved card into a standard 3×4 top loader. The card should fit snugly without being forced.</div></div>
-      <div class="step-row"><div class="step-num-sm">3</div><div class="step-text"><strong>Team bag</strong> — place the loaded top loader into a resealable team bag. Seal it to keep moisture out and the top loader from sliding out.</div></div>
-      <div class="step-row"><div class="step-num-sm">4</div><div class="step-text"><strong>Stiffen the envelope</strong> — fold a sheet of paper or cut an index card to fit inside the envelope, then place the team bag between two layers. This prevents the card from bending when the envelope goes through postal machinery.</div></div>
-      <div class="step-row"><div class="step-num-sm">5</div><div class="step-text"><strong>Seal and label</strong> — seal the envelope, apply your shipping label centered on the front, and you're done.</div></div>
-
-      <h3>BMWT Packing Method</h3>
-      <p>Follow steps 1–3 above, then add the team-bagged top loader to a bubble mailer. Make sure the label is flat and fully adhered to the mailer — bubbles or peeling labels can delay delivery or cause misrouting. Seal the mailer completely and reinforce the seal with tape on high-value orders.</p>
-
-      <h3>For Valuable Cards ($50+)</h3>
-      <p>For expensive cards, use a card saver instead of a top loader (graders prefer them and they're less likely to cause corner damage), double-bag the card, and place it inside a rigid cardboard mailer. Write "Do Not Bend" visibly on the outside. For cards worth hundreds of dollars, consider adding shipping insurance through USPS or a third-party insurer.</p>
-
-      <div class="callout">
-        <p><strong>Common mistake to avoid:</strong> Never fold the flap of a #10 envelope over the top of a top loader. The fold can transfer directly to the card. Always make sure the top loader sits fully inside the envelope with room to spare.</p>
-      </div>
-    </div>
-
-    <!-- Section 5: Workflow -->
-    <div class="guide-section">
-      <h2>Efficient Shipping Workflow</h2>
-      <p>Sellers who process a high volume of orders consistently use a batched workflow rather than handling each order individually from start to finish. Here's a proven approach.</p>
-
-      <h3>Batch at End of Day</h3>
-      <p>Instead of shipping each order as it comes in, set a daily cutoff time (e.g., 5 PM) and process everything that arrived before that point together. This means one trip to generate labels, one printing session, one packing session, and one post office run or pickup. It's far more efficient than handling orders one at a time throughout the day.</p>
-
-      <h3>Assemble Before Labeling</h3>
-      <p>Pull all your orders' cards, sleeve and top-load them all first, then print labels in one batch using TCGPlayer Speed Shipper. Match labels to packages by order number, then seal and label everything in one pass. This avoids context-switching and reduces mistakes.</p>
-
-      <h3>USPS Pickup vs Drop-Off</h3>
-      <p>USPS offers free scheduled package pickups from your mailbox or door. For BMWT shipments, this eliminates the post office trip entirely. Schedule your pickup the evening before so everything gets collected the next morning. Note that USPS pickup requires at least one package with postage — they will not pick up PWE envelopes alone.</p>
-
-      <h3>Tracking Entry</h3>
-      <p>Enter tracking numbers into TCGPlayer as soon as you print labels, not after you drop them off. Buyers appreciate seeing the tracking number appear quickly, and it protects you against "item not shipped" claims. TCGPlayer Speed Shipper generates your address labels; you still need to enter tracking separately in the TCGPlayer seller portal or through your shipping software.</p>
-    </div>
-
-    <!-- Section 6: Building Reputation -->
-    <div class="guide-section">
-      <h2>Building Your Seller Reputation</h2>
-      <p>On TCGPlayer, your feedback score and seller rating directly affect your visibility in search results and buyers' willingness to purchase from you. A few consistent habits keep your metrics strong.</p>
-
-      <h3>Ship On Time, Every Time</h3>
-      <p>TCGPlayer tracks your handling time — the gap between when an order is placed and when tracking shows movement. If you commit to a 1-business-day handling time, meet it consistently. Late shipments trigger automated warnings and eventually can lead to account restrictions. If you know you'll be unavailable (vacation, illness), use TCGPlayer's vacation mode to pause your store rather than letting orders pile up.</p>
-
-      <h3>Accurate Condition Grading</h3>
-      <p>The single biggest driver of negative feedback is condition disputes. A card listed as Near Mint that arrives with visible play wear will generate a complaint. When in doubt, grade down. A "Lightly Played" card that arrives looking better than expected delights the buyer; a "Near Mint" card that looks beat up creates a dispute. Be conservative with NM grades, especially on older or rarer cards.</p>
-
-      <h3>Packaging That Impresses</h3>
-      <p>Buyers notice when a card arrives well-packaged. A properly sleeved, top-loaded card in a clean bubble mailer with a neat label signals that the seller takes their store seriously. Some sellers include a small thank-you note or a bonus common card. These small touches earn repeat customers in a marketplace where buyer loyalty is otherwise rare.</p>
-
-      <h3>Responding to Issues</h3>
-      <p>When a buyer contacts you about a problem, respond within 24 hours. Even if you believe you're not at fault, a calm and professional response usually de-escalates the situation. Offer a refund or replacement for legitimate complaints rather than arguing — the cost of one refund is far less than the cost of a negative feedback score dragging down your listings.</p>
-    </div>
-
-    <!-- Section 7: Troubleshooting -->
-    <div class="guide-section">
-      <h2>Troubleshooting Common Issues</h2>
-
-      <h3>CSV Won't Parse</h3>
-      <p>If TCGPlayer Speed Shipper shows an error about unrecognized columns, open your CSV file in a plain text editor (Notepad on Windows, TextEdit on Mac in plain-text mode) and look at the first line. The header names need to include recognizable terms like "First Name," "Address 1," etc. If TCGPlayer changed their export format, the header row will reveal exactly what column names they're now using. You can also try re-exporting — sometimes the first export from a session is malformed.</p>
-
-      <h3>Labels Print Too Small or Too Large</h3>
-      <p>This is almost always a print settings issue. In your PDF viewer (Adobe Acrobat, Preview, Chrome's built-in viewer), find the print dialog and select "Actual Size" or set scaling to 100%. Never use "Fit to Page" — this rescales the label to match your paper size rather than printing at the intended dimensions. For thermal printers, also confirm your paper size is set to exactly 4 × 6 inches in the printer driver settings.</p>
-
-      <h3>Return Address Not Saving</h3>
-      <p>The return address saves to your browser's localStorage. Private/incognito mode clears localStorage when the window closes, so switch to a regular browser window. Some browser privacy extensions (like certain ad blockers or fingerprinting blockers) also block localStorage access — check your extension settings if the problem persists in a regular window.</p>
-
-      <h3>PDF Download Fails</h3>
-      <p>The PDF is built using the jsPDF library loaded from a CDN. If the library hasn't finished loading when you click Download (usually on very slow connections), you'll see an error. Wait a few seconds and try again. If downloads are consistently failing, check your browser console for errors — an ad blocker or content security policy may be blocking the CDN script.</p>
-
-      <h3>Some Orders Are Missing from the CSV</h3>
-      <p>TCGPlayer's packing list CSV only includes orders that have not yet been marked as shipped. If an order is missing, it may already be marked shipped in your seller dashboard, or it may have been cancelled. You can also check if your TCGPlayer packing list filter is set to show all pending orders rather than just today's orders.</p>
     </div>
 
   </div><!-- end guide tab -->
@@ -1576,6 +1385,7 @@ Chicago, IL 60601</div>
   <footer class="site-footer">
     <p class="footer-built">Built by <a href="https://clujkeebs.com" target="_blank" rel="noopener">Clujkeebs</a> — TCGPlayer seller &amp; keyboard enthusiast</p>
     <div class="footer-links">
+      <a href="/guide/">Seller's Guide</a> ·
       <a href="https://www.tcgplayer.com/search/all/product?seller=ad430346&view=grid" target="_blank" rel="noopener">TCGPlayer</a> ·
       <a href="https://www.ebay.com/str/clujkeebs" target="_blank" rel="noopener">eBay</a> ·
       <a href="https://www.whatnot.com/user/clujkeebs" target="_blank" rel="noopener">Whatnot</a> ·
@@ -1943,11 +1753,17 @@ function renderProfileList() {
 
 /* ── Tab switching ── */
 var MORE_TABS = ['hiw', 'faq', 'guide'];
+var VALID_TABS = ['home', 'paste', 'design', 'pricing', 'hiw', 'faq', 'guide'];
 function closeMoreMenu() {
   var m = document.getElementById('nav-more-menu');
   if (m) m.classList.remove('open');
 }
-function switchTab(name) {
+// Keeps the URL fragment in sync with the open tab (skipped when switchTab is
+// itself reacting to a hashchange, so it never fights the back/forward
+// buttons or double-fires). This is what makes a link like /#pricing from an
+// external page — one of the /guide/ articles, a shared link — actually land
+// on the right tab instead of silently opening Home.
+function switchTab(name, fromHash) {
   document.querySelectorAll('.nav-tab').forEach(function(t){ t.classList.remove('active'); });
   document.querySelectorAll('.nav-more-item').forEach(function(t){ t.classList.remove('active'); });
   document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
@@ -1960,8 +1776,20 @@ function switchTab(name) {
   document.getElementById('tab-'+name).classList.add('active');
   closeMoreMenu();
   window.scrollTo(0, 0);
+  if (!fromHash) {
+    try {
+      var target = name === 'home' ? '#' : '#' + name;
+      if (window.location.hash !== target) history.replaceState(null, '', target);
+    } catch (e) { /* history API unavailable — hash sync is a convenience, not required */ }
+  }
 }
 window.switchTab = switchTab;
+
+function openTabFromHash() {
+  var name = (window.location.hash || '').replace('#', '');
+  if (VALID_TABS.indexOf(name) !== -1) switchTab(name, true);
+}
+window.addEventListener('hashchange', openTabFromHash);
 
 document.querySelectorAll('.nav-tab').forEach(function(btn){
   if (btn.id === 'nav-more-btn') return;
@@ -2842,6 +2670,7 @@ function awaitPlanUpgrade(attempt) {
   emailInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') subscribe(); });
 })();
 
+openTabFromHash();
 loadAddr();
 refreshSession().then(function(){
   var params = new URLSearchParams(window.location.search);
