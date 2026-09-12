@@ -1073,6 +1073,17 @@ Chicago, IL 60601</div>
         <div class="btn-row" style="margin-top:14px;">
           <button class="btn-ghost" id="manage-billing-btn">Manage Billing</button>
         </div>
+        <div id="referral-box" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+          <p style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;">Refer a friend, earn a free month</p>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:8px;">When someone signs up with your link and becomes a paying customer, you get a free month — automatically, no matter what plan you're on.</p>
+          <div class="grid-2" style="align-items:end;gap:8px;">
+            <div class="field" style="margin-bottom:0;">
+              <input type="text" id="referral-link" readonly style="font-size:12px;" onclick="this.select();" />
+            </div>
+            <button class="btn-ghost" id="referral-copy-btn" type="button" style="height:42px;">Copy Link</button>
+          </div>
+          <p class="tip" id="referral-stats-line" style="margin-top:8px;"></p>
+        </div>
       </div>
     </div>
 
@@ -1266,6 +1277,11 @@ Chicago, IL 60601</div>
     <div class="faq-item">
       <button class="faq-q">What do the paid plans include? <span class="faq-arrow">▼</span></button>
       <div class="faq-a">The Free plan needs no account and includes 10 labels a month. Base is $1.99/mo for 500 labels a month — plenty for most small sellers. Premium is $5.99/mo for unlimited labels, plus paste-address label generation, the Design Studio (custom colors, fonts, a custom packing-slip message, QR codes, and multiple saved return-address profiles), and no "Powered by" branding on packing slips. See the <a href="#" onclick="switchTab('pricing');return false;">Pricing</a> tab for details.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">Is there a referral program? <span class="faq-arrow">▼</span></button>
+      <div class="faq-a">Yes. Sign in and find your referral link under Account. When someone signs up through it and becomes a paying customer, you get a free month — applied automatically to whatever plan you're on, whenever you have one to apply it to.</div>
     </div>
 
     <div class="faq-item">
@@ -1616,6 +1632,67 @@ async function refreshServerStatus() {
   } catch (e) { /* offline or not signed in yet */ }
 }
 
+/* ── Referrals: refer a friend who becomes a paying customer, earn a free month ── */
+var REFERRAL_STORAGE_KEY = 'tcgss_pending_referral';
+var referralStats = null; // { code, applied_credits, pending_credits }
+
+(function captureReferralCodeFromUrl() {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var ref = params.get('ref');
+    if (!ref) return;
+    localStorage.setItem(REFERRAL_STORAGE_KEY, ref.trim().toUpperCase());
+    params.delete('ref');
+    var qs = params.toString();
+    window.history.replaceState({}, '', window.location.pathname + (qs ? '?' + qs : ''));
+  } catch (e) { /* localStorage unavailable (private browsing) — referral link silently has no effect */ }
+})();
+
+// Called right after a signup completes. Deliberately not called on login —
+// only a brand-new account can be referred, and the database enforces that
+// independently (a referral code applied more than ~2 hours after the
+// account was created is refused), so this is defense in depth, not the only
+// guard.
+async function applyPendingReferralCode() {
+  if (!sb) return;
+  var code;
+  try { code = localStorage.getItem(REFERRAL_STORAGE_KEY); } catch (e) { return; }
+  if (!code) return;
+  try {
+    var res = await sb.rpc('tcgss_apply_referral_code', { p_code: code });
+    // Whatever the outcome — applied, already referred, invalid code, too
+    // late — there's nothing to gain by asking again on a future visit.
+    if (!res.error) { try { localStorage.removeItem(REFERRAL_STORAGE_KEY); } catch (e) {} }
+  } catch (e) { /* offline — leave it stored, we'll try again next visit */ }
+}
+
+async function refreshReferralStats() {
+  if (!sb || !session) { referralStats = null; return; }
+  try {
+    var res = await sb.rpc('tcgss_get_referral_stats');
+    if (!res.error) referralStats = res.data;
+  } catch (e) { /* offline */ }
+}
+
+function renderReferralUI() {
+  var box = document.getElementById('referral-box');
+  if (!box) return;
+  if (!session || !referralStats || !referralStats.code) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  var link = window.location.origin + '/?ref=' + referralStats.code;
+  var linkEl = document.getElementById('referral-link');
+  if (linkEl) linkEl.value = link;
+  var statsEl = document.getElementById('referral-stats-line');
+  if (statsEl) {
+    var applied = referralStats.applied_credits || 0;
+    var pending = referralStats.pending_credits || 0;
+    var parts = [];
+    parts.push(applied === 1 ? '1 free month earned' : applied + ' free months earned');
+    if (pending) parts.push(pending === 1 ? '1 more on the way' : pending + ' more on the way');
+    statsEl.textContent = parts.join(' · ');
+  }
+}
+
 function updateAccountUI() {
   var signedOut = document.getElementById('account-signed-out');
   var signedIn = document.getElementById('account-signed-in');
@@ -1659,6 +1736,7 @@ function updateAccountUI() {
   }
 
   updatePricingButtons();
+  renderReferralUI();
   applyGating();
   // Keep the "N left this month" hint in the preview in sync with the plan.
   if (orders.length) renderPreviews();
@@ -1703,6 +1781,7 @@ async function refreshSession() {
   var res = await sb.auth.getSession();
   session = res.data.session;
   await refreshServerStatus();
+  await refreshReferralStats();
   updateAccountUI();
 }
 
@@ -2526,6 +2605,10 @@ document.getElementById('clear-btn').addEventListener('click',function(){
         var signInRes = await sb.auth.signInWithPassword({ email: c.email, password: c.password });
         if (signInRes.error) throw signInRes.error;
       }
+      // Harmless to call on a repaired legacy account too — the database
+      // side refuses anything but a genuinely brand-new profile, so this
+      // never re-attaches a referral to an old account.
+      await applyPendingReferralCode();
       setMsg('', null);
     } catch (e) {
       setMsg(friendlyAuthError(e), 'err');
@@ -2591,6 +2674,29 @@ document.getElementById('clear-btn').addEventListener('click',function(){
       setPromoMsg('', null);
     }
   });
+
+  var referralCopyBtn = document.getElementById('referral-copy-btn');
+  if (referralCopyBtn) {
+    referralCopyBtn.addEventListener('click', async function () {
+      var linkEl = document.getElementById('referral-link');
+      if (!linkEl || !linkEl.value) return;
+      var orig = this.textContent;
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(linkEl.value);
+        } else {
+          linkEl.select();
+          document.execCommand('copy');
+        }
+        this.textContent = 'Copied!';
+      } catch (e) {
+        linkEl.select();
+        this.textContent = 'Select & copy';
+      }
+      var btn = this;
+      setTimeout(function () { btn.textContent = orig; }, 1800);
+    });
+  }
 
   document.getElementById('manage-billing-btn').addEventListener('click', async function(){
     if (!session) return;

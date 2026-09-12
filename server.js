@@ -74,7 +74,7 @@ async function applySubscriptionToProfile(subscription) {
   const plan = active ? PRICE_TO_PLAN[priceId] : 'free';
   // is_lifetime_free accounts (the owner) are never touched by Stripe events,
   // even in a freak stripe_customer_id collision.
-  const { error } = await supabaseAdmin
+  const { data: updated, error } = await supabaseAdmin
     .from('tcgss_profiles')
     .update({
       stripe_subscription_id: subscription.id,
@@ -85,8 +85,14 @@ async function applySubscriptionToProfile(subscription) {
       updated_at: new Date().toISOString(),
     })
     .eq('stripe_customer_id', subscription.customer)
-    .eq('is_lifetime_free', false);
-  if (error) console.error('Failed to update profile from subscription event:', error);
+    .eq('is_lifetime_free', false)
+    .select('id')
+    .maybeSingle();
+  if (error) { console.error('Failed to update profile from subscription event:', error); return; }
+  // Covers a referrer whose OWN subscription just went active (first purchase
+  // via subscription.created, or a later renewal/resume) while they had
+  // referral rewards waiting on that.
+  if (active && updated) await applyPendingReferralCredits(updated.id, subscription.customer);
 }
 
 // Statuses that mean "Stripe is still billing this subscription". A customer in
@@ -101,6 +107,70 @@ async function liveSubscriptionFor(customerId) {
   if (!customerId) return null;
   const list = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 20 });
   return list.data.find((sub) => LIVE_SUBSCRIPTION_STATUSES.includes(sub.status)) || null;
+}
+
+// Referral rewards: applies as a Stripe customer balance credit rather than a
+// coupon, so it works no matter which plan the referrer ends up on and stacks
+// correctly if they've earned more than one free month (each credit reduces
+// their next invoice(s) until it's used up). The amount is priced off the
+// referrer's CURRENT subscription at the moment the credit is actually
+// applied, not the plan they were on when they earned it — a fair "one month
+// of whatever you're paying for" rather than a fixed dollar figure.
+//
+// tcgss_claim_pending_referral_credits atomically claims each pending row
+// (row-level lock inside the UPDATE), so this is safe to call from multiple
+// webhook deliveries racing each other — only one will ever claim a given
+// reward. A claimed row that fails to get a real Stripe credit is released
+// back to 'pending' rather than left stuck, so it's retried on the next
+// opportunity (the next time this referrer's subscription goes active).
+async function applyPendingReferralCredits(referrerProfileId, stripeCustomerId) {
+  if (!referrerProfileId || !stripeCustomerId) return;
+  try {
+    const { data: claimed, error: claimErr } = await supabaseAdmin.rpc('tcgss_claim_pending_referral_credits', {
+      p_referrer_id: referrerProfileId,
+    });
+    if (claimErr) { console.error('Failed to claim referral credits for', referrerProfileId, claimErr); return; }
+    if (!claimed || !claimed.length) return;
+
+    const subscription = await liveSubscriptionFor(stripeCustomerId);
+    if (!subscription) {
+      // Claimed but this referrer isn't actually live right now (a race with
+      // a cancellation, most likely) — hand every claimed row back so it's
+      // retried the next time they really do have an active subscription.
+      for (const credit of claimed) {
+        await supabaseAdmin.rpc('tcgss_release_referral_credit', { p_credit_id: credit.id });
+      }
+      return;
+    }
+
+    let price = subscription.items.data[0].price;
+    if (!price || typeof price.unit_amount !== 'number') {
+      price = await stripe.prices.retrieve(price ? price.id : subscription.items.data[0].price.id);
+    }
+    const amount = price.unit_amount;
+    const currency = price.currency || 'usd';
+    if (!amount) { for (const credit of claimed) await supabaseAdmin.rpc('tcgss_release_referral_credit', { p_credit_id: credit.id }); return; }
+
+    for (const credit of claimed) {
+      try {
+        const txn = await stripe.customers.createBalanceTransaction(stripeCustomerId, {
+          amount: -amount,
+          currency,
+          description: 'Referral reward: free month for referring a paying customer',
+        });
+        const { error: markErr } = await supabaseAdmin.rpc('tcgss_mark_referral_credit_applied', {
+          p_credit_id: credit.id,
+          p_balance_transaction_id: txn.id,
+        });
+        if (markErr) console.error('Applied a referral credit but failed to record it:', markErr);
+      } catch (stripeErr) {
+        console.error('Failed to apply referral credit', credit.id, 'for', referrerProfileId, stripeErr.message);
+        await supabaseAdmin.rpc('tcgss_release_referral_credit', { p_credit_id: credit.id });
+      }
+    }
+  } catch (err) {
+    console.error('applyPendingReferralCredits failed for', referrerProfileId, err);
+  }
 }
 
 async function findPromotionCode(rawCode) {
@@ -236,7 +306,44 @@ router.post('/stripe-webhook', express.raw({ type: '*/*' }), requireStripe, requ
             })
             .eq('id', userId)
             .eq('is_lifetime_free', false);
-          if (error) console.error('Failed to attach subscription to profile:', error);
+          if (error) {
+            console.error('Failed to attach subscription to profile:', error);
+            break;
+          }
+
+          if (['active', 'trialing'].includes(subscription.status)) {
+            // If this newly-paying customer was referred by someone, record the
+            // conversion (idempotent — a resubscription years later cannot earn
+            // a second reward for the same referral). tcgss_record_referral_conversion
+            // returns the referrer's id only the first time this fires for a
+            // given referred user, so nothing further happens on a duplicate
+            // webhook delivery or a later resubscription.
+            const { data: referrerId, error: referralErr } = await supabaseAdmin.rpc('tcgss_record_referral_conversion', {
+              p_referred_user_id: userId,
+            });
+            if (referralErr) {
+              console.error('Failed to record referral conversion for', userId, referralErr);
+            } else if (referrerId) {
+              const { data: referrerProfile } = await supabaseAdmin
+                .from('tcgss_profiles')
+                .select('stripe_customer_id')
+                .eq('id', referrerId)
+                .maybeSingle();
+              // Only worth trying now if the referrer already has a Stripe
+              // customer — if they've never subscribed, this credit sits
+              // 'pending' until their own subscription goes active, at which
+              // point applySubscriptionToProfile/this same handler applies it.
+              if (referrerProfile && referrerProfile.stripe_customer_id) {
+                await applyPendingReferralCredits(referrerId, referrerProfile.stripe_customer_id);
+              }
+            }
+
+            // Independently: this customer, who just started paying, may
+            // themselves have referred other people before they ever
+            // subscribed. Now that they have a live subscription, apply any
+            // credit they've already earned as a referrer.
+            await applyPendingReferralCredits(userId, session.customer);
+          }
         }
         break;
       }

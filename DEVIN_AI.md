@@ -111,6 +111,62 @@ whoever touches auth next:
   stamped in customer metadata — never by email, which would let one account
   claim another's subscription.
 
+## Referral program
+
+Refer a friend who becomes a paying customer, earn a free month. Details
+that matter if you touch this:
+
+- Every profile gets an 8-character `referral_code` (random, URL-safe
+  alphabet — no `0/O/1/I/L`, no `+`/`/`) the moment it's created, via the
+  `tcgss_handle_new_user` trigger. Share link is `<site>/?ref=<code>`.
+- `?ref=` is captured client-side into `localStorage` and applied via
+  `tcgss_apply_referral_code` right after a signup completes (not login).
+  That RPC is the only real gate and enforces, independently of the client:
+  no self-referral, one referral per account ever, and only within ~2 hours
+  of the account being created — so an old account can't retroactively
+  "become referred" by clicking a link.
+- The reward is a **Stripe customer balance credit**, not a coupon — sized
+  to whatever the referrer's current plan costs AT THE MOMENT it's applied,
+  not when it was earned. This is deliberate: it's the only way "one free
+  month" means the same thing whether the referrer is on Base or Premium,
+  and it lets multiple earned rewards just stack (each credit knocks a
+  month off, in order, until it's used up).
+- `tcgss_referral_credits` has one row per referred user, ever (unique
+  constraint) — resubscribing after a cancellation cannot earn a second
+  reward for the same referral. `tcgss_record_referral_conversion` is the
+  only thing that inserts a row, called from the `checkout.session.completed`
+  webhook handler, and only returns the referrer's id the first time (null
+  on every later call for that same referred user).
+- Credit is applied via a claim/apply/release cycle designed to survive a
+  webhook firing twice or two webhooks racing:
+  `tcgss_claim_pending_referral_credits` atomically flips `pending` rows to
+  `processing` (row-level lock — only one caller ever wins a given row).
+  server.js then calls Stripe for each claimed row; success marks it
+  `applied` via `tcgss_mark_referral_credit_applied`, failure calls
+  `tcgss_release_referral_credit` to hand it back to `pending` rather than
+  lose it. **Never apply a credit without going through claim first** — that
+  atomicity is the only thing preventing a double-credit on a redelivered
+  webhook.
+- If the referrer isn't a paying customer yet when their referral converts,
+  the credit sits `pending` — no error, nothing lost. It gets applied the
+  next time that referrer's own subscription goes active, whether that's
+  their first purchase or a later renewal (both `checkout.session.completed`
+  and `applySubscriptionToProfile` call `applyPendingReferralCredits` on
+  every active-status transition).
+- All of this is exercised in `test/referral.test.js` against a stubbed
+  Stripe/Supabase — including the resubscription-can't-double-earn case and
+  the Stripe-call-fails-so-release-not-lose case. It was also verified
+  directly against the live database (self-referral, invalid code, the
+  2-hour window, idempotent conversion, claim/apply/release) before any
+  application code was written, the same way RLS was verified elsewhere in
+  this file.
+- `tcgss_referral_credits` has RLS enabled with **no policies** — that's
+  intentional, same pattern as everything else here: no direct table access
+  for anyone, all reads/writes go through the SECURITY DEFINER functions
+  above (or the service role from server.js). Supabase's linter flags this
+  as an INFO-level "RLS enabled, no policy" notice; that's expected, not a
+  bug to fix.
+
 ## Tests
 
 `npm test` runs three suites (`test/`) with stubbed Stripe and Supabase
@@ -124,6 +180,10 @@ clients. No network, no live keys, runs in this sandbox:
 - `webhook-signature.test.js` — drives the real Netlify function handler with
   genuine Stripe signatures, plain and base64 bodies, both path prefixes.
   Forged, unsigned and tampered deliveries are confirmed to write nothing.
+- `referral.test.js` — the referral credit lifecycle: immediate application,
+  pending-until-the-referrer-pays, one reward per referral ever even across a
+  resubscription, and a failed Stripe call releasing rather than losing the
+  claim.
 
 Run it before pushing anything that touches billing or auth.
 

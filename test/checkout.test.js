@@ -65,8 +65,14 @@ const supabaseStub = {
     update: (vals) => {
       const q = { _f: {} };
       q.eq = (k, v) => { q._f[k] = v; return q; };
-      // Supabase client resolves when awaited; record on the terminal eq().
-      q.then = (resolve) => { state.updates.push({ vals: JSON.parse(JSON.stringify(vals)), filters: q._f }); resolve({ error: null }); };
+      var record = function () { state.updates.push({ vals: JSON.parse(JSON.stringify(vals)), filters: q._f }); };
+      // Supports both `await update().eq().eq()` (resolves via .then) and
+      // `await update().eq().eq().select('id').maybeSingle()`, which
+      // applySubscriptionToProfile uses to fetch the row's id for referral
+      // credit lookups after the write.
+      q.select = () => q;
+      q.maybeSingle = async () => { record(); return { data: { id: 'stub_profile_id' }, error: null }; };
+      q.then = (resolve) => { record(); resolve({ error: null }); };
       return q;
     },
     upsert: async (vals) => { calls.push(['profiles.upsert', vals]); return { error: null }; },

@@ -37,11 +37,20 @@ const supabaseStub = {
     update: (vals) => {
       const q = { _f: {} };
       q.eq = (k, v) => { q._f[k] = v; return q; };
-      q.then = (resolve) => { writes.push({ vals, filters: q._f }); resolve({ error: null }); };
+      var record = function () { writes.push({ vals, filters: q._f }); };
+      // checkout.session.completed's handler now also does
+      // .select('id').maybeSingle() on the subscription-update path; the
+      // webhook fixture here only exercises the referral-free case, so a
+      // stub id with no referrer is enough to keep that path a no-op.
+      q.select = () => q;
+      q.maybeSingle = async () => { record(); return { data: { id: 'stub_profile_id' }, error: null }; };
+      q.then = (resolve) => { record(); resolve({ error: null }); };
       return q;
     },
   }),
   auth: { admin: {} },
+  // No referrer in this fixture set — every referral RPC is a safe no-op.
+  rpc: async () => ({ data: null, error: null }),
 };
 
 const origLoad = Module._load;
