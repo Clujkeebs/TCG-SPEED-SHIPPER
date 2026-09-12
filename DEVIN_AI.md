@@ -167,9 +167,62 @@ that matter if you touch this:
   as an INFO-level "RLS enabled, no policy" notice; that's expected, not a
   bug to fix.
 
+## Fully-free (100%-off) promo codes
+
+Any promotion code whose coupon is **100% off** is treated as a distinct
+class in `create-checkout-session`, detected generically
+(`coupon.percent_off === 100`) — not by hardcoding a specific code string, so
+any free-giveaway code created later in the Stripe dashboard gets the same
+handling automatically, no app changes needed:
+
+- The Checkout Session is created with `payment_method_collection:
+  'if_required'`. This is set on **every** checkout session, not just
+  free ones — it's a no-op for a normal paid checkout (Stripe still collects
+  a card whenever the amount due is > 0) and only actually skips card
+  collection when a 100%-off coupon makes the total $0. Do not make this
+  conditional; there's no case where it needs to be.
+- IP-based redemption limiting: `tcgss_promo_ip_redemptions` (promotion code
+  id + sha256 of the client IP, unique together) stops the same connection
+  from claiming the same free code twice. `getClientIp`/`hashIp` in
+  server.js do the extraction/hashing; the raw IP is never stored, only the
+  hash. This is a deterrent, not a guarantee — shared IPs (offices, campus
+  wifi, VPNs) can still collide two unrelated legitimate people onto the
+  same hash. Said so explicitly to the owner when this shipped.
+- The check happens **twice**: once for early UX feedback in
+  `GET /validate-promo-code` (so the "Apply Code" button can say "already
+  used" before checkout), and again — authoritatively — right before the
+  Checkout Session is created in `create-checkout-session`, since the two
+  requests aren't guaranteed to come from the same IP.
+- The redemption is recorded **on actual completion** (the
+  `checkout.session.completed` webhook), not at session creation. The IP
+  hash and promotion code id are stamped into the session's `metadata` at
+  creation time specifically so the webhook has them later without a second
+  lookup. This matters: recording at creation time would burn someone's one
+  redemption if they started checkout and abandoned it.
+- What happens after the free month: nothing special was added, and nothing
+  needed to be. A `duration: 'once'` coupon only discounts the first billing
+  cycle; the renewal invoice after that has no payment method to charge
+  (none was ever collected), so Stripe fails to collect and the subscription
+  status moves to `past_due`. `applySubscriptionToProfile` already treats
+  any status outside `active`/`trialing` as `plan: 'free'` — so paid access
+  is cut off immediately, automatically, using logic that already existed
+  and is already tested. If the person adds a card later and pays the
+  past-due invoice, the subscription just resumes as a normal paid Base
+  subscription — that's an intentional, reasonable trial→convert path, not
+  an oversight.
+- Recommended (not yet created — needs a human in the Stripe dashboard, or
+  the Stripe connector reconnected): a coupon restricted to the Base product
+  specifically, `percent_off: 100`, `duration: 'once'`, with a Promotion
+  Code on top that has `restrictions.first_time_transaction: true` set. That
+  restriction is Stripe-native and stops the *same Stripe customer* from
+  reusing the code across a cancel/resubscribe cycle — it's the other half
+  of the protection the IP table provides (which stops different *new*
+  accounts on one connection, not repeat use by one already-existing
+  customer).
+
 ## Tests
 
-`npm test` runs three suites (`test/`) with stubbed Stripe and Supabase
+`npm test` runs five suites (`test/`) with stubbed Stripe and Supabase
 clients. No network, no live keys, runs in this sandbox:
 
 - `signup.test.js` — pins both conditions gating the password-repair path, so
@@ -184,6 +237,11 @@ clients. No network, no live keys, runs in this sandbox:
   pending-until-the-referrer-pays, one reward per referral ever even across a
   resubscription, and a failed Stripe call releasing rather than losing the
   claim.
+- `free-promo.test.js` — the 100%-off promo path: `if_required` payment
+  collection, the IP hash stamped into session metadata, redemption recorded
+  only on actual completion (not session creation), a second attempt from
+  the same IP refused before Stripe is touched, a different IP still
+  allowed, and a non-100%-off code confirmed never subject to any of this.
 
 Run it before pushing anything that touches billing or auth.
 

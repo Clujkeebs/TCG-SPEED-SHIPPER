@@ -1,6 +1,7 @@
 const express = require('express');
 const Stripe = require('stripe');
 const { createClient } = require('@supabase/supabase-js');
+const crypto = require('crypto');
 
 const PORT = process.env.PORT || 3000;
 const SITE_URL = (process.env.PUBLIC_SITE_URL || '').replace(/\/$/, '') || 'http://localhost:' + PORT;
@@ -224,6 +225,55 @@ function tooManySignupAttempts(ip) {
   return recent.length > maxAttempts;
 }
 
+// x-forwarded-for can carry a client,proxy,proxy chain; the first entry is the
+// original client. Falls back to req.ip (direct connections, local testing).
+function getClientIp(req) {
+  const header = req.headers['x-forwarded-for'];
+  if (header) return String(header).split(',')[0].trim();
+  return req.ip || 'unknown';
+}
+
+// One-way hash so the database never stores a raw IP address, just enough to
+// recognise "this is the same connection as before."
+function hashIp(ip) {
+  return crypto.createHash('sha256').update(String(ip)).digest('hex');
+}
+
+// A 100%-off coupon is a fully-free redemption regardless of which promo code
+// carries it — treating this as a property of the coupon (not a specific
+// hardcoded code) means any free-tier giveaway code created in the future
+// gets the same IP protection automatically, with no code changes here.
+function isFullyFreeCoupon(coupon) {
+  return !!coupon && coupon.percent_off === 100;
+}
+
+// Has this (promotion code, connection) pair already redeemed a free month?
+// Best-effort defense against the same person signing up repeatedly from one
+// network to keep re-claiming a free-tier code — not airtight (shared IPs,
+// VPNs), but a real deterrent, backed by a database unique constraint rather
+// than only in-process state.
+async function alreadyRedeemedFromIp(promotionCodeId, ipHash) {
+  const { data, error } = await supabaseAdmin
+    .from('tcgss_promo_ip_redemptions')
+    .select('id')
+    .eq('promotion_code_id', promotionCodeId)
+    .eq('ip_hash', ipHash)
+    .maybeSingle();
+  if (error) { console.error('Failed to check promo IP redemption:', error); return false; }
+  return !!data;
+}
+
+// Records a completed free redemption. Errors are swallowed except for the
+// expected "already recorded" case, which is exactly the race this table's
+// unique constraint exists to catch (e.g. a redelivered webhook) — silent by
+// design, not a bug.
+async function recordPromoIpRedemption(promotionCodeId, ipHash, userId) {
+  const { error } = await supabaseAdmin
+    .from('tcgss_promo_ip_redemptions')
+    .insert({ promotion_code_id: promotionCodeId, ip_hash: ipHash, user_id: userId });
+  if (error && error.code !== '23505') console.error('Failed to record promo IP redemption:', error);
+}
+
 async function findAuthUserId(email) {
   const { data, error } = await supabaseAdmin.rpc('tcgss_find_auth_user_id', { p_email: email });
   if (error) throw error;
@@ -344,6 +394,14 @@ router.post('/stripe-webhook', express.raw({ type: '*/*' }), requireStripe, requ
             // credit they've already earned as a referrer.
             await applyPendingReferralCredits(userId, session.customer);
           }
+
+          // A fully-free redemption (see create-checkout-session) stamps its
+          // IP hash into session metadata at creation time; recorded only now,
+          // on actual completion, so an abandoned $0 checkout never burns the
+          // one redemption this connection gets.
+          if (session.metadata && session.metadata.promo_code_id && session.metadata.promo_ip_hash) {
+            await recordPromoIpRedemption(session.metadata.promo_code_id, session.metadata.promo_ip_hash, userId);
+          }
         }
         break;
       }
@@ -452,10 +510,20 @@ router.post('/signup', express.json(), requireSupabase, async (req, res) => {
   }
 });
 
-router.get('/validate-promo-code', requireStripe, async (req, res) => {
+router.get('/validate-promo-code', requireStripe, requireSupabase, async (req, res) => {
   try {
     const promo = await findPromotionCode(req.query.code);
     if (!promo) return res.json({ valid: false, error: 'That code is not valid or has expired.' });
+    // Early, best-effort feedback for a fully-free code already used from this
+    // connection — saves a trip through checkout to find out. Not the only
+    // enforcement: create-checkout-session checks again right before billing,
+    // since the two requests aren't guaranteed to share the same IP.
+    if (isFullyFreeCoupon(promo.coupon)) {
+      const ipHash = hashIp(getClientIp(req));
+      if (await alreadyRedeemedFromIp(promo.id, ipHash)) {
+        return res.json({ valid: false, error: 'This code has already been used from this connection.' });
+      }
+    }
     res.json({ valid: true, code: promo.code, description: describeCoupon(promo.coupon) });
   } catch (err) {
     console.error('validate-promo-code failed:', err);
@@ -470,6 +538,8 @@ router.post('/create-checkout-session', express.json(), requireStripe, requireSu
       : plan === 'base' ? process.env.STRIPE_PRICE_BASE
       : null;
     if (!priceId) return res.status(400).json({ error: 'Unknown plan' });
+
+    const ipHash = hashIp(getClientIp(req));
 
     // Kicked off now (in parallel with the profile/customer setup below) since
     // it depends on none of that work — re-validated server-side regardless of
@@ -544,7 +614,17 @@ router.post('/create-checkout-session', express.json(), requireStripe, requireSu
       if (upsertErr) throw upsertErr;
     }
 
-    const appliedPromo = await promoLookup;
+    let appliedPromo = await promoLookup;
+    let promoDeniedReason = null;
+    const isFreeRedemption = isFullyFreeCoupon(appliedPromo && appliedPromo.coupon);
+
+    if (isFreeRedemption && (await alreadyRedeemedFromIp(appliedPromo.id, ipHash))) {
+      // Authoritative check — /validate-promo-code already tried to catch
+      // this earlier, but that request isn't guaranteed to have come from the
+      // same IP, so this is the real gate, right before anything is billed.
+      appliedPromo = null;
+      promoDeniedReason = 'ip_already_used';
+    }
 
     const sessionParams = {
       mode: 'subscription',
@@ -553,9 +633,23 @@ router.post('/create-checkout-session', express.json(), requireStripe, requireSu
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: SITE_URL + '/?checkout=success',
       cancel_url: SITE_URL + '/?checkout=cancelled',
+      // Only skips card collection when the amount actually due is $0 (e.g. a
+      // 100%-off code below) — a normal paid checkout still collects a card
+      // exactly as before, since its total is never zero.
+      payment_method_collection: 'if_required',
     };
-    if (appliedPromo) sessionParams.discounts = [{ promotion_code: appliedPromo.id }];
-    else sessionParams.allow_promotion_codes = true;
+    if (appliedPromo) {
+      sessionParams.discounts = [{ promotion_code: appliedPromo.id }];
+      if (isFreeRedemption) {
+        // Read back by the checkout.session.completed handler to record the
+        // redemption once the $0 checkout actually completes — not here at
+        // session *creation*, since a session that's merely started and
+        // abandoned shouldn't burn the one redemption this IP gets.
+        sessionParams.metadata = { promo_code_id: appliedPromo.id, promo_ip_hash: ipHash };
+      }
+    } else {
+      sessionParams.allow_promotion_codes = true;
+    }
 
     let session;
     let promoApplied = !!appliedPromo;
@@ -568,12 +662,14 @@ router.post('/create-checkout-session', express.json(), requireStripe, requireSu
       // checkout entirely; the client tells the user the discount didn't apply.
       console.error('Checkout with promo code failed, retrying without it:', stripeErr.message);
       delete sessionParams.discounts;
+      delete sessionParams.metadata;
       sessionParams.allow_promotion_codes = true;
       session = await stripe.checkout.sessions.create(sessionParams);
       promoApplied = false;
+      promoDeniedReason = promoDeniedReason || 'not_applicable';
     }
 
-    res.json({ url: session.url, promoApplied: promoApplied });
+    res.json({ url: session.url, promoApplied: promoApplied, promoDeniedReason: promoApplied ? null : promoDeniedReason });
   } catch (err) {
     console.error('create-checkout-session failed:', err);
     res.status(500).json({ error: 'Could not create checkout session' });

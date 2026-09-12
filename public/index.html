@@ -2751,7 +2751,10 @@ document.getElementById('clear-btn').addEventListener('click',function(){
         }
         if (json.url) {
           if (appliedPromo && !json.promoApplied) {
-            var proceed = confirm('The promo code "' + appliedPromo.code + '" doesn\'t apply to this plan. Continue without the discount?');
+            var reason = json.promoDeniedReason === 'ip_already_used'
+              ? 'The code "' + appliedPromo.code + '" has already been used from this connection.'
+              : 'The promo code "' + appliedPromo.code + '" doesn\'t apply to this plan.';
+            var proceed = confirm(reason + ' Continue without the discount?');
             if (!proceed) { this.disabled = false; this.textContent = orig; return; }
           }
           window.location.href = json.url;
