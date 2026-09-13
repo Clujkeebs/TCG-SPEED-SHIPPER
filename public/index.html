@@ -861,6 +861,7 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
       </div>
       <div class="shipped-progress" id="shipped-progress" style="display:none;">
         <span id="shipped-progress-text"></span>
+        <button type="button" id="shipped-mark-all-btn">Mark all shipped</button>
         <button type="button" id="shipped-clear-btn">Clear shipped marks</button>
       </div>
       <div id="preview-list"></div>
@@ -2192,10 +2193,12 @@ function renderPreviews() {
 
   var progress = document.getElementById('shipped-progress');
   var progressText = document.getElementById('shipped-progress-text');
+  var markAllBtn = document.getElementById('shipped-mark-all-btn');
   if (progress && progressText) {
     if (total > 0) {
       progress.style.display = 'flex';
       progressText.textContent = shippedCount + ' of ' + total + ' marked shipped';
+      if (markAllBtn) markAllBtn.textContent = shippedCount >= total ? 'Unmark all' : 'Mark all shipped';
     } else {
       progress.style.display = 'none';
     }
@@ -2381,6 +2384,7 @@ function handleFile(file) {
     document.getElementById('upload-text').textContent='\u2713 '+file.name;
     document.getElementById('loaded-msg').innerHTML='<div class="loaded-state"><span>\u2713 '+orders.length+' order'+(orders.length!==1?'s':'')+' loaded</span></div>';
     renderPreviews();
+    restoreTrackingForBatch();
   };
   reader.readAsText(file);
 }
@@ -2405,6 +2409,13 @@ document.getElementById('preview-list').addEventListener('change', function (e) 
 
 document.getElementById('shipped-clear-btn').addEventListener('click', function () {
   clearShippedForBatch();
+  renderPreviews();
+});
+
+document.getElementById('shipped-mark-all-btn').addEventListener('click', function () {
+  var shipped = getShippedSet();
+  var allShipped = orders.every(function (o, i) { return !!shipped[orderKey(o, i)]; });
+  orders.forEach(function (o, i) { setShipped(orderKey(o, i), !allShipped); });
   renderPreviews();
 });
 
@@ -2440,6 +2451,7 @@ document.getElementById('paste-generate-btn').addEventListener('click', function
 
   orders = result.good;
   resetTracking();
+  restoreTrackingForBatch();
   document.getElementById('csv-input').value = '';
   document.getElementById('upload-text').textContent = 'Drop your CSV here, or tap to browse';
   document.getElementById('error-msg').innerHTML = '';
@@ -2489,6 +2501,43 @@ function resetTracking() {
   if (area) area.style.display = 'none';
 }
 
+/* Pasted tracking numbers persist per-batch too, same as shipped marks —
+   losing 50 just-pasted tracking numbers to an accidental reload before
+   they're all copied into TCGplayer would be a genuinely bad day. */
+var TRACKING_STORAGE_KEY = 'tcgss_tracking_v1';
+var TRACKING_MAX_BATCHES = 25;
+
+function loadTrackingStore() {
+  try { return JSON.parse(localStorage.getItem(TRACKING_STORAGE_KEY) || '{}'); } catch (e) { return {}; }
+}
+function saveTrackingStore(store) {
+  try {
+    var keys = Object.keys(store);
+    while (keys.length > TRACKING_MAX_BATCHES) { delete store[keys.shift()]; }
+    localStorage.setItem(TRACKING_STORAGE_KEY, JSON.stringify(store));
+  } catch (e) { /* localStorage unavailable — pasted numbers just won't persist across reloads */ }
+}
+function saveTrackingInputForBatch(text) {
+  var bk = batchKey();
+  if (!bk) return;
+  var store = loadTrackingStore();
+  delete store[bk];
+  if (text) store[bk] = text;
+  saveTrackingStore(store);
+}
+function loadTrackingInputForBatch() {
+  var bk = batchKey();
+  if (!bk) return '';
+  return loadTrackingStore()[bk] || '';
+}
+function restoreTrackingForBatch() {
+  var saved = loadTrackingInputForBatch();
+  if (!saved) return;
+  var input = document.getElementById('tracking-input');
+  if (input) input.value = saved;
+  matchTrackingNumbers();
+}
+
 function matchTrackingNumbers() {
   var input = document.getElementById('tracking-input');
   var lines = (input.value || '').split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean);
@@ -2498,6 +2547,7 @@ function matchTrackingNumbers() {
   var copyAllBtn = document.getElementById('tracking-copy-all-btn');
   if (!lines.length || !orders.length) { refBox.style.display = 'none'; copyAllBtn.style.display = 'none'; return; }
 
+  saveTrackingInputForBatch(input.value);
   trackingNumbers = orders.map(function (o, i) { return lines[i] || ''; });
 
   list.innerHTML = '';
