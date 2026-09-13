@@ -1377,6 +1377,11 @@ Chicago, IL 60601</div>
           <div class="glc-title">Browse All Guides →</div>
           <div class="glc-desc">The full seller's guide hub, outside the app.</div>
         </a>
+        <a class="guide-link-card" href="/blog/">
+          <div class="glc-tag">Blog</div>
+          <div class="glc-title">Seller Blog: Pricing, Levels, Payouts →</div>
+          <div class="glc-desc">Ten more articles — pricing strategy, seller levels, suspensions, and running it like a business.</div>
+        </a>
       </div>
     </div>
 
@@ -1386,6 +1391,7 @@ Chicago, IL 60601</div>
     <p class="footer-built">Built by <a href="https://clujkeebs.com" target="_blank" rel="noopener">Clujkeebs</a> — TCGPlayer seller &amp; keyboard enthusiast</p>
     <div class="footer-links">
       <a href="/guide/">Seller's Guide</a> ·
+      <a href="/blog/">Blog</a> ·
       <a href="https://www.tcgplayer.com/search/all/product?seller=ad430346&view=grid" target="_blank" rel="noopener">TCGPlayer</a> ·
       <a href="https://www.ebay.com/str/clujkeebs" target="_blank" rel="noopener">eBay</a> ·
       <a href="https://www.whatnot.com/user/clujkeebs" target="_blank" rel="noopener">Whatnot</a> ·
@@ -1432,6 +1438,11 @@ var serverStatus = null; // { plan, limit, used }
 function currentPlan() { return (session && serverStatus) ? serverStatus.plan : 'free'; }
 function isPremium() { return currentPlan() === 'premium'; }
 function isLifetimeFree() { return !!(session && serverStatus && serverStatus.is_lifetime_free); }
+function activeFreeUntil() { return (session && serverStatus && serverStatus.free_until) ? serverStatus.free_until : null; }
+function formatFreeUntilDate(iso) {
+  try { return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }); }
+  catch (e) { return iso; }
+}
 function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
 async function refreshServerStatus() {
@@ -1549,10 +1560,13 @@ function updateAccountUI() {
     var used = serverStatus ? serverStatus.used : 0;
     var limit = serverStatus ? serverStatus.limit : PLAN_LIMITS.free;
     var limTxt = (limit === null || limit === undefined) ? 'unlimited' : limit;
+    var freeUntil = activeFreeUntil();
     var line = document.getElementById('account-plan-line');
     if (line) line.textContent = isLifetimeFree()
       ? 'Owner account — Premium, free forever'
-      : capitalize(plan) + ' plan — ' + used + ' / ' + limTxt + ' labels used this month';
+      : freeUntil
+        ? 'Premium plan — free until ' + formatFreeUntilDate(freeUntil) + ' (partner program) — ' + used + ' / ' + limTxt + ' labels used this month'
+        : capitalize(plan) + ' plan — ' + used + ' / ' + limTxt + ' labels used this month';
     var fill = document.getElementById('usage-bar-fill');
     if (fill) {
       var pct = (limit === null || limit === undefined) ? 8 : Math.min(100, Math.round((used / limit) * 100));
@@ -1562,6 +1576,7 @@ function updateAccountUI() {
     var billingBtn = document.getElementById('manage-billing-btn');
     if (billingBtn) {
       if (isLifetimeFree()) { billingBtn.textContent = 'No billing — owner account'; billingBtn.disabled = true; }
+      else if (freeUntil) { billingBtn.textContent = 'Free until ' + formatFreeUntilDate(freeUntil) + ' — no billing needed'; billingBtn.disabled = true; }
       else { billingBtn.textContent = 'Manage Billing'; billingBtn.disabled = false; }
     }
     if (navBtn) { navBtn.textContent = 'Account'; navBtn.onclick = function () { switchTab('pricing'); }; }
