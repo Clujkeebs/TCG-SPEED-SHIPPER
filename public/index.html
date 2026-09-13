@@ -307,6 +307,24 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
 }
 .paste-textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(45,106,79,.1); }
 
+/* ── Tracking number reference ── */
+.tracking-row {
+  display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  margin-bottom: 6px; background: var(--surface); flex-wrap: wrap;
+}
+.tracking-row.tr-mismatch { border-color: var(--danger); background: var(--danger-bg); }
+.tracking-row .tr-order { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--hint); min-width: 56px; flex-shrink: 0; }
+.tracking-row .tr-name { font-size: 13.5px; color: var(--text); flex: 1 1 140px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tracking-row .tr-num { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: var(--accent); flex: 1 1 160px; }
+.tracking-row .tr-copy {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; background: none;
+  border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px;
+  cursor: pointer; color: var(--muted); flex-shrink: 0;
+}
+.tracking-row .tr-copy:hover { border-color: var(--accent); color: var(--accent); }
+.tracking-mismatch-note { font-size: 12.5px; color: var(--danger); margin: 8px 0; }
+
 /* ── Options bar ── */
 .options-bar {
   background: var(--surface); border: 1px solid var(--border);
@@ -837,6 +855,25 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
         <button class="btn-ghost" id="clear-btn">Clear</button>
       </div>
       <p class="tip">4×6: print on thermal, margins none  ·  8.5×11: any printer, cut on lines</p>
+    </div>
+
+    <!-- Tracking number reference (shown after CSV loaded) -->
+    <div id="tracking-area" style="display:none;">
+      <div class="section fade-in-up">
+        <div class="section-label">Tracking Numbers <span style="font-weight:400;color:var(--hint);text-transform:none;letter-spacing:0;">— optional</span></div>
+        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:10px;line-height:1.6;">
+          TCGplayer doesn't generate tracking for you — paste the numbers from your carrier, Pirate Ship, or Click-N-Ship below, one per line, in the same order as the labels above. You'll get a quick-copy reference list for entering each one back into TCGplayer.
+        </p>
+        <textarea id="tracking-input" class="paste-textarea" rows="4" placeholder="9400100000000000000000&#10;9400100000000000000001&#10;..."></textarea>
+        <div class="btn-row" style="margin-top:10px;">
+          <button class="btn-ghost" id="tracking-match-btn" type="button">Match to Orders</button>
+          <button class="btn-ghost" id="tracking-copy-all-btn" type="button" style="display:none;">Copy All</button>
+        </div>
+        <div id="tracking-mismatch-note" class="tracking-mismatch-note" style="display:none;"></div>
+        <div id="tracking-reference" style="display:none;margin-top:12px;">
+          <div id="tracking-list"></div>
+        </div>
+      </div>
     </div>
 
     <div class="content-section">
@@ -1428,6 +1465,7 @@ document.documentElement.classList.add('js-ready');
 'use strict';
 
 var orders = [];
+var trackingNumbers = []; // parallel to orders, by index; matched via the Tracking Numbers panel
 var slipsOn = false;
 var format = '4x6';
 
@@ -2072,6 +2110,8 @@ function renderPreviews() {
   document.getElementById('preview-area').style.display='block';
   document.getElementById('options-bar').classList.add('visible');
   document.getElementById('sticky-bar').classList.add('visible');
+  var trackingArea = document.getElementById('tracking-area');
+  if (trackingArea) trackingArea.style.display = orders.length ? 'block' : 'none';
 
   var list=document.getElementById('preview-list');
   list.innerHTML='';
@@ -2081,7 +2121,7 @@ function renderPreviews() {
     div.className='label-card';
     div.style.animationDelay = (i * 0.04) + 's';
     var slip=slipsOn?'<div class="slip-tag">+ packing slip</div>':'';
-    div.innerHTML='<div class="label-num">#'+(i+1)+'</div>'+
+    div.innerHTML='<div class="label-num" title="'+(o.orderNumber?'Order #'+esc(o.orderNumber):'')+'">#'+(i+1)+'</div>'+
       '<div class="label-from"><strong>'+esc(s.name||'Your Name')+'</strong>'+
       esc(s.addr1||'')+(s.addr2?', '+esc(s.addr2):'')+'<br>'+esc(sLine2)+'</div>'+
       '<div class="label-to"><strong>'+esc(o.firstName+' '+o.lastName)+'</strong>'+
@@ -2265,6 +2305,7 @@ function handleFile(file) {
     if(result&&result.error){ document.getElementById('error-msg').innerHTML='<div class="error-box">'+result.error+'</div>'; return; }
     if(!result||!result.length){ document.getElementById('error-msg').innerHTML='<div class="error-box">No valid orders found.</div>'; return; }
     orders=result;
+    resetTracking();
     document.getElementById('upload-text').textContent='\u2713 '+file.name;
     document.getElementById('loaded-msg').innerHTML='<div class="loaded-state"><span>\u2713 '+orders.length+' order'+(orders.length!==1?'s':'')+' loaded</span></div>';
     renderPreviews();
@@ -2307,6 +2348,7 @@ document.getElementById('paste-generate-btn').addEventListener('click', function
   }
 
   orders = result.good;
+  resetTracking();
   document.getElementById('csv-input').value = '';
   document.getElementById('upload-text').textContent = 'Drop your CSV here, or tap to browse';
   document.getElementById('error-msg').innerHTML = '';
@@ -2330,6 +2372,102 @@ document.getElementById('clear-btn').addEventListener('click',function(){
   document.getElementById('preview-list').innerHTML='';
   document.getElementById('options-bar').classList.remove('visible');
   document.getElementById('sticky-bar').classList.remove('visible');
+  resetTracking();
+});
+
+/* ── Tracking Numbers: match pasted tracking numbers to orders by line
+   position and produce a quick-copy reference list. Entirely client-side —
+   tracking numbers never leave the browser, same as order data. Reset
+   whenever a fresh set of orders is loaded, since stale matches against a
+   new order list would be actively misleading. ── */
+function resetTracking() {
+  trackingNumbers = [];
+  var input = document.getElementById('tracking-input');
+  if (input) input.value = '';
+  var ref = document.getElementById('tracking-reference');
+  if (ref) ref.style.display = 'none';
+  var note = document.getElementById('tracking-mismatch-note');
+  if (note) note.style.display = 'none';
+  var copyAllBtn = document.getElementById('tracking-copy-all-btn');
+  if (copyAllBtn) copyAllBtn.style.display = 'none';
+  // Safe to always hide here: callers that still have orders (a fresh CSV/
+  // paste load) immediately call renderPreviews() right after, which shows
+  // it again based on orders.length. Only clear-btn relies on this line to
+  // actually hide it, since clear-btn never calls renderPreviews().
+  var area = document.getElementById('tracking-area');
+  if (area) area.style.display = 'none';
+}
+
+function matchTrackingNumbers() {
+  var input = document.getElementById('tracking-input');
+  var lines = (input.value || '').split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean);
+  var refBox = document.getElementById('tracking-reference');
+  var list = document.getElementById('tracking-list');
+  var note = document.getElementById('tracking-mismatch-note');
+  var copyAllBtn = document.getElementById('tracking-copy-all-btn');
+  if (!lines.length || !orders.length) { refBox.style.display = 'none'; copyAllBtn.style.display = 'none'; return; }
+
+  trackingNumbers = orders.map(function (o, i) { return lines[i] || ''; });
+
+  list.innerHTML = '';
+  orders.forEach(function (o, i) {
+    var num = trackingNumbers[i];
+    var row = document.createElement('div');
+    row.className = 'tracking-row' + (!num ? ' tr-mismatch' : '');
+    row.innerHTML =
+      '<span class="tr-order">' + esc(o.orderNumber ? '#' + o.orderNumber : 'Label #' + (i + 1)) + '</span>' +
+      '<span class="tr-name">' + esc((o.firstName + ' ' + o.lastName).trim() || '—') + '</span>' +
+      '<span class="tr-num">' + esc(num || '— missing —') + '</span>' +
+      (num ? '<button class="tr-copy" type="button" data-num="' + esc(num) + '">Copy</button>' : '');
+    list.appendChild(row);
+  });
+
+  if (lines.length !== orders.length) {
+    note.style.display = 'block';
+    note.textContent = 'Pasted ' + lines.length + ' tracking number' + (lines.length === 1 ? '' : 's') + ' for ' + orders.length + ' order' + (orders.length === 1 ? '' : 's') + ' — matched by line position, so double-check the order before copying.';
+  } else {
+    note.style.display = 'none';
+  }
+  refBox.style.display = 'block';
+  copyAllBtn.style.display = 'inline-flex';
+}
+
+async function copyText(str) {
+  if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(str); return true; }
+  var ta = document.createElement('textarea');
+  ta.value = str; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  var ok = false;
+  try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+  document.body.removeChild(ta);
+  return ok;
+}
+
+document.getElementById('tracking-match-btn').addEventListener('click', matchTrackingNumbers);
+
+document.getElementById('tracking-list').addEventListener('click', function (e) {
+  var btn = e.target.closest('.tr-copy');
+  if (!btn) return;
+  var num = btn.getAttribute('data-num');
+  var orig = btn.textContent;
+  copyText(num).then(function (ok) {
+    btn.textContent = ok ? 'Copied!' : 'Select & copy';
+    setTimeout(function () { btn.textContent = orig; }, 1400);
+  });
+});
+
+document.getElementById('tracking-copy-all-btn').addEventListener('click', function () {
+  var btn = this;
+  var text = orders.map(function (o, i) {
+    var label = o.orderNumber ? '#' + o.orderNumber : 'Label #' + (i + 1);
+    var name = (o.firstName + ' ' + o.lastName).trim() || '—';
+    return label + '\t' + name + '\t' + (trackingNumbers[i] || '(missing)');
+  }).join('\n');
+  var orig = btn.textContent;
+  copyText(text).then(function (ok) {
+    btn.textContent = ok ? 'Copied!' : 'Select & copy';
+    setTimeout(function () { btn.textContent = orig; }, 1400);
+  });
 });
 
 /* ── Design Studio ── */
