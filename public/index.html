@@ -1476,6 +1476,37 @@ async function applyPendingReferralCode() {
   } catch (e) { /* offline — leave it stored, we'll try again next visit */ }
 }
 
+/* ── Affiliate program: a creator's ?aff= tracking link, separate from the
+   consumer ?ref= referral system above — different reward mechanics (cash
+   commission on all revenue, not a one-time free-month credit for the
+   platform user), so kept as its own code path end to end. ── */
+var AFFILIATE_STORAGE_KEY = 'tcgss_pending_affiliate';
+
+(function captureAffiliateCodeFromUrl() {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var aff = params.get('aff');
+    if (!aff) return;
+    localStorage.setItem(AFFILIATE_STORAGE_KEY, aff.trim().toUpperCase());
+    params.delete('aff');
+    var qs = params.toString();
+    window.history.replaceState({}, '', window.location.pathname + (qs ? '?' + qs : ''));
+  } catch (e) { /* localStorage unavailable — affiliate link silently has no effect */ }
+})();
+
+// Same placement and same reasoning as applyPendingReferralCode: only called
+// right after signup, with the real gate enforced database-side.
+async function applyPendingAffiliateCode() {
+  if (!sb) return;
+  var code;
+  try { code = localStorage.getItem(AFFILIATE_STORAGE_KEY); } catch (e) { return; }
+  if (!code) return;
+  try {
+    var res = await sb.rpc('tcgss_apply_affiliate_code', { p_code: code });
+    if (!res.error) { try { localStorage.removeItem(AFFILIATE_STORAGE_KEY); } catch (e) {} }
+  } catch (e) { /* offline — leave it stored, we'll try again next visit */ }
+}
+
 async function refreshReferralStats() {
   if (!sb || !session) { referralStats = null; return; }
   try {
@@ -2437,6 +2468,7 @@ document.getElementById('clear-btn').addEventListener('click',function(){
       // side refuses anything but a genuinely brand-new profile, so this
       // never re-attaches a referral to an old account.
       await applyPendingReferralCode();
+      await applyPendingAffiliateCode();
       setMsg('', null);
     } catch (e) {
       setMsg(friendlyAuthError(e), 'err');

@@ -278,9 +278,89 @@ allows everything under `/guide/` (`Allow: /`), no change needed there.
 `googleff1e1a4a0e2eceaf.html` is the live Google Search Console
 verification file — do not delete or rename it.
 
+## Creator affiliate program (cash commission — separate from the consumer referral program)
+
+A second, unrelated referral-shaped system, added because the owner started
+personally recruiting content creators as paid partners. Do not confuse this
+with the consumer "refer a friend, get a free month" program above — they
+share a design pattern (a code, a link, an attribution window) but nothing
+else. This one moves real money and has real legal/tax weight; that one
+never leaves the app's own Stripe balance.
+
+- **The deal**: no upfront payment. A partner gets a personal `?aff=CODE`
+  link and a private dashboard (`/affiliate/?token=...`, token-authenticated,
+  not a Supabase session — creators mostly won't have a TCGSS account at
+  all). They earn **30% of every payment**, forever, from anyone who signs
+  up through their link — not a one-time bonus. Paid out **monthly, by the
+  owner, manually** (Venmo/PayPal/whatever) — there is no automated payment
+  rail here, on purpose; see "Not yet done" below for why that matters.
+  They get a free month to try the app themselves, and a free year on their
+  own account once they commit. The agreement runs one year.
+- **Attribution**: `tcgss_profiles.affiliate_id`, set once via
+  `tcgss_apply_affiliate_code` (client captures `?aff=` into localStorage,
+  applies right after signup) — same shape of guards as the consumer
+  referral code (one-time, ~2-hour window, no self-referral), except
+  self-referral here is checked by **email**, not by `user_id`, because an
+  affiliate's own first signup happens before their account is linked to
+  their affiliate record. If you ever touch that function, keep the email
+  check — checking `user_id = auth.uid()` alone lets an affiliate's very
+  first signup slip through unblocked, since `user_id` is null at that
+  point. (Found and fixed this exact bug while building it, verified
+  directly against the database before it ever reached server.js.)
+- **Earnings**: computed from **`invoice.payment_succeeded` only** — not
+  `checkout.session.completed`, not the subscription webhooks. This event
+  fires for every paid invoice, first payment and every renewal alike, so
+  it's the one place "30% of everything, forever" can be computed correctly
+  without double-counting. `tcgss_record_affiliate_earning` is idempotent on
+  `stripe_invoice_id` (unique constraint), so a redelivered webhook can never
+  double-credit the same payment. **The live Stripe webhook endpoint's
+  `enabled_events` had to be updated** to add `invoice.payment_succeeded` —
+  it wasn't there before this feature and the handler is dead code without
+  it. If you ever recreate the webhook endpoint, remember to include it.
+- **The free year**: `tcgss_profiles.free_until` (new column), set by
+  `tcgss_activate_affiliate` to one year from activation. Deliberately
+  **not** `is_lifetime_free` — that flag is the owner's permanent grant and
+  nothing else should ever set it. `tcgss_get_status`/
+  `tcgss_consume_label_credits` treat `free_until > now()` the same as
+  lifetime for plan purposes, but it actually expires.
+- **Admin routes** (`/api/admin/affiliates*`) are gated by `requireOwner` in
+  server.js — a hardcoded email check mirroring `tcgss_is_owner_email()` in
+  the database. Use these to onboard someone once they've actually agreed:
+  `POST /admin/affiliates` (create — returns their link and dashboard URL to
+  send them), `POST /admin/affiliates/:id/activate` (starts the 1-year
+  clock, grants the free year), `GET /admin/affiliates` (everyone's current
+  balance, for the monthly payout run), `POST /admin/affiliates/:id/mark-paid`
+  (call after actually sending the money).
+- **RLS**: `tcgss_affiliates` and `tcgss_affiliate_earnings` have RLS enabled
+  with no policies — same pattern as everything else here, all access is
+  through SECURITY DEFINER functions or the service role.
+
+### Not yet done / real gap here
+
+**There is no payment rail.** The dashboard shows what's owed; nothing
+actually sends money. The owner pays each partner by hand every month
+(Venmo, PayPal, whatever) and then calls `mark-paid` to clear the ledger.
+Building real payouts (Stripe Connect or similar) is a genuinely separate,
+much larger project — KYC/onboarding per partner, payout scheduling,
+failure handling — and wasn't attempted here.
+
+**Tax/legal reality worth surfacing to the owner, not something I can fix in
+code**: paying any one person or business $600+ in a calendar year in the US
+generally creates a 1099-NEC filing obligation, which means collecting a W-9
+from each partner before the first payout. Nothing in this system collects
+that. Also: nothing here is an actual written contract — the terms in the
+outreach email are the whole agreement right now. Worth the owner tightening
+that up before the numbers get large enough to matter.
+
+**Only 5 outreach emails were actually sent** (2026-09-13, to Team APS, MBT
+Yu-Gi-Oh!, TOTALmtg, Lorcana Villain, and Don Diego Trading) — the only
+creators found with a verified public business email in that session's
+research. See the published "Creator Outreach List" artifact from that
+conversation for the other ~25 real, named, but unverified-contact creators.
+
 ## Tests
 
-`npm test` runs five suites (`test/`) with stubbed Stripe and Supabase
+`npm test` runs six suites (`test/`) with stubbed Stripe and Supabase
 clients. No network, no live keys, runs in this sandbox:
 
 - `signup.test.js` — pins both conditions gating the password-repair path, so
@@ -300,6 +380,11 @@ clients. No network, no live keys, runs in this sandbox:
   only on actual completion (not session creation), a second attempt from
   the same IP refused before Stripe is touched, a different IP still
   allowed, and a non-100%-off code confirmed never subject to any of this.
+- `affiliate.test.js` — earnings recorded only from `invoice.payment_succeeded`
+  with the right invoice/customer/amount, a $0 invoice and an unrecognised
+  customer both handled without error, the dashboard endpoint 404s cleanly
+  on a bad or missing token without touching the database, and every admin
+  route confirmed owner-only.
 
 Run it before pushing anything that touches billing or auth.
 

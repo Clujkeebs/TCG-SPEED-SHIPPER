@@ -424,6 +424,39 @@ router.post('/stripe-webhook', express.raw({ type: '*/*' }), requireStripe, requ
         if (error) console.error('Failed to downgrade profile on cancellation:', error);
         break;
       }
+      case 'invoice.payment_succeeded': {
+        // The single source of truth for affiliate commission: fires for
+        // every paid invoice, first payment and every renewal alike, so
+        // recording earnings only here (never in checkout.session.completed
+        // or the subscription handlers above) means there is exactly one
+        // place this money is ever computed. Idempotent on the Stripe
+        // invoice id inside tcgss_record_affiliate_earning, so a redelivered
+        // webhook can never double-credit the same payment.
+        const invoice = event.data.object;
+        if (invoice.customer && invoice.amount_paid > 0) {
+          const { data: profile, error: profileErr } = await supabaseAdmin
+            .from('tcgss_profiles')
+            .select('id')
+            .eq('stripe_customer_id', invoice.customer)
+            .maybeSingle();
+          if (profileErr) {
+            console.error('Failed to look up profile for invoice.payment_succeeded:', profileErr);
+          } else if (profile) {
+            const periodStart = invoice.period_start ? new Date(invoice.period_start * 1000) : new Date();
+            const periodMonth = new Date(Date.UTC(periodStart.getUTCFullYear(), periodStart.getUTCMonth(), 1))
+              .toISOString().slice(0, 10);
+            const { error: earningErr } = await supabaseAdmin.rpc('tcgss_record_affiliate_earning', {
+              p_referred_user_id: profile.id,
+              p_stripe_invoice_id: invoice.id,
+              p_amount_cents: invoice.amount_paid,
+              p_currency: invoice.currency || 'usd',
+              p_period_month: periodMonth,
+            });
+            if (earningErr) console.error('Failed to record affiliate earning for invoice', invoice.id, earningErr);
+          }
+        }
+        break;
+      }
       default:
         break;
     }
@@ -738,6 +771,96 @@ router.post('/create-portal-session', express.json(), requireStripe, requireSupa
   } catch (err) {
     console.error('create-portal-session failed:', err);
     res.status(500).json({ error: 'Could not open billing portal' });
+  }
+});
+
+// The owner's account, hardcoded to match tcgss_is_owner_email() in the
+// database — kept in sync deliberately rather than looked up, since these
+// admin routes gate real money (creating affiliates, marking cash payouts as
+// sent) and should fail closed if the two ever disagreed.
+const OWNER_EMAIL = 'clujkeebs@aol.com';
+function requireOwner(req, res, next) {
+  if (!req.user || (req.user.email || '').toLowerCase() !== OWNER_EMAIL) {
+    return res.status(403).json({ error: 'Not authorized' });
+  }
+  next();
+}
+
+// Public by design: a creator has their own dashboard_token, not necessarily
+// a TCGSS account, so this is token-authenticated rather than session-based.
+// tcgss_get_affiliate_dashboard returns null for an unknown token and this
+// route reports the same 404 either way, so a wrong token can't be
+// distinguished from one that's merely unrecognised.
+router.get('/affiliate-dashboard', requireSupabase, async (req, res) => {
+  try {
+    const token = (req.query.token || '').toString().trim();
+    if (!token) return res.status(400).json({ error: 'Missing token' });
+    const { data, error } = await supabaseAdmin.rpc('tcgss_get_affiliate_dashboard', { p_token: token });
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Dashboard not found' });
+    res.json(data);
+  } catch (err) {
+    console.error('affiliate-dashboard failed:', err);
+    res.status(500).json({ error: 'Could not load dashboard' });
+  }
+});
+
+// Everything below is owner-only: creating a partner record, activating the
+// 1-year deal (which also grants their free year), listing everyone's
+// current balance, and confirming a manual payout actually happened.
+router.get('/admin/affiliates', requireSupabase, requireUser, requireOwner, async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin.rpc('tcgss_list_affiliates_summary');
+    if (error) throw error;
+    res.json({ affiliates: data });
+  } catch (err) {
+    console.error('list affiliates failed:', err);
+    res.status(500).json({ error: 'Could not load affiliates' });
+  }
+});
+
+router.post('/admin/affiliates', express.json(), requireSupabase, requireUser, requireOwner, async (req, res) => {
+  try {
+    const name = ((req.body && req.body.name) || '').trim();
+    const email = ((req.body && req.body.email) || '').trim().toLowerCase();
+    const rate = req.body && req.body.commissionRate;
+    if (!name || !EMAIL_RE.test(email)) return res.status(400).json({ error: 'A name and a valid email are required.' });
+
+    const { data, error } = await supabaseAdmin.rpc('tcgss_create_affiliate', {
+      p_name: name, p_email: email,
+      p_commission_rate: typeof rate === 'number' ? rate : 0.3,
+    });
+    if (error) throw error;
+    res.json({
+      affiliate: data,
+      link: SITE_URL + '/?aff=' + data.affiliate_code,
+      dashboard: SITE_URL + '/affiliate/?token=' + data.dashboard_token,
+    });
+  } catch (err) {
+    console.error('create affiliate failed:', err);
+    res.status(500).json({ error: 'Could not create affiliate' });
+  }
+});
+
+router.post('/admin/affiliates/:id/activate', express.json(), requireSupabase, requireUser, requireOwner, async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin.rpc('tcgss_activate_affiliate', { p_affiliate_id: req.params.id });
+    if (error) throw error;
+    res.json({ affiliate: data });
+  } catch (err) {
+    console.error('activate affiliate failed:', err);
+    res.status(500).json({ error: 'Could not activate affiliate — check the id is correct.' });
+  }
+});
+
+router.post('/admin/affiliates/:id/mark-paid', express.json(), requireSupabase, requireUser, requireOwner, async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin.rpc('tcgss_mark_affiliate_paid', { p_affiliate_id: req.params.id });
+    if (error) throw error;
+    res.json({ rowsMarkedPaid: data });
+  } catch (err) {
+    console.error('mark affiliate paid failed:', err);
+    res.status(500).json({ error: 'Could not mark affiliate as paid' });
   }
 });
 
