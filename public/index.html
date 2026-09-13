@@ -354,7 +354,7 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
 .preview-header span { font-size: 12px; color: var(--hint); font-family: 'JetBrains Mono', monospace; }
 .label-card {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 1.1rem 1.25rem;
+  border-radius: var(--radius); padding: 1.85rem 1.25rem 1.1rem;
   margin-bottom: 8px; font-family: 'JetBrains Mono', monospace;
   position: relative; box-shadow: var(--shadow-sm);
   transition: transform .15s, box-shadow .15s;
@@ -362,6 +362,16 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
 }
 .label-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
 .label-num { position: absolute; top: 10px; right: 14px; font-size: 10px; color: var(--hint); font-weight: 600; }
+.label-shipped {
+  position: absolute; top: 10px; left: 14px; display: flex; align-items: center; gap: 5px;
+  font-size: 10px; color: var(--hint); cursor: pointer; user-select: none;
+}
+.label-shipped input { width: 13px; height: 13px; accent-color: var(--accent); cursor: pointer; margin: 0; }
+.label-card.shipped { opacity: .48; }
+.label-card.shipped .label-from, .label-card.shipped .label-to { text-decoration: line-through; text-decoration-color: var(--border-mid); }
+.shipped-progress { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: var(--muted); margin-bottom: 10px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.shipped-progress button { font: inherit; color: var(--muted); background: none; border: none; text-decoration: underline; cursor: pointer; padding: 0; }
+.shipped-progress button:hover { color: var(--accent); }
 .label-from { font-size: 11px; color: var(--muted); line-height: 1.6; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 12px; }
 .label-from strong { font-size: 12px; color: var(--text); display: block; margin-bottom: 2px; }
 .label-to { text-align: center; line-height: 1.7; }
@@ -848,6 +858,10 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
       <div class="preview-header">
         <h2>Preview</h2>
         <span id="count-label"></span>
+      </div>
+      <div class="shipped-progress" id="shipped-progress" style="display:none;">
+        <span id="shipped-progress-text"></span>
+        <button type="button" id="shipped-clear-btn">Clear shipped marks</button>
       </div>
       <div id="preview-list"></div>
       <div class="btn-row">
@@ -1716,6 +1730,47 @@ function addLocalUsage(n) {
 /* A batch is charged once. Re-downloading the same orders (to switch format,
    re-print, or retry) must not burn more of the monthly allowance. */
 var paidBatchKey = null;
+
+/* ── "Mark as shipped" checklist: lets a seller working through a large
+   batch over multiple sittings track which labels they've actually packed
+   and shipped. Scoped to the exact set of orders (batchKey), so re-
+   uploading the same packing list later resumes progress, and a different
+   CSV starts fresh. Capped at a handful of remembered batches so this can
+   never grow unbounded in localStorage. ── */
+var SHIPPED_STORAGE_KEY = 'tcgss_shipped_v1';
+var SHIPPED_MAX_BATCHES = 25;
+
+function orderKey(o, i) {
+  return o.orderNumber ? ('on:' + o.orderNumber) : ('ix:' + i + ':' + o.firstName + '|' + o.lastName + '|' + o.addr1 + '|' + o.zip);
+}
+function loadShippedStore() {
+  try { return JSON.parse(localStorage.getItem(SHIPPED_STORAGE_KEY) || '{}'); } catch (e) { return {}; }
+}
+function saveShippedStore(store) {
+  try {
+    var keys = Object.keys(store);
+    while (keys.length > SHIPPED_MAX_BATCHES) { delete store[keys.shift()]; }
+    localStorage.setItem(SHIPPED_STORAGE_KEY, JSON.stringify(store));
+  } catch (e) { /* localStorage unavailable — shipped marks just won't persist across reloads */ }
+}
+function getShippedSet() {
+  return loadShippedStore()[batchKey()] || {};
+}
+function setShipped(key, val) {
+  var store = loadShippedStore();
+  var bk = batchKey();
+  var entry = store[bk] || {};
+  delete store[bk]; // re-insert below so it's most-recently-used for FIFO eviction
+  if (val) entry[key] = true; else delete entry[key];
+  store[bk] = entry;
+  saveShippedStore(store);
+}
+function clearShippedForBatch() {
+  var store = loadShippedStore();
+  delete store[batchKey()];
+  saveShippedStore(store);
+}
+
 function batchKey() {
   return orders.map(function (o) {
     return [o.firstName, o.lastName, o.addr1, o.addr2, o.city, o.state, o.zip, o.orderNumber].join('');
@@ -2115,19 +2170,36 @@ function renderPreviews() {
 
   var list=document.getElementById('preview-list');
   list.innerHTML='';
+  var shipped = getShippedSet();
+  var shippedCount = 0;
   orders.forEach(function(o,i){
     var al=addrLines(o).map(esc);
     var div=document.createElement('div');
-    div.className='label-card';
+    var key = orderKey(o, i);
+    var isShipped = !!shipped[key];
+    if (isShipped) shippedCount++;
+    div.className='label-card'+(isShipped?' shipped':'');
     div.style.animationDelay = (i * 0.04) + 's';
     var slip=slipsOn?'<div class="slip-tag">+ packing slip</div>':'';
-    div.innerHTML='<div class="label-num" title="'+(o.orderNumber?'Order #'+esc(o.orderNumber):'')+'">#'+(i+1)+'</div>'+
+    div.innerHTML='<label class="label-shipped"><input type="checkbox" data-key="'+esc(key)+'"'+(isShipped?' checked':'')+'> shipped</label>'+
+      '<div class="label-num" title="'+(o.orderNumber?'Order #'+esc(o.orderNumber):'')+'">#'+(i+1)+'</div>'+
       '<div class="label-from"><strong>'+esc(s.name||'Your Name')+'</strong>'+
       esc(s.addr1||'')+(s.addr2?', '+esc(s.addr2):'')+'<br>'+esc(sLine2)+'</div>'+
       '<div class="label-to"><strong>'+esc(o.firstName+' '+o.lastName)+'</strong>'+
       '<span>'+al.join('<br>')+'</span>'+slip+'</div>';
     list.appendChild(div);
   });
+
+  var progress = document.getElementById('shipped-progress');
+  var progressText = document.getElementById('shipped-progress-text');
+  if (progress && progressText) {
+    if (total > 0) {
+      progress.style.display = 'flex';
+      progressText.textContent = shippedCount + ' of ' + total + ' marked shipped';
+    } else {
+      progress.style.display = 'none';
+    }
+  }
 }
 
 /* ── PDF ── */
@@ -2317,6 +2389,25 @@ document.getElementById('fmt-top').addEventListener('change',function(){ setForm
 document.getElementById('fmt-main').addEventListener('change',function(){ setFormat(this.value); });
 document.getElementById('slip-top').addEventListener('change',function(){ setSlips(this.checked); });
 document.getElementById('slip-main').addEventListener('change',function(){ setSlips(this.checked); });
+document.getElementById('preview-list').addEventListener('change', function (e) {
+  if (e.target.tagName !== 'INPUT' || e.target.type !== 'checkbox') return;
+  var key = e.target.getAttribute('data-key');
+  var checked = e.target.checked;
+  setShipped(key, checked);
+  var card = e.target.closest('.label-card');
+  if (card) card.classList.toggle('shipped', checked);
+  var progressText = document.getElementById('shipped-progress-text');
+  if (progressText) {
+    var shippedNow = Object.keys(getShippedSet()).length;
+    progressText.textContent = shippedNow + ' of ' + orders.length + ' marked shipped';
+  }
+});
+
+document.getElementById('shipped-clear-btn').addEventListener('click', function () {
+  clearShippedForBatch();
+  renderPreviews();
+});
+
 document.getElementById('dl-btn').addEventListener('click',function(){ triggerDownload(this); });
 document.getElementById('dl-btn-top').addEventListener('click',function(){ triggerDownload(this); });
 document.getElementById('upload-zone').addEventListener('click',function(){ document.getElementById('csv-input').click(); });
