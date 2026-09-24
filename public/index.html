@@ -2700,9 +2700,22 @@ document.getElementById('tracking-copy-all-btn').addEventListener('click', funct
     return { email: emailField.value.trim().toLowerCase(), password: passwordField.value };
   }
 
-  // Creates-or-repairs the account through our own endpoint. Used when the
-  // direct Supabase signup can't finish on its own (email confirmation is
-  // enabled, or the email belongs to an older passwordless account).
+  // Creates-or-repairs the account through our own endpoint (admin API,
+  // email_confirm: true — never sends a confirmation email, never leaves a
+  // half-created account behind). This used to be a fallback behind a direct
+  // `sb.auth.signUp()` "fast path", but that path creates the account via
+  // Supabase's public signup endpoint, which requires email confirmation on
+  // this project. When it does, `sb.auth.signUp()` returns no session (so the
+  // fast path never actually wins here) but the unconfirmed account is
+  // already created — and Supabase's shared email sender is unreliable and
+  // rate-limited (see the auth notes elsewhere in this file / DEVIN_AI.md),
+  // so the confirmation email often never arrives. That stranded a real
+  // signup: login failed with "email not confirmed", the server's own
+  // /api/signup correctly refused to touch a same-day account (that check is
+  // what stops account takeover — see LEGACY_ACCOUNT_CUTOFF in server.js),
+  // and "Forgot Password" hit the same unreliable sender. Going straight to
+  // the server path removes that whole failure class: it always creates an
+  // already-confirmed account with no email round-trip at all.
   async function serverSignup(email, password) {
     var res;
     try {
@@ -2746,28 +2759,11 @@ document.getElementById('tracking-copy-all-btn').addEventListener('click', funct
     if (!sb) { setMsg('Accounts are unavailable right now — try again later.', 'err'); return; }
     signupBtn.disabled = true; var orig = signupBtn.textContent; signupBtn.textContent = 'Creating account...';
     try {
-      // Try Supabase directly first: when the project doesn't require email
-      // confirmation this signs the user straight in and never touches our
-      // own API, so signup keeps working even if the function is down.
-      var signedInDirectly = false;
-      try {
-        var direct = await sb.auth.signUp({ email: c.email, password: c.password });
-        if (!direct.error && direct.data && direct.data.session) {
-          signedInDirectly = true;
-          // Tag the account the same way the server does. The server also
-          // refuses to overwrite anything created after password auth shipped,
-          // so this is belt-and-braces rather than the only protection.
-          try { await sb.auth.updateUser({ data: { password_set_by_user: true } }); } catch (tagErr) { /* non-fatal */ }
-        }
-      } catch (ignored) { /* fall through to the server path below */ }
-
-      if (!signedInDirectly) {
-        // Covers: confirmation required, email already registered, and older
-        // passwordless accounts that need a password set.
-        await serverSignup(c.email, c.password);
-        var signInRes = await sb.auth.signInWithPassword({ email: c.email, password: c.password });
-        if (signInRes.error) throw signInRes.error;
-      }
+      // Always go through our own endpoint — see the comment on serverSignup
+      // for why a direct sb.auth.signUp() fast path was removed from here.
+      await serverSignup(c.email, c.password);
+      var signInRes = await sb.auth.signInWithPassword({ email: c.email, password: c.password });
+      if (signInRes.error) throw signInRes.error;
       // Harmless to call on a repaired legacy account too — the database
       // side refuses anything but a genuinely brand-new profile, so this
       // never re-attaches a referral to an old account.

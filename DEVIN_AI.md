@@ -565,3 +565,44 @@ which is still an owner dashboard action.
 Still open and unchanged: leaked-password protection (owner), custom SMTP
 for password reset (owner), and the end-to-end live paid checkout, which
 still has not been run for real.
+
+### 2026-09-24 — Claude (Sonnet 5)
+Owner asked for a "make sure it's working great for paying users" pass.
+User counts at this entry: **5 paying** (2 premium, 3 base — the end-to-end
+live paid checkout from the item above has since happened for real, several
+times over; this doc just hadn't been updated). Live site/deploy healthy,
+real label-generation usage happening daily.
+
+Found and fixed a real account-lockout bug via the auth logs: the signup
+button tried a direct `sb.auth.signUp()` "fast path" before falling back to
+`/api/signup`. This project has email confirmation ON, so that path never
+actually signs anyone in — but it *does* create an unconfirmed account
+first. Supabase's shared email sender (already known-unreliable — see the
+auth model section above) then rate-limited the confirmation email, and the
+user was stuck: login said "email not confirmed", `/api/signup` correctly
+refused to touch a same-day account (LEGACY_ACCOUNT_CUTOFF is what stops
+account takeover, working exactly as designed), and "Forgot Password" hit
+the same unreliable sender. A real prospective customer hit this exact
+trap yesterday (2026-09-23) across three email addresses before escaping on
+the third. Removed the fast path entirely — signup now always goes through
+`/api/signup` (admin API, `email_confirm: true`, no email ever sent, so this
+whole failure class can't happen). Directly repaired the two accounts still
+stuck from that (`onecardebay@gmail.com`, `onecardcollectibles@gmail.com`) —
+confirmed them and tagged `password_set_by_user` so they can log in with the
+password they already set. Full `npm test` still green (unaffected — this
+was a client-only code path, no server tests cover it).
+
+Also fixed the `auth_rls_initplan` performance advisory on
+`tcgss_profiles`/`tcgss_label_usage` (wrapped `auth.uid()` as
+`(select auth.uid())` in both SELECT policies) — pure query-plan fix, no
+behavior change, verified via `get_advisors`.
+
+Confirmed still-intentional and left alone: the "RLS enabled, no policy"
+INFO notices and the `SECURITY DEFINER` WARN notices (same pattern
+documented above — everything goes through SECURITY DEFINER functions or
+the service role, by design).
+
+Still open, unchanged, still owner-only dashboard actions: leaked-password
+protection, custom SMTP for password reset. Worth prioritizing the SMTP one
+now — it's the same unreliable-sender problem that caused today's bug, and
+it's still the live path for "Forgot Password."
