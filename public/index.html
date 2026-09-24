@@ -1088,7 +1088,7 @@ Chicago, IL 60601</div>
         </div>
         <div id="referral-box" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
           <p style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;">Refer a friend, earn a free month</p>
-          <p style="font-size:12px;color:var(--muted);margin-bottom:8px;">When someone signs up with your link and becomes a paying customer, you get a free month — automatically, no matter what plan you're on.</p>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:8px;">When someone signs up with your link and becomes a paying customer, you get a free month — automatically, whether you're already paying (it's credited to your next bill) or not (you get 30 days of free Premium, even on the Free plan).</p>
           <div class="grid-2" style="align-items:end;gap:8px;">
             <div class="field" style="margin-bottom:0;">
               <input type="text" id="referral-link" readonly style="font-size:12px;" onclick="this.select();" />
@@ -1304,7 +1304,7 @@ Chicago, IL 60601</div>
 
     <div class="faq-item">
       <button class="faq-q">Is there a referral program? <span class="faq-arrow">▼</span></button>
-      <div class="faq-a">Yes. Sign in and find your referral link under Account. When someone signs up through it and becomes a paying customer, you get a free month — applied automatically to whatever plan you're on, whenever you have one to apply it to.</div>
+      <div class="faq-a">Yes. Sign in and find your referral link under Account. When someone signs up through it and becomes a paying customer, you get a free month — applied automatically, whether or not you've ever paid yourself. Already on Base or Premium? It's credited to your next bill. Still on the Free plan? You get 30 days of free Premium access instead, no card required.</div>
     </div>
 
     <div class="faq-item">
@@ -1392,6 +1392,11 @@ Chicago, IL 60601</div>
       <div class="faq-a">This can happen if your CSV has trailing blank lines, special characters in addresses, or inconsistent quoting from the TCGPlayer export. The tool filters out blank rows automatically. If you're getting an error about unrecognized columns, open the CSV in a text editor to check the actual header row. Common issues include invisible BOM characters at the start of the file or extra spaces in column names — the tool handles most of these cases, but a severely malformed file may need to be re-exported from TCGPlayer.</div>
     </div>
 
+    <div class="faq-item">
+      <button class="faq-q">Something's not working, or I have a billing question — how do I get help? <span class="faq-arrow">▼</span></button>
+      <div class="faq-a">Email <a href="mailto:clujkeebs@aol.com">clujkeebs@aol.com</a> any time — bug reports, billing/subscription questions, feature requests, anything. It goes straight to a real person (not a ticket queue) and every message gets a reply.</div>
+    </div>
+
     <div class="faq-cta">
       <p>Ready to start shipping faster?</p>
       <button onclick="switchTab('home')">Go to the Tool</button>
@@ -1461,6 +1466,7 @@ Chicago, IL 60601</div>
       <a href="/privacy.html">Privacy Policy</a>
     </div>
     <p>Free plan included — <a href="#" onclick="switchTab('pricing');return false;">paid plans</a> for higher volume &amp; custom label design</p>
+    <p>Questions, problems, or billing issues? Email <a href="mailto:clujkeebs@aol.com">clujkeebs@aol.com</a> — we read every message and reply personally.</p>
 
     <div class="newsletter-box">
       <div class="newsletter-label">Get occasional product updates</div>
@@ -1601,8 +1607,13 @@ function renderReferralUI() {
   if (statsEl) {
     var applied = referralStats.applied_credits || 0;
     var pending = referralStats.pending_credits || 0;
+    var freeMonths = referralStats.free_months_granted || 0;
+    var billingCredits = referralStats.stripe_credits_applied || 0;
     var parts = [];
     parts.push(applied === 1 ? '1 free month earned' : applied + ' free months earned');
+    if (freeMonths && billingCredits) {
+      parts.push(billingCredits + ' as billing credit, ' + freeMonths + ' as free Premium access');
+    }
     if (pending) parts.push(pending === 1 ? '1 more on the way' : pending + ' more on the way');
     statsEl.textContent = parts.join(' · ');
   }
@@ -1628,7 +1639,7 @@ function updateAccountUI() {
     if (line) line.textContent = isLifetimeFree()
       ? 'Owner account — Premium, free forever'
       : freeUntil
-        ? 'Premium plan — free until ' + formatFreeUntilDate(freeUntil) + ' (partner program) — ' + used + ' / ' + limTxt + ' labels used this month'
+        ? 'Premium plan — free until ' + formatFreeUntilDate(freeUntil) + ' (referral or partner reward) — ' + used + ' / ' + limTxt + ' labels used this month'
         : capitalize(plan) + ' plan — ' + used + ' / ' + limTxt + ' labels used this month';
     var fill = document.getElementById('usage-bar-fill');
     if (fill) {

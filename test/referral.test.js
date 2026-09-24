@@ -1,8 +1,9 @@
-/* The referral reward moves real money (a Stripe balance credit), so this
-   pins: a conversion only ever creates one reward per referred user, credit
-   is applied immediately when the referrer is already paying, stays pending
-   and is picked up later when they aren't yet, and a failed Stripe call
-   releases the claim instead of losing the reward. */
+/* The referral reward moves real money or grants real access, so this pins:
+   a conversion only ever creates one reward per referred user, a paying
+   referrer gets a Stripe balance credit immediately, a referrer with no live
+   subscription (never paid, or currently lapsed) gets a free month of
+   Premium granted directly instead of a reward stuck pending forever, and a
+   failed grant/Stripe call releases the claim instead of losing it. */
 const Module = require('module');
 const path = require('path');
 
@@ -21,6 +22,7 @@ const state = {
   referrerOf: {},          // referred user id -> referrer id (what tcgss_record_referral_conversion "knows")
   alreadyConverted: {},    // referred user id -> true once "recorded"
   balanceTxnShouldFail: false,
+  freeGrantShouldFail: false,
   updates: [],
 };
 
@@ -93,6 +95,14 @@ const supabaseStub = {
       if (row) row.status = 'pending';
       return { data: null, error: null };
     }
+    if (name === 'tcgss_grant_referral_free_month') {
+      if (state.freeGrantShouldFail) return { data: null, error: { message: 'grant failed' } };
+      const row = state.pendingCredits.find((c) => c.id === args.p_credit_id);
+      if (row) { row.status = 'applied'; row.applied_method = 'free_month_grant'; }
+      state.freeUntilGrants = state.freeUntilGrants || [];
+      state.freeUntilGrants.push(args.p_referrer_id);
+      return { data: null, error: null };
+    }
     return { data: null, error: null };
   },
 };
@@ -133,6 +143,7 @@ function check(name, cond, detail) {
 function reset() {
   state.subscriptions.length = 0; state.pendingCredits.length = 0;
   state.referrerOf = {}; state.alreadyConverted = {}; state.balanceTxnShouldFail = false;
+  state.freeGrantShouldFail = false; state.freeUntilGrants = [];
   state.updates.length = 0; state.referrerCustomerId = null;
   calls.length = 0;
 }
@@ -152,24 +163,44 @@ function reset() {
   check('a real Stripe balance credit was created on the referrer\'s customer', calls.some((c) => c[0] === 'customers.createBalanceTransaction' && c[1] === 'cus_referrer' && c[2].amount === -599));
   check('credit marked applied', state.pendingCredits[0].status === 'applied');
 
-  console.log('\n-- Referrer has not subscribed yet: credit stays pending, no phantom charge --');
+  console.log('\n-- Referrer has never paid: gets a real free month directly, not a stuck pending credit --');
   reset();
   state.referrerOf['referred_2'] = 'referrer_2';
   state.referrerCustomerId = null; // referrer has no Stripe customer at all yet
   state.subscriptions.push(sub({ id: 'sub_referred2', customer: 'cus_referred2' }));
   await postWebhook(checkoutCompleted('referred_2', 'cus_referred2', { id: 'sub_referred2' }));
-  check('conversion recorded', state.pendingCredits.length === 1 && state.pendingCredits[0].status === 'pending');
-  check('no attempt to claim credit for the actual referrer, who has no Stripe customer yet',
-    !calls.some((c) => c[0] === 'rpc:tcgss_claim_pending_referral_credits' && c[1].p_referrer_id === 'referrer_2'));
-  check('nothing charged', !calls.some((c) => c[0] === 'customers.createBalanceTransaction'));
+  check('credit was still claimed even though the referrer has never paid',
+    calls.some((c) => c[0] === 'rpc:tcgss_claim_pending_referral_credits' && c[1].p_referrer_id === 'referrer_2'));
+  check('a free month was granted directly to the referrer', (state.freeUntilGrants || []).includes('referrer_2'));
+  check('credit applied via free_month_grant, not left pending', state.pendingCredits[0].status === 'applied' && state.pendingCredits[0].applied_method === 'free_month_grant');
+  check('nothing charged — this reward never touches Stripe billing', !calls.some((c) => c[0] === 'customers.createBalanceTransaction'));
 
-  console.log('\n-- That pending credit is applied once the referrer starts paying --');
-  // Same state carried over: referrer_2 now subscribes themselves.
+  console.log('\n-- Later subscribing for real does not also earn a second (Stripe-credit) reward for the same referral --');
+  // Same state carried over: referrer_2 now subscribes themselves. They already
+  // got their reward as a free month above — nothing left to claim.
   state.referrerCustomerId = 'cus_referrer2';
   state.subscriptions.push(sub({ id: 'sub_referrer2', customer: 'cus_referrer2' }));
   await postWebhook(checkoutCompleted('referrer_2', 'cus_referrer2', { id: 'sub_referrer2' }));
-  check('the earlier pending credit gets claimed once the referrer is live', calls.some((c) => c[0] === 'rpc:tcgss_claim_pending_referral_credits' && c[1].p_referrer_id === 'referrer_2'));
-  check('and applied as a real credit', state.pendingCredits[0].status === 'applied');
+  check('no pending credit left to claim for this referrer', !calls.some((c) => c[0] === 'rpc:tcgss_claim_pending_referral_credits' && c[1].p_referrer_id === 'referrer_2' && state.pendingCredits.some((cr) => cr.status === 'pending')));
+  check('still exactly one credit row, already applied as a free month', state.pendingCredits.length === 1 && state.pendingCredits[0].applied_method === 'free_month_grant');
+
+  console.log('\n-- A referrer with a Stripe customer but no currently-live subscription still gets the free month, not a stuck credit --');
+  reset();
+  state.referrerOf['referred_5'] = 'referrer_5';
+  state.referrerCustomerId = 'cus_referrer5'; // has a Stripe customer, but no live subscription below
+  state.subscriptions.push(sub({ id: 'sub_referred5', customer: 'cus_referred5' }));
+  await postWebhook(checkoutCompleted('referred_5', 'cus_referred5', { id: 'sub_referred5' }));
+  check('a free month was granted rather than the credit sitting pending', (state.freeUntilGrants || []).includes('referrer_5'));
+  check('credit applied, not pending', state.pendingCredits[0].status === 'applied');
+
+  console.log('\n-- A failed free-month grant releases the claim instead of losing it --');
+  reset();
+  state.referrerOf['referred_6'] = 'referrer_6';
+  state.referrerCustomerId = null;
+  state.subscriptions.push(sub({ id: 'sub_referred6', customer: 'cus_referred6' }));
+  state.freeGrantShouldFail = true;
+  await postWebhook(checkoutCompleted('referred_6', 'cus_referred6', { id: 'sub_referred6' }));
+  check('credit is released back to pending, not lost, when the grant fails', state.pendingCredits[0].status === 'pending', JSON.stringify(state.pendingCredits));
 
   console.log('\n-- Resubscribing does not earn a second reward for the same referral --');
   reset();

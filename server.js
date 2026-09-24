@@ -110,22 +110,29 @@ async function liveSubscriptionFor(customerId) {
   return list.data.find((sub) => LIVE_SUBSCRIPTION_STATUSES.includes(sub.status)) || null;
 }
 
-// Referral rewards: applies as a Stripe customer balance credit rather than a
-// coupon, so it works no matter which plan the referrer ends up on and stacks
-// correctly if they've earned more than one free month (each credit reduces
-// their next invoice(s) until it's used up). The amount is priced off the
-// referrer's CURRENT subscription at the moment the credit is actually
-// applied, not the plan they were on when they earned it — a fair "one month
-// of whatever you're paying for" rather than a fixed dollar figure.
+// Referral rewards: a paying referrer gets a Stripe customer balance credit,
+// which works no matter which plan they end up on and stacks correctly if
+// they've earned more than one free month (each credit reduces their next
+// invoice(s) until it's used up). The amount is priced off the referrer's
+// CURRENT subscription at the moment the credit is actually applied, not the
+// plan they were on when they earned it — a fair "one month of whatever
+// you're paying for" rather than a fixed dollar figure.
+//
+// A referrer with no live subscription right now — including one who has
+// never paid at all — gets a real free month too: 30 days of free Premium
+// access via tcgss_grant_referral_free_month (the same free_until mechanism
+// the creator-affiliate program uses for its free year). This is the whole
+// point of "refer someone who pays and get a free month" for a free-tier
+// user: it used to just sit 'pending' forever unless THEY also became a
+// paying customer, which wasn't the deal being offered.
 //
 // tcgss_claim_pending_referral_credits atomically claims each pending row
 // (row-level lock inside the UPDATE), so this is safe to call from multiple
 // webhook deliveries racing each other — only one will ever claim a given
-// reward. A claimed row that fails to get a real Stripe credit is released
-// back to 'pending' rather than left stuck, so it's retried on the next
-// opportunity (the next time this referrer's subscription goes active).
+// reward. A claimed row that fails to get a real reward is released back to
+// 'pending' rather than left stuck, so it's retried on the next opportunity.
 async function applyPendingReferralCredits(referrerProfileId, stripeCustomerId) {
-  if (!referrerProfileId || !stripeCustomerId) return;
+  if (!referrerProfileId) return;
   try {
     const { data: claimed, error: claimErr } = await supabaseAdmin.rpc('tcgss_claim_pending_referral_credits', {
       p_referrer_id: referrerProfileId,
@@ -133,13 +140,19 @@ async function applyPendingReferralCredits(referrerProfileId, stripeCustomerId) 
     if (claimErr) { console.error('Failed to claim referral credits for', referrerProfileId, claimErr); return; }
     if (!claimed || !claimed.length) return;
 
-    const subscription = await liveSubscriptionFor(stripeCustomerId);
+    const subscription = stripeCustomerId ? await liveSubscriptionFor(stripeCustomerId) : null;
     if (!subscription) {
-      // Claimed but this referrer isn't actually live right now (a race with
-      // a cancellation, most likely) — hand every claimed row back so it's
-      // retried the next time they really do have an active subscription.
+      // No live subscription to credit right now — grant the free month
+      // directly instead of leaving the reward stuck.
       for (const credit of claimed) {
-        await supabaseAdmin.rpc('tcgss_release_referral_credit', { p_credit_id: credit.id });
+        const { error: grantErr } = await supabaseAdmin.rpc('tcgss_grant_referral_free_month', {
+          p_credit_id: credit.id,
+          p_referrer_id: referrerProfileId,
+        });
+        if (grantErr) {
+          console.error('Failed to grant referral free month for', referrerProfileId, grantErr);
+          await supabaseAdmin.rpc('tcgss_release_referral_credit', { p_credit_id: credit.id });
+        }
       }
       return;
     }
@@ -379,13 +392,11 @@ router.post('/stripe-webhook', express.raw({ type: '*/*' }), requireStripe, requ
                 .select('stripe_customer_id')
                 .eq('id', referrerId)
                 .maybeSingle();
-              // Only worth trying now if the referrer already has a Stripe
-              // customer — if they've never subscribed, this credit sits
-              // 'pending' until their own subscription goes active, at which
-              // point applySubscriptionToProfile/this same handler applies it.
-              if (referrerProfile && referrerProfile.stripe_customer_id) {
-                await applyPendingReferralCredits(referrerId, referrerProfile.stripe_customer_id);
-              }
+              // Always attempt this, even if the referrer has never
+              // subscribed — applyPendingReferralCredits grants a free month
+              // of Premium directly in that case rather than needing a
+              // Stripe customer to credit.
+              await applyPendingReferralCredits(referrerId, referrerProfile && referrerProfile.stripe_customer_id);
             }
 
             // Independently: this customer, who just started paying, may

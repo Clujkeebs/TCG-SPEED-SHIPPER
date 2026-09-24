@@ -113,8 +113,11 @@ whoever touches auth next:
 
 ## Referral program
 
-Refer a friend who becomes a paying customer, earn a free month. Details
-that matter if you touch this:
+Refer a friend who becomes a paying customer, earn a free month — **whether
+or not you've ever paid yourself.** That last part was added 2026-09-24; see
+the status log entry for that date for why (short version: it wasn't true
+before, and a free-tier user referring a paying friend got nothing real).
+Details that matter if you touch this:
 
 - Every profile gets an 8-character `referral_code` (random, URL-safe
   alphabet — no `0/O/1/I/L`, no `+`/`/`) the moment it's created, via the
@@ -125,41 +128,61 @@ that matter if you touch this:
   no self-referral, one referral per account ever, and only within ~2 hours
   of the account being created — so an old account can't retroactively
   "become referred" by clicking a link.
-- The reward is a **Stripe customer balance credit**, not a coupon — sized
-  to whatever the referrer's current plan costs AT THE MOMENT it's applied,
-  not when it was earned. This is deliberate: it's the only way "one free
-  month" means the same thing whether the referrer is on Base or Premium,
-  and it lets multiple earned rewards just stack (each credit knocks a
-  month off, in order, until it's used up).
+- **Two reward paths**, chosen at the moment the reward is actually applied
+  (not when it's earned), based on whether the referrer has a live Stripe
+  subscription **right then**:
+  - **Paying referrer → Stripe customer balance credit**, sized to whatever
+    the referrer's current plan costs AT THE MOMENT it's applied, not the
+    plan they were on when they earned it. This is deliberate: it's the only
+    way "one free month" means the same thing whether the referrer is on
+    Base or Premium, and it lets multiple earned rewards just stack (each
+    credit knocks a month off, in order, until it's used up).
+  - **Everyone else (free tier, never subscribed, or currently
+    lapsed/canceled) → 30 days of free Premium**, granted directly via
+    `tcgss_profiles.free_until` (`tcgss_grant_referral_free_month` — same
+    mechanism the creator-affiliate program uses for its free year, and
+    already treated as full Premium by `tcgss_get_status` /
+    `tcgss_consume_label_credits`). No Stripe involved at all — the reward is
+    real access, not a discount with nothing to discount.
+  Which path a given credit took is recorded on the row itself
+  (`tcgss_referral_credits.applied_method`: `'stripe_credit'` or
+  `'free_month_grant'`) and surfaced back via `tcgss_get_referral_stats`
+  (`stripe_credits_applied`, `free_months_granted`, alongside the existing
+  `applied_credits` total and `pending_credits`).
 - `tcgss_referral_credits` has one row per referred user, ever (unique
   constraint) — resubscribing after a cancellation cannot earn a second
   reward for the same referral. `tcgss_record_referral_conversion` is the
   only thing that inserts a row, called from the `checkout.session.completed`
   webhook handler, and only returns the referrer's id the first time (null
   on every later call for that same referred user).
-- Credit is applied via a claim/apply/release cycle designed to survive a
+- Reward is applied via a claim/apply/release cycle designed to survive a
   webhook firing twice or two webhooks racing:
   `tcgss_claim_pending_referral_credits` atomically flips `pending` rows to
   `processing` (row-level lock — only one caller ever wins a given row).
-  server.js then calls Stripe for each claimed row; success marks it
-  `applied` via `tcgss_mark_referral_credit_applied`, failure calls
-  `tcgss_release_referral_credit` to hand it back to `pending` rather than
-  lose it. **Never apply a credit without going through claim first** — that
-  atomicity is the only thing preventing a double-credit on a redelivered
-  webhook.
-- If the referrer isn't a paying customer yet when their referral converts,
-  the credit sits `pending` — no error, nothing lost. It gets applied the
-  next time that referrer's own subscription goes active, whether that's
-  their first purchase or a later renewal (both `checkout.session.completed`
-  and `applySubscriptionToProfile` call `applyPendingReferralCredits` on
-  every active-status transition).
+  `applyPendingReferralCredits` in server.js then checks the referrer's live
+  Stripe subscription status for each claimed row and takes whichever path
+  above applies; success marks it `applied` (via `tcgss_mark_referral_credit_applied`
+  for the Stripe path, `tcgss_grant_referral_free_month` for the free-access
+  path — the latter also does the `free_until` update, in the same function,
+  so a row can never end up `applied` without the grant actually having
+  happened). Failure of either path calls `tcgss_release_referral_credit` to
+  hand the row back to `pending` rather than lose it. **Never apply a reward
+  without going through claim first** — that atomicity is the only thing
+  preventing a double-reward on a redelivered webhook.
+- Because the free-access path fires immediately (no "wait until they pay"
+  step), a converted referral essentially never sits `pending` for long
+  anymore — it either becomes a Stripe credit or a free-month grant right
+  away, in the same webhook delivery that recorded the conversion. `pending`
+  now mainly means "claim/apply is mid-flight" or "the previous attempt
+  failed and is waiting to be retried," not "waiting for the referrer to
+  become a customer."
 - All of this is exercised in `test/referral.test.js` against a stubbed
-  Stripe/Supabase — including the resubscription-can't-double-earn case and
-  the Stripe-call-fails-so-release-not-lose case. It was also verified
-  directly against the live database (self-referral, invalid code, the
-  2-hour window, idempotent conversion, claim/apply/release) before any
-  application code was written, the same way RLS was verified elsewhere in
-  this file.
+  Stripe/Supabase — including both reward paths, the resubscription-can't-
+  double-earn case, and both the Stripe-call-fails and the grant-fails
+  release-not-lose cases. The original claim/apply/release plumbing was also
+  verified directly against the live database (self-referral, invalid code,
+  the 2-hour window, idempotent conversion) before any application code was
+  written, the same way RLS was verified elsewhere in this file.
 - `tcgss_referral_credits` has RLS enabled with **no policies** — that's
   intentional, same pattern as everything else here: no direct table access
   for anyone, all reads/writes go through the SECURITY DEFINER functions
