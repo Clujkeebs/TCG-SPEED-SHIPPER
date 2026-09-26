@@ -12,10 +12,12 @@ A fast tool that converts TCGplayer CSV order exports (or pasted addresses) into
 - **Base ($1.99/mo)** — 500 labels/month
 - **Premium ($5.99/mo)** — unlimited labels, paste-address labels, Design Studio (custom colors/fonts/message/QR code), multiple saved return-address profiles, no "Powered by" branding on packing slips
 
+Print formats (every plan): 4×6 thermal, 8.5×11 (1–4 up), Avery 5160 address-label sheets (30/page), and #10 envelopes.
+
 All label/PDF generation still happens entirely in the browser — CSV contents, buyer names, and shipping addresses are never uploaded, whether or not you're signed in. See [`public/privacy.html`](public/privacy.html) for details.
 
 ## Architecture
-- **Static site**: `public/` — served directly by Netlify's CDN.
+- **Static site**: `public/` — served directly by Netlify's CDN. CSV/address parsing and label-text helpers live in `public/js/shipper-core.js` (no DOM dependencies, shared with the tests). Legal/support pages: `public/terms.html`, `public/privacy.html`, `public/support.html`.
 - **API**: `server.js` (Express) — wrapped as a single Netlify Function (`netlify/functions/api.js`, via `serverless-http`) exposing `/api/create-checkout-session`, `/api/create-portal-session`, and `/api/stripe-webhook`. `netlify.toml` redirects `/api/*` to it.
 - **Database/Auth**: Supabase (`tcgss_*` tables, RLS policies, and RPCs — see the `tcgss_profiles` / `tcgss_label_usage` tables and the `tcgss_get_status` / `tcgss_consume_label_credits` functions).
 - **Billing**: Stripe subscriptions (Checkout + Billing Portal + webhooks).
@@ -37,6 +39,24 @@ This runs just the API routes on port 3000 (or `$PORT`) for testing; the static 
 | `SUPABASE_URL` | Supabase project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server-side only, never exposed to the browser) |
 | `PUBLIC_SITE_URL` | The site's public URL, used for Stripe redirect/return URLs |
+
+### Admin dashboard
+`/admin/` (owner account only). It shows overview stats (MRR and 30-day revenue
+live from Stripe, signups, labels), all users with plan and usage, server and
+browser errors, affiliates, and newsletter subscribers. Per-user commands:
+grant or remove free Premium, reset this month's label count, re-sync from
+Stripe, generate a password-reset link, and delete the account (cancels
+Stripe first). API in `admin.js`; every command is audit-logged to
+`tcgss_event_log`.
+
+### Shared site assets
+`public/css/site.css` + `public/js/site.js` load on every page and provide the
+nav byline, footer, cookie notice (optional Cookiebot hook), browser error
+reporting, and scroll-reveal animation. Fonts are self-hosted in
+`public/fonts/`, not loaded from Google.
+
+### Tests
+`npm test` runs every suite in `test/` with stubbed Stripe/Supabase (no network, no keys needed), including `csv-parser.test.js` for the browser's CSV parser.
 
 ## Author
 Built by Clujkeebs

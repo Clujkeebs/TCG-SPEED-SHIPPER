@@ -409,7 +409,11 @@ clients. No network, no live keys, runs in this sandbox:
   on a bad or missing token without touching the database, and every admin
   route confirmed owner-only.
 
-Run it before pushing anything that touches billing or auth.
+- `csv-parser.test.js` — the browser's CSV/paste parser (`public/js/shipper-core.js`)
+  against realistic TCGplayer exports: column matching, quoting, BOMs,
+  multi-line fields, item vs. "Product Weight"/"Item Count", PDF-safe text.
+
+Run it before pushing anything that touches billing, auth, or parsing.
 
 ## Known-good, verified this session
 
@@ -629,3 +633,190 @@ Still open, unchanged, still owner-only dashboard actions: leaked-password
 protection, custom SMTP for password reset. Worth prioritizing the SMTP one
 now — it's the same unreliable-sender problem that caused today's bug, and
 it's still the live path for "Forgot Password."
+
+### 2026-09-26 — Claude (full audit pass)
+Owner asked for a deep "make it bulletproof" pass. Counts at this entry: 14
+profiles, 8 on a paid plan (incl. the owner).
+
+**Security fix, applied directly to the live database:**
+`tcgss_grant_referral_free_month` was executable by `anon` and
+`authenticated` through PostgREST (`/rest/v1/rpc/...`, with the public anon
+key from index.html), and it extended `free_until` for whatever user id it was
+given without checking that a claimed credit existed. Anyone could have given
+themselves unlimited free Premium. I checked first: no profile had
+`free_until` set, so it had not been used. Fixed via migration
+`tcgss_lock_down_referral_free_month_grant`: EXECUTE revoked from
+public/anon/authenticated (service_role only), and the function now extends
+`free_until` only if it actually flipped a `processing` credit for that
+referrer (this also makes a replayed call a no-op). Advisors confirm it's gone.
+**Root cause to remember:** Supabase grants EXECUTE on every new `public`
+function to anon/authenticated by default. Any new server-only SECURITY
+DEFINER function needs an explicit
+`revoke execute ... from public, anon, authenticated` in the same migration.
+Every other server-only function was already locked down, so this one
+was missed when it was added on 2026-09-24.
+
+**Bugs fixed:**
+- CSV parser: TCGplayer's shipping export has "Product Weight" and
+  "Item Count" columns, and the loose header match picked "Product Weight" as
+  the item name, so packing slips listed weights ("• 0.12") as items. The
+  parser also split rows on newlines before handling quotes, so any quoted
+  field with a line break shifted every column after it. It had no
+  escaped-quote (`""`) support, and an earlier "Order Date" column could
+  beat an exact "Order #". I rewrote it as a real RFC 4180 reader with
+  exact-before-substring column matching and per-field exclusions, moved it
+  to `public/js/shipper-core.js`, and pinned it with `test/csv-parser.test.js`.
+- Forgot Password never let anyone set a new password. The reset link signs
+  the user in with a recovery session (`PASSWORD_RECOVERY` event), which the
+  app ignored. It now opens a "choose a new password" panel, and signed-in
+  users get a Change Password button.
+- "Manage Billing" was disabled for anyone with `free_until`, so a paying
+  customer who also earned a free month or affiliate year couldn't reach the
+  portal to cancel a subscription that was still billing them. It's always
+  enabled now; the server explains when there's nothing to manage.
+- Referral box didn't appear after logging in until a page reload
+  (`onAuthStateChange` didn't refresh referral stats). Supabase calls in that
+  callback are now deferred with `setTimeout`, per supabase-js guidance, to
+  avoid its auth-lock deadlock.
+- Long names/addresses ran off the edge of labels. Text now shrinks to fit.
+  Characters outside jsPDF's built-in font set (e.g. "ễ", "ł", CJK) printed
+  as garbage and now become their base letter or a visible "?".
+- The CSV error message was injected into innerHTML unescaped.
+
+**Hardening:** security headers in `netlify.toml` (nosniff, frame-ancestors
+none, Referrer-Policy; the affiliate dashboard gets `no-referrer` + noindex
+because its secret token is in the URL); the signup throttle now uses the
+same client-IP parsing as the promo code; the promo-code check is rate
+limited (20 per 10 min per IP) against brute-forcing.
+
+**Legal:** new `terms.html` (auto-renewal, cancellation, refunds, disclaimers,
+liability cap, not affiliated with TCGplayer). Rewrote `privacy.html` to
+cover what's actually stored now (referral/affiliate attribution, hashed-IP
+promo check, Netlify hosting, retention, deletion/access requests, contact
+email). Stripe Checkout shows an auto-renewal/cancellation disclosure
+(`custom_text.submit`, tested). The pricing page states the renewal terms,
+signup has a Terms/Privacy consent line, and the footer has a trademark +
+"this isn't postage" disclaimer. **Owner should review two
+commitments made on their behalf in terms.html:** the 14-day "we'll make it
+right" refund window (§5), and the governing-law clause, which says "the state
+where the operator resides" because the state isn't known. Put the actual
+state in if you want.
+
+**New:** `support.html` (troubleshooting, billing and cancellation answers, a
+live `/api/health` status line, and a prefilled support email with browser
+details). New print formats on every plan: Avery 5160 (30 address labels per
+sheet) and #10 envelopes, both aimed at plain-white-envelope orders. Also:
+shipping method shown on preview cards and slips, item count on slips, "+N
+more" instead of item lists printed off the page, and the chosen format is
+remembered between visits.
+
+Verified: `npm test` (7 suites) green, plus a headless-Chromium run of the
+real page generating every format with a tricky CSV, with the PDFs rendered
+and inspected. Not verified live: the password-recovery panel (needs a real
+reset email) and the Checkout disclosure text in the actual Stripe UI.
+
+Still open (owner-only dashboard actions, unchanged): leaked-password
+protection, and custom SMTP for password-reset email reliability. The
+recovery flow now works end-to-end, but only if the email arrives.
+
+### 2026-09-26 (later) — Claude: shipping plan, blog, outreach review
+**Numbers at this entry:** 7 active subscriptions (4 Premium, 3 Base), 5
+signups in the last 7 days, 456 labels printed this month, about 70% of
+them by a single Premium user.
+
+**New feature: Shipping Plan** (`index.html` + `shippingTier`/`parseMoney`
+in `public/js/shipper-core.js`, tested in `csv-parser.test.js`). It reads
+"Value Of Products" from TCGplayer's shipping export and tags each order by
+TCGplayer's published seller guidelines: over $20 tracking recommended,
+$49.99+ tracking required, $250+ signature required. Buyers who paid for
+expedited shipping always go to tracked. With no value column it falls back
+to "unknown" (no guessing) unless the method is expedited. A "Print" filter
+(all / envelopes only / tracked only / not yet marked shipped) decides which
+orders go into the PDF. **Billing changed from per-batch to per-order**
+(`paidOrderKeys`): printing envelopes then tracked labels from one CSV costs
+the same as printing everything once, and a later re-download is free. The
+thresholds are TCGplayer's rules, not ours. If TCGplayer changes them,
+update `shippingTier` and the new guidelines blog post together.
+
+**Blog:** four new posts targeting low-competition queries from keyword
+research: tcgplayer-shipping-guidelines (~210/mo for "tcgplayer shipping
+guidelines"), how-to-ship-trading-cards-in-a-plain-white-envelope,
+tcgplayer-shipping-not-confirmed (~120/mo combined), and
+tcgplayer-free-shipping-for-sellers (~140/mo for "tcgplayer free shipping").
+Also added to the blog index, sitemap and Blog JSON-LD, with cross-links
+from five older posts. The homepage meta description and WebApplication
+schema now mention envelopes, Avery and the shipping plan. The site audit
+scored 100/100 on on-page SEO, so there were no technical fixes to make.
+Search Console is **not** connected to the SEO tooling here, so no real
+ranking or click data is available. Connecting it is the next SEO unlock.
+
+**Outreach, reviewed and paused:** about 200 sent threads in 30 days, nearly
+all the same "30% revenue-share partnership" pitch to TCGplayer hobby shops.
+The result was **zero human replies**: only auto-responders, plus 8 bounces
+that hurt the Gmail account's sender reputation. Two problems:
+(1) wrong audience. Large shops ship with bulk tools and have no audience of
+small sellers to promote to. (2) **The emails aren't CAN-SPAM compliant**:
+cold commercial email needs a physical postal address and an opt-out line,
+and they had neither. Don't send more cold commercial email without both.
+The owner needs to supply a mailing address (a P.O. box works).
+What was done instead:
+- Sent: a personal thank-you and feedback request to the top power user.
+- Drafted in Gmail, not sent: a "what's new" email to the 7 paying
+  customers (BCC). It's a product-update message to existing subscribers,
+  but it announces features that only exist after this branch merges and
+  deploys, so send it after that. Also drafted: a win-back email to the 4
+  dormant August free accounts. It's commercial, so it has an opt-out line
+  and a `[YOUR MAILING ADDRESS]` placeholder that must be filled before
+  sending.
+The 2 extra free accounts `onecard*` are the same person as the
+`onecardpokemon` Base subscriber (from the old signup bug), so they're
+excluded from the free-user emails.
+
+### 2026-09-26 (evening) — Claude: admin dashboard, site-wide cleanup
+**Admin dashboard at `/admin/`**, sign in with the owner account
+(`clujkeebs@aol.com`, the login email, which is unchanged). API is in
+`admin.js`, mounted from server.js, and every route is
+`requireUser + requireOwner`. Overview (Stripe MRR / 30-day paid, signups,
+labels, errors), users (auth + profile + usage merged, CSV export, copy
+emails), errors & activity, affiliates (create / activate / mark paid, over
+the existing API), newsletter. User commands: grant/revoke free Premium
+(`free_until`), reset this month's usage, re-sync from Stripe, a
+password-reset link generated with `auth.admin.generateLink` (so it doesn't
+depend on Supabase's email sender), and delete. Delete requires the email
+typed back, cancels live Stripe subscriptions first, then runs
+`tcgss_admin_prepare_user_delete` (clears the FK references that don't
+cascade; refuses the owner and any user with affiliate earnings), then
+`auth.admin.deleteUser`. The page never puts data into innerHTML:
+emails and browser error text are attacker-controllable, and this page
+runs with the owner's session. This was verified with an injected payload.
+`test/admin.test.js` covers the access control, delete safety and audit rows.
+
+**New DB objects** (migration `tcgss_admin_event_log_and_user_cleanup`,
+applied live): `tcgss_event_log` (RLS on, no policies, anon/authenticated
+revoked) and `tcgss_admin_prepare_user_delete` (service_role only).
+`logError`/`logWarn` in server.js now write money, signup, checkout, webhook
+and config failures there, and `/api/client-error` takes browser crash
+reports (throttled, capped at 500 chars, no IP stored) from
+`public/js/site.js`.
+
+**Site-wide:** one nav on every inner page ("TCG Speed Shipper / by
+Clujkeebs" plus Guides / Blog / Support), and one organized footer
+(`.sf`) on every page with a "Cookie settings" button. Public contact
+email changed to clujkeebs@gmail.com everywhere. Server `OWNER_EMAIL` and
+`tcgss_is_owner_email()` stay on the aol address, because that's the
+owner's login; don't change them unless the owner's login email changes.
+**Fonts are self-hosted** (`public/fonts/`, OFL), so no page contacts
+Google Fonts any more, which is a GDPR exposure removed. There's now a
+cookie notice rather than a consent wall, because the site sets no
+tracking or ad cookies (only strictly-necessary localStorage, now listed
+key by key in privacy.html#cookies). `COOKIEBOT_CBID` in site.js switches
+to Usercentrics Cookiebot if analytics or ads are ever added.
+
+**Bugs found and fixed:** on phones the app nav overflowed and hid the
+**Sign in / Account button** off-screen. It's now a two-row nav with
+swipeable tabs. Preview cards replayed their fade-in on every keystroke
+in the return-address form, and card stagger was uncapped (card #200
+appeared ~8s late). The blog count said 10, then 14, but there are 16
+posts. The blog index was one 16-row list; it's now grouped into Shipping /
+Selling / Business with a Guides|Blog switcher on both indexes. All motion
+respects `prefers-reduced-motion`, and keyboard focus rings are visible.
