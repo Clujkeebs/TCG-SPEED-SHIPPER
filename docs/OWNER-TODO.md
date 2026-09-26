@@ -158,3 +158,18 @@ them.
 
 ### Added by Devin
 <!-- Devin: add owner-only items here (what, why, time). -->
+- [ ] **Get a USPS Mailer ID** (free): create a USPS Business Customer
+  Gateway account at gateway.usps.com, then request a Mailer ID and
+  Informed Visibility access. It's the prerequisite for tracking stamped
+  envelopes (Intelligent Mail barcodes), which three competitors already
+  sell. See `docs/competitors.md`, "IMb path". Approval is slow, so start
+  early. ⏱ 20 min + waiting
+- [ ] **Export one real eBay and one real Whatnot order CSV,** then replace
+  the names and addresses with fake ones and drop them in the repo (or send
+  them to either of us). With those we can make the app read them, so it
+  works for sellers who aren't on TCGplayer. ⏱ 10 min
+- [ ] **Ask Mana Pool to list the tool** on their seller-tools / integrations
+  page (email their support from your account). ⏱ 5 min
+- [ ] **Sanity-check the holiday dates** in the refreshed holiday post before
+  it's merged. They're sourced and dated "as of Sept 26", but you know the
+  release calendar best. ⏱ 3 min
