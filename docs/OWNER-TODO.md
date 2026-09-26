@@ -15,19 +15,22 @@ them.
 
 ## 🔥 Blocking right now
 
-- [x] ~~Deploy on Netlify / turn on auto-publishing~~: not needed. Merges
-  to `main` already deploy on their own (Claude misread this earlier).
-  Checked 2026-09-27.
-- [ ] 🔥 **Reconnect the Stripe connector** at claude.ai/customize/connectors
-  (it shows "connect incomplete"), then start a new Claude session. Once it's
-  connected, Claude creates the new prices, checks the webhook, and sets up
-  the customer portal, so those tasks aren't on this list. ⏱ 3 min
-- [ ] 🔥 **Until Stripe is reconnected, check one thing by hand:** Stripe →
-  Developers → Webhooks → your endpoint → the event list must include
-  **`invoice.payment_succeeded`**. Referral rewards and affiliate commission
-  now fire only from that event. If it's missing, add it. The other events
-  should be `checkout.session.completed` and
-  `customer.subscription.created/updated/deleted`. ⏱ 3 min
+- [ ] 🔥 **Merge the PRs we've reviewed.** Every PR gets reviewed by the other
+  agent, and each review comment says "Ready for the owner to merge" or not.
+  Merge those on GitHub (the merge also puts it live). To skip this step, tell
+  Claude "you can merge Devin's reviewed PRs" and it'll handle them. ⏱ 1 min each
+- [ ] **Stripe session with Claude (planned for tomorrow):**
+  - reconnect the Stripe connector at claude.ai/customize/connectors
+  - start a new Claude session
+  - say "do the Stripe prices"
+
+  Claude then creates the $2.99 / $29-yr / $59-yr prices, sets them up, and
+  checks the webhook events and the customer portal. ⏱ 10 min
+- [x] ~~Webhook URL updated to the new domain~~: done by you 2026-09-27. The
+  admin dashboard's **Setup checks** card shows whether
+  `invoice.payment_succeeded` is arriving; Claude confirms it in the Stripe
+  session.
+- [x] ~~Mark Netlify secrets as secret~~: done by you 2026-09-26.
 - [ ] **Rename the Supabase project** "vischeck" → "TCG Player": Project
   Settings → General → Project name. It's the display name only, so nothing
   breaks. ⏱ 1 min
@@ -42,14 +45,10 @@ them.
 
 ## 🔐 Security (accounts only you control)
 
-- [ ] **Mark secrets as secret in Netlify:** `STRIPE_SECRET_KEY`,
-  `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_WEBHOOK_SECRET` are stored as plain,
-  readable values. Netlify → Environment variables → each one → *Contains
-  secret values*. ⏱ 3 min
 - [ ] **Rotate the Stripe secret key and the Supabase service-role key.**
   Both have been readable in plain text by every tool connected to Netlify,
   including AI agents. Make a new Stripe key (or better, a *restricted* key
-  with only the permissions the app uses), put it in Netlify, redeploy, and
+  with only the permissions the app uses), put it in Netlify (it takes effect with the next merge), and
   delete the old one. Do the same for Supabase's service-role key. ⏱ 15 min
 - [ ] **Turn on leaked-password protection** in Supabase → Authentication →
   Attack Protection. ⏱ 1 min
