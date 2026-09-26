@@ -163,6 +163,51 @@ async function hadAnySubscription(customerId) {
   return list.data.length > 0;
 }
 
+// The profile a Stripe customer belongs to. Normally linked by
+// stripe_customer_id, but a first invoice can be delivered before
+// checkout.session.completed has linked it, so fall back to the Supabase user
+// id stamped on every customer this server creates.
+async function profileForStripeCustomer(customerId) {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('tcgss_profiles')
+      .select('id, referred_by')
+      .eq('stripe_customer_id', customerId)
+      .maybeSingle();
+    if (error) throw error;
+    if (data) return data;
+    const customer = await stripe.customers.retrieve(customerId);
+    const userId = customer && customer.metadata && customer.metadata.supabase_user_id;
+    if (!userId) return null;
+    const { data: byId, error: byIdErr } = await supabaseAdmin
+      .from('tcgss_profiles')
+      .select('id, referred_by')
+      .eq('id', userId)
+      .maybeSingle();
+    if (byIdErr) throw byIdErr;
+    return byId || null;
+  } catch (err) {
+    await logError('webhook.invoice', 'Failed to find the profile for Stripe customer', customerId, err);
+    return null;
+  }
+}
+
+// True if a paid invoice is for one of our plans' subscriptions (not, say, a
+// one-off invoice created by hand in the Stripe dashboard).
+async function isPaidPlanInvoice(invoice) {
+  const subId = invoice.subscription ||
+    (invoice.parent && invoice.parent.subscription_details && invoice.parent.subscription_details.subscription);
+  if (!subId) return false;
+  try {
+    const sub = await stripe.subscriptions.retrieve(typeof subId === 'string' ? subId : subId.id);
+    const item = sub && sub.items && sub.items.data[0];
+    return !!(item && PRICE_TO_PLAN[item.price.id]);
+  } catch (err) {
+    await logError('webhook.invoice', 'Could not check the subscription on invoice', invoice.id, err);
+    return false;
+  }
+}
+
 // Records that a referred customer has become a paying customer and rewards
 // whoever referred them. Idempotent in the database: a referred user can only
 // ever earn their referrer one reward, so calling this again on a renewal or a
@@ -463,12 +508,10 @@ router.post('/stripe-webhook', express.raw({ type: '*/*' }), requireStripe, requ
             break;
           }
 
-          if (subscription.status === 'active') {
-            // A referred friend on their free first month ('trialing') hasn't
-            // paid anything yet, so the referrer's reward waits for their
-            // first real invoice (see invoice.payment_succeeded below).
-            await recordReferralConversion(userId);
-          }
+          // The referrer's reward is NOT granted here: an active subscription
+          // can still have cost $0 (a 100%-off code) and a referred friend's
+          // free month starts as 'trialing'. It waits for the friend's first
+          // real payment, in invoice.payment_succeeded below.
           if (['active', 'trialing'].includes(subscription.status)) {
             // Independently: this customer, who just started paying, may
             // themselves have referred other people before they ever
@@ -516,16 +559,12 @@ router.post('/stripe-webhook', express.raw({ type: '*/*' }), requireStripe, requ
         // webhook can never double-credit the same payment.
         const invoice = event.data.object;
         if (invoice.customer && invoice.amount_paid > 0) {
-          const { data: profile, error: profileErr } = await supabaseAdmin
-            .from('tcgss_profiles')
-            .select('id')
-            .eq('stripe_customer_id', invoice.customer)
-            .maybeSingle();
-          if (profileErr) {
-            await logError('webhook.invoice', 'Failed to look up profile for invoice.payment_succeeded:', profileErr);
-          } else if (profile) {
-            // First real payment after a referred friend's free month.
-            await recordReferralConversion(profile.id);
+          const profile = await profileForStripeCustomer(invoice.customer);
+          if (profile) {
+            // A referred customer's first real payment for a plan is what
+            // earns their referrer's reward (idempotent: once per referred
+            // user, ever). Any other paid invoice doesn't count.
+            if (profile.referred_by && (await isPaidPlanInvoice(invoice))) await recordReferralConversion(profile.id);
             const periodStart = invoice.period_start ? new Date(invoice.period_start * 1000) : new Date();
             const periodMonth = new Date(Date.UTC(periodStart.getUTCFullYear(), periodStart.getUTCMonth(), 1))
               .toISOString().slice(0, 10);
@@ -778,7 +817,10 @@ router.post('/create-checkout-session', express.json(), requireStripe, requireSu
     // very first subscription. Not combined with a 100%-off code (already
     // free), and a card is collected up front so the plan simply continues.
     const referredFriend = !!(profile && (profile.referred_by || profile.affiliate_id));
-    const friendTrial = referredFriend && !isFreeRedemption && !(await hadAnySubscription(customerId));
+    // Checked after the IP rule above: if the 100%-off code was refused, the
+    // friend still gets their free month instead of being charged at once.
+    const stillFullyFree = isFullyFreeCoupon(appliedPromo && appliedPromo.coupon);
+    const friendTrial = referredFriend && !stillFullyFree && !(await hadAnySubscription(customerId));
     const renewalText = friendTrial
       ? 'Your first ' + FRIEND_TRIAL_DAYS + ' days are free (referral reward). After that this subscription renews automatically every ' + interval + ' at the price shown until you cancel. Cancel before the free period ends and you are never charged. '
       : 'This subscription renews automatically every ' + interval + ' at the price shown until you cancel. ';

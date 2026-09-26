@@ -24,6 +24,7 @@ const state = {
   balanceTxnShouldFail: false,
   freeGrantShouldFail: false,
   updates: [],
+  userOfCustomer: {},     // Stripe customer id -> profile id
 };
 
 function sub(over) {
@@ -63,8 +64,12 @@ const supabaseStub = {
   from: (table) => ({
     update: () => updateChain(table),
     select: () => ({
-      eq: () => ({
-        maybeSingle: async () => ({ data: { stripe_customer_id: state.referrerCustomerId }, error: null }),
+      eq: (k, v) => ({
+        // By Stripe customer: the paying (referred) customer's profile.
+        // By id: the referrer's profile, for their own Stripe customer id.
+        maybeSingle: async () => (k === 'stripe_customer_id'
+          ? { data: state.userOfCustomer[v] ? { id: state.userOfCustomer[v], referred_by: state.referrerOf[state.userOfCustomer[v]] || null } : null, error: null }
+          : { data: { stripe_customer_id: state.referrerCustomerId }, error: null }),
       }),
     }),
   }),
@@ -130,6 +135,13 @@ function postWebhook(payload) {
   });
 }
 
+// The referred customer's first real payment: the only thing that earns the
+// referrer a reward.
+function firstPayment(userId, customer, subscription) {
+  state.userOfCustomer[customer] = userId;
+  return { type: 'invoice.payment_succeeded', data: { object: { id: 'in_' + subscription.id, customer, subscription: subscription.id, amount_paid: 599, currency: 'usd', period_start: 1800000000 } } };
+}
+
 function checkoutCompleted(userId, customer, subscription) {
   return { type: 'checkout.session.completed', data: { object: { client_reference_id: userId, subscription: subscription.id, customer } } };
 }
@@ -144,7 +156,7 @@ function reset() {
   state.subscriptions.length = 0; state.pendingCredits.length = 0;
   state.referrerOf = {}; state.alreadyConverted = {}; state.balanceTxnShouldFail = false;
   state.freeGrantShouldFail = false; state.freeUntilGrants = [];
-  state.updates.length = 0; state.referrerCustomerId = null;
+  state.updates.length = 0; state.referrerCustomerId = null; state.userOfCustomer = {};
   calls.length = 0;
 }
 
@@ -157,7 +169,7 @@ function reset() {
   state.referrerCustomerId = 'cus_referrer';
   state.subscriptions.push(sub({ id: 'sub_referred', customer: 'cus_referred' }));
   state.subscriptions.push(sub({ id: 'sub_referrer', customer: 'cus_referrer' }));
-  await postWebhook(checkoutCompleted('referred_1', 'cus_referred', { id: 'sub_referred' }));
+  await postWebhook(firstPayment('referred_1', 'cus_referred', { id: 'sub_referred' }));
   check('conversion was recorded', calls.some((c) => c[0] === 'rpc:tcgss_record_referral_conversion'));
   check('credit was claimed for the referrer', calls.some((c) => c[0] === 'rpc:tcgss_claim_pending_referral_credits' && c[1].p_referrer_id === 'referrer_1'));
   check('a real Stripe balance credit was created on the referrer\'s customer', calls.some((c) => c[0] === 'customers.createBalanceTransaction' && c[1] === 'cus_referrer' && c[2].amount === -599));
@@ -168,7 +180,7 @@ function reset() {
   state.referrerOf['referred_2'] = 'referrer_2';
   state.referrerCustomerId = null; // referrer has no Stripe customer at all yet
   state.subscriptions.push(sub({ id: 'sub_referred2', customer: 'cus_referred2' }));
-  await postWebhook(checkoutCompleted('referred_2', 'cus_referred2', { id: 'sub_referred2' }));
+  await postWebhook(firstPayment('referred_2', 'cus_referred2', { id: 'sub_referred2' }));
   check('credit was still claimed even though the referrer has never paid',
     calls.some((c) => c[0] === 'rpc:tcgss_claim_pending_referral_credits' && c[1].p_referrer_id === 'referrer_2'));
   check('a free month was granted directly to the referrer', (state.freeUntilGrants || []).includes('referrer_2'));
@@ -189,7 +201,7 @@ function reset() {
   state.referrerOf['referred_5'] = 'referrer_5';
   state.referrerCustomerId = 'cus_referrer5'; // has a Stripe customer, but no live subscription below
   state.subscriptions.push(sub({ id: 'sub_referred5', customer: 'cus_referred5' }));
-  await postWebhook(checkoutCompleted('referred_5', 'cus_referred5', { id: 'sub_referred5' }));
+  await postWebhook(firstPayment('referred_5', 'cus_referred5', { id: 'sub_referred5' }));
   check('a free month was granted rather than the credit sitting pending', (state.freeUntilGrants || []).includes('referrer_5'));
   check('credit applied, not pending', state.pendingCredits[0].status === 'applied');
 
@@ -199,7 +211,7 @@ function reset() {
   state.referrerCustomerId = null;
   state.subscriptions.push(sub({ id: 'sub_referred6', customer: 'cus_referred6' }));
   state.freeGrantShouldFail = true;
-  await postWebhook(checkoutCompleted('referred_6', 'cus_referred6', { id: 'sub_referred6' }));
+  await postWebhook(firstPayment('referred_6', 'cus_referred6', { id: 'sub_referred6' }));
   check('credit is released back to pending, not lost, when the grant fails', state.pendingCredits[0].status === 'pending', JSON.stringify(state.pendingCredits));
 
   console.log('\n-- Resubscribing does not earn a second reward for the same referral --');
@@ -208,15 +220,15 @@ function reset() {
   state.referrerCustomerId = 'cus_referrer3';
   state.subscriptions.push(sub({ id: 'sub_referred3a', customer: 'cus_referred3' }));
   state.subscriptions.push(sub({ id: 'sub_referrer3', customer: 'cus_referrer3' }));
-  await postWebhook(checkoutCompleted('referred_3', 'cus_referred3', { id: 'sub_referred3a' }));
+  await postWebhook(firstPayment('referred_3', 'cus_referred3', { id: 'sub_referred3a' }));
   check('first conversion created exactly one credit', state.pendingCredits.length === 1);
   // referred_3 cancels and resubscribes — a second, brand new Checkout Session.
-  await postWebhook(checkoutCompleted('referred_3', 'cus_referred3', { id: 'sub_referred3b' }));
+  await postWebhook(firstPayment('referred_3', 'cus_referred3', { id: 'sub_referred3b' }));
   check('resubscribing does not create a second credit', state.pendingCredits.length === 1, JSON.stringify(state.pendingCredits));
 
   console.log('\n-- A referrer who was never referred, or an unreferred signup, earns nothing --');
   reset();
-  await postWebhook(checkoutCompleted('nobody_referred_them', 'cus_x', { id: 'sub_x' }));
+  await postWebhook(firstPayment('nobody_referred_them', 'cus_x', { id: 'sub_x' }));
   check('no credit row created', state.pendingCredits.length === 0);
   check('no Stripe balance call', !calls.some((c) => c[0] === 'customers.createBalanceTransaction'));
 
@@ -227,7 +239,7 @@ function reset() {
   state.subscriptions.push(sub({ id: 'sub_referred4', customer: 'cus_referred4' }));
   state.subscriptions.push(sub({ id: 'sub_referrer4', customer: 'cus_referrer4' }));
   state.balanceTxnShouldFail = true;
-  await postWebhook(checkoutCompleted('referred_4', 'cus_referred4', { id: 'sub_referred4' }));
+  await postWebhook(firstPayment('referred_4', 'cus_referred4', { id: 'sub_referred4' }));
   check('credit is released back to pending, not lost, when Stripe fails', state.pendingCredits[0].status === 'pending', JSON.stringify(state.pendingCredits));
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

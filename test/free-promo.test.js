@@ -192,6 +192,15 @@ function check(name, cond, detail) {
   check('checkout still succeeds, just without the discount', second.status === 200 && typeof second.body.url === 'string');
   check('no metadata stamped on the denied attempt (nothing more to record)', !calls.find((c) => c[0] === 'checkout.sessions.create')[1].metadata);
 
+  console.log('\n-- A referred friend whose 100%-off code is refused still gets their free month --');
+  calls.length = 0;
+  state.profile = { stripe_customer_id: null, is_lifetime_free: false, referred_by: 'referrer_1' };
+  let third = await req('POST', '/api/create-checkout-session', { plan: 'base', promoCode: 'FREEMONTH' }, fromIp('4.4.4.4'));
+  const thirdParams = calls.find((c) => c[0] === 'checkout.sessions.create')[1];
+  check('code refused on this connection', third.body.promoDeniedReason === 'ip_already_used');
+  check('the referral free month is applied instead of charging right away',
+    thirdParams.subscription_data && thirdParams.subscription_data.trial_period_days === 30, JSON.stringify(thirdParams));
+
   console.log('\n-- Different IP, same code: allowed --');
   reset();
   state.redemptions.push({ promotion_code_id: 'promo_free', ip_hash: 'some-other-hash-entirely' });

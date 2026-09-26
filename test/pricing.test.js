@@ -38,6 +38,7 @@ const stripeStub = {
   },
   customers: {
     create: async () => ({ id: 'cus_new' }),
+    retrieve: async (id) => ({ id, metadata: { supabase_user_id: state.metaUser || undefined } }),
     createBalanceTransaction: async (cus, p) => { calls.push(['balance', cus, p]); return { id: 'cbtxn_1' }; },
   },
   checkout: { sessions: { create: async (p) => { calls.push(['checkout', p]); return { url: 'https://checkout.stripe.com/x' }; } } },
@@ -101,7 +102,7 @@ function check(name, cond, extra) {
   else { failed++; console.log('  FAIL  ' + name + (extra ? '  — ' + extra : '')); }
 }
 const AUTH = { Authorization: 'Bearer t' };
-function reset() { calls.length = 0; state.updates.length = 0; state.subs = []; state.profile = null; state.claimed = []; }
+function reset() { calls.length = 0; state.updates.length = 0; state.subs = []; state.profile = null; state.claimed = []; state.metaUser = null; }
 
 server.listen(0, async () => {
   try {
@@ -177,11 +178,30 @@ server.listen(0, async () => {
     await req('POST', '/api/stripe-webhook', { type: 'checkout.session.completed', data: { object: { client_reference_id: 'user_1', subscription: 'sub_1', customer: 'cus_1' } } }, { 'stripe-signature': 'x' });
     check('a friend starting their free month earns the referrer nothing yet', !calls.some((c) => c[0] === 'rpc' && c[1] === 'tcgss_record_referral_conversion'));
 
-    reset(); state.profile = { id: 'user_1' };
-    await req('POST', '/api/stripe-webhook', { type: 'invoice.payment_succeeded', data: { object: { id: 'in_1', customer: 'cus_1', amount_paid: 299, currency: 'usd', period_start: 1800000000 } } }, { 'stripe-signature': 'x' });
-    check('their first real payment records the referral conversion', calls.some((c) => c[0] === 'rpc' && c[1] === 'tcgss_record_referral_conversion'));
+    const paid = (over) => ({ type: 'invoice.payment_succeeded', data: { object: Object.assign({ id: 'in_1', customer: 'cus_1', subscription: 'sub_1', amount_paid: 299, currency: 'usd', period_start: 1800000000 }, over) } });
+    const converted = () => calls.some((c) => c[0] === 'rpc' && c[1] === 'tcgss_record_referral_conversion');
 
-    reset(); state.profile = { id: 'user_1' };
+    reset(); state.profile = { id: 'user_1', referred_by: 'referrer_1' }; state.subs = [sub('price_base_299')];
+    await req('POST', '/api/stripe-webhook', paid(), { 'stripe-signature': 'x' });
+    check('their first real payment records the referral conversion', converted());
+
+    reset(); state.profile = { id: 'user_1', referred_by: 'referrer_1' }; state.subs = [sub('price_base_299')];
+    await req('POST', '/api/stripe-webhook', { type: 'checkout.session.completed', data: { object: { client_reference_id: 'user_1', subscription: 'sub_1', customer: 'cus_1' } } }, { 'stripe-signature': 'x' });
+    check('an active $0 checkout (100%-off code) earns the referrer nothing', !converted());
+
+    reset(); state.profile = { id: 'user_1', referred_by: 'referrer_1' }; state.subs = [sub('price_base_299')];
+    await req('POST', '/api/stripe-webhook', paid({ subscription: null }), { 'stripe-signature': 'x' });
+    check('a paid one-off invoice (no subscription) earns the referrer nothing', !converted());
+
+    reset(); state.profile = { id: 'user_1', referred_by: 'referrer_1' }; state.subs = [sub('price_unknown')];
+    await req('POST', '/api/stripe-webhook', paid(), { 'stripe-signature': 'x' });
+    check('a paid invoice on a price that isn\'t one of our plans earns nothing', !converted());
+
+    reset(); state.profile = { id: 'user_1' }; state.subs = [sub('price_base_299')];
+    await req('POST', '/api/stripe-webhook', paid(), { 'stripe-signature': 'x' });
+    check('an unreferred customer\'s payment records no conversion', !converted());
+
+    reset(); state.profile = { id: 'user_1', referred_by: 'referrer_1' };
     await req('POST', '/api/stripe-webhook', { type: 'invoice.payment_succeeded', data: { object: { id: 'in_0', customer: 'cus_1', amount_paid: 0, currency: 'usd' } } }, { 'stripe-signature': 'x' });
     check('a $0 trial invoice does not', !calls.some((c) => c[0] === 'rpc' && c[1] === 'tcgss_record_referral_conversion'));
 

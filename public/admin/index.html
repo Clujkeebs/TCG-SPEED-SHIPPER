@@ -312,6 +312,14 @@ async function loadFunnel() {
     step.lastChild.style.width = top ? Math.max(2, Math.round(100 * v / top)) + '%' : '0';
     box.appendChild(step);
   });
+  // Events that aren't steps of the funnel: the paywall (limit_hit vs.
+  // upgrade_prompt clicks), shares, TCGplayer import files, sample orders.
+  var extra = $('funnel-extra');
+  if (!extra) { extra = el('p', { cls: 'muted' }); extra.id = 'funnel-extra'; extra.style.margin = '10px 0 0'; box.parentNode.insertBefore(extra, box.nextSibling); }
+  extra.textContent = [['limit_hit', 'hit the limit'], ['upgrade_prompt', 'clicked upgrade in a prompt'], ['share_clicked', 'shared'],
+    ['tcg_import', 'TCGplayer import files'], ['sample_loaded', 'sample orders'], ['pricing_viewed', 'pricing views']]
+    .map(function (x) { return (t[x[0]] || 0) + ' ' + x[1]; }).join(' · ') +
+    (t.limit_hit ? ' · paywall click-through ' + pct(t.upgrade_prompt || 0, t.limit_hit) : '');
   var body = clear($('funnel-sources'));
   var rows = Object.keys(j.by_source || {}).map(function (k) { return [k, j.by_source[k]]; })
     .sort(function (a, b) { return (b[1].visit || 0) - (a[1].visit || 0); });

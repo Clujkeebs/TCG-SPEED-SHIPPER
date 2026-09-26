@@ -122,7 +122,7 @@
       if (q.get('aff')) return 'affiliate';
       if (q.get('ref')) return 'referral';
       var utm = (q.get('utm_source') || '').toLowerCase();
-      var known = ['google', 'bing', 'reddit', 'youtube', 'tiktok', 'facebook', 'instagram', 'discord', 'twitter', 'tcgplayer', 'email'];
+      var known = ['google', 'bing', 'reddit', 'youtube', 'tiktok', 'facebook', 'instagram', 'discord', 'twitter', 'tcgplayer', 'email', 'slip', 'whatnot', 'ebay'];
       for (var i = 0; i < known.length; i++) if (utm.indexOf(known[i]) !== -1) return known[i];
       if (utm) return 'other';
       var r = document.referrer ? new URL(document.referrer).hostname : '';
