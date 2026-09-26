@@ -11,7 +11,7 @@ entries, just add to the log so the history stays intact.
 TCG Speed Shipper — converts a TCGPlayer packing-list CSV (or pasted
 addresses) into print-ready PDF shipping labels and packing slips, entirely
 client-side. Free plan needs no account. Paid plans add higher volume and a
-Design Studio. Live at **https://tcg-speed-shipper.netlify.app**.
+Design Studio. Live at **https://tcgspeedshipper.com** (custom domain since 2026-09-26; the old netlify.app address redirects).
 
 Plans: Free (10 labels/mo, no account) · Base $1.99/mo (500/mo) · Premium
 $5.99/mo (unlimited + paste-address mode + Design Studio: colors/fonts,
