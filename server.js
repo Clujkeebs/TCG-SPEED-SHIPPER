@@ -151,6 +151,39 @@ async function liveSubscriptionFor(customerId) {
   return list.data.find((sub) => LIVE_SUBSCRIPTION_STATUSES.includes(sub.status)) || null;
 }
 
+// Length of the free first month a referred friend gets (see checkout).
+const FRIEND_TRIAL_DAYS = 30;
+
+// True if this Stripe customer has ever had a subscription, in any state. The
+// referred-friend free month is for a first subscription only, so cancelling
+// and coming back can't restart it.
+async function hadAnySubscription(customerId) {
+  if (!customerId) return false;
+  const list = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 1 });
+  return list.data.length > 0;
+}
+
+// Records that a referred customer has become a paying customer and rewards
+// whoever referred them. Idempotent in the database: a referred user can only
+// ever earn their referrer one reward, so calling this again on a renewal or a
+// redelivered webhook does nothing.
+async function recordReferralConversion(userId) {
+  const { data: referrerId, error: referralErr } = await supabaseAdmin.rpc('tcgss_record_referral_conversion', {
+    p_referred_user_id: userId,
+  });
+  if (referralErr) { await logError('webhook.referral', 'Failed to record referral conversion for', userId, referralErr); return; }
+  if (!referrerId) return;
+  const { data: referrerProfile } = await supabaseAdmin
+    .from('tcgss_profiles')
+    .select('stripe_customer_id')
+    .eq('id', referrerId)
+    .maybeSingle();
+  // Always attempt this, even if the referrer has never subscribed —
+  // applyPendingReferralCredits grants a free month of Premium directly in
+  // that case rather than needing a Stripe customer to credit.
+  await applyPendingReferralCredits(referrerId, referrerProfile && referrerProfile.stripe_customer_id);
+}
+
 // Referral rewards: a paying referrer gets a Stripe customer balance credit,
 // which works no matter which plan they end up on and stacks correctly if
 // they've earned more than one free month (each credit reduces their next
@@ -430,31 +463,13 @@ router.post('/stripe-webhook', express.raw({ type: '*/*' }), requireStripe, requ
             break;
           }
 
+          if (subscription.status === 'active') {
+            // A referred friend on their free first month ('trialing') hasn't
+            // paid anything yet, so the referrer's reward waits for their
+            // first real invoice (see invoice.payment_succeeded below).
+            await recordReferralConversion(userId);
+          }
           if (['active', 'trialing'].includes(subscription.status)) {
-            // If this newly-paying customer was referred by someone, record the
-            // conversion (idempotent — a resubscription years later cannot earn
-            // a second reward for the same referral). tcgss_record_referral_conversion
-            // returns the referrer's id only the first time this fires for a
-            // given referred user, so nothing further happens on a duplicate
-            // webhook delivery or a later resubscription.
-            const { data: referrerId, error: referralErr } = await supabaseAdmin.rpc('tcgss_record_referral_conversion', {
-              p_referred_user_id: userId,
-            });
-            if (referralErr) {
-              await logError('webhook.referral', 'Failed to record referral conversion for', userId, referralErr);
-            } else if (referrerId) {
-              const { data: referrerProfile } = await supabaseAdmin
-                .from('tcgss_profiles')
-                .select('stripe_customer_id')
-                .eq('id', referrerId)
-                .maybeSingle();
-              // Always attempt this, even if the referrer has never
-              // subscribed — applyPendingReferralCredits grants a free month
-              // of Premium directly in that case rather than needing a
-              // Stripe customer to credit.
-              await applyPendingReferralCredits(referrerId, referrerProfile && referrerProfile.stripe_customer_id);
-            }
-
             // Independently: this customer, who just started paying, may
             // themselves have referred other people before they ever
             // subscribed. Now that they have a live subscription, apply any
@@ -509,6 +524,8 @@ router.post('/stripe-webhook', express.raw({ type: '*/*' }), requireStripe, requ
           if (profileErr) {
             await logError('webhook.invoice', 'Failed to look up profile for invoice.payment_succeeded:', profileErr);
           } else if (profile) {
+            // First real payment after a referred friend's free month.
+            await recordReferralConversion(profile.id);
             const periodStart = invoice.period_start ? new Date(invoice.period_start * 1000) : new Date();
             const periodMonth = new Date(Date.UTC(periodStart.getUTCFullYear(), periodStart.getUTCMonth(), 1))
               .toISOString().slice(0, 10);
@@ -682,7 +699,7 @@ router.post('/create-checkout-session', express.json(), requireStripe, requireSu
 
     const { data: profile, error: profileErr } = await supabaseAdmin
       .from('tcgss_profiles')
-      .select('stripe_customer_id, is_lifetime_free')
+      .select('stripe_customer_id, is_lifetime_free, referred_by, affiliate_id')
       .eq('id', req.user.id)
       .maybeSingle();
     if (profileErr) throw profileErr;
@@ -756,6 +773,16 @@ router.post('/create-checkout-session', express.json(), requireStripe, requireSu
       promoDeniedReason = 'ip_already_used';
     }
 
+    // Two-sided referrals: someone who signed up through a friend's referral
+    // link or a creator's link gets their first month free — once, on their
+    // very first subscription. Not combined with a 100%-off code (already
+    // free), and a card is collected up front so the plan simply continues.
+    const referredFriend = !!(profile && (profile.referred_by || profile.affiliate_id));
+    const friendTrial = referredFriend && !isFreeRedemption && !(await hadAnySubscription(customerId));
+    const renewalText = friendTrial
+      ? 'Your first ' + FRIEND_TRIAL_DAYS + ' days are free (referral reward). After that this subscription renews automatically every ' + interval + ' at the price shown until you cancel. Cancel before the free period ends and you are never charged. '
+      : 'This subscription renews automatically every ' + interval + ' at the price shown until you cancel. ';
+
     const sessionParams = {
       mode: 'subscription',
       customer: customerId,
@@ -772,12 +799,16 @@ router.post('/create-checkout-session', express.json(), requireStripe, requireSu
       // terms and how to cancel to be clear at the point of purchase.
       custom_text: {
         submit: {
-          message: 'This subscription renews automatically every ' + interval + ' at the price shown until you cancel. ' +
+          message: renewalText +
             'Cancel any time online from Manage Billing on the Pricing page; you keep access through the end of the paid period. ' +
             'By subscribing you agree to the Terms of Service at ' + SITE_URL + '/terms.html',
         },
       },
     };
+    if (friendTrial) {
+      sessionParams.subscription_data = { trial_period_days: FRIEND_TRIAL_DAYS, metadata: { referral_trial: 'true' } };
+      sessionParams.payment_method_collection = 'always';
+    }
     if (appliedPromo) {
       sessionParams.discounts = [{ promotion_code: appliedPromo.id }];
       if (isFreeRedemption) {
@@ -839,7 +870,7 @@ router.post('/sync-subscription', express.json(), requireStripe, requireSupabase
   try {
     const { data: profile, error } = await supabaseAdmin
       .from('tcgss_profiles')
-      .select('stripe_customer_id, is_lifetime_free')
+      .select('stripe_customer_id, is_lifetime_free, referred_by, affiliate_id')
       .eq('id', req.user.id)
       .maybeSingle();
     if (error) throw error;
@@ -940,6 +971,10 @@ router.get('/admin/affiliates', requireSupabase, requireUser, requireOwner, asyn
   }
 });
 
+// Creator partner deal: 40% of every payment their referrals make, for as
+// long as they stay subscribed, plus a free year of Premium on activation.
+const AFFILIATE_DEFAULT_RATE = 0.4;
+
 router.post('/admin/affiliates', express.json(), requireSupabase, requireUser, requireOwner, async (req, res) => {
   try {
     const name = ((req.body && req.body.name) || '').trim();
@@ -949,7 +984,7 @@ router.post('/admin/affiliates', express.json(), requireSupabase, requireUser, r
 
     const { data, error } = await supabaseAdmin.rpc('tcgss_create_affiliate', {
       p_name: name, p_email: email,
-      p_commission_rate: typeof rate === 'number' ? rate : 0.3,
+      p_commission_rate: typeof rate === 'number' && rate > 0 && rate <= 0.6 ? rate : AFFILIATE_DEFAULT_RATE,
     });
     if (error) throw error;
     res.json({
@@ -1007,7 +1042,7 @@ router.post('/client-error', express.json({ limit: '8kb' }), async (req, res) =>
 // and source names are accepted, so the table can't be filled with junk, and
 // only daily totals are stored — no cookie, IP, or user id, which is why no
 // consent banner is needed for it.
-const FUNNEL_EVENTS = ['visit', 'csv_loaded', 'pdf_downloaded', 'signup', 'checkout_started', 'upgraded', 'pricing_viewed', 'tcg_import'];
+const FUNNEL_EVENTS = ['visit', 'csv_loaded', 'pdf_downloaded', 'signup', 'checkout_started', 'upgraded', 'pricing_viewed', 'tcg_import', 'share_clicked', 'upgrade_prompt'];
 const FUNNEL_SOURCES = ['direct', 'google', 'google_ads', 'bing', 'reddit', 'youtube', 'tiktok', 'facebook', 'instagram', 'discord', 'twitter', 'tcgplayer', 'email', 'referral', 'affiliate', 'other'];
 const tooManyEvents = makeThrottle(120, 10 * 60 * 1000);
 router.post('/e', express.json({ limit: '1kb' }), async (req, res) => {

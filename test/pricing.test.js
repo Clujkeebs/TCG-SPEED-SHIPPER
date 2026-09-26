@@ -13,7 +13,7 @@ process.env.STRIPE_PRICE_BASE_ANNUAL = 'price_base_year';
 process.env.STRIPE_PRICE_PREMIUM_ANNUAL = '';                // not configured
 process.env.SUPABASE_URL = 'https://stub.supabase.co';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'stub-key';
-process.env.PUBLIC_SITE_URL = 'https://tcg-speed-shipper.netlify.app';
+process.env.PUBLIC_SITE_URL = 'https://tcgspeedshipper.com';
 
 const LAUNCH_BASE = 'price_1U00soPpFiI6sg2WQvzev0Rm';
 const PRICES = {
@@ -147,6 +147,43 @@ server.listen(0, async () => {
     await req('POST', '/api/stripe-webhook', { type: 'customer.subscription.updated', data: { object: sub('price_base_year') } }, { 'stripe-signature': 'x' });
     const bal = calls.find((c) => c[0] === 'balance');
     check('credit is one month ($29 / 12 = $2.42), not a year', bal && bal[2].amount === -242, JSON.stringify(bal));
+
+    console.log('\n-- Two-sided referrals: the friend gets a free first month --');
+    reset(); state.profile = { stripe_customer_id: null, is_lifetime_free: false, referred_by: 'referrer_1' };
+    r = await req('POST', '/api/create-checkout-session', { plan: 'base' }, AUTH);
+    co = calls.find((c) => c[0] === 'checkout');
+    check('a referred friend\'s first checkout starts with a 30-day free month and collects a card',
+      co && co[1].subscription_data && co[1].subscription_data.trial_period_days === 30 && co[1].payment_method_collection === 'always', JSON.stringify(co && co[1]));
+    check('the free month is disclosed at checkout', co && /first 30 days are free/.test(co[1].custom_text.submit.message));
+
+    reset(); state.profile = { stripe_customer_id: null, is_lifetime_free: false, affiliate_id: 'aff_1' };
+    r = await req('POST', '/api/create-checkout-session', { plan: 'premium' }, AUTH);
+    co = calls.find((c) => c[0] === 'checkout');
+    check('a creator-link signup gets the same free month', co && co[1].subscription_data && co[1].subscription_data.trial_period_days === 30);
+
+    reset(); state.profile = { stripe_customer_id: 'cus_1', is_lifetime_free: false, referred_by: 'referrer_1' };
+    state.subs = [sub(LAUNCH_BASE, { status: 'canceled' })];
+    r = await req('POST', '/api/create-checkout-session', { plan: 'base' }, AUTH);
+    co = calls.find((c) => c[0] === 'checkout');
+    check('no second free month after cancelling and coming back', co && !co[1].subscription_data && co[1].payment_method_collection === 'if_required');
+
+    reset(); state.profile = { stripe_customer_id: null, is_lifetime_free: false };
+    r = await req('POST', '/api/create-checkout-session', { plan: 'base' }, AUTH);
+    co = calls.find((c) => c[0] === 'checkout');
+    check('an unreferred customer gets no free month', co && !co[1].subscription_data);
+
+    console.log('\n-- The referrer is rewarded only once the friend actually pays --');
+    reset(); state.subs = [sub('price_base_299', { status: 'trialing' })];
+    await req('POST', '/api/stripe-webhook', { type: 'checkout.session.completed', data: { object: { client_reference_id: 'user_1', subscription: 'sub_1', customer: 'cus_1' } } }, { 'stripe-signature': 'x' });
+    check('a friend starting their free month earns the referrer nothing yet', !calls.some((c) => c[0] === 'rpc' && c[1] === 'tcgss_record_referral_conversion'));
+
+    reset(); state.profile = { id: 'user_1' };
+    await req('POST', '/api/stripe-webhook', { type: 'invoice.payment_succeeded', data: { object: { id: 'in_1', customer: 'cus_1', amount_paid: 299, currency: 'usd', period_start: 1800000000 } } }, { 'stripe-signature': 'x' });
+    check('their first real payment records the referral conversion', calls.some((c) => c[0] === 'rpc' && c[1] === 'tcgss_record_referral_conversion'));
+
+    reset(); state.profile = { id: 'user_1' };
+    await req('POST', '/api/stripe-webhook', { type: 'invoice.payment_succeeded', data: { object: { id: 'in_0', customer: 'cus_1', amount_paid: 0, currency: 'usd' } } }, { 'stripe-signature': 'x' });
+    check('a $0 trial invoice does not', !calls.some((c) => c[0] === 'rpc' && c[1] === 'tcgss_record_referral_conversion'));
 
     console.log('\n-- Health --');
     const h = await req('GET', '/api/health');

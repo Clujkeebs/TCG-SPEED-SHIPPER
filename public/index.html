@@ -777,6 +777,28 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
 .newsletter-row button:hover { transform: translateY(-1px); }
 .newsletter-row button:disabled { opacity: .5; cursor: not-allowed; transform: none; }
 @media (max-width: 420px) { .newsletter-row { flex-direction: column; } }
+
+/* ── Post-download share card + upgrade prompt ── */
+.share-toast { position: fixed; left: 50%; bottom: 18px; transform: translate(-50%, 20px); opacity: 0;
+  width: min(440px, calc(100vw - 32px)); background: var(--surface, #fff); border: 1px solid var(--border);
+  border-radius: 14px; box-shadow: 0 14px 40px rgba(0,0,0,.18); padding: 16px 18px 14px; z-index: 900;
+  transition: opacity .25s ease, transform .25s ease; }
+.share-toast.show { opacity: 1; transform: translate(-50%, 0); }
+.share-toast h4 { font-size: 15px; margin: 0 0 4px; color: var(--text); }
+.share-toast p { font-size: 13px; color: var(--muted); margin: 0 0 12px; line-height: 1.45; }
+.share-toast .row { display: flex; gap: 8px; flex-wrap: wrap; }
+.share-toast .row button, .share-toast .row a { flex: 1 1 auto; min-width: 110px; height: 38px; font-size: 13px; justify-content: center; text-decoration: none; }
+.share-toast .x { position: absolute; top: 6px; right: 8px; background: none; border: 0; font-size: 20px; line-height: 1; color: var(--muted); cursor: pointer; padding: 4px 6px; }
+@media (prefers-reduced-motion: reduce) { .share-toast { transition: none; } }
+.upsell { margin-top: 10px; padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface, #fff); }
+.upsell h4 { margin: 0 0 4px; font-size: 15px; color: var(--text); }
+.upsell p { margin: 0 0 12px; font-size: 13px; color: var(--muted); line-height: 1.45; }
+.upsell .plans { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.upsell .plans button { height: auto; padding: 10px 12px; flex-direction: column; align-items: flex-start; text-align: left; gap: 2px; width: 100%; }
+.upsell .plans b { font-size: 14px; } .upsell .plans small { font-size: 12px; opacity: .85; font-weight: 400; }
+.upsell .gift { margin-top: 10px; font-size: 12.5px; color: var(--accent, #2d6a4f); }
+@media (max-width: 480px) { .upsell .plans { grid-template-columns: 1fr; } }
+.invite-banner { margin: 0 0 14px; padding: 12px 14px; border-radius: 12px; background: var(--accent-bg, #e8f3ee); color: var(--text); font-size: 13.5px; border: 1px solid var(--border); }
 </style>
 <link rel="stylesheet" href="/css/site.css">
 <script src="/js/site.js"></script>
@@ -1188,8 +1210,8 @@ Chicago, IL 60601</div>
           <div id="password-msg"></div>
         </div>
         <div id="referral-box" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
-          <p style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;">Refer a friend, earn a free month</p>
-          <p style="font-size:12px;color:var(--muted);margin-bottom:8px;">When someone signs up with your link and becomes a paying customer, you get a free month — automatically, whether you're already paying (it's credited to your next bill) or not (you get 30 days of free Premium, even on the Free plan).</p>
+          <p style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;">Give a free month, get a free month</p>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:8px;">Share your link with another seller. <strong>They get their first month of Base or Premium free.</strong> When they become a paying customer, <strong>you get a free month too</strong> — credited to your next bill if you pay, or 30 days of free Premium if you're on the Free plan.</p>
           <div class="grid-2" style="align-items:end;gap:8px;">
             <div class="field" style="margin-bottom:0;">
               <input type="text" id="referral-link" readonly style="font-size:12px;" onclick="this.select();" />
@@ -1214,6 +1236,8 @@ Chicago, IL 60601</div>
       </div>
       <p class="tip" id="promo-msg"></p>
     </div>
+
+    <div class="invite-banner" id="invite-banner" hidden>🎁 <strong>You were invited by another seller.</strong> Create a free account and your first month of Base or Premium is on us — cancel before it ends and you pay nothing.</div>
 
     <div class="billing-toggle" id="billing-toggle" role="group" aria-label="Billing period" hidden>
       <button type="button" data-interval="month" class="active" aria-pressed="true">Monthly</button>
@@ -1418,7 +1442,7 @@ Chicago, IL 60601</div>
 
     <div class="faq-item">
       <button class="faq-q">Is there a referral program? <span class="faq-arrow">▼</span></button>
-      <div class="faq-a">Yes. Sign in and find your referral link under Account. When someone signs up through it and becomes a paying customer, you get a free month — applied automatically, whether or not you've ever paid yourself. Already on Base or Premium? It's credited to your next bill. Still on the Free plan? You get 30 days of free Premium access instead, no card required.</div>
+      <div class="faq-a">Yes — and both of you win. Sign in and find your referral link under Account. Anyone who signs up through it gets their first month of Base or Premium free. When they become a paying customer, you get a free month — applied automatically, whether or not you've ever paid yourself. Already on Base or Premium? It's credited to your next bill. Still on the Free plan? You get 30 days of free Premium access instead, no card required.</div>
     </div>
 
     <div class="faq-item">
@@ -1610,6 +1634,7 @@ Chicago, IL 60601</div>
         <h4>Help &amp; legal</h4>
         <ul>
           <li><a href="/support.html">Support</a></li>
+          <li><a href="/partners.html">Partner program</a></li>
           <li><a href="/terms.html">Terms of Service</a></li>
           <li><a href="/privacy.html">Privacy Policy</a></li>
           <li><button type="button" data-cookie-settings>Cookie settings</button></li>
@@ -1748,6 +1773,11 @@ async function refreshReferralStats() {
     if (!res.error) referralStats = res.data;
   } catch (e) { /* offline */ }
 }
+
+(function showInviteBanner() {
+  var b = document.getElementById('invite-banner');
+  if (b && wasInvited()) b.hidden = false;
+})();
 
 function renderReferralUI() {
   var box = document.getElementById('referral-box');
@@ -2074,29 +2104,117 @@ async function checkAndConsumeCredits(count) {
   return { allowed: true, plan: 'free', limit: PLAN_LIMITS.free, used: updated.count, remaining: PLAN_LIMITS.free - updated.count };
 }
 
-function showBlockedMessage(gate, count) {
-  var msg, isLimit = !gate.failed;
-  if (gate.failed) {
-    msg = 'Could not reach the server to verify your plan. Check your connection and try again — you have not been charged any labels.';
-  } else if (gate.plan === 'free' && !session) {
-    msg = 'This batch is ' + count + ' label' + (count !== 1 ? 's' : '') + ', but you have ' +
-      Math.max(gate.limit - gate.used, 0) + ' of your ' + gate.limit + ' free labels left this month. ' +
-      'Sign in and upgrade to Base (500/mo) or Premium (unlimited) to keep shipping.';
-  } else {
-    msg = 'This batch is ' + count + ' label' + (count !== 1 ? 's' : '') + ', but you have ' +
-      Math.max(gate.limit - gate.used, 0) + ' left on the ' + capitalize(gate.plan) + ' plan this month.';
+function wasInvited() {
+  try { return !!(localStorage.getItem(REFERRAL_STORAGE_KEY) || localStorage.getItem(AFFILIATE_STORAGE_KEY)); } catch (e) { return false; }
+}
+function planPriceText(plan) {
+  var m = plansInfo && plansInfo[plan] && plansInfo[plan].month;
+  return m ? money(m.amount) + '/mo' : (plan === 'base' ? '$2.99/mo' : '$5.99/mo');
+}
+// Upgrade buttons inside prompts reuse the Pricing tab's own buttons, so there
+// is exactly one checkout code path (sign-in check, plan switching, promo).
+function startUpgrade(plan) {
+  trackEvent('upgrade_prompt');
+  var btn = document.querySelector('.pricing-grid [data-plan="' + plan + '"]');
+  if (session && btn && !btn.disabled) { btn.click(); return; }
+  switchTab('pricing');
+  if (!session) {
+    var em = document.getElementById('auth-email'); if (em) em.focus();
+    var am = document.getElementById('auth-msg'); if (am) am.textContent = 'Create a free account (or sign in), then pick ' + capitalize(plan) + '.';
   }
+}
+function upsellHTML(title, body) {
+  var onBase = currentPlan() === 'base';
+  var plans = onBase
+    ? '<button class="btn-dl" type="button" data-up="premium"><b>Premium — ' + esc(planPriceText('premium')) + '</b><small>Unlimited labels + Design Studio</small></button>'
+    : '<button class="btn-ghost" type="button" data-up="base"><b>Base — ' + esc(planPriceText('base')) + '</b><small>500 labels / month</small></button>' +
+      '<button class="btn-dl" type="button" data-up="premium"><b>Premium — ' + esc(planPriceText('premium')) + '</b><small>Unlimited + Design Studio</small></button>';
+  return '<div class="upsell" role="status"><h4>' + esc(title) + '</h4><p>' + esc(body) + '</p><div class="plans">' + plans + '</div>' +
+    (wasInvited() ? '<div class="gift">🎁 You were invited — your first month is free. Cancel before it ends and you pay nothing.</div>'
+                  : '<div class="gift">Cancel any time from Manage Billing. Your order data never leaves your browser.</div>') +
+    '</div>';
+}
+document.addEventListener('click', function (e) {
+  var b = e.target.closest && e.target.closest('[data-up]');
+  if (b) { e.preventDefault(); startUpgrade(b.getAttribute('data-up')); }
+});
 
-  // Shown on the Home tab, where the Download button lives, so the user
-  // actually sees it instead of it being buried on a tab they were navigated
-  // away from.
+function showBlockedMessage(gate, count) {
   var box = document.getElementById('error-msg');
-  if (box) {
-    box.innerHTML = '<div class="error-box">' + esc(msg) +
-      (isLimit ? ' <a href="#" onclick="switchTab(\'pricing\');return false;" style="color:inherit;text-decoration:underline;">See plans</a>' : '') +
-      '</div>';
-    box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  if (!box) return;
+  if (gate.failed) {
+    box.innerHTML = '<div class="error-box">Could not reach the server to verify your plan. Check your connection and try again — you have not been charged any labels.</div>';
+  } else {
+    var left = Math.max(gate.limit - gate.used, 0);
+    var title = left === 0
+      ? 'You\'ve used all ' + gate.limit + ' ' + (gate.plan === 'free' ? 'free ' : '') + 'labels this month'
+      : 'This batch needs ' + count + ' labels — you have ' + left + ' left';
+    var body = gate.plan === 'free'
+      ? 'Your labels are built and ready. Upgrade to download all ' + count + ' now — Base covers 500 a month, Premium is unlimited.'
+      : 'Premium removes the limit entirely, and Stripe credits the unused part of your Base plan. Your labels are ready to download the moment you switch.';
+    box.innerHTML = upsellHTML(title, body);
   }
+  // Shown on the Home tab, where the Download button lives, so the user
+  // actually sees it instead of it being buried on another tab.
+  box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// A gentle heads-up before the wall, not after it: shown once the Free plan
+// is nearly used up, so the next batch doesn't come as a surprise.
+function maybeShowLowLabelsNudge(gate) {
+  if (!gate || gate.plan !== 'free' || gate.limit == null) return false;
+  var left = Math.max(gate.limit - gate.used, 0);
+  if (left > 3) return false;
+  var box = document.getElementById('error-msg');
+  if (!box) return false;
+  box.innerHTML = upsellHTML(left === 0 ? 'That was your last free label this month' : 'Only ' + left + ' free label' + (left === 1 ? '' : 's') + ' left this month',
+    'Keep shipping without counting: Base gives you 500 labels a month, Premium is unlimited with custom branding.');
+  return true;
+}
+
+/* ── After a successful download: ask for a share ──
+   Shown at most once a week per browser, and never on the same download as
+   an upgrade nudge. Signed-in users share their referral link (they earn a
+   free month, their friend gets one); everyone else shares the site. */
+var SHARE_ASK_KEY = 'tcgss_share_ask_v1';
+function shareLink() {
+  return referralStats && referralStats.code ? location.origin + '/?ref=' + referralStats.code : location.origin + '/';
+}
+function maybeAskForShare(labelCount) {
+  var last = 0;
+  try { last = Number(localStorage.getItem(SHARE_ASK_KEY) || 0); } catch (e) { return; }
+  if (Date.now() - last < 7 * 24 * 3600 * 1000) return;
+  try { localStorage.setItem(SHARE_ASK_KEY, String(Date.now())); } catch (e) {}
+  var hasRef = !!(referralStats && referralStats.code);
+  var old = document.getElementById('share-toast'); if (old) old.remove();
+  var t = document.createElement('div');
+  t.className = 'share-toast'; t.id = 'share-toast'; t.setAttribute('role', 'dialog'); t.setAttribute('aria-label', 'Share TCG Speed Shipper');
+  t.innerHTML = '<button class="x" type="button" aria-label="Close">×</button>' +
+    '<h4>✓ ' + labelCount + ' label' + (labelCount === 1 ? '' : 's') + ' ready to print</h4>' +
+    '<p>' + (hasRef
+      ? 'Know another seller still typing addresses by hand? Send them your link: <strong>they get a free month, and so do you</strong> when they subscribe.'
+      : 'Saved you some time? Help another seller out — share TCG Speed Shipper with your card shop, Discord, or group chat. It\'s free to use.') + '</p>' +
+    '<div class="row"><button class="btn-dl" type="button" data-share="native">Share</button>' +
+    '<button class="btn-ghost" type="button" data-share="copy">Copy link</button></div>';
+  // Sit above the cookie notice rather than behind it.
+  var cc = document.querySelector('.cc.show');
+  if (cc) t.style.bottom = (cc.getBoundingClientRect().height + 30) + 'px';
+  document.body.appendChild(t);
+  requestAnimationFrame(function () { t.classList.add('show'); });
+  var timer = setTimeout(close, 20000);
+  function close() { clearTimeout(timer); t.classList.remove('show'); setTimeout(function () { t.remove(); }, 300); }
+  t.querySelector('.x').addEventListener('click', close);
+  t.addEventListener('click', async function (e) {
+    var b = e.target.closest('[data-share]'); if (!b) return;
+    var url = shareLink();
+    var text = 'I print my TCGplayer shipping labels with this — upload the CSV, get the PDF. Free for 10 labels a month' + (hasRef ? ', and your first paid month is free with my link' : '') + ':';
+    trackEvent('share_clicked');
+    if (b.dataset.share === 'native' && navigator.share) {
+      try { await navigator.share({ title: 'TCG Speed Shipper', text: text, url: url }); close(); return; } catch (err) { if (err && err.name === 'AbortError') return; }
+    }
+    try { await navigator.clipboard.writeText(text + ' ' + url); b.textContent = 'Copied ✓'; setTimeout(close, 1500); }
+    catch (err) { prompt('Copy this link:', url); }
+  });
 }
 
 /* ── Design prefs (Premium) ── */
@@ -2696,6 +2814,7 @@ function triggerDownload(btn){
       trackEvent('pdf_downloaded');
       renderPreviews();
       done();
+      if (!maybeShowLowLabelsNudge(gate)) setTimeout(function () { maybeAskForShare(list.length); }, 1200);
     });
   }, 60);
 }
