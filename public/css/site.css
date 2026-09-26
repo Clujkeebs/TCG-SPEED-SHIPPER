@@ -148,3 +148,6 @@ button:active:not(:disabled), .btn:active, .btn-dl:active, .nav-cta:active { tra
 @media (pointer: coarse) {
   .sf li a, .sf li button { display: inline-block; padding: 4px 0; }
 }
+
+/* Scrollable tables are keyboard-focusable (tabindex=0); show where focus is. */
+.table-scroll:focus-visible { outline: 2px solid var(--accent, #2d6a4f); outline-offset: 2px; }
