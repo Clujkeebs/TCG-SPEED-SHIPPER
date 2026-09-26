@@ -307,15 +307,26 @@ async function loadOverview() {
 async function loadSetupChecks() {
   var box = clear($('setup-checks'));
   var h = await fetch('/api/health').then(function (r) { return r.json(); }).catch(function () { return null; });
-  var f = await api('/funnel?days=30').catch(function () { return {}; });
-  var seen = f.stripe_events || {}, last = f.stripe_last || {};
+  var fErr = null;
+  var f = await api('/funnel?days=30').catch(function (e) { fErr = e; return null; });
+
   var rows = [];
   function row(ok, text, fix) { rows.push([ok, text, fix]); }
   if (h) {
     row(h.ok, h.ok ? 'Server config complete' : 'Missing server config: ' + (h.missing || []).join(', '), 'Set these in Netlify → Environment variables, then redeploy.');
     row(/^https:\/\/tcgspeedshipper\.com$/.test(h.config.site_url), 'Site URL: ' + h.config.site_url, 'Set PUBLIC_SITE_URL=https://tcgspeedshipper.com in Netlify.');
-    row(h.config.price_base_annual && h.config.price_premium_annual, 'Yearly prices ' + (h.config.price_base_annual && h.config.price_premium_annual ? 'configured' : 'not set: the yearly toggle stays hidden'), 'Create yearly prices in Stripe and set STRIPE_PRICE_BASE_ANNUAL / STRIPE_PRICE_PREMIUM_ANNUAL.');
+    // Mirrors the pricing page: the yearly toggle shows when either plan has a yearly price.
+    var yb = h.config.price_base_annual, yp = h.config.price_premium_annual;
+    row(yb || yp, 'Yearly prices: ' + (yb && yp ? 'Base and Premium' : yb ? 'Base only (Premium is monthly-only)' : yp ? 'Premium only (Base is monthly-only)' : 'not set, so the yearly toggle stays hidden'),
+      'Create yearly prices in Stripe and set STRIPE_PRICE_BASE_ANNUAL / STRIPE_PRICE_PREMIUM_ANNUAL.');
   } else row(false, 'Could not reach /api/health', '');
+  if (!f) {
+    // Don't turn a failed request into "Stripe isn't sending events".
+    row(false, 'Webhook delivery counts unavailable: ' + (fErr && fErr.message ? fErr.message : 'request failed'), 'Reload. If it persists, check Errors & Activity.');
+    rows.forEach(renderRow);
+    return;
+  }
+  var seen = f.stripe_events || {}, last = f.stripe_last || {};
   var any = Object.keys(seen).length;
   var note = function (t) { return seen[t] ? seen[t] + ' in 30 days, last ' + last[t] : 'none in 30 days'; };
   row(any > 0, 'Stripe webhooks arriving: ' + (any ? Object.keys(seen).length + ' event types' : 'none recorded yet (counting started with this version)'), 'Check Stripe → Developers → Webhooks: endpoint https://tcgspeedshipper.com/api/stripe-webhook.');
@@ -327,10 +338,11 @@ async function loadSetupChecks() {
       ? 'Enable invoice.payment_succeeded on the Stripe webhook endpoint: referral rewards and partner commission depend on it.'
       : 'Make sure this event is enabled on the Stripe webhook endpoint.');
   });
-  rows.forEach(function (r) {
+  rows.forEach(renderRow);
+  function renderRow(r) {
     box.appendChild(el('p', { style: 'margin:4px 0;' }, [el('span', { text: (r[0] ? '✅ ' : '⚠️ ') + r[1] }),
       r[0] || !r[2] ? el('span') : el('span', { cls: 'muted', text: ' → ' + r[2] })]));
-  });
+  }
 }
 
 var FUNNEL = [['visit', 'Visits'], ['csv_loaded', 'CSV loaded'], ['pdf_downloaded', 'PDFs'], ['signup', 'Signups'], ['checkout_started', 'Checkouts'], ['upgraded', 'Upgrades']];

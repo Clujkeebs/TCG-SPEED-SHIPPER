@@ -68,6 +68,7 @@ const supabaseStub = {
   }),
   rpc: async (name) => {
     calls.push(['rpc', name]);
+    if (name === 'tcgss_bump_event' && state.bumpFails) return { data: null, error: { message: 'function not found' } };
     if (name === 'tcgss_claim_pending_referral_credits') { const c = state.claimed; state.claimed = []; return { data: c, error: null }; }
     return { data: null, error: null };
   },
@@ -209,6 +210,10 @@ server.listen(0, async () => {
     reset();
     await req('POST', '/api/stripe-webhook', paid(), { 'stripe-signature': 'x' });
     check('each verified webhook delivery is counted by event type', calls.some((c) => c[0] === 'rpc' && c[1] === 'tcgss_bump_event'));
+    reset(); state.bumpFails = true; state.profile = { id: 'user_1' };
+    const wr = await req('POST', '/api/stripe-webhook', paid(), { 'stripe-signature': 'x' });
+    state.bumpFails = false;
+    check('a counter error is logged, and the webhook still succeeds', wr.status === 200 && calls.some((c) => c[0] === 'rpc' && c[1] === 'tcgss_bump_event'));
 
     console.log('\n-- Health --');
     const h = await req('GET', '/api/health');
