@@ -81,7 +81,12 @@
       out('pro').textContent = money(r.lines.proItems + r.lines.proShipping);
       out('proRow').hidden = v('sellerType') !== 'pro';
       out('transaction').textContent = money(r.lines.transaction);
-      out('totalFees').textContent = money(r.totalFees) + ' (' + r.feePercent.toFixed(1) + '% of subtotal)';
+      var feesCell = out('totalFees');
+      feesCell.textContent = money(r.totalFees);
+      var pct = document.createElement('small');
+      pct.className = 'fc-pct';
+      pct.textContent = r.feePercent.toFixed(1) + '% of subtotal';
+      feesCell.appendChild(pct);
       out('payout').textContent = money(r.payout);
       out('profit').textContent = money(r.profit);
     }

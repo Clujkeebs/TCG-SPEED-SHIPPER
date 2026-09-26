@@ -152,6 +152,10 @@ td strong { color: var(--accent-deep); }
 
 @media (max-width: 480px) {
   .cta-box { flex-direction: column; align-items: stretch; text-align: center; }
+  .fee-calc { padding: 1rem .85rem; }
+  .fc-out td { padding: 8px 6px; }
+  .fc-pct { display: block; margin-left: 0; }
+  .fc-pct::before, .fc-pct::after { content: none; }
 }
 
 /* ── Blog hub + post list (additive; shared with /guide/) ── */
@@ -189,4 +193,7 @@ blockquote {
 .fee-calc table.fc-out { min-width: 0; }
 .fc-out td:last-child { text-align: right; font-family: 'JetBrains Mono', monospace; white-space: nowrap; }
 .fc-out tr.fc-strong td { color: var(--accent-deep); font-weight: 700; }
+.fc-pct { font-weight: 400; margin-left: 6px; opacity: .8; }
+.fc-pct::before { content: "("; }
+.fc-pct::after { content: ")"; }
 .fc-note { font-size: 12.5px; color: var(--muted); margin: .75rem 0 0; }
