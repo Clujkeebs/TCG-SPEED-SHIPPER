@@ -44,7 +44,10 @@ custom slip message, QR codes, saved return-address profiles, no branding).
   files and the pinned CDN libs are stale-while-revalidate. `/api`, `/admin`,
   `/affiliate`, Supabase and Stripe are **never** cached. If you change the
   PRECACHE list, or ever need to force-drop old caches, bump `VERSION` in
-  `sw.js`. If you add a new CDN library, pin its version in the URL.
+  `sw.js`. Third-party browser libraries are self-hosted in `public/vendor/`
+  with the version in the file name (cached as immutable). To upgrade one, add
+  the new file, update the `<script>` tag and the sw.js PRECACHE, and bump
+  `VERSION`.
 - **Netlify site ID**: `eed4a636-ed96-43b5-841c-0e5e03d245dc`.
 
 ### Required env vars (set in Netlify's dashboard — never commit these)
