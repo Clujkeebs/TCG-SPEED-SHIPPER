@@ -69,6 +69,13 @@ td.wrap-cell { white-space: normal; min-width: 260px; max-width: 520px; word-bre
 .msg { margin: 10px 0; padding: 10px 12px; border-radius: 8px; font-size: 13px; line-height: 1.5; }
 .msg.err { background: var(--danger-bg); color: var(--danger); }
 .msg.ok { background: var(--accent-bg); color: var(--accent); }
+.funnel { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.fstep { background: #faf9f6; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; position: relative; overflow: hidden; }
+.fstep .bar { position: absolute; left: 0; bottom: 0; height: 4px; background: var(--accent); border-radius: 0 4px 0 0; transition: width .6s cubic-bezier(.2,.8,.2,1); }
+.fstep .k { font: 10px var(--mono); text-transform: uppercase; letter-spacing: .05em; color: var(--hint); }
+.fstep .v { font-family: 'DM Serif Display', serif; font-size: 24px; margin-top: 2px; }
+.fstep .p { font: 11px var(--mono); color: var(--accent); }
+@media (max-width: 760px) { .funnel { grid-template-columns: repeat(2, 1fr); } }
 .login { max-width: 380px; margin: 60px auto; }
 .login input { width: 100%; font: 15px 'Source Serif 4', serif; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; }
 /* User drawer */
@@ -123,6 +130,18 @@ a { color: var(--accent); }
 
     <section class="panel active" id="p-overview">
       <div class="grid" id="stats"></div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+          <h2 style="margin:0;">Funnel</h2>
+          <select id="funnel-days" class="btn" style="font-weight:400;"><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option></select>
+        </div>
+        <div class="funnel" id="funnel"></div>
+        <div class="table-scroll" style="margin-top:14px;"><table>
+          <thead><tr><th>Source</th><th>Visits</th><th>CSV loaded</th><th>PDFs</th><th>Signups</th><th>Checkouts</th><th>Upgrades</th><th>Visit → paid</th></tr></thead>
+          <tbody id="funnel-sources"></tbody>
+        </table></div>
+        <p class="muted" style="font-size:12px;margin-top:8px;">Anonymous daily counts, no cookies. "Visits" = browser sessions. Google Ads clicks show as <span class="mono">google_ads</span> (auto-tagged with gclid).</p>
+      </div>
       <div class="card">
         <h2>Newest users</h2>
         <div class="table-scroll"><table><thead><tr><th>Email</th><th>Plan</th><th>Joined</th><th>Labels (mo)</th></tr></thead><tbody id="newest"></tbody></table></div>
@@ -279,6 +298,32 @@ async function loadOverview() {
   g.appendChild(stat('Newsletter', o.newsletter, 'subscribers'));
 }
 
+var FUNNEL = [['visit', 'Visits'], ['csv_loaded', 'CSV loaded'], ['pdf_downloaded', 'PDFs'], ['signup', 'Signups'], ['checkout_started', 'Checkouts'], ['upgraded', 'Upgrades']];
+function pct(a, b) { return b ? (100 * a / b).toFixed(a && a / b < 0.1 ? 1 : 0) + '%' : '—'; }
+async function loadFunnel() {
+  var j = await api('/funnel?days=' + encodeURIComponent($('funnel-days').value));
+  var t = j.totals || {}, top = t.visit || 0;
+  var box = clear($('funnel'));
+  FUNNEL.forEach(function (f, i) {
+    var v = t[f[0]] || 0;
+    var prev = i ? (t[FUNNEL[i - 1][0]] || 0) : 0;
+    var step = el('div', { cls: 'fstep' }, [el('div', { cls: 'k', text: f[1] }), el('div', { cls: 'v', text: String(v) }),
+      el('div', { cls: 'p', text: i ? pct(v, prev) + ' of previous' : 'sessions' }), el('div', { cls: 'bar' })]);
+    step.lastChild.style.width = top ? Math.max(2, Math.round(100 * v / top)) + '%' : '0';
+    box.appendChild(step);
+  });
+  var body = clear($('funnel-sources'));
+  var rows = Object.keys(j.by_source || {}).map(function (k) { return [k, j.by_source[k]]; })
+    .sort(function (a, b) { return (b[1].visit || 0) - (a[1].visit || 0); });
+  if (!rows.length) { body.appendChild(el('tr', null, [el('td', { colspan: '8', cls: 'empty', text: 'No data yet — counts start once this version is live.' })])); return; }
+  rows.forEach(function (r) {
+    var e = r[1];
+    body.appendChild(el('tr', { style: 'cursor:default' }, [el('td', { cls: 'mono', text: r[0] })].concat(
+      ['visit', 'csv_loaded', 'pdf_downloaded', 'signup', 'checkout_started', 'upgraded'].map(function (k) { return el('td', { text: String(e[k] || 0) }); }),
+      [el('td', { text: pct(e.upgraded || 0, e.visit || 0) })])));
+  });
+}
+
 async function loadUsers() {
   var j = await api('/users');
   users = j.users;
@@ -313,6 +358,7 @@ function renderUsers() {
   });
 }
 $('user-q').addEventListener('input', renderUsers);
+$('funnel-days').addEventListener('change', function () { loadFunnel().catch(function () {}); });
 $('user-plan').addEventListener('change', renderUsers);
 document.querySelectorAll('th[data-sort]').forEach(function (th) {
   th.addEventListener('click', function () {
@@ -471,6 +517,7 @@ async function start() {
   $('signout').style.display = 'inline-block';
   try {
     await Promise.all([loadOverview(), loadUsers(), loadRecentErrors()]);
+    loadFunnel().catch(function (e) { clear($('funnel')).appendChild(el('p', { cls: 'muted', text: 'Funnel unavailable: ' + e.message })); });
     $('app').style.display = 'block';
     loadNewsletter().catch(function () {});
     var tab = (location.hash || '').slice(1);

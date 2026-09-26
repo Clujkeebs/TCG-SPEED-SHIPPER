@@ -946,6 +946,26 @@ router.post('/client-error', express.json({ limit: '8kb' }), async (req, res) =>
   res.json({ ok: true });
 });
 
+// Anonymous funnel counting (see tcgss_daily_events): only whitelisted event
+// and source names are accepted, so the table can't be filled with junk, and
+// only daily totals are stored — no cookie, IP, or user id, which is why no
+// consent banner is needed for it.
+const FUNNEL_EVENTS = ['visit', 'csv_loaded', 'pdf_downloaded', 'signup', 'checkout_started', 'upgraded', 'pricing_viewed'];
+const FUNNEL_SOURCES = ['direct', 'google', 'google_ads', 'bing', 'reddit', 'youtube', 'tiktok', 'facebook', 'instagram', 'discord', 'twitter', 'tcgplayer', 'email', 'referral', 'affiliate', 'other'];
+const tooManyEvents = makeThrottle(120, 10 * 60 * 1000);
+router.post('/e', express.json({ limit: '1kb' }), async (req, res) => {
+  const b = req.body || {};
+  const event = String(b.e || '');
+  const source = FUNNEL_SOURCES.includes(b.s) ? b.s : 'other';
+  if (!FUNNEL_EVENTS.includes(event)) return res.status(400).json({ ok: false });
+  if (tooManyEvents(getClientIp(req)) || !supabaseAdmin) return res.status(202).json({ ok: true });
+  try {
+    const { error } = await supabaseAdmin.rpc('tcgss_bump_event', { p_event: event, p_source: source });
+    if (error) console.error('funnel event failed:', error.message);
+  } catch (e) { /* analytics must never break anything */ }
+  res.status(202).json({ ok: true });
+});
+
 require('./admin')(router, {
   supabaseAdmin: () => supabaseAdmin, stripe: () => stripe,
   requireUser, requireOwner, requireSupabase, logEvent, logError, SITE_URL, PRICE_TO_PLAN,

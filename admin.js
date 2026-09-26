@@ -163,6 +163,27 @@ module.exports = function mountAdminRoutes(router, d) {
     }
   });
 
+  // Anonymous daily funnel counts (tcgss_daily_events) for the last N days.
+  router.get('/admin/funnel', ...guard, async (req, res) => {
+    try {
+      const days = Math.min(Math.max(Number(req.query.days) || 30, 1), 365);
+      const since = new Date(Date.now() - (days - 1) * 864e5).toISOString().slice(0, 10);
+      const { data, error } = await db().from('tcgss_daily_events').select('day, event, source, count').gte('day', since);
+      if (error) throw error;
+      const totals = {}, bySource = {}, byDay = {};
+      for (const r of data || []) {
+        totals[r.event] = (totals[r.event] || 0) + r.count;
+        const s = bySource[r.source] || (bySource[r.source] = {});
+        s[r.event] = (s[r.event] || 0) + r.count;
+        const d = byDay[r.day] || (byDay[r.day] = {});
+        d[r.event] = (d[r.event] || 0) + r.count;
+      }
+      res.json({ days, totals, by_source: bySource, by_day: byDay });
+    } catch (err) {
+      res.status(500).json({ error: 'Could not load funnel: ' + err.message });
+    }
+  });
+
   router.get('/admin/newsletter', ...guard, async (req, res) => {
     try {
       const { data, error } = await db().from('tcgss_newsletter_subscribers').select('email, source, created_at').order('created_at', { ascending: false });

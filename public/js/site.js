@@ -108,6 +108,51 @@
   });
   window.TCGSSReportError = report;
 
+  /* ── Anonymous funnel counts ──
+     Sends only an event name and a coarse traffic source ("google",
+     "reddit", ...) — no cookie, no id. The server keeps daily totals only.
+     The source is decided once per browser tab session, from the landing
+     page's URL (utm_source / gclid / ?ref / ?aff) or its referrer. */
+  var SOURCE_KEY = 'tcgss_src';
+  function detectSource() {
+    try {
+      var q = new URLSearchParams(location.search);
+      if (q.get('gclid') || q.get('gbraid') || q.get('wbraid') || /google.*(ads|cpc)|^cpc$/i.test((q.get('utm_source') || '') + (q.get('utm_medium') || ''))) return 'google_ads';
+      if (q.get('aff')) return 'affiliate';
+      if (q.get('ref')) return 'referral';
+      var utm = (q.get('utm_source') || '').toLowerCase();
+      var known = ['google', 'bing', 'reddit', 'youtube', 'tiktok', 'facebook', 'instagram', 'discord', 'twitter', 'tcgplayer', 'email'];
+      for (var i = 0; i < known.length; i++) if (utm.indexOf(known[i]) !== -1) return known[i];
+      if (utm) return 'other';
+      var r = document.referrer ? new URL(document.referrer).hostname : '';
+      if (!r || r === location.hostname) return 'direct';
+      var map = [[/google\./, 'google'], [/bing\.|duckduckgo|yahoo\./, 'bing'], [/reddit\./, 'reddit'], [/youtube\.|youtu\.be/, 'youtube'], [/tiktok\./, 'tiktok'],
+        [/facebook\.|fb\.com|messenger/, 'facebook'], [/instagram\./, 'instagram'], [/discord/, 'discord'], [/twitter\.|x\.com|t\.co$/, 'twitter'], [/tcgplayer\./, 'tcgplayer'], [/mail\./, 'email']];
+      for (var j = 0; j < map.length; j++) if (map[j][0].test(r)) return map[j][1];
+      return 'other';
+    } catch (e) { return 'other'; }
+  }
+  var source = null;
+  try { source = sessionStorage.getItem(SOURCE_KEY); } catch (e) {}
+  if (!source) { source = detectSource(); try { sessionStorage.setItem(SOURCE_KEY, source); } catch (e) {} }
+
+  var trackedOnce = {};
+  function track(event, once) {
+    try {
+      if (once) {
+        var k = 'tcgss_ev_' + event;
+        if (trackedOnce[k]) return;
+        trackedOnce[k] = true;
+        try { if (sessionStorage.getItem(k)) return; sessionStorage.setItem(k, '1'); } catch (e) {}
+      }
+      var body = JSON.stringify({ e: event, s: source });
+      if (navigator.sendBeacon) navigator.sendBeacon('/api/e', new Blob([body], { type: 'application/json' }));
+      else fetch('/api/e', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body, keepalive: true }).catch(function () {});
+    } catch (e) { /* analytics must never break the page */ }
+  }
+  window.TCGSSTrack = track;
+  if (!/^\/admin\//.test(location.pathname)) track('visit', true);
+
   /* ── 3. Scroll reveal ──
      Only for content that starts below the fold, so nothing visible on
      load ever blinks. Without IntersectionObserver (or with reduced motion),
