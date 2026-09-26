@@ -848,3 +848,29 @@ respects `prefers-reduced-motion`, and keyboard focus rings are visible.
   first real upload.
 - The growth plan ($25 → $100 → $1k MRR, including the Google Ads plan) is
   in the owner's Claude doc "TCG Speed Shipper Growth Plan".
+
+### 2026-09-26 (late) — Claude: hero reverted, new pricing
+- The owner didn't like the dark `.hero2` homepage hero. It was removed and the
+  original "Ship Cards Faster" block restored. Don't bring the hero back
+  without asking.
+- **Pricing:** Base $2.99/mo (was $1.99) and Premium $5.99/mo for new
+  customers, plus optional yearly plans (Base $29/yr, Premium $59/yr). Existing
+  subscribers are grandfathered: the two launch price ids are hardcoded in
+  `LAUNCH_PRICES` (server.js) so they always map to their plans, whatever the
+  env vars say. `SALE_PRICES` = what new checkouts sell, from `STRIPE_PRICE_BASE`,
+  `STRIPE_PRICE_PREMIUM`, and optional `STRIPE_PRICE_BASE_ANNUAL` /
+  `STRIPE_PRICE_PREMIUM_ANNUAL`. `STRIPE_LEGACY_PRICES` ("id:plan,...") covers any
+  future retired price. `GET /api/plans` returns the live amounts from Stripe,
+  and the pricing page renders from it (so it can't disagree with Checkout).
+  The yearly toggle only appears once a yearly price exists. Checkout takes
+  `interval`; a monthly subscriber can switch to yearly in place (prorated).
+  The referral "free month" credit on a yearly plan is price/12, not a year.
+  Tests: `test/pricing.test.js`.
+- **Owner action needed for the new prices to take effect:** create in Stripe
+  (under the existing Base and Premium products) a $2.99/month Base price,
+  and optionally $29/year Base and $59/year Premium. Then in Netlify set
+  `STRIPE_PRICE_BASE` = the new $2.99 price id (existing $1.99 subscribers
+  keep working because of `LAUNCH_PRICES`), plus `STRIPE_PRICE_BASE_ANNUAL` /
+  `STRIPE_PRICE_PREMIUM_ANNUAL` for yearly. Until then, new customers are still
+  charged $1.99 even though the static page copy says $2.99. That's the safe
+  direction: nobody is overcharged.

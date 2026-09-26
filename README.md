@@ -9,8 +9,8 @@ A fast tool that converts TCGplayer CSV order exports (or pasted addresses) into
 
 ## Plans
 - **Free** — 10 labels/month, no account required
-- **Base ($1.99/mo)** — 500 labels/month
-- **Premium ($5.99/mo)** — unlimited labels, paste-address labels, Design Studio (custom colors/fonts/message/QR code), multiple saved return-address profiles, no "Powered by" branding on packing slips
+- **Base ($2.99/mo or $29/yr)** — 500 labels/month (launch subscribers keep $1.99)
+- **Premium ($5.99/mo or $59/yr)** — unlimited labels, paste-address labels, Design Studio (custom colors/fonts/message/QR code), multiple saved return-address profiles, no "Powered by" branding on packing slips
 
 Print formats (every plan): 4×6 thermal, 8.5×11 (1–4 up), Avery 5160 address-label sheets (30/page), and #10 envelopes.
 
@@ -34,8 +34,11 @@ This runs just the API routes on port 3000 (or `$PORT`) for testing; the static 
 |---|---|
 | `STRIPE_SECRET_KEY` | Stripe secret API key |
 | `STRIPE_WEBHOOK_SECRET` | Signing secret for the `/api/stripe-webhook` endpoint |
-| `STRIPE_PRICE_BASE` | Stripe Price ID for the $1.99/mo Base plan |
-| `STRIPE_PRICE_PREMIUM` | Stripe Price ID for the $5.99/mo Premium plan |
+| `STRIPE_PRICE_BASE` | Stripe Price ID for the monthly Base plan sold to new customers ($2.99) |
+| `STRIPE_PRICE_BASE_ANNUAL` | Optional: yearly Base price ($29/yr). Yearly toggle appears once set |
+| `STRIPE_PRICE_PREMIUM` | Stripe Price ID for the monthly Premium plan ($5.99) |
+| `STRIPE_PRICE_PREMIUM_ANNUAL` | Optional: yearly Premium price ($59/yr) |
+| `STRIPE_LEGACY_PRICES` | Optional: retired price ids that still grant a plan, e.g. `price_x:base`. The launch prices are built in |
 | `SUPABASE_URL` | Supabase project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server-side only, never exposed to the browser) |
 | `PUBLIC_SITE_URL` | The site's public URL, used for Stripe redirect/return URLs |
