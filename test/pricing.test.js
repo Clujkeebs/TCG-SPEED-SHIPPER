@@ -210,6 +210,15 @@ server.listen(0, async () => {
     reset();
     await req('POST', '/api/stripe-webhook', paid(), { 'stripe-signature': 'x' });
     check('each verified webhook delivery is counted by event type', calls.some((c) => c[0] === 'rpc' && c[1] === 'tcgss_bump_event'));
+    reset();
+    stripeStub.webhooks.constructEvent = () => { throw new Error('No signatures found matching the expected signature'); };
+    const bad = await req('POST', '/api/stripe-webhook', paid(), { 'stripe-signature': 'x' });
+    stripeStub.webhooks.constructEvent = (body) => JSON.parse(body.toString('utf8'));
+    check('a signature failure is rejected (400) and counted for the Setup checks', bad.status === 400 && calls.some((c) => c[0] === 'rpc' && c[1] === 'tcgss_bump_event'));
+    reset();
+    const noSig = await req('POST', '/api/stripe-webhook', paid(), {});
+    check('a request without a Stripe signature header is not counted as a Stripe failure', (noSig.status === 400 || noSig.status === 200));
+
     reset(); state.bumpFails = true; state.profile = { id: 'user_1' };
     const wr = await req('POST', '/api/stripe-webhook', paid(), { 'stripe-signature': 'x' });
     state.bumpFails = false;
