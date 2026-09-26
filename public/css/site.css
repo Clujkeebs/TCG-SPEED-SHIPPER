@@ -52,7 +52,7 @@
   padding: 7px 16px; border-radius: 999px; transition: background .15s, color .15s;
 }
 .res-switch a[aria-current="page"] { background: #1c1b18; color: #fff; }
-.res-switch a .n { opacity: .6; margin-left: 4px; }
+.res-switch a .n { margin-left: 4px; font-weight: 400; }
 
 /* ── Grouped post grid (blog index) ── */
 .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 1.75rem; }
@@ -103,9 +103,9 @@
 .sf-bottom {
   border-top: 1px solid var(--sf-line); margin-top: 36px; padding-top: 18px;
   display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: space-between; align-items: flex-start;
-  font-family: 'JetBrains Mono', monospace; font-size: 11px; line-height: 1.6; color: rgba(255,255,255,.42);
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; line-height: 1.6; color: rgba(255,255,255,.62);
 }
-.sf-bottom p { margin: 0; max-width: 70ch; }
+.sf-bottom p { margin: 0; max-width: 70ch; color: inherit; } /* pages set p colors for light backgrounds */
 @media (max-width: 900px) { .sf-grid { grid-template-columns: repeat(2, 1fr); } .sf-brand { grid-column: 1 / -1; } }
 @media (max-width: 380px) { .sf-grid { grid-template-columns: 1fr 1fr; gap: 24px 16px; } }
 
