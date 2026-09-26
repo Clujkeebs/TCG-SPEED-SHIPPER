@@ -107,7 +107,7 @@
           '<div class="section-label">Earnings</div>' +
           '<p><strong>' + money(d.owed_cents) + '</strong> owed to you right now, paid out monthly.</p>' +
           '<p><strong>' + money(d.paid_cents) + '</strong> paid to you so far.</p>' +
-          '<p style="margin-top:8px;color:var(--hint);font-size:12.5px;">Commission is 30% of every payment anyone who signed up through your link makes, for as long as they stay subscribed — not just their first month.</p>' +
+          '<p style="margin-top:8px;color:var(--hint);font-size:12.5px;">Commission is ' + pct + '% of every payment anyone who signed up through your link makes, for as long as they stay subscribed — not just their first month.</p>' +
         '</div>' +
 
         (d.status === 'active'

@@ -9,6 +9,35 @@
 [functions]
   included_files = ["admin.js"]
 
+# Old address -> new domain. The API keeps answering on the old address
+# (listed first, so it wins) so a Stripe webhook or an open browser tab that
+# still points there never breaks: Stripe does not follow redirects. Every
+# page, guide and blog post gets a permanent 301 to the same path on
+# tcgspeedshipper.com, which also moves its Google ranking over.
+[[redirects]]
+  from = "https://tcg-speed-shipper.netlify.app/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "https://tcg-speed-shipper.netlify.app/*"
+  to = "https://tcgspeedshipper.com/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "http://tcg-speed-shipper.netlify.app/*"
+  to = "https://tcgspeedshipper.com/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "https://www.tcgspeedshipper.com/*"
+  to = "https://tcgspeedshipper.com/:splat"
+  status = 301
+  force = true
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"

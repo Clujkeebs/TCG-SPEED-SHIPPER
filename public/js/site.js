@@ -103,6 +103,7 @@
   window.addEventListener('unhandledrejection', function (e) {
     var r = e.reason;
     var msg = (r && r.message) || String(r);
+    if (r && r.stack && /(chrome|moz|safari(-web)?)-extension:\/\//.test(String(r.stack))) return; // browser extensions, not us
     if (/Failed to fetch|NetworkError|Load failed|AbortError/i.test(msg)) return; // flaky connections aren't bugs
     report('Unhandled promise: ' + msg, (r && r.stack ? String(r.stack).split('\n')[1] : '') || '');
   });
