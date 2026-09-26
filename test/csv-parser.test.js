@@ -130,6 +130,26 @@ section('TCGplayer tracking import file');
   check('refuses a file with no order numbers', !!core.buildTrackingImport('Name,Address 1\nA,1 St', {}, {}).error);
 }
 
+section('Pirate Ship tracked-order export');
+{
+  const orders = [
+    { firstName: 'Ann, "Ace"', lastName: 'Lee', addr1: '1 "Main", Apt', addr2: '', city: 'Boston', state: 'MA', zip: '02108', country: '', orderNumber: 'S1', itemCount: 1 },
+    { firstName: 'Bill', lastName: 'One', addr1: '2 Oak St', addr2: 'Suite 4', city: 'Austin', state: 'TX', zip: '73301-1234', country: 'US', orderNumber: 'S2', itemCount: 3 },
+    { firstName: 'No', lastName: 'Number', addr1: '3 Elm St', addr2: '', city: 'Reno', state: 'NV', zip: '89501', country: ' ', orderNumber: '', itemCount: 3 }
+  ];
+  const result = core.buildPirateShipCSV(orders);
+  const rows = core.readCSVRows(result.csv);
+  check('exact Pirate Ship header', rows[0].join(',') === 'Name,Address,Address Line 2,City,State,Zipcode,Country,Order ID,Rubber Stamp 1', rows[0].join(','));
+  check('comma and quote escaping in name and address', result.csv.indexOf('"Ann, ""Ace"" Lee","1 ""Main"", Apt"') !== -1, result.csv);
+  check('blank address line 2 stays empty', rows[1][2] === '');
+  check('blank country defaults to US', rows[1][6] === 'US' && rows[3][6] === 'US');
+  check('ZIP+4 and leading-zero ZIP are preserved', rows[1][5] === '02108' && rows[2][5] === '73301-1234');
+  check('count matches the input', result.count === orders.length, String(result.count));
+  check('one-item stamp', rows[1][8] === 'TCGplayer S1 · 1 item', rows[1][8]);
+  check('three-item stamp', rows[2][8] === 'TCGplayer S2 · 3 items', rows[2][8]);
+  check('item stamp works without an order number', rows[3][8] === '3 items', rows[3][8]);
+}
+
 section('PDF-safe text');
 {
   check('Latin-1 accents untouched', core.pdfSafe('José Müller') === 'José Müller');
