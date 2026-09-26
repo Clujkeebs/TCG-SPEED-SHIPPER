@@ -2693,7 +2693,7 @@ function drawPackingSlip(doc,o,s,W,H,design){
     doc.setFont(font,'normal'); doc.setFontSize(9); doc.setTextColor(0,0,0);
     // Leave room for the thank-you line; a huge order gets a "+N more" line
     // instead of text printed off the bottom of the slip.
-    var reserve=design.branded?24:(design.qrUrl?96:30);
+    var reserve=design.branded?40:(design.qrUrl?96:30);
     for(var ii=0; ii<items.length; ii++){
       var wr=doc.splitTextToSize('• '+items[ii],W-px*2);
       if(py+wr.length*12>bottom-reserve){ doc.text('+ '+(items.length-ii)+' more item'+(items.length-ii===1?'':'s'),px,py); py+=12; break; }
