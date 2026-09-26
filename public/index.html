@@ -914,6 +914,10 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
         <small>TCGPlayer → Orders → Packing List → Export</small>
       </div>
       <input type="file" id="csv-input" accept=".csv,.txt" />
+      <div class="btn-row" style="margin-top:10px;align-items:center;">
+        <button type="button" class="btn-ghost" id="sample-order-btn">No CSV handy? Try a sample order</button>
+        <a href="/samples/tcgplayer-sample-shipping-export.csv" download style="font-size:13px;color:var(--accent);">Download the sample CSV</a>
+      </div>
       <div id="loaded-msg"></div>
       <div id="error-msg"></div>
     </div>
@@ -2847,23 +2851,28 @@ function setFormat(val){
 try { var savedFmt = localStorage.getItem(FORMAT_KEY); if (savedFmt) setFormat(savedFmt); } catch (e) {}
 function setSlips(val){ slipsOn=val; document.getElementById('slip-top').checked=val; document.getElementById('slip-main').checked=val; if(orders.length) renderPreviews(); }
 
+function loadCsvText(text, fileName, eventName, afterLoad, loadedMessage) {
+  var result=parseCSV(text);
+  document.getElementById('error-msg').innerHTML='';
+  document.getElementById('loaded-msg').innerHTML='';
+  if(result&&result.error){ document.getElementById('error-msg').innerHTML='<div class="error-box">'+esc(result.error)+' <a href="/guide/tcgplayer-packing-list-csv-format.html" style="color:inherit;text-decoration:underline;">CSV help</a></div>'; return false; }
+  if(!result||!result.length){ document.getElementById('error-msg').innerHTML='<div class="error-box">No valid orders found.</div>'; return false; }
+  orders=result;
+  lastCsvText=text;
+  if(afterLoad) afterLoad();
+  trackEvent(eventName);
+  resetTracking();
+  document.getElementById('upload-text').textContent='\u2713 '+fileName;
+  var message=loadedMessage?loadedMessage(orders.length):'\u2713 '+orders.length+' order'+(orders.length!==1?'s':'')+' loaded';
+  document.getElementById('loaded-msg').innerHTML='<div class="loaded-state"><span>'+esc(message)+'</span></div>';
+  renderPreviews();
+  restoreTrackingForBatch();
+  return true;
+}
+
 function handleFile(file) {
   var reader=new FileReader();
-  reader.onload=function(ev){
-    var result=parseCSV(ev.target.result);
-    document.getElementById('error-msg').innerHTML='';
-    document.getElementById('loaded-msg').innerHTML='';
-    if(result&&result.error){ document.getElementById('error-msg').innerHTML='<div class="error-box">'+esc(result.error)+' <a href="/guide/tcgplayer-packing-list-csv-format.html" style="color:inherit;text-decoration:underline;">CSV help</a></div>'; return; }
-    if(!result||!result.length){ document.getElementById('error-msg').innerHTML='<div class="error-box">No valid orders found.</div>'; return; }
-    orders=result;
-    lastCsvText=ev.target.result;
-    trackEvent('csv_loaded');
-    resetTracking();
-    document.getElementById('upload-text').textContent='\u2713 '+file.name;
-    document.getElementById('loaded-msg').innerHTML='<div class="loaded-state"><span>\u2713 '+orders.length+' order'+(orders.length!==1?'s':'')+' loaded</span></div>';
-    renderPreviews();
-    restoreTrackingForBatch();
-  };
+  reader.onload=function(ev){ loadCsvText(ev.target.result,file.name,'csv_loaded'); };
   reader.onerror=function(){ document.getElementById('error-msg').innerHTML='<div class="error-box">Could not read that file. Try exporting it again from TCGplayer.</div>'; };
   reader.readAsText(file);
 }
@@ -2911,6 +2920,22 @@ document.getElementById('upload-zone').addEventListener('click',function(){ docu
 document.getElementById('csv-input').addEventListener('change',function(e){
   var file=e.target.files[0]; if(!file) return;
   handleFile(file);
+});
+document.getElementById('sample-order-btn').addEventListener('click',function(){
+  var btn=this;
+  btn.disabled=true;
+  fetch('/samples/tcgplayer-sample-shipping-export.csv').then(function(res){
+    if(!res.ok) throw new Error('Sample order could not be loaded.');
+    return res.text();
+  }).then(function(text){
+    loadCsvText(text,'Sample orders','sample_loaded',function(){
+      orders.forEach(function(o,i){ paidOrderKeys[paidKey(o,i)]=true; });
+    },function(count){
+      return '\u2713 '+count+' sample orders loaded — sample orders never count toward your free labels';
+    });
+  }).catch(function(){
+    document.getElementById('error-msg').innerHTML='<div class="error-box">Could not load the sample order. Please try again.</div>';
+  }).then(function(){ btn.disabled=false; });
 });
 
 document.getElementById('paste-generate-btn').addEventListener('click', function () {
