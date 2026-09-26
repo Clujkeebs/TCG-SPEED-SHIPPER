@@ -31,12 +31,13 @@
 {"@context":"https://schema.org","@type":"WebApplication","name":"TCGPlayer Speed Shipper","url":"https://tcg-speed-shipper.netlify.app/","description":"Shipping label generator for TCGPlayer sellers. Upload your packing list CSV and get print-ready 4x6 or 8.5x11 PDF labels in seconds.","applicationCategory":"UtilitiesApplication","operatingSystem":"Any","browserRequirements":"Requires JavaScript","offers":[{"@type":"Offer","name":"Free","price":"0","priceCurrency":"USD"},{"@type":"Offer","name":"Base","price":"1.99","priceCurrency":"USD","priceSpecification":{"@type":"UnitPriceSpecification","price":"1.99","priceCurrency":"USD","billingDuration":"P1M"}},{"@type":"Offer","name":"Premium","price":"5.99","priceCurrency":"USD","priceSpecification":{"@type":"UnitPriceSpecification","price":"5.99","priceCurrency":"USD","billingDuration":"P1M"}}],"author":{"@type":"Person","name":"Clujkeebs","url":"https://clujkeebs.com","sameAs":["https://clujkeebs.com","https://www.ebay.com/str/clujkeebs","https://www.whatnot.com/user/clujkeebs","https://www.tcgplayer.com/search/all/product?seller=ad430346&view=grid"]},"screenshot":"https://tcg-speed-shipper.netlify.app/og-image.png","featureList":"CSV to PDF labels, 4x6 thermal labels, 8.5x11 multi-up labels, packing slips, paste-address labels, custom label design, local processing"}
 </script>
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Does TCGplayer provide shipping labels?","acceptedAnswer":{"@type":"Answer","text":"No — TCGplayer itself doesn't generate or sell shipping labels for standard marketplace sellers. You buy postage yourself, usually through USPS Click-N-Ship, Pirate Ship, PayPal, or a carrier account, then enter the tracking number on the order. TCGplayer gives you a packing-list CSV export of your open orders; turning that CSV into a print-ready label is what TCGPlayer Speed Shipper does."}},{"@type":"Question","name":"What's the fastest way to ship TCGplayer orders?","acceptedAnswer":{"@type":"Answer","text":"Export your packing list CSV, upload it to TCGPlayer Speed Shipper, and download print-ready labels — no manual retyping of names and addresses. Paired with a 4x6 thermal printer, most sellers go from CSV export to a stack of labels in under five minutes."}},{"@type":"Question","name":"How do I export my TCGPlayer packing list?","acceptedAnswer":{"@type":"Answer","text":"Log in to TCGPlayer, go to Orders, click Packing List, then hit Export to download your CSV file."}},{"@type":"Question","name":"Is TCGPlayer Speed Shipper free?","acceptedAnswer":{"@type":"Answer","text":"The Free plan needs no account and includes 10 labels a month. Paid plans start at $1.99/mo for 500 labels a month, and $5.99/mo for unlimited labels plus paste-address labels and custom design tools."}},{"@type":"Question","name":"What printers work with 4x6 labels?","acceptedAnswer":{"@type":"Answer","text":"Any 4x6 thermal label printer — Rollo, Dymo 4XL, MUNBYN. For 8.5x11, any home printer works."}},{"@type":"Question","name":"Can I print multiple labels per page?","acceptedAnswer":{"@type":"Answer","text":"Yes. Choose 8.5x11 format and select 1, 2, 3, or 4 labels per page."}},{"@type":"Question","name":"Does it include packing slips?","acceptedAnswer":{"@type":"Answer","text":"Yes. Toggle packing slips on before downloading and each label will be followed by a matching slip."}}]}
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Does TCGplayer provide shipping labels?","acceptedAnswer":{"@type":"Answer","text":"No — TCGplayer itself doesn't generate or sell shipping labels for standard marketplace sellers. You buy postage yourself, usually through USPS Click-N-Ship, Pirate Ship, PayPal, or a carrier account, then enter the tracking number on the order. TCGplayer gives you a packing-list CSV export of your open orders; turning that CSV into a print-ready label is what TCGPlayer Speed Shipper does."}},{"@type":"Question","name":"What's the fastest way to ship TCGplayer orders?","acceptedAnswer":{"@type":"Answer","text":"Export your packing list CSV, upload it to TCGPlayer Speed Shipper, and download print-ready labels — no manual retyping of names and addresses. Paired with a 4x6 thermal printer, most sellers go from CSV export to a stack of labels in under five minutes."}},{"@type":"Question","name":"How do I export my TCGPlayer packing list?","acceptedAnswer":{"@type":"Answer","text":"Log in to TCGPlayer, go to Orders, click Packing List, then hit Export to download your CSV file."}},{"@type":"Question","name":"Is TCGPlayer Speed Shipper free?","acceptedAnswer":{"@type":"Answer","text":"The Free plan needs no account and includes 10 labels a month. Paid plans start at $1.99/mo for 500 labels a month, and $5.99/mo for unlimited labels plus paste-address labels and custom design tools."}},{"@type":"Question","name":"What printers work with 4x6 labels?","acceptedAnswer":{"@type":"Answer","text":"Any 4x6 thermal label printer — Rollo, Dymo 4XL, MUNBYN. For 8.5x11, any home printer works."}},{"@type":"Question","name":"Can I print multiple labels per page?","acceptedAnswer":{"@type":"Answer","text":"Yes. Choose 8.5x11 format and select 1, 2, 3, or 4 labels per page."}},{"@type":"Question","name":"Can I print on Avery sheets or straight onto envelopes?","acceptedAnswer":{"@type":"Answer","text":"Yes. Choose Avery 5160 (30 address labels per sheet) or #10 envelope as the format, print at 100% scale, and add your stamp. Available on every plan, including Free."}},{"@type":"Question","name":"Does it include packing slips?","acceptedAnswer":{"@type":"Answer","text":"Yes. Toggle packing slips on before downloading and each label will be followed by a matching slip."}}]}
 </script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="/js/shipper-core.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
@@ -383,6 +384,8 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
   border: 1px solid var(--accent-border); background: var(--accent-bg);
   border-radius: 20px; padding: 3px 9px; font-weight: 500;
 }
+.ship-tag { display: table; margin: 8px auto 0; }
+.plan-note a { color: var(--accent); }
 
 /* ── Buttons ── */
 .btn-row { display: flex; gap: 10px; margin-top: 1.5rem; flex-wrap: wrap; }
@@ -699,6 +702,7 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
 .footer-built { margin-bottom: 6px; }
 .footer-built a { color: var(--accent); text-decoration: underline; }
 .footer-links { margin: 8px 0 10px; }
+.footer-disclaimer { max-width: 560px; margin: 1.5rem auto 0; font-size: 11px; line-height: 1.6; color: var(--hint); }
 
 /* ── Auth messages ── */
 .auth-note { margin: 10px 0 0; font-size: 13px; line-height: 1.5; border-radius: var(--radius-sm); padding: 10px 12px; }
@@ -762,6 +766,8 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
       <option value="letter2">8.5×11 — 2 up</option>
       <option value="letter3">8.5×11 — 3 up</option>
       <option value="letter4">8.5×11 — 4 up</option>
+      <option value="avery5160">Avery 5160 — 30/sheet</option>
+      <option value="env10">#10 Envelope</option>
     </select>
   </div>
   <button class="btn-dl-top" id="dl-btn-top">⬇ Download PDF</button>
@@ -845,6 +851,8 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
           <option value="letter2">8.5×11 — 2 per page</option>
           <option value="letter3">8.5×11 — 3 per page</option>
           <option value="letter4">8.5×11 — 4 per page</option>
+          <option value="avery5160">Avery 5160 address labels — 30 per sheet</option>
+          <option value="env10">#10 envelope (PWE)</option>
         </select>
       </div>
       <div class="opt-group tog-light">
@@ -869,7 +877,7 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
         <button class="btn-dl" id="dl-btn">⬇ Download PDF</button>
         <button class="btn-ghost" id="clear-btn">Clear</button>
       </div>
-      <p class="tip">4×6: print on thermal, margins none  ·  8.5×11: any printer, cut on lines</p>
+      <p class="tip" id="fmt-tip">4×6: print on thermal, margins none  ·  8.5×11: any printer, cut on lines</p>
     </div>
 
     <!-- Tracking number reference (shown after CSV loaded) -->
@@ -920,7 +928,7 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
       <p>Whether you sell Magic: The Gathering singles, sealed Pokémon product, Yu-Gi-Oh cards, Flesh and Blood, or any other TCG, the packing list format is the same. Upload it, choose your label format, and start shipping.</p>
 
       <h3>Supported Printers &amp; Label Sizes</h3>
-      <p>TCGPlayer Speed Shipper supports two main label formats. The 4×6 thermal format is designed for dedicated label printers like the Rollo, Dymo LabelWriter 4XL, and MUNBYN 4×6. Set your printer margins to zero and your paper size to 4×6 for best results. The 8.5×11 format works with any standard inkjet or laser printer and lets you fit one, two, three, or four labels per page with cut lines printed between them.</p>
+      <p>TCGPlayer Speed Shipper supports thermal labels, plain paper, Avery 5160 address-label sheets (30 per page — ideal for stamped plain white envelopes), and direct printing onto #10 envelopes. The 4×6 thermal format is designed for dedicated label printers like the Rollo, Dymo LabelWriter 4XL, and MUNBYN 4×6. Set your printer margins to zero and your paper size to 4×6 for best results. The 8.5×11 format works with any standard inkjet or laser printer and lets you fit one, two, three, or four labels per page with cut lines printed between them.</p>
     </div>
 
     <!-- More publisher content -->
@@ -929,7 +937,7 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
       <p>Toggle packing slips on before downloading and each label in your PDF will be followed by a matching packing slip. Each slip includes the shipping address, your return address, the order number, and a full list of items from that order. It is a small detail that makes your store look more professional and helps buyers confirm they received the correct cards.</p>
 
       <h3>Privacy by Design</h3>
-      <p>Your data stays on your device. TCGPlayer Speed Shipper does not send any information to a server. The CSV is read by your browser, the PDF is built in JavaScript using jsPDF, and the result is downloaded directly to your computer. No analytics on your order data, no tracking of buyer information, and no server-side processing. Your customers' personal information stays exactly where it should — with you.</p>
+      <p>Your order data stays on your device. Your CSV, buyer names, and addresses are never sent to a server: the CSV is read by your browser, the PDF is built in JavaScript using jsPDF, and the result is downloaded directly to your computer. No analytics on your order data, no tracking of buyer information, and no server-side processing of it. (If you sign in for a paid plan, we store your email, plan, and a monthly label <em>count</em> — never order contents. See the <a href="/privacy.html">Privacy Policy</a>.) Your customers' personal information stays exactly where it should — with you.</p>
     </div>
 
   </div><!-- end home tab -->
@@ -1071,6 +1079,7 @@ Chicago, IL 60601</div>
           <button class="btn-ghost" id="auth-signup-btn">Create Account</button>
         </div>
         <div id="auth-msg"></div>
+        <p class="tip" style="margin-top:8px;">By creating an account you agree to the <a href="/terms.html" style="color:inherit;">Terms of Service</a> and <a href="/privacy.html" style="color:inherit;">Privacy Policy</a>.</p>
         <p class="tip"><a href="#" id="auth-forgot-link" style="color:inherit;">Forgot your password?</a></p>
       </div>
       <div id="account-signed-in" style="display:none;">
@@ -1085,6 +1094,17 @@ Chicago, IL 60601</div>
         </div>
         <div class="btn-row" style="margin-top:14px;">
           <button class="btn-ghost" id="manage-billing-btn">Manage Billing</button>
+          <button class="btn-ghost" id="change-password-toggle" type="button">Change Password</button>
+        </div>
+        <div id="password-panel" style="display:none;margin-top:14px;">
+          <p class="tip" id="password-panel-intro" style="margin-bottom:8px;">Choose a new password (at least 8 characters).</p>
+          <div class="grid-2" style="align-items:end;gap:8px;">
+            <div class="field" style="margin-bottom:0;">
+              <input type="password" id="new-password" placeholder="New password" autocomplete="new-password" />
+            </div>
+            <button class="btn-dl" id="new-password-save" type="button" style="height:42px;">Save Password</button>
+          </div>
+          <div id="password-msg"></div>
         </div>
         <div id="referral-box" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
           <p style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;">Refer a friend, earn a free month</p>
@@ -1121,7 +1141,7 @@ Chicago, IL 60601</div>
         <ul>
           <li>10 labels / month</li>
           <li>CSV upload</li>
-          <li>4×6 &amp; 8.5×11 print formats</li>
+          <li>4×6, 8.5×11, Avery 5160 &amp; #10 envelope formats</li>
           <li>Packing slips</li>
           <li>No account required</li>
         </ul>
@@ -1154,7 +1174,7 @@ Chicago, IL 60601</div>
         <button class="btn-dl" data-plan="premium">Upgrade to Premium</button>
       </div>
     </div>
-    <p class="plan-note">Cancel any time from Manage Billing. Prices in USD, billed monthly.</p>
+    <p class="plan-note">Paid plans are monthly subscriptions that <strong>renew automatically</strong> at the price shown until you cancel. Cancel any time, online, from Manage Billing — you keep access until the end of the period you've paid for. Prices in USD. See the <a href="/terms.html">Terms of Service</a> and <a href="/terms.html#refunds">refund policy</a>. Questions? <a href="/support.html">Support</a>.</p>
 
   </div><!-- end pricing tab -->
 
@@ -1295,6 +1315,11 @@ Chicago, IL 60601</div>
     <div class="faq-item">
       <button class="faq-q">What's the fastest way to ship TCGplayer orders? <span class="faq-arrow">▼</span></button>
       <div class="faq-a">Export your packing list CSV, upload it here, and download print-ready labels — no manual retyping of names and addresses. Pair that with a 4×6 thermal printer (see the <a href="/guide/thermal-printer-comparison.html">printer comparison</a>) and most sellers go from CSV export to a stack of labels in under five minutes, regardless of order volume.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">Can I print on Avery sheets or straight onto envelopes? <span class="faq-arrow">▼</span></button>
+      <div class="faq-a">Yes — handy for plain white envelope (PWE) orders. Pick <strong>Avery 5160 — 30 per sheet</strong> to print recipient addresses on standard 2⅝″ × 1″ address labels (Avery 5160/8160 and compatible sheets), or <strong>#10 envelope</strong> to print your return address and the buyer's address directly on a business envelope. Print at 100% / "actual size," then add your stamp. Available on every plan, including Free.</div>
     </div>
 
     <div class="faq-item">
@@ -1463,10 +1488,12 @@ Chicago, IL 60601</div>
       <a href="https://www.ebay.com/str/clujkeebs" target="_blank" rel="noopener">eBay</a> ·
       <a href="https://www.whatnot.com/user/clujkeebs" target="_blank" rel="noopener">Whatnot</a> ·
       <a href="https://clujkeebs.com" target="_blank" rel="noopener">clujkeebs.com</a> ·
+      <a href="/support.html">Support</a> ·
+      <a href="/terms.html">Terms</a> ·
       <a href="/privacy.html">Privacy Policy</a>
     </div>
     <p>Free plan included — <a href="#" onclick="switchTab('pricing');return false;">paid plans</a> for higher volume &amp; custom label design</p>
-    <p>Questions, problems, or billing issues? Email <a href="mailto:clujkeebs@aol.com">clujkeebs@aol.com</a> — we read every message and reply personally.</p>
+    <p>Questions, problems, or billing issues? Visit <a href="/support.html">Support</a> or email <a href="mailto:clujkeebs@aol.com">clujkeebs@aol.com</a> — we read every message and reply personally.</p>
 
     <div class="newsletter-box">
       <div class="newsletter-label">Get occasional product updates</div>
@@ -1476,6 +1503,7 @@ Chicago, IL 60601</div>
       </div>
       <p class="tip" id="newsletter-msg"></p>
     </div>
+    <p class="footer-disclaimer">TCG Speed Shipper is an independent tool and is not affiliated with, endorsed by, or sponsored by TCGplayer, eBay, or any card game publisher. TCGplayer is a trademark of its respective owner. Labels generated here are address labels, not postage — you still need to buy postage from your carrier.</p>
   </footer>
 
 </div><!-- end page-wrap -->
@@ -1650,7 +1678,9 @@ function updateAccountUI() {
     var billingBtn = document.getElementById('manage-billing-btn');
     if (billingBtn) {
       if (isLifetimeFree()) { billingBtn.textContent = 'No billing — owner account'; billingBtn.disabled = true; }
-      else if (freeUntil) { billingBtn.textContent = 'Free until ' + formatFreeUntilDate(freeUntil) + ' — no billing needed'; billingBtn.disabled = true; }
+      // Not disabled for free_until: a paying customer who also earned a
+      // free month/year still has a live subscription and must be able to
+      // reach the portal to cancel it. The server says so if there's none.
       else { billingBtn.textContent = 'Manage Billing'; billingBtn.disabled = false; }
     }
     if (navBtn) { navBtn.textContent = 'Account'; navBtn.onclick = function () { switchTab('pricing'); }; }
@@ -1718,8 +1748,31 @@ async function refreshSession() {
 if (sb) {
   sb.auth.onAuthStateChange(function (event, s) {
     session = s;
-    refreshServerStatus().then(updateAccountUI);
+    // Deferred: supabase-js holds an auth lock while this callback runs, and
+    // making Supabase calls from inside it can deadlock.
+    setTimeout(function () {
+      Promise.all([refreshServerStatus(), refreshReferralStats()]).then(function () {
+        updateAccountUI();
+        // The reset link in a "Forgot password" email signs the user in with a
+        // recovery session. Without this they were logged in once and never
+        // actually got to choose a new password.
+        if (event === 'PASSWORD_RECOVERY') openPasswordPanel(true);
+      });
+    }, 0);
   });
+}
+
+function openPasswordPanel(fromRecovery) {
+  var panel = document.getElementById('password-panel');
+  if (!panel) return;
+  panel.style.display = 'block';
+  var intro = document.getElementById('password-panel-intro');
+  if (intro) intro.textContent = fromRecovery
+    ? 'You followed a password reset link — choose your new password now (at least 8 characters).'
+    : 'Choose a new password (at least 8 characters).';
+  if (fromRecovery) switchTab('pricing');
+  var input = document.getElementById('new-password');
+  if (input) input.focus();
 }
 
 /* ── Local (anonymous) usage tracking — Free plan only, no account ── */
@@ -2021,119 +2074,14 @@ function loadAddr() {
   } catch(e) {}
 }
 
-/* ── CSV parsing ── */
-var MAPS = {
-  firstName:   ['first name','firstname','buyer first name'],
-  lastName:    ['last name','lastname','buyer last name'],
-  fullName:    ['name','buyer name','recipient name','ship to name','customer name','full name'],
-  addr1:       ['address 1','address1','street address','address line 1','ship address 1','shipping address 1','street','ship to address 1'],
-  addr2:       ['address 2','address2','address line 2','ship address 2','ship to address 2'],
-  city:        ['city','ship city','shipping city','ship to city'],
-  state:       ['state','province','ship state','shipping state','ship to state'],
-  zip:         ['zip','postal code','zip code','ship zip','shipping zip','postcode','ship to zip'],
-  country:     ['country','ship country','ship to country'],
-  orderNumber: ['order #','order number','order id','ordernumber'],
-  item:        ['product name','product','item name','item','card','description']
-};
-
-function splitLine(line) {
-  var out=[], cur='', inQ=false, i;
-  for (i=0;i<line.length;i++) {
-    if (line[i]==='"') { inQ=!inQ; }
-    else if (line[i]===',' && !inQ) { out.push(cur.trim()); cur=''; }
-    else { cur+=line[i]; }
-  }
-  out.push(cur.trim());
-  return out;
-}
-
-function normHeader(s) { return s.replace(/[^a-z0-9]/g,''); }
-
-function parseCSV(text) {
-  var lines = text.split(/\r?\n/).filter(function(l){ return l.trim(); });
-  if (lines.length < 2) return { error: 'File appears empty.' };
-  var headers = splitLine(lines[0]).map(function(h){ return h.toLowerCase().replace(/"/g,'').trim(); });
-  var headersNorm = headers.map(normHeader);
-
-  function findCol(candidates) {
-    var ci, hi, c, cNorm;
-    for (ci=0;ci<candidates.length;ci++) {
-      c=candidates[ci];
-      cNorm=normHeader(c);
-      for (hi=0;hi<headers.length;hi++) {
-        if (headers[hi]===c || headersNorm[hi].indexOf(cNorm)!==-1) return hi;
-      }
-    }
-    return -1;
-  }
-
-  var cols = {};
-  for (var k in MAPS) cols[k] = findCol(MAPS[k]);
-  var hasName = cols.fullName!==-1 || (cols.firstName!==-1 && cols.lastName!==-1);
-  if (!hasName || cols.addr1===-1) return { error: 'Cannot find name/address columns. Found: '+headers.join(', ') };
-
-  var orderMap={}, orderList=[], i;
-  for (i=1;i<lines.length;i++) {
-    if (!lines[i].trim()) continue;
-    var cells = splitLine(lines[i]);
-    function get(key) {
-      if (cols[key]===-1||cols[key]>=cells.length||!cells[cols[key]]) return '';
-      return cells[cols[key]].replace(/^"|"$/g,'').trim();
-    }
-    var fn='', ln='';
-    if (cols.firstName!==-1 && cols.lastName!==-1) { fn=get('firstName'); ln=get('lastName'); }
-    else { var parts=get('fullName').trim().split(/\s+/); fn=parts[0]||''; ln=parts.slice(1).join(' ')||''; }
-    if (!fn&&!ln) continue;
-    var onum=get('orderNumber');
-    var mapKey=onum||(fn+'|'+ln+'|'+get('addr1'));
-    if (!orderMap[mapKey]) {
-      var entry={ firstName:fn, lastName:ln, addr1:get('addr1'), addr2:get('addr2'),
-        city:get('city'), state:get('state'), zip:get('zip'), country:get('country'),
-        orderNumber:onum, items:[] };
-      orderMap[mapKey]=entry; orderList.push(entry);
-    }
-    var item=get('item');
-    if (item && orderMap[mapKey].items.indexOf(item)===-1) orderMap[mapKey].items.push(item);
-  }
-  return orderList;
-}
-
-/* ── Paste-address parsing ── */
-var CITY_STATE_ZIP_RE = /^(.+?),?\s+([A-Za-z]{2})\s+(\d{5}(?:-\d{4})?)$/;
-
-function parsePastedAddresses(text) {
-  var blocks = text.split(/\n\s*\n/).map(function(b){ return b.trim(); }).filter(Boolean);
-  var good = [], bad = [];
-  blocks.forEach(function(block){
-    var lines = block.split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
-    if (lines.length < 2) { bad.push({ raw: block, error: 'Needs a name line and a "City, ST ZIP" line.' }); return; }
-    var last = lines[lines.length - 1];
-    var m = last.match(CITY_STATE_ZIP_RE);
-    if (!m) { bad.push({ raw: block, error: 'Last line "' + last + '" doesn\'t look like "City, ST ZIP".' }); return; }
-    var nameParts = lines[0].split(/\s+/);
-    var streetLines = lines.slice(1, lines.length - 1);
-    good.push({
-      firstName: nameParts[0] || '',
-      lastName: nameParts.slice(1).join(' ') || '',
-      addr1: streetLines[0] || '',
-      addr2: streetLines.slice(1).join(', '),
-      city: m[1], state: m[2].toUpperCase(), zip: m[3],
-      country: '', orderNumber: '', items: []
-    });
-  });
-  return { good: good, bad: bad };
-}
-
-function addrLines(o) {
-  var lines=[];
-  if (o.addr1) lines.push(o.addr1);
-  if (o.addr2) lines.push(o.addr2);
-  var csz=[o.city,o.state].filter(Boolean).join(', ')+(o.zip?' '+o.zip:'');
-  if (csz.trim()) lines.push(csz.trim());
-  var c=o.country;
-  if (c&&['us','usa','united states'].indexOf(c.toLowerCase())===-1) lines.push(c);
-  return lines;
-}
+/* ── CSV / paste parsing and label text — see public/js/shipper-core.js
+   (shared with test/csv-parser.test.js, so the parser that builds real labels
+   is the one under test). ── */
+var Core = window.TCGSSCore;
+var parseCSV = Core.parseCSV;
+var parsePastedAddresses = Core.parsePastedAddresses;
+var addrLines = Core.addrLines;
+var pdfSafe = Core.pdfSafe;
 
 function getSender() {
   return {
@@ -2197,8 +2145,8 @@ function renderPreviews() {
       '<div class="label-num" title="'+(o.orderNumber?'Order #'+esc(o.orderNumber):'')+'">#'+(i+1)+'</div>'+
       '<div class="label-from"><strong>'+esc(s.name||'Your Name')+'</strong>'+
       esc(s.addr1||'')+(s.addr2?', '+esc(s.addr2):'')+'<br>'+esc(sLine2)+'</div>'+
-      '<div class="label-to"><strong>'+esc(o.firstName+' '+o.lastName)+'</strong>'+
-      '<span>'+al.join('<br>')+'</span>'+slip+'</div>';
+      '<div class="label-to"><strong>'+esc(Core.fullName(o))+'</strong>'+
+      '<span>'+al.join('<br>')+'</span>'+slip+(o.shipMethod?'<div class="slip-tag ship-tag">'+esc(o.shipMethod)+'</div>':'')+'</div>';
     list.appendChild(div);
   });
 
@@ -2217,27 +2165,45 @@ function renderPreviews() {
 }
 
 /* ── PDF ── */
+// Width of `text` in points at `size` in the doc's current font (unit: pt).
+function textWidth(doc, text, size) {
+  return doc.getStringUnitWidth(text) * size / doc.internal.scaleFactor;
+}
+function fitSize(doc, lines, size, min, maxWidth) {
+  return Core.fitFontSize(lines, size, min, maxWidth, function (t, sz) { return textWidth(doc, t, sz); });
+}
+function safeSender(s) {
+  var out = {};
+  Object.keys(s).forEach(function (k) { out[k] = pdfSafe(s[k]); });
+  return out;
+}
+
 function drawLabel(doc,o,s,bx,by,bw,bh,design){
-  var al=addrLines(o);
+  var al=addrLines(o).map(pdfSafe);
+  var name=pdfSafe(Core.fullName(o));
   var sLine1=s.addr1+(s.addr2?', '+s.addr2:'');
   var sLine2=[s.city,s.state].filter(Boolean).join(', ')+(s.zip?' '+s.zip:'');
   var font=design.font, accent=design.color;
 
   var padX=bw*0.07, padY=bh*0.05;
+  var maxW=bw-2*padX;
   var rx=bx+padX, ry=by+padY;
 
+  var retLines=[sLine1,sLine2].filter(Boolean);
+  doc.setFont(font,'normal');
+  var retSize=fitSize(doc, retLines, 9, 6, maxW);
   if(s.name){
     doc.setFont(font,'bold');
-    doc.setFontSize(10);
+    var sNameSize=fitSize(doc, [s.name], 10, 6, maxW);
+    doc.setFontSize(sNameSize);
     doc.setTextColor(0,0,0);
     doc.text(s.name,rx,ry);
     ry+=14;
   }
   doc.setFont(font,'normal');
-  doc.setFontSize(9);
+  doc.setFontSize(retSize);
   doc.setTextColor(100,100,100);
-  if(sLine1){ doc.text(sLine1,rx,ry); ry+=12; }
-  if(sLine2){ doc.text(sLine2,rx,ry); ry+=12; }
+  retLines.forEach(function(l){ doc.text(l,rx,ry); ry+=12; });
 
   ry+=8;
   doc.setDrawColor(accent[0],accent[1],accent[2]);
@@ -2245,16 +2211,20 @@ function drawLabel(doc,o,s,bx,by,bw,bh,design){
   doc.line(bx+padX, ry, bx+bw-padX, ry);
   ry+=8;
 
-  var nameSize=22, addrSize=15;
+  // Long names/streets shrink to fit instead of running off the label edge.
+  doc.setFont(font,'bold');
+  var nameSize=fitSize(doc, [name], 22, 11, maxW);
+  doc.setFont(font,'normal');
+  var addrSize=fitSize(doc, al, 15, 9, maxW);
   var nameGap=nameSize*1.6, lineGap=addrSize*1.65;
   var blockH=nameGap+(al.length*lineGap);
   var remaining=(by+bh-padY)-ry;
-  var cy=ry+((remaining-blockH)/2)+nameSize;
+  var cy=ry+Math.max(0,(remaining-blockH)/2)+nameSize;
 
   doc.setFont(font,'bold');
   doc.setFontSize(nameSize);
   doc.setTextColor(0,0,0);
-  doc.text(o.firstName+' '+o.lastName, bx+(bw/2), cy, {align:'center'});
+  doc.text(name, bx+(bw/2), cy, {align:'center'});
   cy+=nameGap;
 
   doc.setFont(font,'normal');
@@ -2263,19 +2233,65 @@ function drawLabel(doc,o,s,bx,by,bw,bh,design){
   al.forEach(function(line){ doc.text(line, bx+(bw/2), cy, {align:'center'}); cy+=lineGap; });
 }
 
+// Avery 5160 / 8160 (and compatible 30-up) address label: recipient only,
+// left-aligned, sized to fit a 2⅝" × 1" label.
+function drawSmallLabel(doc,o,x,y,w,h,font){
+  var padX=9;
+  var lines=[pdfSafe(Core.fullName(o))].concat(addrLines(o).map(pdfSafe));
+  // Height caps the size for every line (five lines at 10pt don't fit in
+  // 72pt); width is then fitted per line, in that line's own weight, so one
+  // long street doesn't shrink the whole label.
+  var size=Math.min(10, (h-10)/(lines.length*1.18));
+  var lh=size*1.18;
+  var ty=y+(h-lines.length*lh)/2+size*0.85;
+  doc.setTextColor(0,0,0);
+  lines.forEach(function(l,i){
+    doc.setFont(font,i===0?'bold':'normal');
+    doc.setFontSize(fitSize(doc,[l],size,5.5,w-2*padX));
+    doc.text(l,x+padX,ty+i*lh);
+  });
+}
+
+// #10 business envelope (9.5" × 4.125"): return address top-left, recipient
+// block in the USPS-readable zone, left-aligned.
+function drawEnvelope(doc,o,s,W,H,font){
+  var retLines=[s.name, s.addr1+(s.addr2?', '+s.addr2:''), [s.city,s.state].filter(Boolean).join(', ')+(s.zip?' '+s.zip:'')]
+    .map(function(l){ return (l||'').trim(); }).filter(Boolean);
+  doc.setTextColor(0,0,0);
+  var ry=36;
+  retLines.forEach(function(l,i){
+    doc.setFont(font,i===0&&s.name?'bold':'normal');
+    doc.setFontSize(fitSize(doc,[l],10,7,W*0.42));
+    doc.text(l,30,ry); ry+=12.5;
+  });
+
+  var lines=[pdfSafe(Core.fullName(o))].concat(addrLines(o).map(pdfSafe));
+  var x=W*0.40, maxW=W-x-30;
+  doc.setFont(font,'bold');
+  var size=fitSize(doc, lines, 14, 9, maxW);
+  var lh=size*1.35;
+  var ty=H*0.52-(lines.length*lh)/2+size;
+  lines.forEach(function(l,i){
+    doc.setFont(font,i===0?'bold':'normal');
+    doc.setFontSize(size);
+    doc.text(l,x,ty+i*lh);
+  });
+}
+
 function drawPackingSlip(doc,o,s,W,H,design){
   var px=24,py=28;
   var sLine1=s.addr1+(s.addr2?', '+s.addr2:'');
   var sLine2=[s.city,s.state].filter(Boolean).join(', ')+(s.zip?' '+s.zip:'');
-  var al=addrLines(o);
+  var al=addrLines(o).map(pdfSafe);
   var font=design.font, accent=design.color;
+  var bottom=H-24;
   doc.setFont(font,'bold'); doc.setFontSize(11); doc.setTextColor(accent[0],accent[1],accent[2]);
   doc.text('Packing Slip',W/2,py,{align:'center'}); py+=16;
   doc.setDrawColor(accent[0],accent[1],accent[2]); doc.setLineWidth(0.75); doc.line(px,py,W-px,py); py+=12;
   doc.setFont(font,'bold'); doc.setFontSize(8); doc.setTextColor(130,130,130);
   doc.text('SHIP TO',px,py); py+=12;
   doc.setFont(font,'bold'); doc.setFontSize(10); doc.setTextColor(0,0,0);
-  doc.text(o.firstName+' '+o.lastName,px,py); py+=13;
+  doc.text(pdfSafe(Core.fullName(o)),px,py); py+=13;
   doc.setFont(font,'normal'); doc.setFontSize(9); doc.setTextColor(40,40,40);
   al.forEach(function(l){ doc.text(l,px,py); py+=12; }); py+=6;
   doc.setDrawColor(220,220,220); doc.line(px,py,W-px,py); py+=12;
@@ -2286,11 +2302,30 @@ function drawPackingSlip(doc,o,s,W,H,design){
   if(sLine1){ doc.text(sLine1,px,py); py+=12; }
   if(sLine2){ doc.text(sLine2,px,py); py+=12; }
   if(s.phone){ doc.text(s.phone,px,py); py+=12; } py+=6;
-  if(o.orderNumber){ doc.setDrawColor(220,220,220); doc.line(px,py,W-px,py); py+=12; doc.setFont(font,'bold'); doc.setFontSize(8); doc.setTextColor(130,130,130); doc.text('ORDER',px,py); py+=12; doc.setFont(font,'normal'); doc.setFontSize(9); doc.setTextColor(0,0,0); doc.text('#'+o.orderNumber,px,py); py+=14; }
-  if(o.items&&o.items.length){ doc.setDrawColor(220,220,220); doc.line(px,py,W-px,py); py+=12; doc.setFont(font,'bold'); doc.setFontSize(8); doc.setTextColor(130,130,130); doc.text('ITEMS',px,py); py+=12; doc.setFont(font,'normal'); doc.setFontSize(9); doc.setTextColor(0,0,0); o.items.forEach(function(item){ var wr=doc.splitTextToSize('• '+item,W-px*2); wr.forEach(function(l){ doc.text(l,px,py); py+=12; }); }); }
+  if(o.orderNumber){
+    doc.setDrawColor(220,220,220); doc.line(px,py,W-px,py); py+=12;
+    doc.setFont(font,'bold'); doc.setFontSize(8); doc.setTextColor(130,130,130); doc.text('ORDER',px,py); py+=12;
+    doc.setFont(font,'normal'); doc.setFontSize(9); doc.setTextColor(0,0,0);
+    doc.text('#'+pdfSafe(o.orderNumber)+(o.shipMethod?'  ·  '+pdfSafe(o.shipMethod):''),px,py); py+=14;
+  }
+  var items=(o.items||[]).map(pdfSafe);
+  if(items.length || o.itemCount){
+    doc.setDrawColor(220,220,220); doc.line(px,py,W-px,py); py+=12;
+    doc.setFont(font,'bold'); doc.setFontSize(8); doc.setTextColor(130,130,130);
+    doc.text('ITEMS'+(o.itemCount?' ('+o.itemCount+')':''),px,py); py+=12;
+    doc.setFont(font,'normal'); doc.setFontSize(9); doc.setTextColor(0,0,0);
+    // Leave room for the thank-you line; a huge order gets a "+N more" line
+    // instead of text printed off the bottom of the slip.
+    var reserve=design.qrUrl?96:30;
+    for(var ii=0; ii<items.length; ii++){
+      var wr=doc.splitTextToSize('• '+items[ii],W-px*2);
+      if(py+wr.length*12>bottom-reserve){ doc.text('+ '+(items.length-ii)+' more item'+(items.length-ii===1?'':'s'),px,py); py+=12; break; }
+      wr.forEach(function(l){ doc.text(l,px,py); py+=12; });
+    }
+  }
   py+=10;
 
-  if(design.qrUrl){
+  if(design.qrUrl && py+72<bottom){
     var qrSize=64;
     var dataUrl=generateQRDataURL(design.qrUrl,128);
     if(dataUrl){
@@ -2301,7 +2336,7 @@ function drawPackingSlip(doc,o,s,W,H,design){
   }
 
   doc.setFont(font,'italic'); doc.setFontSize(8); doc.setTextColor(160,160,160);
-  doc.text(design.message,W/2,py,{align:'center'});
+  doc.text(pdfSafe(design.message),W/2,Math.min(py,bottom),{align:'center'});
 
   if(design.branded){
     doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(190,190,190);
@@ -2309,9 +2344,37 @@ function drawPackingSlip(doc,o,s,W,H,design){
   }
 }
 
+var LETTER_W=612, LETTER_H=792;
+var AVERY_5160={ cols:3, rows:10, left:13.5, top:36, w:189, h:72, pitchX:198, pitchY:72 };
+
 function buildPDF(fmt){
-  var jsPDF=window.jspdf.jsPDF, s=getSender();
+  var jsPDF=window.jspdf.jsPDF, s=safeSender(getSender());
   var design=activeDesign();
+  design.message=design.message||'';
+
+  if(fmt==='avery5160' || fmt==='env10'){
+    var doc2, A=AVERY_5160;
+    if(fmt==='env10'){
+      doc2=new jsPDF({unit:'pt',format:[684,297],orientation:'landscape'});
+      orders.forEach(function(o,i){ if(i>0) doc2.addPage([684,297],'landscape'); drawEnvelope(doc2,o,s,684,297,design.font); });
+    } else {
+      doc2=new jsPDF({unit:'pt',format:'letter',orientation:'portrait'});
+      var per=A.cols*A.rows;
+      orders.forEach(function(o,i){
+        var k=i%per;
+        if(k===0 && i>0) doc2.addPage('letter','portrait');
+        var col=k%A.cols, row=Math.floor(k/A.cols);
+        drawSmallLabel(doc2,o,A.left+col*A.pitchX,A.top+row*A.pitchY,A.w,A.h,design.font);
+      });
+    }
+    // Sheet labels and envelopes can't interleave slips page-by-page, so
+    // slips go after all the labels, on plain letter paper.
+    if(slipsOn){
+      orders.forEach(function(o){ doc2.addPage('letter','portrait'); drawPackingSlip(doc2,o,s,LETTER_W,LETTER_H,design); });
+    }
+    return doc2;
+  }
+
   var PW=fmt==='4x6'?432:612, PH=fmt==='4x6'?288:792;
   var doc=new jsPDF({unit:'pt',format:[PW,PH],orientation:fmt==='4x6'?'landscape':'portrait'});
   var pageNum=0, margin=36, uW=PW-2*margin, uH=PH-2*margin;
@@ -2379,7 +2442,25 @@ function triggerDownload(btn){
   }, 60);
 }
 
-function setFormat(val){ format=val; document.getElementById('fmt-top').value=val; document.getElementById('fmt-main').value=val; }
+var FORMAT_KEY = 'tcgss_format_v1';
+var FORMAT_TIPS = {
+  '4x6': '4×6: print on a thermal printer at 100% scale, margins none.',
+  letter1: '8.5×11: any printer, print at 100% ("actual size") and cut on the lines.',
+  letter2: '8.5×11: any printer, print at 100% ("actual size") and cut on the lines.',
+  letter3: '8.5×11: any printer, print at 100% ("actual size") and cut on the lines.',
+  letter4: '8.5×11: any printer, print at 100% ("actual size") and cut on the lines.',
+  avery5160: 'Avery 5160/8160 (or any 30-up 2⅝″ × 1″ sheet): print at 100% ("actual size"), not "fit to page". Recipient address only — perfect for PWE/stamped envelopes. Packing slips, if on, print after the labels on plain paper.',
+  env10: '#10 envelope (9½″ × 4⅛″): feed envelopes per your printer\'s guide and print at 100%. Add your stamp top-right. Packing slips, if on, print after the envelopes on plain paper.'
+};
+function setFormat(val){
+  if(!FORMAT_TIPS[val]) val='4x6';
+  format=val;
+  document.getElementById('fmt-top').value=val;
+  document.getElementById('fmt-main').value=val;
+  var tip=document.getElementById('fmt-tip'); if(tip) tip.textContent=FORMAT_TIPS[val];
+  try { localStorage.setItem(FORMAT_KEY, val); } catch (e) {}
+}
+try { var savedFmt = localStorage.getItem(FORMAT_KEY); if (savedFmt) setFormat(savedFmt); } catch (e) {}
 function setSlips(val){ slipsOn=val; document.getElementById('slip-top').checked=val; document.getElementById('slip-main').checked=val; if(orders.length) renderPreviews(); }
 
 function handleFile(file) {
@@ -2388,7 +2469,7 @@ function handleFile(file) {
     var result=parseCSV(ev.target.result);
     document.getElementById('error-msg').innerHTML='';
     document.getElementById('loaded-msg').innerHTML='';
-    if(result&&result.error){ document.getElementById('error-msg').innerHTML='<div class="error-box">'+result.error+'</div>'; return; }
+    if(result&&result.error){ document.getElementById('error-msg').innerHTML='<div class="error-box">'+esc(result.error)+' <a href="/guide/tcgplayer-packing-list-csv-format.html" style="color:inherit;text-decoration:underline;">CSV help</a></div>'; return; }
     if(!result||!result.length){ document.getElementById('error-msg').innerHTML='<div class="error-box">No valid orders found.</div>'; return; }
     orders=result;
     resetTracking();
@@ -2397,6 +2478,7 @@ function handleFile(file) {
     renderPreviews();
     restoreTrackingForBatch();
   };
+  reader.onerror=function(){ document.getElementById('error-msg').innerHTML='<div class="error-box">Could not read that file. Try exporting it again from TCGplayer.</div>'; };
   reader.readAsText(file);
 }
 
@@ -2748,6 +2830,8 @@ document.getElementById('tracking-copy-all-btn').addEventListener('click', funct
     return json;
   }
 
+  passwordField.addEventListener('keydown', function (e) { if (e.key === 'Enter') loginBtn.click(); });
+
   loginBtn.addEventListener('click', async function () {
     var c = readCredentials();
     if (!c.email || !c.password) { setMsg('Enter your email and password.', 'err'); return; }
@@ -2799,6 +2883,33 @@ document.getElementById('tracking-copy-all-btn').addEventListener('click', funct
     } catch (err) {
       setMsg('Could not send a reset email right now.', 'err');
     }
+  });
+
+  document.getElementById('change-password-toggle').addEventListener('click', function () {
+    var panel = document.getElementById('password-panel');
+    if (panel.style.display === 'block') panel.style.display = 'none';
+    else openPasswordPanel(false);
+  });
+
+  document.getElementById('new-password-save').addEventListener('click', async function () {
+    var input = document.getElementById('new-password');
+    var msg = document.getElementById('password-msg');
+    function show(text, kind) { msg.className = 'auth-note ' + (kind === 'ok' ? 'ok' : 'err'); msg.textContent = text; }
+    var pw = input.value;
+    if (pw.length < 8) { show('Password must be at least 8 characters.', 'err'); return; }
+    if (!sb || !session) { show('Sign in first.', 'err'); return; }
+    var btn = this; btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Saving...';
+    try {
+      var res = await sb.auth.updateUser({ password: pw });
+      if (res.error) throw res.error;
+      input.value = '';
+      show('✓ Password updated. Use it next time you log in.', 'ok');
+      setTimeout(function () { document.getElementById('password-panel').style.display = 'none'; msg.className = ''; msg.textContent = ''; }, 2500);
+    } catch (e) {
+      var m = (e && e.message) || '';
+      show(/same.*password|different from the old/i.test(m) ? 'That is already your password — pick a different one.' : (m || 'Could not update your password.'), 'err');
+    }
+    btn.disabled = false; btn.textContent = orig;
   });
 
   document.getElementById('auth-signout').addEventListener('click', async function(){

@@ -44,7 +44,7 @@ const stripeStub = {
     create: async (p) => { calls.push(['customers.create', p]); return { id: 'cus_new' }; },
     list: async (p) => { calls.push(['customers.list', p]); return { data: state.stripeCustomers || [] }; },
   },
-  checkout: { sessions: { create: async (p) => { calls.push(['checkout.sessions.create', p]); return { url: 'https://checkout.stripe.com/x' }; } } },
+  checkout: { sessions: { create: async (p) => { calls.push(['checkout.sessions.create', JSON.parse(JSON.stringify(p))]); if (state.rejectCustomText && p.custom_text) throw new Error('Invalid custom_text[submit][message]'); return { url: 'https://checkout.stripe.com/x' }; } } },
   promotionCodes: { list: async (p) => { calls.push(['promotionCodes.list', p]); return { data: state.promo ? [state.promo] : [] }; } },
   billingPortal: { sessions: { create: async () => ({ url: 'https://billing.stripe.com/x' }) } },
   webhooks: { constructEvent: (body) => JSON.parse(body.toString('utf8')) },
@@ -175,6 +175,32 @@ function reset(profile, subs, promo, stripeCustomers) {
     calls.some((c) => c[0] === 'profiles.upsert' && c[1].stripe_customer_id === 'cus_new'));
   check('lets Stripe collect a promo code when none was pre-applied',
     calls.some((c) => c[0] === 'checkout.sessions.create' && c[1].allow_promotion_codes === true));
+  const created = calls.find((c) => c[0] === 'checkout.sessions.create');
+  const renewal = created && created[1].custom_text && created[1].custom_text.submit && created[1].custom_text.submit.message;
+  check('Checkout shows the auto-renewal and cancellation terms',
+    !!renewal && /renews automatically/i.test(renewal) && /cancel/i.test(renewal) && renewal.indexOf('/terms.html') !== -1, renewal);
+  check('the disclosure fits Stripe\'s 1200-character limit', !!renewal && renewal.length <= 1200);
+
+  reset({ stripe_customer_id: null, is_lifetime_free: false }, []);
+  state.rejectCustomText = true;
+  res = await req('POST', '/api/create-checkout-session', { plan: 'base' }, AUTH);
+  state.rejectCustomText = false;
+  check('if Stripe rejects the disclosure, checkout still opens without it',
+    res.status === 200 && res.body.url && calls.filter((c) => c[0] === 'checkout.sessions.create').length === 2, JSON.stringify(res.body));
+
+  console.log('\n-- Billing portal with no subscription --');
+  reset({ stripe_customer_id: null, is_lifetime_free: false }, []);
+  res = await req('POST', '/api/create-portal-session', {}, AUTH);
+  check('explains there is nothing to manage, and points to support',
+    res.status === 400 && /support/.test(res.body.error || ''), JSON.stringify(res.body));
+
+  console.log('\n-- Promo code guessing is throttled --');
+  reset({ stripe_customer_id: null, is_lifetime_free: false }, []);
+  let last;
+  for (let i = 0; i < 21; i++) last = await req('GET', '/api/validate-promo-code?code=GUESS' + i, undefined, { 'X-Forwarded-For': '203.0.113.9' });
+  check('the 21st check in ten minutes from one IP is refused', last.status === 429, JSON.stringify(last));
+  const other = await req('GET', '/api/validate-promo-code?code=REAL', undefined, { 'X-Forwarded-For': '198.51.100.4' });
+  check('a different IP is unaffected', other.status === 200, JSON.stringify(other));
 
   console.log('\n-- Owner account --');
   reset({ stripe_customer_id: null, is_lifetime_free: true }, []);

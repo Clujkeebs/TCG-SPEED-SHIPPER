@@ -103,69 +103,102 @@ a { color: var(--accent); }
 <div class="page-wrap">
 
   <h1>Privacy Policy</h1>
-  <p class="updated">Last updated: August 2, 2026</p>
+  <p class="updated">Last updated: September 26, 2026</p>
 
   <div class="highlight">
-    <strong>Short version:</strong> Your CSV file, buyer names, shipping addresses, and order contents never leave your browser — that part hasn't changed. If you create an account to use a paid plan, we additionally store your email address and a monthly label count (not order contents) to run your subscription, and Stripe processes your payment details on our behalf.
+    <strong>Short version:</strong> Your CSV file, buyer names, shipping addresses, tracking numbers, and order contents never leave your browser. If you create an account, we store your email address, your plan, and a monthly label <em>count</em> (not order contents) to run your subscription, and Stripe processes your payment details. We don't sell your data, we don't run ads, and we don't use tracking cookies.
+  </div>
+
+  <div class="card">
+    <h2>Who We Are</h2>
+    <p>TCG Speed Shipper ("we", "us") is an independent tool built and operated by Clujkeebs. You can reach us about anything in this policy at <a href="mailto:clujkeebs@aol.com">clujkeebs@aol.com</a>.</p>
   </div>
 
   <div class="card">
     <h2>What This Site Does</h2>
-    <p>TCG Speed Shipper converts TCGPlayer packing list CSV files (or pasted addresses, on Premium) into printable PDF shipping labels. Label generation runs entirely in your browser using JavaScript.</p>
-    <p>When you upload a CSV file, it is read by your browser's built-in FileReader API and processed locally. The resulting PDF is generated in your browser using the jsPDF library and downloaded directly to your device. At no point does your CSV file, buyer names, or shipping addresses get sent to our server or any third party.</p>
+    <p>TCG Speed Shipper converts TCGplayer order CSV exports (or pasted addresses, on Premium) into printable PDF shipping labels and packing slips. Label generation runs entirely in your browser using JavaScript.</p>
+    <p>When you upload a CSV file, it is read by your browser's built-in FileReader API and processed locally. The resulting PDF is generated in your browser using the jsPDF library and downloaded directly to your device. At no point is your CSV file, your buyers' names or addresses, the items they ordered, or tracking numbers you paste sent to our servers or to any third party.</p>
   </div>
 
   <div class="card">
-    <h2>Free Plan — No Account, Nothing Collected</h2>
-    <p>You can use the Free plan (10 labels/month) without creating an account. In that mode we do not collect, transmit, or store anything: no CSV contents, no buyer data, no return address. Your return address, design preferences, and monthly label count are saved only in your own browser's <code>localStorage</code>, which never leaves your device.</p>
+    <h2>Free Plan — No Account</h2>
+    <p>You can use the Free plan without creating an account. In that mode we do not collect or store any personal information about you or your buyers. Your return address, design preferences, "shipped" checkmarks, pasted tracking numbers, and monthly label count are saved only in your own browser's <code>localStorage</code>, which stays on your device. You can erase them at any time by clearing this site's data in your browser.</p>
   </div>
 
   <div class="card">
     <h2>What We Store If You Create an Account</h2>
-    <p>Signing in is only needed to use a paid plan (Base or Premium) or to check usage from another device. If you sign in, we store:</p>
+    <p>If you sign in, we store:</p>
     <ul>
-      <li>Your email address and password, via our authentication provider, Supabase — your password is hashed (never stored as plain text, never visible to us) using Supabase's standard authentication system, the same way any reputable login system handles passwords</li>
-      <li>Your plan (Free/Base/Premium) and subscription status</li>
-      <li>A count of how many labels you've generated this month — not the buyer names, addresses, or order contents behind that count</li>
-      <li>A Stripe customer/subscription ID, so we can manage billing</li>
+      <li>Your email address and password, via our authentication provider, Supabase. Your password is hashed — never stored as plain text and never visible to us.</li>
+      <li>Your plan (Free/Base/Premium), subscription status, and billing period end date.</li>
+      <li>A count of how many labels you've generated each month — not the buyer names, addresses, or order contents behind that count.</li>
+      <li>Your Stripe customer and subscription IDs, so we can manage billing.</li>
+      <li>Your personal referral code, and — if you signed up through someone's referral or creator/affiliate link — which code referred you. We use this only to give the referrer their reward or commission, and the referrer does not see your email address.</li>
+      <li>Any free-access period you've earned (for example a referral reward).</li>
     </ul>
-    <p>Your CSV, buyer names, and shipping addresses are never uploaded as part of this — labels are still built entirely in your browser, whether or not you're signed in.</p>
   </div>
 
   <div class="card">
-    <h2>Newsletter Sign-Up</h2>
-    <p>If you enter your email in the "Get occasional product updates" box, we store only that email address, to send occasional updates about the product. It is not linked to your account, plan, or usage, and is never sold or shared. Every email we send will include a way to unsubscribe.</p>
+    <h2>Payments</h2>
+    <p>Payments are processed by <a href="https://stripe.com/privacy" target="_blank" rel="noopener">Stripe</a>. Your card details go directly to Stripe; we never see or store your full card number. Stripe shares with us the information needed to run your subscription (for example, whether a payment succeeded, the plan, and billing dates).</p>
+  </div>
+
+  <div class="card">
+    <h2>Promo Codes and Abuse Prevention</h2>
+    <p>When a 100%-off promo code is redeemed, we store a one-way cryptographic hash of the connection's IP address together with the promo code, so the same free code can't be claimed repeatedly from one connection. We never store the raw IP address for this. Our servers also apply short-lived, in-memory rate limits to sign-ups and promo code checks.</p>
+  </div>
+
+  <div class="card">
+    <h2>Newsletter</h2>
+    <p>If you enter your email in the "Get occasional product updates" box, we store only that email address to send occasional product updates. It is not linked to your account, plan, or usage, and is never sold or shared. Every email we send includes a way to unsubscribe, or you can email us to be removed.</p>
   </div>
 
   <div class="card">
     <h2>Cookies &amp; Local Storage</h2>
-    <p>We use your browser's <code>localStorage</code> to keep you signed in between visits, remember your return address and design preferences, and (for anonymous Free-plan use) track your monthly label count. This is standard browser storage, not third-party tracking cookies, and it stays on your device.</p>
+    <p>We don't use advertising or third-party tracking cookies, and we don't run analytics on your order data. We use your browser's <code>localStorage</code> to keep you signed in between visits and to remember your settings, as described above. Stripe may set its own cookies on its checkout and billing pages for fraud prevention.</p>
   </div>
 
   <div class="card">
-    <h2>Third-Party Services</h2>
-    <p>This site uses the following third-party services:</p>
+    <h2>Service Providers</h2>
+    <p>We use these providers to run the site. Each receives only what it needs to do its job:</p>
     <ul>
+      <li><strong>Netlify</strong> — hosts the website and our server functions. Like any web host, it processes standard request data such as IP addresses in its logs.</li>
       <li><strong>Supabase</strong> — authentication and account/plan storage, if you sign in.</li>
-      <li><strong>Stripe</strong> — payment processing for paid plans. We never see or store your full card number; see <a href="https://stripe.com/privacy" target="_blank" rel="noopener">Stripe's privacy policy</a>.</li>
-      <li><strong>Google Fonts</strong> — to load the fonts used in the site design. Google's font CDN may log your IP address per their <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">privacy policy</a>.</li>
-      <li><strong>Cloudflare CDN</strong> — the jsPDF and QR code libraries are loaded from Cloudflare/jsDelivr-hosted CDNs. These may log standard HTTP request data.</li>
+      <li><strong>Stripe</strong> — payment processing and the billing portal for paid plans.</li>
+      <li><strong>Google Fonts</strong> — loads the fonts used in the site design; Google may log your IP address per its <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">privacy policy</a>.</li>
+      <li><strong>cdnjs (Cloudflare) and jsDelivr</strong> — serve the open-source jsPDF, QR code, and Supabase libraries the page loads. These may log standard request data.</li>
     </ul>
+    <p>We do not sell or rent personal information, and we do not share it for advertising.</p>
+  </div>
+
+  <div class="card">
+    <h2>How Long We Keep It</h2>
+    <p>We keep account information for as long as your account exists. Stripe keeps payment records as long as the law requires, which can be several years. Monthly label counts are kept as part of your account history. If you delete your account, we delete your account record and usage counts, except anything we must keep for legal, tax, or fraud-prevention reasons.</p>
+  </div>
+
+  <div class="card">
+    <h2>Your Choices and Rights</h2>
+    <p>You can ask us to access, correct, export, or delete the personal information we hold about you, or to delete your account entirely, by emailing <a href="mailto:clujkeebs@aol.com">clujkeebs@aol.com</a> from the address on your account. We'll respond within 30 days. If you have an active subscription, cancel it from Manage Billing first (or ask us to), so you aren't charged again. Depending on where you live (for example California, or the EU/UK), you may have additional rights under local law; we honor those requests the same way. We will not treat you differently for exercising them.</p>
+  </div>
+
+  <div class="card">
+    <h2>Security</h2>
+    <p>Connections to the site are encrypted (HTTPS). Account data is protected by database access rules so each signed-in user can read only their own records, and all changes to plans and billing happen on our server. No system is perfectly secure, but we work to protect your information and will notify affected users of a breach as required by law.</p>
   </div>
 
   <div class="card">
     <h2>Children's Privacy</h2>
-    <p>TCG Speed Shipper is not directed at children under 13. We do not knowingly collect personal information from children.</p>
+    <p>TCG Speed Shipper is a tool for sellers and is not directed at children under 13. We do not knowingly collect personal information from children under 13; if you believe we have, contact us and we will delete it.</p>
   </div>
 
   <div class="card">
     <h2>Changes to This Policy</h2>
-    <p>If this privacy policy changes, the updated version will be posted at this URL with a revised "last updated" date.</p>
+    <p>If this policy changes, the updated version will be posted at this URL with a new "last updated" date. For material changes that affect account holders, we'll give notice by email or on the site.</p>
   </div>
 
   <div class="card">
     <h2>Contact</h2>
-    <p>Questions about this privacy policy? Reach out via the contact information on <a href="https://clujkeebs.com" target="_blank" rel="noopener">clujkeebs.com</a>.</p>
+    <p>Questions about this policy or your data: <a href="mailto:clujkeebs@aol.com">clujkeebs@aol.com</a>. For help using the tool, see our <a href="/support.html">Support page</a>.</p>
   </div>
 
 </div>
@@ -174,7 +207,9 @@ a { color: var(--accent); }
   <a href="/">← Back to TCG Speed Shipper</a> ·
   <a href="/guide/">Seller's Guide</a> ·
   <a href="https://clujkeebs.com" target="_blank" rel="noopener">clujkeebs.com</a> ·
-  <a href="mailto:clujkeebs@aol.com">Questions or problems? Email us</a>
+  <a href="/support.html">Support</a> ·
+  <a href="/terms.html">Terms of Service</a> ·
+  <a href="mailto:clujkeebs@aol.com">Email us</a>
 </footer>
 
 </body>

@@ -7,3 +7,23 @@
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"
   status = 200
+
+# Baseline security headers for every page. No full Content-Security-Policy:
+# the pages rely on inline scripts plus CDN libraries, and a too-strict CSP
+# would silently break label generation. frame-ancestors covers clickjacking.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Content-Security-Policy = "frame-ancestors 'none'"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=()"
+
+# The affiliate dashboard is authenticated by a secret token in its URL: never
+# send that URL anywhere as a referrer, and keep it out of search indexes.
+[[headers]]
+  for = "/affiliate/*"
+  [headers.values]
+    Referrer-Policy = "no-referrer"
+    X-Robots-Tag = "noindex, nofollow"

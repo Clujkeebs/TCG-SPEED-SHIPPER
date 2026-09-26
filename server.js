@@ -227,16 +227,23 @@ const LEGACY_ACCOUNT_CUTOFF = new Date('2026-09-11T00:00:00Z');
 // not guaranteed to stay warm between invocations, so this is not a strong
 // guarantee — it only helps within a warm container — but it's a cheap first
 // line of defense against obvious abuse without adding external infra.
-const signupAttempts = new Map();
-function tooManySignupAttempts(ip) {
-  const now = Date.now();
-  const windowMs = 10 * 60 * 1000;
-  const maxAttempts = 8;
-  const recent = (signupAttempts.get(ip) || []).filter((t) => now - t < windowMs);
-  recent.push(now);
-  signupAttempts.set(ip, recent);
-  return recent.length > maxAttempts;
+function makeThrottle(maxAttempts, windowMs) {
+  const attempts = new Map();
+  return function tooMany(key) {
+    const now = Date.now();
+    const recent = (attempts.get(key) || []).filter((t) => now - t < windowMs);
+    recent.push(now);
+    attempts.set(key, recent);
+    // Keep a warm container from accumulating every IP it has ever seen.
+    if (attempts.size > 5000) {
+      for (const [k, v] of attempts) if (!v.length || now - v[v.length - 1] > windowMs) attempts.delete(k);
+    }
+    return recent.length > maxAttempts;
+  };
 }
+const tooManySignupAttempts = makeThrottle(8, 10 * 60 * 1000);
+// Promo codes are guessable strings; this slows down brute-forcing them.
+const tooManyPromoChecks = makeThrottle(20, 10 * 60 * 1000);
 
 // x-forwarded-for can carry a client,proxy,proxy chain; the first entry is the
 // original client. Falls back to req.ip (direct connections, local testing).
@@ -481,8 +488,7 @@ router.post('/stripe-webhook', express.raw({ type: '*/*' }), requireStripe, requ
 
 router.post('/signup', express.json(), requireSupabase, async (req, res) => {
   try {
-    const ip = req.headers['x-forwarded-for'] || req.ip || 'unknown';
-    if (tooManySignupAttempts(ip)) {
+    if (tooManySignupAttempts(getClientIp(req))) {
       return res.status(429).json({ error: 'Too many attempts — try again in a few minutes.' });
     }
 
@@ -556,6 +562,9 @@ router.post('/signup', express.json(), requireSupabase, async (req, res) => {
 
 router.get('/validate-promo-code', requireStripe, requireSupabase, async (req, res) => {
   try {
+    if (tooManyPromoChecks(getClientIp(req))) {
+      return res.status(429).json({ valid: false, error: 'Too many attempts — try again in a few minutes.' });
+    }
     const promo = await findPromotionCode(req.query.code);
     if (!promo) return res.json({ valid: false, error: 'That code is not valid or has expired.' });
     // Early, best-effort feedback for a fully-free code already used from this
@@ -681,6 +690,16 @@ router.post('/create-checkout-session', express.json(), requireStripe, requireSu
       // 100%-off code below) — a normal paid checkout still collects a card
       // exactly as before, since its total is never zero.
       payment_method_collection: 'if_required',
+      // Automatic-renewal disclosure shown right above the Subscribe button.
+      // State auto-renewal laws (e.g. California's) require the renewal
+      // terms and how to cancel to be clear at the point of purchase.
+      custom_text: {
+        submit: {
+          message: 'This subscription renews automatically every month at the price shown until you cancel. ' +
+            'Cancel any time online from Manage Billing on the Pricing page; you keep access through the end of the paid period. ' +
+            'By subscribing you agree to the Terms of Service at ' + SITE_URL + '/terms.html',
+        },
+      },
     };
     if (appliedPromo) {
       sessionParams.discounts = [{ promotion_code: appliedPromo.id }];
@@ -695,10 +714,24 @@ router.post('/create-checkout-session', express.json(), requireStripe, requireSu
       sessionParams.allow_promotion_codes = true;
     }
 
+    // The renewal disclosure must never be the thing that stops a sale: if
+    // Stripe ever rejects custom_text (e.g. a wording limit), log it loudly
+    // and open Checkout without it — Stripe still shows its own renewal terms.
+    const createSession = async (params) => {
+      try {
+        return await stripe.checkout.sessions.create(params);
+      } catch (err) {
+        if (!params.custom_text || !/custom_text/i.test(err.message || '')) throw err;
+        console.error('Checkout rejected custom_text, retrying without it:', err.message);
+        delete params.custom_text;
+        return stripe.checkout.sessions.create(params);
+      }
+    };
+
     let session;
     let promoApplied = !!appliedPromo;
     try {
-      session = await stripe.checkout.sessions.create(sessionParams);
+      session = await createSession(sessionParams);
     } catch (stripeErr) {
       if (!appliedPromo) throw stripeErr;
       // The code is valid but doesn't apply to this particular plan (e.g. it's
@@ -708,7 +741,7 @@ router.post('/create-checkout-session', express.json(), requireStripe, requireSu
       delete sessionParams.discounts;
       delete sessionParams.metadata;
       sessionParams.allow_promotion_codes = true;
-      session = await stripe.checkout.sessions.create(sessionParams);
+      session = await createSession(sessionParams);
       promoApplied = false;
       promoDeniedReason = promoDeniedReason || 'not_applicable';
     }
@@ -770,7 +803,7 @@ router.post('/create-portal-session', express.json(), requireStripe, requireSupa
       .maybeSingle();
     if (error) throw error;
     if (!profile || !profile.stripe_customer_id) {
-      return res.status(400).json({ error: 'No billing account yet — upgrade to a paid plan first.' });
+      return res.status(400).json({ error: 'There is no paid subscription on this account, so there is nothing to manage or cancel. Questions? See ' + SITE_URL + '/support.html' });
     }
 
     const portalSession = await stripe.billingPortal.sessions.create({

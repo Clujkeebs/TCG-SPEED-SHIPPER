@@ -409,7 +409,11 @@ clients. No network, no live keys, runs in this sandbox:
   on a bad or missing token without touching the database, and every admin
   route confirmed owner-only.
 
-Run it before pushing anything that touches billing or auth.
+- `csv-parser.test.js` — the browser's CSV/paste parser (`public/js/shipper-core.js`)
+  against realistic TCGplayer exports: column matching, quoting, BOMs,
+  multi-line fields, item vs. "Product Weight"/"Item Count", PDF-safe text.
+
+Run it before pushing anything that touches billing, auth, or parsing.
 
 ## Known-good, verified this session
 
@@ -629,3 +633,88 @@ Still open, unchanged, still owner-only dashboard actions: leaked-password
 protection, custom SMTP for password reset. Worth prioritizing the SMTP one
 now — it's the same unreliable-sender problem that caused today's bug, and
 it's still the live path for "Forgot Password."
+
+### 2026-09-26 — Claude (full audit pass)
+Owner asked for a deep "make it bulletproof" pass. Counts at this entry: 14
+profiles, 8 on a paid plan (incl. the owner).
+
+**Security fix, applied directly to the live database:**
+`tcgss_grant_referral_free_month` was executable by `anon` and
+`authenticated` through PostgREST (`/rest/v1/rpc/...`, with the public anon
+key from index.html), and it extended `free_until` for whatever user id it was
+given without checking that a claimed credit existed. Anyone could have given
+themselves unlimited free Premium. I checked first: no profile had
+`free_until` set, so it had not been used. Fixed via migration
+`tcgss_lock_down_referral_free_month_grant`: EXECUTE revoked from
+public/anon/authenticated (service_role only), and the function now extends
+`free_until` only if it actually flipped a `processing` credit for that
+referrer (this also makes a replayed call a no-op). Advisors confirm it's gone.
+**Root cause to remember:** Supabase grants EXECUTE on every new `public`
+function to anon/authenticated by default. Any new server-only SECURITY
+DEFINER function needs an explicit
+`revoke execute ... from public, anon, authenticated` in the same migration.
+Every other server-only function was already locked down, so this one
+was missed when it was added on 2026-09-24.
+
+**Bugs fixed:**
+- CSV parser: TCGplayer's shipping export has "Product Weight" and
+  "Item Count" columns, and the loose header match picked "Product Weight" as
+  the item name, so packing slips listed weights ("• 0.12") as items. The
+  parser also split rows on newlines before handling quotes, so any quoted
+  field with a line break shifted every column after it. It had no
+  escaped-quote (`""`) support, and an earlier "Order Date" column could
+  beat an exact "Order #". I rewrote it as a real RFC 4180 reader with
+  exact-before-substring column matching and per-field exclusions, moved it
+  to `public/js/shipper-core.js`, and pinned it with `test/csv-parser.test.js`.
+- Forgot Password never let anyone set a new password. The reset link signs
+  the user in with a recovery session (`PASSWORD_RECOVERY` event), which the
+  app ignored. It now opens a "choose a new password" panel, and signed-in
+  users get a Change Password button.
+- "Manage Billing" was disabled for anyone with `free_until`, so a paying
+  customer who also earned a free month or affiliate year couldn't reach the
+  portal to cancel a subscription that was still billing them. It's always
+  enabled now; the server explains when there's nothing to manage.
+- Referral box didn't appear after logging in until a page reload
+  (`onAuthStateChange` didn't refresh referral stats). Supabase calls in that
+  callback are now deferred with `setTimeout`, per supabase-js guidance, to
+  avoid its auth-lock deadlock.
+- Long names/addresses ran off the edge of labels. Text now shrinks to fit.
+  Characters outside jsPDF's built-in font set (e.g. "ễ", "ł", CJK) printed
+  as garbage and now become their base letter or a visible "?".
+- The CSV error message was injected into innerHTML unescaped.
+
+**Hardening:** security headers in `netlify.toml` (nosniff, frame-ancestors
+none, Referrer-Policy; the affiliate dashboard gets `no-referrer` + noindex
+because its secret token is in the URL); the signup throttle now uses the
+same client-IP parsing as the promo code; the promo-code check is rate
+limited (20 per 10 min per IP) against brute-forcing.
+
+**Legal:** new `terms.html` (auto-renewal, cancellation, refunds, disclaimers,
+liability cap, not affiliated with TCGplayer). Rewrote `privacy.html` to
+cover what's actually stored now (referral/affiliate attribution, hashed-IP
+promo check, Netlify hosting, retention, deletion/access requests, contact
+email). Stripe Checkout shows an auto-renewal/cancellation disclosure
+(`custom_text.submit`, tested). The pricing page states the renewal terms,
+signup has a Terms/Privacy consent line, and the footer has a trademark +
+"this isn't postage" disclaimer. **Owner should review two
+commitments made on their behalf in terms.html:** the 14-day "we'll make it
+right" refund window (§5), and the governing-law clause, which says "the state
+where the operator resides" because the state isn't known. Put the actual
+state in if you want.
+
+**New:** `support.html` (troubleshooting, billing and cancellation answers, a
+live `/api/health` status line, and a prefilled support email with browser
+details). New print formats on every plan: Avery 5160 (30 address labels per
+sheet) and #10 envelopes, both aimed at plain-white-envelope orders. Also:
+shipping method shown on preview cards and slips, item count on slips, "+N
+more" instead of item lists printed off the page, and the chosen format is
+remembered between visits.
+
+Verified: `npm test` (7 suites) green, plus a headless-Chromium run of the
+real page generating every format with a tricky CSV, with the PDFs rendered
+and inspected. Not verified live: the password-recovery panel (needs a real
+reset email) and the Checkout disclosure text in the actual Stripe UI.
+
+Still open (owner-only dashboard actions, unchanged): leaked-password
+protection, and custom SMTP for password-reset email reliability. The
+recovery flow now works end-to-end, but only if the email arrives.
