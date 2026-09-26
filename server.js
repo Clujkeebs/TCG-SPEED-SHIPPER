@@ -32,9 +32,29 @@ try {
   console.error('Supabase admin client init failed:', err.message);
 }
 
+// Errors also go to tcgss_event_log so they show up on the owner's /admin
+// dashboard — otherwise they only exist in Netlify's function logs, which
+// nobody reads until something is already on fire. Never throws: logging
+// must not be the thing that breaks a request. Awaited where possible,
+// because a serverless function can be frozen right after it responds.
+function eventText(args) {
+  return args.map((a) => (a && a.message) ? a.message : (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ').slice(0, 2000);
+}
+async function logEvent(level, source, message, context) {
+  try {
+    if (!supabaseAdmin) return;
+    const { error } = await supabaseAdmin.from('tcgss_event_log').insert({
+      level, source: String(source).slice(0, 100), message: String(message || '').slice(0, 2000), context: context || {},
+    });
+    if (error) console.error('event log insert failed:', error.message);
+  } catch (e) { /* never let logging break a request */ }
+}
+function logError(source, ...args) { console.error('[' + source + ']', ...args); return logEvent('error', source, eventText(args)); }
+function logWarn(source, ...args) { console.warn('[' + source + ']', ...args); return logEvent('warn', source, eventText(args)); }
+
 function requireSupabase(req, res, next) {
   if (!supabaseAdmin) {
-    console.error('Request to ' + req.path + ' with Supabase unconfigured. Missing: ' + (MISSING_SUPABASE.join(', ') || 'client init failed'));
+    logError('config', 'Request to ' + req.path + ' with Supabase unconfigured. Missing: ' + (MISSING_SUPABASE.join(', ') || 'client init failed'));
     return res.status(503).json({ error: 'The server is not configured correctly (Supabase). This is a server-side problem, not your account.' });
   }
   next();
@@ -42,7 +62,7 @@ function requireSupabase(req, res, next) {
 
 function requireStripe(req, res, next) {
   if (!stripe) {
-    console.error('Request to ' + req.path + ' with Stripe unconfigured.');
+    logError('config', 'Request to ' + req.path + ' with Stripe unconfigured.');
     return res.status(503).json({ error: 'The server is not configured correctly (Stripe). This is a server-side problem, not your account.' });
   }
   next();
@@ -69,7 +89,7 @@ async function applySubscriptionToProfile(subscription) {
   // write a plan at all in that case rather than silently recording a paying
   // customer as 'free' and cutting off the thing they just paid for.
   if (active && !PRICE_TO_PLAN[priceId]) {
-    console.error('Active subscription ' + subscription.id + ' is on unrecognised price ' + priceId + ' — leaving plan untouched. Check STRIPE_PRICE_BASE/STRIPE_PRICE_PREMIUM.');
+    await logError('billing.price', 'Active subscription ' + subscription.id + ' is on unrecognised price ' + priceId + ' — leaving plan untouched. Check STRIPE_PRICE_BASE/STRIPE_PRICE_PREMIUM.');
     return;
   }
   const plan = active ? PRICE_TO_PLAN[priceId] : 'free';
@@ -89,7 +109,7 @@ async function applySubscriptionToProfile(subscription) {
     .eq('is_lifetime_free', false)
     .select('id')
     .maybeSingle();
-  if (error) { console.error('Failed to update profile from subscription event:', error); return; }
+  if (error) { await logError('billing.profile-update', 'Failed to update profile from subscription event:', error); return; }
   // Covers a referrer whose OWN subscription just went active (first purchase
   // via subscription.created, or a later renewal/resume) while they had
   // referral rewards waiting on that.
@@ -137,7 +157,7 @@ async function applyPendingReferralCredits(referrerProfileId, stripeCustomerId) 
     const { data: claimed, error: claimErr } = await supabaseAdmin.rpc('tcgss_claim_pending_referral_credits', {
       p_referrer_id: referrerProfileId,
     });
-    if (claimErr) { console.error('Failed to claim referral credits for', referrerProfileId, claimErr); return; }
+    if (claimErr) { await logError('referral.claim', 'Failed to claim referral credits for', referrerProfileId, claimErr); return; }
     if (!claimed || !claimed.length) return;
 
     const subscription = stripeCustomerId ? await liveSubscriptionFor(stripeCustomerId) : null;
@@ -150,7 +170,7 @@ async function applyPendingReferralCredits(referrerProfileId, stripeCustomerId) 
           p_referrer_id: referrerProfileId,
         });
         if (grantErr) {
-          console.error('Failed to grant referral free month for', referrerProfileId, grantErr);
+          await logError('referral.grant', 'Failed to grant referral free month for', referrerProfileId, grantErr);
           await supabaseAdmin.rpc('tcgss_release_referral_credit', { p_credit_id: credit.id });
         }
       }
@@ -176,14 +196,14 @@ async function applyPendingReferralCredits(referrerProfileId, stripeCustomerId) 
           p_credit_id: credit.id,
           p_balance_transaction_id: txn.id,
         });
-        if (markErr) console.error('Applied a referral credit but failed to record it:', markErr);
+        if (markErr) await logError('referral.record', 'Applied a referral credit but failed to record it:', markErr);
       } catch (stripeErr) {
-        console.error('Failed to apply referral credit', credit.id, 'for', referrerProfileId, stripeErr.message);
+        await logError('referral.stripe-credit', 'Failed to apply referral credit', credit.id, 'for', referrerProfileId, stripeErr.message);
         await supabaseAdmin.rpc('tcgss_release_referral_credit', { p_credit_id: credit.id });
       }
     }
   } catch (err) {
-    console.error('applyPendingReferralCredits failed for', referrerProfileId, err);
+    await logError('referral', 'applyPendingReferralCredits failed for', referrerProfileId, err);
   }
 }
 
@@ -361,7 +381,7 @@ router.post('/stripe-webhook', express.raw({ type: '*/*' }), requireStripe, requ
             // Someone just paid for a price we can't map to a plan. Record the
             // billing link so support can see it, but never write plan: 'free'
             // over a completed payment.
-            console.error('Checkout completed on unrecognised price ' + priceId + ' for user ' + userId + ' — plan not set. Check STRIPE_PRICE_BASE/STRIPE_PRICE_PREMIUM.');
+            await logError('webhook.checkout-price', 'Checkout completed on unrecognised price ' + priceId + ' for user ' + userId + ' — plan not set. Check STRIPE_PRICE_BASE/STRIPE_PRICE_PREMIUM.');
           }
           const { error } = await supabaseAdmin
             .from('tcgss_profiles')
@@ -377,7 +397,7 @@ router.post('/stripe-webhook', express.raw({ type: '*/*' }), requireStripe, requ
             .eq('id', userId)
             .eq('is_lifetime_free', false);
           if (error) {
-            console.error('Failed to attach subscription to profile:', error);
+            await logError('webhook.checkout', 'Failed to attach subscription to profile:', error);
             break;
           }
 
@@ -392,7 +412,7 @@ router.post('/stripe-webhook', express.raw({ type: '*/*' }), requireStripe, requ
               p_referred_user_id: userId,
             });
             if (referralErr) {
-              console.error('Failed to record referral conversion for', userId, referralErr);
+              await logError('webhook.referral', 'Failed to record referral conversion for', userId, referralErr);
             } else if (referrerId) {
               const { data: referrerProfile } = await supabaseAdmin
                 .from('tcgss_profiles')
@@ -439,7 +459,7 @@ router.post('/stripe-webhook', express.raw({ type: '*/*' }), requireStripe, requ
           .eq('stripe_customer_id', subscription.customer)
           .eq('stripe_subscription_id', subscription.id)
           .eq('is_lifetime_free', false);
-        if (error) console.error('Failed to downgrade profile on cancellation:', error);
+        if (error) await logError('webhook.cancel', 'Failed to downgrade profile on cancellation:', error);
         break;
       }
       case 'invoice.payment_succeeded': {
@@ -458,7 +478,7 @@ router.post('/stripe-webhook', express.raw({ type: '*/*' }), requireStripe, requ
             .eq('stripe_customer_id', invoice.customer)
             .maybeSingle();
           if (profileErr) {
-            console.error('Failed to look up profile for invoice.payment_succeeded:', profileErr);
+            await logError('webhook.invoice', 'Failed to look up profile for invoice.payment_succeeded:', profileErr);
           } else if (profile) {
             const periodStart = invoice.period_start ? new Date(invoice.period_start * 1000) : new Date();
             const periodMonth = new Date(Date.UTC(periodStart.getUTCFullYear(), periodStart.getUTCMonth(), 1))
@@ -470,7 +490,7 @@ router.post('/stripe-webhook', express.raw({ type: '*/*' }), requireStripe, requ
               p_currency: invoice.currency || 'usd',
               p_period_month: periodMonth,
             });
-            if (earningErr) console.error('Failed to record affiliate earning for invoice', invoice.id, earningErr);
+            if (earningErr) await logError('webhook.affiliate-earning', 'Failed to record affiliate earning for invoice', invoice.id, earningErr);
           }
         }
         break;
@@ -479,7 +499,7 @@ router.post('/stripe-webhook', express.raw({ type: '*/*' }), requireStripe, requ
         break;
     }
   } catch (err) {
-    console.error('Error handling Stripe webhook event:', err);
+    await logError('webhook', 'Error handling Stripe webhook event:', err);
     return res.status(500).send('Webhook handler failed');
   }
 
@@ -555,7 +575,7 @@ router.post('/signup', express.json(), requireSupabase, async (req, res) => {
 
     return res.status(409).json({ error: 'An account with that email already exists — log in instead, or use Forgot Password if you don’t know the password.' });
   } catch (err) {
-    console.error('signup failed:', err);
+    await logError('signup', 'signup failed:', err);
     res.status(500).json({ error: 'Could not create account' });
   }
 });
@@ -579,7 +599,7 @@ router.get('/validate-promo-code', requireStripe, requireSupabase, async (req, r
     }
     res.json({ valid: true, code: promo.code, description: describeCoupon(promo.coupon) });
   } catch (err) {
-    console.error('validate-promo-code failed:', err);
+    await logError('promo.validate', 'validate-promo-code failed:', err);
     res.status(500).json({ valid: false, error: 'Could not check that code right now.' });
   }
 });
@@ -722,7 +742,7 @@ router.post('/create-checkout-session', express.json(), requireStripe, requireSu
         return await stripe.checkout.sessions.create(params);
       } catch (err) {
         if (!params.custom_text || !/custom_text/i.test(err.message || '')) throw err;
-        console.error('Checkout rejected custom_text, retrying without it:', err.message);
+        await logWarn('checkout.custom-text', 'Checkout rejected custom_text, retrying without it:', err.message);
         delete params.custom_text;
         return stripe.checkout.sessions.create(params);
       }
@@ -748,7 +768,7 @@ router.post('/create-checkout-session', express.json(), requireStripe, requireSu
 
     res.json({ url: session.url, promoApplied: promoApplied, promoDeniedReason: promoApplied ? null : promoDeniedReason });
   } catch (err) {
-    console.error('create-checkout-session failed:', err);
+    await logError('checkout', 'create-checkout-session failed:', err);
     res.status(500).json({ error: 'Could not create checkout session' });
   }
 });
@@ -789,7 +809,7 @@ router.post('/sync-subscription', express.json(), requireStripe, requireSupabase
     await applySubscriptionToProfile(subscription);
     res.json({ synced: true, plan: PRICE_TO_PLAN[subscription.items.data[0].price.id] || null });
   } catch (err) {
-    console.error('sync-subscription failed:', err);
+    await logError('sync-subscription', 'sync-subscription failed:', err);
     res.status(500).json({ error: 'Could not check your subscription' });
   }
 });
@@ -813,7 +833,7 @@ router.post('/create-portal-session', express.json(), requireStripe, requireSupa
 
     res.json({ url: portalSession.url });
   } catch (err) {
-    console.error('create-portal-session failed:', err);
+    await logError('billing-portal', 'create-portal-session failed:', err);
     res.status(500).json({ error: 'Could not open billing portal' });
   }
 });
@@ -844,7 +864,7 @@ router.get('/affiliate-dashboard', requireSupabase, async (req, res) => {
     if (!data) return res.status(404).json({ error: 'Dashboard not found' });
     res.json(data);
   } catch (err) {
-    console.error('affiliate-dashboard failed:', err);
+    await logError('affiliate-dashboard', 'affiliate-dashboard failed:', err);
     res.status(500).json({ error: 'Could not load dashboard' });
   }
 });
@@ -858,7 +878,7 @@ router.get('/admin/affiliates', requireSupabase, requireUser, requireOwner, asyn
     if (error) throw error;
     res.json({ affiliates: data });
   } catch (err) {
-    console.error('list affiliates failed:', err);
+    await logError('admin.affiliates', 'list affiliates failed:', err);
     res.status(500).json({ error: 'Could not load affiliates' });
   }
 });
@@ -881,7 +901,7 @@ router.post('/admin/affiliates', express.json(), requireSupabase, requireUser, r
       dashboard: SITE_URL + '/affiliate/?token=' + data.dashboard_token,
     });
   } catch (err) {
-    console.error('create affiliate failed:', err);
+    await logError('admin.affiliates', 'create affiliate failed:', err);
     res.status(500).json({ error: 'Could not create affiliate' });
   }
 });
@@ -892,7 +912,7 @@ router.post('/admin/affiliates/:id/activate', express.json(), requireSupabase, r
     if (error) throw error;
     res.json({ affiliate: data });
   } catch (err) {
-    console.error('activate affiliate failed:', err);
+    await logError('admin.affiliates', 'activate affiliate failed:', err);
     res.status(500).json({ error: 'Could not activate affiliate — check the id is correct.' });
   }
 });
@@ -903,9 +923,33 @@ router.post('/admin/affiliates/:id/mark-paid', express.json(), requireSupabase, 
     if (error) throw error;
     res.json({ rowsMarkedPaid: data });
   } catch (err) {
-    console.error('mark affiliate paid failed:', err);
+    await logError('admin.affiliates', 'mark affiliate paid failed:', err);
     res.status(500).json({ error: 'Could not mark affiliate as paid' });
   }
+});
+
+// Browser-side crashes, reported by window.onerror in the pages. Public by
+// necessity (anonymous visitors hit errors too), so: throttled per IP, sizes
+// capped, and nothing but the error text, page path and browser string is
+// stored — never order data, never the IP.
+const tooManyClientErrors = makeThrottle(30, 10 * 60 * 1000);
+router.post('/client-error', express.json({ limit: '8kb' }), async (req, res) => {
+  if (tooManyClientErrors(getClientIp(req))) return res.status(429).json({ ok: false });
+  const b = req.body || {};
+  const message = String(b.message || '').slice(0, 500);
+  if (!message) return res.status(400).json({ ok: false });
+  await logEvent('error', 'client', message, {
+    page: String(b.page || '').slice(0, 200),
+    where: String(b.where || '').slice(0, 300),
+    ua: String(req.headers['user-agent'] || '').slice(0, 200),
+  });
+  res.json({ ok: true });
+});
+
+require('./admin')(router, {
+  supabaseAdmin: () => supabaseAdmin, stripe: () => stripe,
+  requireUser, requireOwner, requireSupabase, logEvent, logError, SITE_URL, PRICE_TO_PLAN,
+  liveSubscriptionFor, applySubscriptionToProfile,
 });
 
 // Netlify rewrites /api/* to /.netlify/functions/api/:splat. Depending on the

@@ -771,3 +771,52 @@ What was done instead:
 The 2 extra free accounts `onecard*` are the same person as the
 `onecardpokemon` Base subscriber (from the old signup bug), so they're
 excluded from the free-user emails.
+
+### 2026-09-26 (evening) — Claude: admin dashboard, site-wide cleanup
+**Admin dashboard at `/admin/`**, sign in with the owner account
+(`clujkeebs@aol.com`, the login email, which is unchanged). API is in
+`admin.js`, mounted from server.js, and every route is
+`requireUser + requireOwner`. Overview (Stripe MRR / 30-day paid, signups,
+labels, errors), users (auth + profile + usage merged, CSV export, copy
+emails), errors & activity, affiliates (create / activate / mark paid, over
+the existing API), newsletter. User commands: grant/revoke free Premium
+(`free_until`), reset this month's usage, re-sync from Stripe, a
+password-reset link generated with `auth.admin.generateLink` (so it doesn't
+depend on Supabase's email sender), and delete. Delete requires the email
+typed back, cancels live Stripe subscriptions first, then runs
+`tcgss_admin_prepare_user_delete` (clears the FK references that don't
+cascade; refuses the owner and any user with affiliate earnings), then
+`auth.admin.deleteUser`. The page never puts data into innerHTML:
+emails and browser error text are attacker-controllable, and this page
+runs with the owner's session. This was verified with an injected payload.
+`test/admin.test.js` covers the access control, delete safety and audit rows.
+
+**New DB objects** (migration `tcgss_admin_event_log_and_user_cleanup`,
+applied live): `tcgss_event_log` (RLS on, no policies, anon/authenticated
+revoked) and `tcgss_admin_prepare_user_delete` (service_role only).
+`logError`/`logWarn` in server.js now write money, signup, checkout, webhook
+and config failures there, and `/api/client-error` takes browser crash
+reports (throttled, capped at 500 chars, no IP stored) from
+`public/js/site.js`.
+
+**Site-wide:** one nav on every inner page ("TCG Speed Shipper / by
+Clujkeebs" plus Guides / Blog / Support), and one organized footer
+(`.sf`) on every page with a "Cookie settings" button. Public contact
+email changed to clujkeebs@gmail.com everywhere. Server `OWNER_EMAIL` and
+`tcgss_is_owner_email()` stay on the aol address, because that's the
+owner's login; don't change them unless the owner's login email changes.
+**Fonts are self-hosted** (`public/fonts/`, OFL), so no page contacts
+Google Fonts any more, which is a GDPR exposure removed. There's now a
+cookie notice rather than a consent wall, because the site sets no
+tracking or ad cookies (only strictly-necessary localStorage, now listed
+key by key in privacy.html#cookies). `COOKIEBOT_CBID` in site.js switches
+to Usercentrics Cookiebot if analytics or ads are ever added.
+
+**Bugs found and fixed:** on phones the app nav overflowed and hid the
+**Sign in / Account button** off-screen. It's now a two-row nav with
+swipeable tabs. Preview cards replayed their fade-in on every keystroke
+in the return-address form, and card stagger was uncapped (card #200
+appeared ~8s late). The blog count said 10, then 14, but there are 16
+posts. The blog index was one 16-row list; it's now grouped into Shipping /
+Selling / Business with a Guides|Blog switcher on both indexes. All motion
+respects `prefers-reduced-motion`, and keyboard focus rings are visible.

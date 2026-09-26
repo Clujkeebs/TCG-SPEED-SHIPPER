@@ -38,9 +38,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="/js/shipper-core.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/fonts/fonts.css">
 
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -75,13 +73,14 @@ html, body { overflow-x: hidden; width: 100%; }
 body { font-family: 'Source Serif 4', Georgia, serif; background: var(--bg); color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased; }
 
 /* ── Animations ── */
-@keyframes fadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes panelIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
 @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 
-.fade-in-up { animation: fadeInUp .5s ease both; }
+.fade-in-up { animation: fadeInUp .5s cubic-bezier(.2,.8,.2,1) both; }
 .fade-in { animation: fadeIn .4s ease both; }
 
 /* ── Top nav ── */
@@ -101,8 +100,6 @@ body { font-family: 'Source Serif 4', Georgia, serif; background: var(--bg); col
   flex-shrink: 0;
   font-family: 'DM Serif Display', serif;
 }
-.nav-brand span { opacity: .45; font-weight: normal; display: none; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
-@media (min-width: 480px) { .nav-brand span { display: inline; } }
 .nav-tabs { display: flex; flex: 1; }
 .nav-tab {
   flex: 1; display: flex; align-items: center; justify-content: center;
@@ -118,7 +115,6 @@ body { font-family: 'Source Serif 4', Georgia, serif; background: var(--bg); col
 .nav-tab:hover { color: rgba(255,255,255,.75); }
 .nav-tab.active { color: #fff; border-bottom-color: var(--accent-light); }
 @media (max-width: 760px) { .nav-tab { font-size: 10px; padding: 0 4px; } }
-@media (max-width: 560px) { .nav-brand span { display: none; } }
 
 /* ── "More" dropdown (groups secondary content tabs) ── */
 .nav-more { position: relative; flex: 1; display: flex; }
@@ -128,7 +124,7 @@ body { font-family: 'Source Serif 4', Georgia, serif; background: var(--bg); col
   background: var(--text); border-radius: 0 0 8px 8px; overflow: hidden;
   box-shadow: 0 10px 24px rgba(0,0,0,.35); z-index: 400;
 }
-.nav-more-menu.open { display: block; }
+.nav-more-menu.open { display: block; animation: slideDown .18s cubic-bezier(.2,.8,.2,1); }
 .nav-more-item {
   display: block; width: 100%; text-align: left; padding: 11px 16px;
   background: none; border: none; color: rgba(255,255,255,.7);
@@ -182,7 +178,7 @@ body { font-family: 'Source Serif 4', Georgia, serif; background: var(--bg); col
    .js-ready is added immediately by inline script, so real users
    still get the tab UI with zero flash. */
 .js-ready .tab-panel { display: none; }
-.js-ready .tab-panel.active { display: block; }
+.js-ready .tab-panel.active { display: block; animation: panelIn .3s cubic-bezier(.2,.8,.2,1) both; }
 
 /* ── Hero section for Home ── */
 .home-hero {
@@ -359,7 +355,7 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
   margin-bottom: 8px; font-family: 'JetBrains Mono', monospace;
   position: relative; box-shadow: var(--shadow-sm);
   transition: transform .15s, box-shadow .15s;
-  animation: fadeInUp .3s ease both;
+  animation: fadeInUp .35s cubic-bezier(.2,.8,.2,1) both;
 }
 .label-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
 .label-num { position: absolute; top: 10px; right: 14px; font-size: 10px; color: var(--hint); font-weight: 600; }
@@ -606,7 +602,30 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
 }
 .plan-pill.plan-premium { background: #4ade80; color: #14532d; }
 .plan-pill.plan-base { background: #93c5fd; color: #1e3a5f; }
-@media (max-width: 620px) { .nav-account span.plan-pill { display: none; } }
+/* Phones: two rows — brand + account on top, tabs in a swipeable row below.
+   A single row used to push the Sign in button clean off the screen. */
+@media (max-width: 720px) {
+  :root { --nav-h: 100px; }
+  .top-nav { flex-wrap: wrap; height: auto; }
+  .nav-brand { order: 1; flex: 1 1 auto; border-right: none; padding: 0 14px; height: 54px; }
+  .nav-account { order: 2; height: 54px; border-left: none; padding: 0 12px; }
+  .nav-tabs {
+    order: 3; flex: 1 0 100%; height: 46px; overflow-x: auto; overscroll-behavior-x: contain;
+    border-top: 1px solid rgba(255,255,255,.08); scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    -webkit-mask-image: linear-gradient(to right, #000 88%, transparent); mask-image: linear-gradient(to right, #000 88%, transparent);
+  }
+  .nav-tabs::-webkit-scrollbar { display: none; }
+  .nav-tab { flex: 0 0 auto; padding: 0 14px; font-size: 11px; scroll-snap-align: start; }
+  .nav-more, .nav-more-menu, .nav-more-menu.open { display: contents; }
+  .nav-more-btn { display: none; }
+  .nav-more-item {
+    flex: 0 0 auto; width: auto; display: flex; align-items: center; padding: 0 14px; font-size: 11px;
+    color: rgba(255,255,255,.45); border-bottom: 2px solid transparent; white-space: nowrap; scroll-snap-align: start;
+  }
+  .nav-more-item:hover { background: none; }
+  .nav-more-item.active { color: #fff; border-bottom-color: var(--accent-light); }
+}
 
 /* ── Lock state ── */
 .lock-card { text-align: center; padding: 2.5rem 1.5rem; }
@@ -742,12 +761,14 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
 .newsletter-row button:disabled { opacity: .5; cursor: not-allowed; transform: none; }
 @media (max-width: 420px) { .newsletter-row { flex-direction: column; } }
 </style>
+<link rel="stylesheet" href="/css/site.css">
+<script src="/js/site.js" defer></script>
 </head>
 <body>
 
 <!-- Nav -->
 <nav class="top-nav">
-  <div class="nav-brand">TCG Speed Shipper <span>&nbsp;· Clujkeebs</span></div>
+  <a class="nav-brand" href="/" id="nav-brand"><span class="brand-stack"><span class="brand-name">TCG Speed Shipper</span><span class="brand-by">by Clujkeebs</span></span></a>
   <div class="nav-tabs">
     <button class="nav-tab active" data-tab="home">Home</button>
     <button class="nav-tab" data-tab="paste" id="nav-tab-paste">Paste</button>
@@ -1127,6 +1148,7 @@ Chicago, IL 60601</div>
         <div class="btn-row" style="margin-top:14px;">
           <button class="btn-ghost" id="manage-billing-btn">Manage Billing</button>
           <button class="btn-ghost" id="change-password-toggle" type="button">Change Password</button>
+          <a class="btn-ghost" id="admin-link" href="/admin/" style="display:none;text-decoration:none;">Admin dashboard →</a>
         </div>
         <div id="password-panel" style="display:none;margin-top:14px;">
           <p class="tip" id="password-panel-intro" style="margin-bottom:8px;">Choose a new password (at least 8 characters).</p>
@@ -1451,7 +1473,7 @@ Chicago, IL 60601</div>
 
     <div class="faq-item">
       <button class="faq-q">Something's not working, or I have a billing question — how do I get help? <span class="faq-arrow">▼</span></button>
-      <div class="faq-a">Email <a href="mailto:clujkeebs@aol.com">clujkeebs@aol.com</a> any time — bug reports, billing/subscription questions, feature requests, anything. It goes straight to a real person (not a ticket queue) and every message gets a reply.</div>
+      <div class="faq-a">Email <a href="mailto:clujkeebs@gmail.com">clujkeebs@gmail.com</a> any time — bug reports, billing/subscription questions, feature requests, anything. It goes straight to a real person (not a ticket queue) and every message gets a reply.</div>
     </div>
 
     <div class="faq-cta">
@@ -1504,41 +1526,76 @@ Chicago, IL 60601</div>
         <a class="guide-link-card" href="/blog/">
           <div class="glc-tag">Blog</div>
           <div class="glc-title">Seller Blog: Pricing, Levels, Payouts →</div>
-          <div class="glc-desc">Fourteen articles — shipping rules, PWE how-to, pricing strategy, seller levels, and running it like a business.</div>
+          <div class="glc-desc">Sixteen articles — shipping rules, PWE how-to, pricing strategy, seller levels, and running it like a business.</div>
         </a>
       </div>
     </div>
 
   </div><!-- end guide tab -->
 
-  <footer class="site-footer">
-    <p class="footer-built">Built by <a href="https://clujkeebs.com" target="_blank" rel="noopener">Clujkeebs</a> — TCGPlayer seller &amp; keyboard enthusiast</p>
-    <div class="footer-links">
-      <a href="/guide/">Seller's Guide</a> ·
-      <a href="/blog/">Blog</a> ·
-      <a href="https://www.tcgplayer.com/search/all/product?seller=ad430346&view=grid" target="_blank" rel="noopener">TCGPlayer</a> ·
-      <a href="https://www.ebay.com/str/clujkeebs" target="_blank" rel="noopener">eBay</a> ·
-      <a href="https://www.whatnot.com/user/clujkeebs" target="_blank" rel="noopener">Whatnot</a> ·
-      <a href="https://clujkeebs.com" target="_blank" rel="noopener">clujkeebs.com</a> ·
-      <a href="/support.html">Support</a> ·
-      <a href="/terms.html">Terms</a> ·
-      <a href="/privacy.html">Privacy Policy</a>
-    </div>
-    <p>Free plan included — <a href="#" onclick="switchTab('pricing');return false;">paid plans</a> for higher volume &amp; custom label design</p>
-    <p>Questions, problems, or billing issues? Visit <a href="/support.html">Support</a> or email <a href="mailto:clujkeebs@aol.com">clujkeebs@aol.com</a> — we read every message and reply personally.</p>
-
-    <div class="newsletter-box">
-      <div class="newsletter-label">Get occasional product updates</div>
-      <div class="newsletter-row">
-        <input type="text" id="newsletter-email" placeholder="you@email.com" autocomplete="email" />
-        <button id="newsletter-submit" type="button">Subscribe</button>
-      </div>
-      <p class="tip" id="newsletter-msg"></p>
-    </div>
-    <p class="footer-disclaimer">TCG Speed Shipper is an independent tool and is not affiliated with, endorsed by, or sponsored by TCGplayer, eBay, or any card game publisher. TCGplayer is a trademark of its respective owner. Labels generated here are address labels, not postage — you still need to buy postage from your carrier.</p>
-  </footer>
 
 </div><!-- end page-wrap -->
+
+<footer class="sf">
+  <div class="sf-inner">
+    <div class="sf-grid">
+      <div class="sf-brand">
+        <span class="brand-name">TCG Speed Shipper</span>
+        <span class="brand-by">by Clujkeebs</span>
+        <p>Print-ready labels, envelopes, and packing slips from your TCGplayer orders. Built by a TCGplayer seller, for sellers.</p>
+        <a class="sf-mail" href="mailto:clujkeebs@gmail.com">clujkeebs@gmail.com</a>
+        <div class="sf-news newsletter-box">
+          <div class="newsletter-label">Occasional product updates</div>
+          <div class="newsletter-row">
+            <input type="text" id="newsletter-email" placeholder="you@email.com" autocomplete="email" aria-label="Email for product updates" />
+            <button id="newsletter-submit" type="button">Subscribe</button>
+          </div>
+          <p class="tip" id="newsletter-msg"></p>
+        </div>
+      </div>
+      <div>
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/">Label generator</a></li>
+          <li><a href="/#pricing">Pricing</a></li>
+          <li><a href="/#hiw">How it works</a></li>
+          <li><a href="/#faq">FAQ</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Learn</h4>
+        <ul>
+          <li><a href="/guide/">Seller&#39;s guides</a></li>
+          <li><a href="/blog/">Blog</a></li>
+          <li><a href="/blog/tcgplayer-shipping-guidelines.html">Shipping rules</a></li>
+          <li><a href="/guide/thermal-printer-comparison.html">Printer comparison</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Help &amp; legal</h4>
+        <ul>
+          <li><a href="/support.html">Support</a></li>
+          <li><a href="/terms.html">Terms of Service</a></li>
+          <li><a href="/privacy.html">Privacy Policy</a></li>
+          <li><button type="button" data-cookie-settings>Cookie settings</button></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Clujkeebs</h4>
+        <ul>
+          <li><a href="https://clujkeebs.com" target="_blank" rel="noopener">clujkeebs.com</a></li>
+          <li><a href="https://www.tcgplayer.com/search/all/product?seller=ad430346&amp;view=grid" target="_blank" rel="noopener">TCGplayer store</a></li>
+          <li><a href="https://www.ebay.com/str/clujkeebs" target="_blank" rel="noopener">eBay</a></li>
+          <li><a href="https://www.whatnot.com/user/clujkeebs" target="_blank" rel="noopener">Whatnot</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="sf-bottom">
+      <p>&copy; <span data-year>2026</span> Clujkeebs. TCG Speed Shipper is independent and not affiliated with, endorsed by, or sponsored by TCGplayer, eBay, or any card game publisher. Labels here are address labels, not postage.</p>
+      <p>Your order data never leaves your browser.</p>
+    </div>
+  </div>
+</footer>
 
 <script>
 document.documentElement.classList.add('js-ready');
@@ -1716,6 +1773,9 @@ function updateAccountUI() {
       else { billingBtn.textContent = 'Manage Billing'; billingBtn.disabled = false; }
     }
     if (navBtn) { navBtn.textContent = 'Account'; navBtn.onclick = function () { switchTab('pricing'); }; }
+    // Just a shortcut: the admin API itself checks the owner on every request.
+    var adminLink = document.getElementById('admin-link');
+    if (adminLink) adminLink.style.display = isLifetimeFree() ? 'inline-flex' : 'none';
   } else {
     if (signedOut) signedOut.style.display = 'block';
     if (signedIn) signedIn.style.display = 'none';
@@ -2047,6 +2107,10 @@ function switchTab(name, fromHash) {
   var moreBtn = document.getElementById('nav-more-btn');
   if (moreBtn) moreBtn.classList.toggle('active', MORE_TABS.indexOf(name) !== -1);
   document.getElementById('tab-'+name).classList.add('active');
+  var activeBtn = navTrigger || moreItem;
+  if (activeBtn && activeBtn.offsetParent && window.innerWidth <= 720) {
+    try { activeBtn.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) {}
+  }
   closeMoreMenu();
   window.scrollTo(0, 0);
   if (!fromHash) {
@@ -2057,6 +2121,7 @@ function switchTab(name, fromHash) {
   }
 }
 window.switchTab = switchTab;
+document.getElementById('nav-brand').addEventListener('click', function (e) { e.preventDefault(); switchTab('home'); });
 
 function openTabFromHash() {
   var name = (window.location.hash || '').replace('#', '');
@@ -2186,6 +2251,7 @@ function renderShipPlan(toPrint) {
   box.style.display = 'block';
 }
 
+var lastAnimatedBatch = null;
 function renderPreviews() {
   var s=getSender();
   var sLine2=[s.city,s.state].filter(Boolean).join(', ')+(s.zip?' '+s.zip:'');
@@ -2214,6 +2280,8 @@ function renderPreviews() {
   if (trackingArea) trackingArea.style.display = orders.length ? 'block' : 'none';
 
   var list=document.getElementById('preview-list');
+  var animateCards = lastAnimatedBatch !== batchKey();
+  lastAnimatedBatch = batchKey();
   list.innerHTML='';
   var shipped = getShippedSet();
   var shippedCount = 0;
@@ -2228,7 +2296,10 @@ function renderPreviews() {
     var tier = Core.shippingTier(o);
     var tierTag = tier.label ? '<div class="tier-tag tier-'+tier.tier+'">'+esc(tier.label)+(typeof o.orderValue==='number'?' · $'+o.orderValue.toFixed(2):'')+'</div>' : '';
     div.className='label-card'+(isShipped?' shipped':'')+(printing[i]?'':' not-printing');
-    div.style.animationDelay = (i * 0.04) + 's';
+    // Animate only when a new batch appears (not on every keystroke in the
+    // return-address form), and cap the stagger so card #200 isn't 8s late.
+    if (animateCards) div.style.animationDelay = Math.min(i, 12) * 0.035 + 's';
+    else div.style.animation = 'none';
     var slip=slipsOn?'<div class="slip-tag">+ packing slip</div>':'';
     div.innerHTML='<label class="label-shipped"><input type="checkbox" data-key="'+esc(key)+'"'+(isShipped?' checked':'')+'> shipped</label>'+
       '<div class="label-num" title="'+(o.orderNumber?'Order #'+esc(o.orderNumber):'')+'">#'+(i+1)+'</div>'+

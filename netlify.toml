@@ -3,6 +3,12 @@
   functions = "netlify/functions"
   command = "npm install"
 
+# server.js require()s ./admin.js; the bundler normally follows that on its
+# own, but listing it makes sure the admin API can never be left out of the
+# deployed function.
+[functions]
+  included_files = ["admin.js"]
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"
@@ -27,3 +33,12 @@
   [headers.values]
     Referrer-Policy = "no-referrer"
     X-Robots-Tag = "noindex, nofollow"
+
+# Owner-only dashboard: the page is harmless on its own (all data comes from
+# owner-gated API calls), but keep it out of search results and referrers.
+[[headers]]
+  for = "/admin/*"
+  [headers.values]
+    Referrer-Policy = "no-referrer"
+    X-Robots-Tag = "noindex, nofollow"
+    Cache-Control = "no-store"

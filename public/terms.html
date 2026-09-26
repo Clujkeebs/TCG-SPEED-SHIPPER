@@ -24,9 +24,7 @@
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"WebPage","name":"Terms of Service — TCG Speed Shipper","url":"https://tcg-speed-shipper.netlify.app/terms.html","isPartOf":{"@type":"WebSite","name":"TCG Speed Shipper","url":"https://tcg-speed-shipper.netlify.app/"}}
 </script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/fonts/fonts.css">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -94,11 +92,15 @@ a { color: var(--accent); }
 .site-footer a:hover { color: var(--accent); text-decoration: underline; }
 .card[id] { scroll-margin-top: 16px; }
 </style>
+<link rel="stylesheet" href="/css/site.css">
+<script src="/js/site.js" defer></script>
 </head>
 <body>
 
-<nav class="top-nav">
-  <a href="/" class="nav-brand">TCG Speed Shipper</a>
+<nav class="top-nav site-nav">
+  <a href="/" class="nav-brand"><span class="brand-stack"><span class="brand-name">TCG Speed Shipper</span><span class="brand-by">by Clujkeebs</span></span></a>
+  <div class="nav-links"><a href="/guide/">Guides</a><a href="/blog/">Blog</a><a href="/support.html">Support</a></div>
+  <a href="/" class="nav-cta">Labels<span class="cta-long"> free</span> →</a>
 </nav>
 
 <div class="page-wrap">
@@ -124,7 +126,7 @@ a { color: var(--accent); }
 
   <div class="card">
     <h2>3. Your Account</h2>
-    <p>Keep your password secure and don't share your account. You're responsible for activity under your account. Tell us promptly at <a href="mailto:clujkeebs@aol.com">clujkeebs@aol.com</a> if you think it has been accessed without permission. Give us an email address you can receive mail at, since that's how we'll contact you about your account and billing.</p>
+    <p>Keep your password secure and don't share your account. You're responsible for activity under your account. Tell us promptly at <a href="mailto:clujkeebs@gmail.com">clujkeebs@gmail.com</a> if you think it has been accessed without permission. Give us an email address you can receive mail at, since that's how we'll contact you about your account and billing.</p>
   </div>
 
   <div class="card" id="billing">
@@ -143,7 +145,7 @@ a { color: var(--accent); }
 
   <div class="card" id="refunds">
     <h2>5. Refunds</h2>
-    <p>Because you can cancel any time and keep access through the period you've paid for, payments are generally non-refundable. But we want you to be happy: if you were charged by mistake, charged after you tried to cancel, or subscribed and the Service didn't work for you, email <a href="mailto:clujkeebs@aol.com">clujkeebs@aol.com</a> within 14 days of the charge and we'll make it right, including a refund where appropriate. Nothing here limits any refund rights you have under applicable law.</p>
+    <p>Because you can cancel any time and keep access through the period you've paid for, payments are generally non-refundable. But we want you to be happy: if you were charged by mistake, charged after you tried to cancel, or subscribed and the Service didn't work for you, email <a href="mailto:clujkeebs@gmail.com">clujkeebs@gmail.com</a> within 14 days of the charge and we'll make it right, including a refund where appropriate. Nothing here limits any refund rights you have under applicable law.</p>
   </div>
 
   <div class="card">
@@ -192,7 +194,7 @@ a { color: var(--accent); }
 
   <div class="card">
     <h2>14. Disputes</h2>
-    <p>Please contact us first at <a href="mailto:clujkeebs@aol.com">clujkeebs@aol.com</a> — most problems can be fixed quickly and informally. These Terms are governed by the laws of the United States and of the U.S. state where the Service's operator resides, without regard to conflict-of-law rules. Nothing in these Terms takes away rights you have as a consumer that can't be waived under the law where you live.</p>
+    <p>Please contact us first at <a href="mailto:clujkeebs@gmail.com">clujkeebs@gmail.com</a> — most problems can be fixed quickly and informally. These Terms are governed by the laws of the United States and of the U.S. state where the Service's operator resides, without regard to conflict-of-law rules. Nothing in these Terms takes away rights you have as a consumer that can't be waived under the law where you live.</p>
   </div>
 
   <div class="card">
@@ -202,18 +204,62 @@ a { color: var(--accent); }
 
   <div class="card">
     <h2>16. Contact</h2>
-    <p>Questions about these Terms: <a href="mailto:clujkeebs@aol.com">clujkeebs@aol.com</a>. For help using the tool, visit <a href="/support.html">Support</a>.</p>
+    <p>Questions about these Terms: <a href="mailto:clujkeebs@gmail.com">clujkeebs@gmail.com</a>. For help using the tool, visit <a href="/support.html">Support</a>.</p>
   </div>
 
 </div>
 
-<footer class="site-footer">
-  <a href="/">← Back to TCG Speed Shipper</a> ·
-  <a href="/guide/">Seller's Guide</a> ·
-  <a href="https://clujkeebs.com" target="_blank" rel="noopener">clujkeebs.com</a> ·
-  <a href="/support.html">Support</a> ·
-  <a href="/terms.html">Terms of Service</a> ·
-  <a href="mailto:clujkeebs@aol.com">Email us</a>
+<footer class="sf">
+  <div class="sf-inner">
+    <div class="sf-grid">
+      <div class="sf-brand">
+        <span class="brand-name">TCG Speed Shipper</span>
+        <span class="brand-by">by Clujkeebs</span>
+        <p>Print-ready labels, envelopes, and packing slips from your TCGplayer orders. Built by a TCGplayer seller, for sellers.</p>
+        <a class="sf-mail" href="mailto:clujkeebs@gmail.com">clujkeebs@gmail.com</a>
+      </div>
+      <div>
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/">Label generator</a></li>
+          <li><a href="/#pricing">Pricing</a></li>
+          <li><a href="/#hiw">How it works</a></li>
+          <li><a href="/#faq">FAQ</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Learn</h4>
+        <ul>
+          <li><a href="/guide/">Seller&#39;s guides</a></li>
+          <li><a href="/blog/">Blog</a></li>
+          <li><a href="/blog/tcgplayer-shipping-guidelines.html">Shipping rules</a></li>
+          <li><a href="/guide/thermal-printer-comparison.html">Printer comparison</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Help &amp; legal</h4>
+        <ul>
+          <li><a href="/support.html">Support</a></li>
+          <li><a href="/terms.html">Terms of Service</a></li>
+          <li><a href="/privacy.html">Privacy Policy</a></li>
+          <li><button type="button" data-cookie-settings>Cookie settings</button></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Clujkeebs</h4>
+        <ul>
+          <li><a href="https://clujkeebs.com" target="_blank" rel="noopener">clujkeebs.com</a></li>
+          <li><a href="https://www.tcgplayer.com/search/all/product?seller=ad430346&amp;view=grid" target="_blank" rel="noopener">TCGplayer store</a></li>
+          <li><a href="https://www.ebay.com/str/clujkeebs" target="_blank" rel="noopener">eBay</a></li>
+          <li><a href="https://www.whatnot.com/user/clujkeebs" target="_blank" rel="noopener">Whatnot</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="sf-bottom">
+      <p>&copy; <span data-year>2026</span> Clujkeebs. TCG Speed Shipper is independent and not affiliated with, endorsed by, or sponsored by TCGplayer, eBay, or any card game publisher. Labels here are address labels, not postage.</p>
+      <p>Your order data never leaves your browser.</p>
+    </div>
+  </div>
 </footer>
 
 </body>

@@ -40,6 +40,21 @@ This runs just the API routes on port 3000 (or `$PORT`) for testing; the static 
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server-side only, never exposed to the browser) |
 | `PUBLIC_SITE_URL` | The site's public URL, used for Stripe redirect/return URLs |
 
+### Admin dashboard
+`/admin/` (owner account only). It shows overview stats (MRR and 30-day revenue
+live from Stripe, signups, labels), all users with plan and usage, server and
+browser errors, affiliates, and newsletter subscribers. Per-user commands:
+grant or remove free Premium, reset this month's label count, re-sync from
+Stripe, generate a password-reset link, and delete the account (cancels
+Stripe first). API in `admin.js`; every command is audit-logged to
+`tcgss_event_log`.
+
+### Shared site assets
+`public/css/site.css` + `public/js/site.js` load on every page and provide the
+nav byline, footer, cookie notice (optional Cookiebot hook), browser error
+reporting, and scroll-reveal animation. Fonts are self-hosted in
+`public/fonts/`, not loaded from Google.
+
 ### Tests
 `npm test` runs every suite in `test/` with stubbed Stripe/Supabase (no network, no keys needed), including `csv-parser.test.js` for the browser's CSV parser.
 

@@ -24,9 +24,7 @@
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"WebPage","name":"Privacy Policy — TCG Speed Shipper","url":"https://tcg-speed-shipper.netlify.app/privacy.html","isPartOf":{"@type":"WebSite","name":"TCG Speed Shipper","url":"https://tcg-speed-shipper.netlify.app/"}}
 </script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/fonts/fonts.css">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -93,11 +91,15 @@ a { color: var(--accent); }
 .site-footer a { color: var(--muted); text-decoration: none; margin: 0 6px; }
 .site-footer a:hover { color: var(--accent); text-decoration: underline; }
 </style>
+<link rel="stylesheet" href="/css/site.css">
+<script src="/js/site.js" defer></script>
 </head>
 <body>
 
-<nav class="top-nav">
-  <a href="/" class="nav-brand">TCG Speed Shipper</a>
+<nav class="top-nav site-nav">
+  <a href="/" class="nav-brand"><span class="brand-stack"><span class="brand-name">TCG Speed Shipper</span><span class="brand-by">by Clujkeebs</span></span></a>
+  <div class="nav-links"><a href="/guide/">Guides</a><a href="/blog/">Blog</a><a href="/support.html">Support</a></div>
+  <a href="/" class="nav-cta">Labels<span class="cta-long"> free</span> →</a>
 </nav>
 
 <div class="page-wrap">
@@ -111,7 +113,7 @@ a { color: var(--accent); }
 
   <div class="card">
     <h2>Who We Are</h2>
-    <p>TCG Speed Shipper ("we", "us") is an independent tool built and operated by Clujkeebs. You can reach us about anything in this policy at <a href="mailto:clujkeebs@aol.com">clujkeebs@aol.com</a>.</p>
+    <p>TCG Speed Shipper ("we", "us") is an independent tool built and operated by Clujkeebs. You can reach us about anything in this policy at <a href="mailto:clujkeebs@gmail.com">clujkeebs@gmail.com</a>.</p>
   </div>
 
   <div class="card">
@@ -153,9 +155,24 @@ a { color: var(--accent); }
     <p>If you enter your email in the "Get occasional product updates" box, we store only that email address to send occasional product updates. It is not linked to your account, plan, or usage, and is never sold or shared. Every email we send includes a way to unsubscribe, or you can email us to be removed.</p>
   </div>
 
+  <div class="card" id="cookies">
+    <h2>Cookies &amp; Local Storage (Cookie Policy)</h2>
+    <p>We don't use advertising cookies, tracking pixels, or third-party analytics. We use your browser's <code>localStorage</code> only for things you asked for, which is strictly necessary to provide the service:</p>
+    <ul>
+      <li><strong>Sign-in session</strong> (<code>sb-…-auth-token</code>) — keeps you logged in, if you have an account.</li>
+      <li><strong>Your settings</strong> (<code>tcgss_addr_v2</code>, <code>tcgss_design_v1</code>, <code>tcgss_addr_profiles_v1</code>, <code>tcgss_format_v1</code>, <code>tcgss_print_filter_v1</code>) — return address, label design, and print preferences.</li>
+      <li><strong>Work in progress</strong> (<code>tcgss_shipped_v1</code>, <code>tcgss_tracking_v1</code>) — your "shipped" checkmarks and pasted tracking numbers, so a reload doesn't lose them.</li>
+      <li><strong>Free-plan counter</strong> (<code>tcgss_local_usage_v1</code>) — this month's label count when you're not signed in.</li>
+      <li><strong>Referral/partner link</strong> (<code>tcgss_pending_referral</code>, <code>tcgss_pending_affiliate</code>) — held briefly so the right person gets credit when you sign up.</li>
+      <li><strong>This notice</strong> (<code>tcgss_cookie_notice_v1</code>) — remembers that you've seen it.</li>
+    </ul>
+    <p>None of this is sent to us except your sign-in session (to prove who you are when you use your account). You can delete all of it at any time by clearing this site's data in your browser. Stripe may set its own cookies on its checkout and billing pages for fraud prevention; see <a href="https://stripe.com/cookies-policy/legal" target="_blank" rel="noopener">Stripe's cookie policy</a>. Fonts are hosted on our own site, so loading a page doesn't contact Google.</p>
+    <p><button type="button" data-cookie-settings style="font:inherit;color:var(--accent);background:none;border:0;padding:0;text-decoration:underline;cursor:pointer;">Show the cookie notice again</button></p>
+  </div>
+
   <div class="card">
-    <h2>Cookies &amp; Local Storage</h2>
-    <p>We don't use advertising or third-party tracking cookies, and we don't run analytics on your order data. We use your browser's <code>localStorage</code> to keep you signed in between visits and to remember your settings, as described above. Stripe may set its own cookies on its checkout and billing pages for fraud prevention.</p>
+    <h2>Error Reports</h2>
+    <p>If the website hits a technical error in your browser, it sends us a short error report — the error message, the page it happened on, and your browser type — so we can fix it. Reports never include your CSV, buyer names, addresses, or your IP address, and we delete them regularly.</p>
   </div>
 
   <div class="card">
@@ -165,8 +182,7 @@ a { color: var(--accent); }
       <li><strong>Netlify</strong> — hosts the website and our server functions. Like any web host, it processes standard request data such as IP addresses in its logs.</li>
       <li><strong>Supabase</strong> — authentication and account/plan storage, if you sign in.</li>
       <li><strong>Stripe</strong> — payment processing and the billing portal for paid plans.</li>
-      <li><strong>Google Fonts</strong> — loads the fonts used in the site design; Google may log your IP address per its <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">privacy policy</a>.</li>
-      <li><strong>cdnjs (Cloudflare) and jsDelivr</strong> — serve the open-source jsPDF, QR code, and Supabase libraries the page loads. These may log standard request data.</li>
+            <li><strong>cdnjs (Cloudflare) and jsDelivr</strong> — serve the open-source jsPDF, QR code, and Supabase libraries the page loads. These may log standard request data. (Our fonts are self-hosted; no page contacts Google.)</li>
     </ul>
     <p>We do not sell or rent personal information, and we do not share it for advertising.</p>
   </div>
@@ -178,7 +194,7 @@ a { color: var(--accent); }
 
   <div class="card">
     <h2>Your Choices and Rights</h2>
-    <p>You can ask us to access, correct, export, or delete the personal information we hold about you, or to delete your account entirely, by emailing <a href="mailto:clujkeebs@aol.com">clujkeebs@aol.com</a> from the address on your account. We'll respond within 30 days. If you have an active subscription, cancel it from Manage Billing first (or ask us to), so you aren't charged again. Depending on where you live (for example California, or the EU/UK), you may have additional rights under local law; we honor those requests the same way. We will not treat you differently for exercising them.</p>
+    <p>You can ask us to access, correct, export, or delete the personal information we hold about you, or to delete your account entirely, by emailing <a href="mailto:clujkeebs@gmail.com">clujkeebs@gmail.com</a> from the address on your account. We'll respond within 30 days. If you have an active subscription, cancel it from Manage Billing first (or ask us to), so you aren't charged again. Depending on where you live (for example California, or the EU/UK), you may have additional rights under local law; we honor those requests the same way. We will not treat you differently for exercising them.</p>
   </div>
 
   <div class="card">
@@ -198,18 +214,62 @@ a { color: var(--accent); }
 
   <div class="card">
     <h2>Contact</h2>
-    <p>Questions about this policy or your data: <a href="mailto:clujkeebs@aol.com">clujkeebs@aol.com</a>. For help using the tool, see our <a href="/support.html">Support page</a>.</p>
+    <p>Questions about this policy or your data: <a href="mailto:clujkeebs@gmail.com">clujkeebs@gmail.com</a>. For help using the tool, see our <a href="/support.html">Support page</a>.</p>
   </div>
 
 </div>
 
-<footer class="site-footer">
-  <a href="/">← Back to TCG Speed Shipper</a> ·
-  <a href="/guide/">Seller's Guide</a> ·
-  <a href="https://clujkeebs.com" target="_blank" rel="noopener">clujkeebs.com</a> ·
-  <a href="/support.html">Support</a> ·
-  <a href="/terms.html">Terms of Service</a> ·
-  <a href="mailto:clujkeebs@aol.com">Email us</a>
+<footer class="sf">
+  <div class="sf-inner">
+    <div class="sf-grid">
+      <div class="sf-brand">
+        <span class="brand-name">TCG Speed Shipper</span>
+        <span class="brand-by">by Clujkeebs</span>
+        <p>Print-ready labels, envelopes, and packing slips from your TCGplayer orders. Built by a TCGplayer seller, for sellers.</p>
+        <a class="sf-mail" href="mailto:clujkeebs@gmail.com">clujkeebs@gmail.com</a>
+      </div>
+      <div>
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/">Label generator</a></li>
+          <li><a href="/#pricing">Pricing</a></li>
+          <li><a href="/#hiw">How it works</a></li>
+          <li><a href="/#faq">FAQ</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Learn</h4>
+        <ul>
+          <li><a href="/guide/">Seller&#39;s guides</a></li>
+          <li><a href="/blog/">Blog</a></li>
+          <li><a href="/blog/tcgplayer-shipping-guidelines.html">Shipping rules</a></li>
+          <li><a href="/guide/thermal-printer-comparison.html">Printer comparison</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Help &amp; legal</h4>
+        <ul>
+          <li><a href="/support.html">Support</a></li>
+          <li><a href="/terms.html">Terms of Service</a></li>
+          <li><a href="/privacy.html">Privacy Policy</a></li>
+          <li><button type="button" data-cookie-settings>Cookie settings</button></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Clujkeebs</h4>
+        <ul>
+          <li><a href="https://clujkeebs.com" target="_blank" rel="noopener">clujkeebs.com</a></li>
+          <li><a href="https://www.tcgplayer.com/search/all/product?seller=ad430346&amp;view=grid" target="_blank" rel="noopener">TCGplayer store</a></li>
+          <li><a href="https://www.ebay.com/str/clujkeebs" target="_blank" rel="noopener">eBay</a></li>
+          <li><a href="https://www.whatnot.com/user/clujkeebs" target="_blank" rel="noopener">Whatnot</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="sf-bottom">
+      <p>&copy; <span data-year>2026</span> Clujkeebs. TCG Speed Shipper is independent and not affiliated with, endorsed by, or sponsored by TCGplayer, eBay, or any card game publisher. Labels here are address labels, not postage.</p>
+      <p>Your order data never leaves your browser.</p>
+    </div>
+  </div>
 </footer>
 
 </body>
