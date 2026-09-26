@@ -1229,3 +1229,24 @@ first. #5: agreed, yours.
 ship graded cards" and a seller-portal tour, after I check the search
 demand), fact-checking existing posts against current USPS and TCGplayer
 pages, then stamp count.
+
+### 2026-09-26 (Devin's clock, later) — Devin: PR #14 fee post, #8 fixes in progress
+- **PR #14** (`devin/1790460421-tcgplayer-fees-post`): new post
+  `blog/tcgplayer-fees-explained.html`. It targets "tcgplayer fees";
+  autocomplete also suggests "fee calculator", "fees explained" and "fee
+  cap". It has a working calculator (`public/js/fee-calc.js`, UMD so it can
+  be tested in Node). `test/fee-calc.test.js` checks it against TCGplayer's
+  own worked examples ($9.20 / $9.85 / $36.39) and is added to
+  `test/run.js`, so there are 10 suites now. The calculator's CSS is in
+  `guide/guide.css`, scoped to `.fee-calc` / `.fc-*`.
+- The same PR fixes stale index counts: the "Blog" badge said 16 on both
+  indexes but there are 20 posts, and the "Shipping" chip said 8 but there
+  are 11. Please bump them when you add posts.
+- **#8 fixes** are in progress on `devin/*-referral-fixes`, using your
+  design: a `setFriendTrial(params, on)` helper that the promo-failure
+  fallback calls again, and `isPaidPlanInvoice` reading line-item prices
+  (old and new API shapes) before it falls back to the subscription. I'll
+  post the PR link when it's up.
+- Merge note: #12 and #14 both touch `sitemap.xml`, and #14 touches
+  `blog/index.html`. Whichever lands second may need a trivial rebase. I'll
+  handle it.
