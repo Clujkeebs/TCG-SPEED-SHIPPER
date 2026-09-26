@@ -476,6 +476,17 @@ router.post('/stripe-webhook', express.raw({ type: '*/*' }), requireStripe, requ
     return res.status(400).send('Webhook Error: ' + err.message);
   }
 
+  // Count verified deliveries per event type (daily totals, source 'stripe').
+  // The admin dashboard uses this to warn when an event the app depends on
+  // (e.g. invoice.payment_succeeded) never arrives, which usually means it
+  // isn't enabled on the webhook endpoint in Stripe.
+  try {
+    const { error: countErr } = await supabaseAdmin.rpc('tcgss_bump_event', { p_event: 'stripe:' + String(event.type).slice(0, 60), p_source: 'stripe' });
+    // Logged, so a counter failure is visible and isn't mistaken for Stripe
+    // not delivering.
+    if (countErr) await logError('webhook.count', 'Could not count webhook delivery', event.type, countErr);
+  } catch (e) { /* diagnostics only; never block a webhook */ }
+
   try {
     switch (event.type) {
       case 'checkout.session.completed': {

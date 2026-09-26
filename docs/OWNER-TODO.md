@@ -15,14 +15,9 @@ them.
 
 ## 🔥 Blocking right now
 
-- [ ] 🔥 **Deploy on Netlify.** PRs #6–#8 are merged but not live. ⏱ 2 min
-- [ ] 🔥 **Make merges deploy themselves.** Netlify already builds a preview
-  for every PR (it comments on them), so GitHub is connected, but merges to
-  `main` haven't gone live without you. Check Netlify → Deploys: if it says
-  **"Auto publishing is stopped"**, click *Start auto publishing*.
-  Otherwise, go to Site configuration → Build & deploy → Branches and set the
-  production branch to `main`. After that, nobody needs to deploy by hand.
-  ⏱ 3 min
+- [x] ~~Deploy on Netlify / turn on auto-publishing~~: not needed. Merges
+  to `main` already deploy on their own (Claude misread this earlier).
+  Checked 2026-09-27.
 - [ ] 🔥 **Reconnect the Stripe connector** at claude.ai/customize/connectors
   (it shows "connect incomplete"), then start a new Claude session. Once it's
   connected, Claude creates the new prices, checks the webhook, and sets up
@@ -36,6 +31,14 @@ them.
 - [ ] **Rename the Supabase project** "vischeck" → "TCG Player": Project
   Settings → General → Project name. It's the display name only, so nothing
   breaks. ⏱ 1 min
+
+- [ ] **Install the Dual Agent System in both agents** (one time): paste
+  the two blocks from `docs/agents/INSTALL.md` into Devin → Knowledge and
+  claude.ai → Settings → Profile. After that, "we're rocking the dual agent
+  system" works in any repo. ⏱ 5 min
+- [ ] **Look over `docs/agents/PERMISSIONS.md`**: it's the fence for what
+  the agents may do without asking (send email, spend money, Stripe changes,
+  trades). Edit it to taste. ⏱ 5 min
 
 ## 🔐 Security (accounts only you control)
 
