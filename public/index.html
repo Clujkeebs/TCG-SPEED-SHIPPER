@@ -377,7 +377,7 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
   cursor: pointer; color: var(--muted); flex-shrink: 0;
 }
 .tracking-row .tr-copy:hover { border-color: var(--accent); color: var(--accent); }
-.tracking-mismatch-note { font-size: 12.5px; color: var(--danger); margin: 8px 0; }
+.tracking-mismatch-note { font-size: 12.5px; color: var(--text-secondary); background: var(--surface); border: 1px dashed var(--border); border-radius: 8px; padding: 8px 10px; margin: 10px 0; line-height: 1.5; }
 
 /* ── Options bar ── */
 .options-bar {
@@ -439,6 +439,13 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
 }
 .ship-tag { display: table; margin: 8px auto 0; }
 .plan-note a { color: var(--accent); }
+.tcg-import { margin-top: 14px; padding: 14px; border: 1px solid var(--accent-border, #b7e4c7); background: var(--accent-bg, #edf7f1); border-radius: var(--radius-sm); }
+.tcg-import-head { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; margin-bottom: 8px; }
+.tcg-import-head strong { font-size: 14px; color: var(--text); }
+.tcg-import .tip-inline { font-size: 12px; color: var(--muted); }
+.tcg-import-opt { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--text-secondary); margin-bottom: 10px; line-height: 1.5; }
+.tcg-import-opt input { margin-top: 3px; }
+.tcg-import code { font-size: 12px; background: #fff; padding: 1px 5px; border-radius: 4px; }
 .ship-plan { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; margin: 0 0 12px; }
 .ship-plan-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .ship-plan-title { font-size: 11px; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
@@ -1021,7 +1028,7 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
       <div class="section fade-in-up">
         <div class="section-label">Tracking Numbers <span style="font-weight:400;color:var(--hint);text-transform:none;letter-spacing:0;">— optional</span></div>
         <p style="font-size:13px;color:var(--text-secondary);margin-bottom:10px;line-height:1.6;">
-          TCGplayer doesn't generate tracking for you — paste the numbers from your carrier, Pirate Ship, or Click-N-Ship below, one per line, in the same order as the labels above. You'll get a quick-copy reference list for entering each one back into TCGplayer.
+          TCGplayer doesn't generate tracking for you — paste the numbers from your carrier, Pirate Ship, or Click-N-Ship below, one per line in the same order as the labels above, or as <code>order# tracking#</code> pairs in any order. You'll get a quick-copy reference list for entering each one back into TCGplayer.
         </p>
         <textarea id="tracking-input" class="paste-textarea" rows="4" placeholder="9400100000000000000000&#10;9400100000000000000001&#10;..."></textarea>
         <div class="btn-row" style="margin-top:10px;">
@@ -1031,6 +1038,16 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
         <div id="tracking-mismatch-note" class="tracking-mismatch-note" style="display:none;"></div>
         <div id="tracking-reference" style="display:none;margin-top:12px;">
           <div id="tracking-list"></div>
+        </div>
+        <div id="tcg-import" class="tcg-import" style="display:none;">
+          <div class="tcg-import-head">
+            <strong>Mark the whole batch shipped in TCGplayer</strong>
+            <span class="tip-inline">One upload instead of copying numbers one by one</span>
+          </div>
+          <label class="tcg-import-opt"><input type="checkbox" id="tcg-import-mark" checked> Mark orders with no tracking number as <code>Shipped</code> (envelope / PWE orders)</label>
+          <button class="btn-dl" id="tcg-import-btn" type="button">⬇ Download TCGplayer import file</button>
+          <div id="tcg-import-msg"></div>
+          <p class="tip">In the TCGplayer Seller Portal, open <b>Orders</b> and import this file with <b>Import Shipping Info</b> (TCGplayer's help article: "Importing Shipping Info for Customer Orders"). It's your own export with the Tracking # and Carrier columns filled in. Check one order after importing the first time.</p>
         </div>
       </div>
     </div>
@@ -1687,7 +1704,8 @@ document.documentElement.classList.add('js-ready');
 
 var orders = [];
 function trackEvent(e, once) { try { if (window.TCGSSTrack) window.TCGSSTrack(e, once); } catch (err) {} }
-var trackingNumbers = []; // parallel to orders, by index; matched via the Tracking Numbers panel
+var trackingNumbers = [];
+var lastCsvText = null; // the seller's original export, kept only in memory for the TCGplayer import file // parallel to orders, by index; matched via the Tracking Numbers panel
 var slipsOn = false;
 var format = '4x6';
 
@@ -2729,6 +2747,7 @@ function handleFile(file) {
     if(result&&result.error){ document.getElementById('error-msg').innerHTML='<div class="error-box">'+esc(result.error)+' <a href="/guide/tcgplayer-packing-list-csv-format.html" style="color:inherit;text-decoration:underline;">CSV help</a></div>'; return; }
     if(!result||!result.length){ document.getElementById('error-msg').innerHTML='<div class="error-box">No valid orders found.</div>'; return; }
     orders=result;
+    lastCsvText=ev.target.result;
     trackEvent('csv_loaded');
     resetTracking();
     document.getElementById('upload-text').textContent='\u2713 '+file.name;
@@ -2807,6 +2826,7 @@ document.getElementById('paste-generate-btn').addEventListener('click', function
   }
 
   orders = result.good;
+  lastCsvText = null;
   trackEvent('csv_loaded');
   resetTracking();
   restoreTrackingForBatch();
@@ -2825,6 +2845,7 @@ FIELDS.forEach(function(id){
 
 document.getElementById('clear-btn').addEventListener('click',function(){
   orders=[];
+  lastCsvText=null;
   document.getElementById('csv-input').value='';
   document.getElementById('upload-text').textContent='Drop your CSV here, or tap to browse';
   document.getElementById('loaded-msg').innerHTML='';
@@ -2851,6 +2872,10 @@ function resetTracking() {
   if (note) note.style.display = 'none';
   var copyAllBtn = document.getElementById('tracking-copy-all-btn');
   if (copyAllBtn) copyAllBtn.style.display = 'none';
+  var imp = document.getElementById('tcg-import');
+  if (imp) imp.style.display = 'none';
+  var impMsg = document.getElementById('tcg-import-msg');
+  if (impMsg) impMsg.innerHTML = '';
   // Safe to always hide here: callers that still have orders (a fresh CSV/
   // paste load) immediately call renderPreviews() right after, which shows
   // it again based on orders.length. Only clear-btn relies on this line to
@@ -2906,7 +2931,7 @@ function matchTrackingNumbers() {
   if (!lines.length || !orders.length) { refBox.style.display = 'none'; copyAllBtn.style.display = 'none'; return; }
 
   saveTrackingInputForBatch(input.value);
-  trackingNumbers = orders.map(function (o, i) { return lines[i] || ''; });
+  trackingNumbers = Core.matchTracking(lines, orders.map(function (o) { return o.orderNumber || ''; }));
 
   list.innerHTML = '';
   orders.forEach(function (o, i) {
@@ -2923,12 +2948,14 @@ function matchTrackingNumbers() {
 
   if (lines.length !== orders.length) {
     note.style.display = 'block';
-    note.textContent = 'Pasted ' + lines.length + ' tracking number' + (lines.length === 1 ? '' : 's') + ' for ' + orders.length + ' order' + (orders.length === 1 ? '' : 's') + ' — matched by line position, so double-check the order before copying.';
+    note.textContent = 'Pasted ' + lines.length + ' tracking number' + (lines.length === 1 ? '' : 's') + ' for ' + orders.length + ' order' + (orders.length === 1 ? '' : 's') + '. Orders without one are usually envelope (PWE) orders — that\'s fine. Matched by order number where you gave one, otherwise by line position, so double-check before copying.';
   } else {
     note.style.display = 'none';
   }
   refBox.style.display = 'block';
   copyAllBtn.style.display = 'inline-flex';
+  var imp = document.getElementById('tcg-import');
+  if (imp) imp.style.display = (lastCsvText && orders.some(function (o) { return o.orderNumber; })) ? 'block' : 'none';
 }
 
 async function copyText(str) {
@@ -2943,6 +2970,27 @@ async function copyText(str) {
 }
 
 document.getElementById('tracking-match-btn').addEventListener('click', matchTrackingNumbers);
+
+document.getElementById('tcg-import-btn').addEventListener('click', function () {
+  var msg = document.getElementById('tcg-import-msg');
+  if (!lastCsvText) { msg.innerHTML = '<div class="error-box">Load your TCGplayer shipping export CSV first — the import file is built from it.</div>'; return; }
+  var map = {};
+  orders.forEach(function (o, i) { if (o.orderNumber && trackingNumbers[i]) map[o.orderNumber] = trackingNumbers[i]; });
+  var r = Core.buildTrackingImport(lastCsvText, map, { markShipped: document.getElementById('tcg-import-mark').checked });
+  if (r.error) { msg.innerHTML = '<div class="error-box">' + esc(r.error) + '</div>'; return; }
+  if (!r.included.length) { msg.innerHTML = '<div class="error-box">No orders to import yet — paste tracking numbers above, or tick the "Shipped" option for envelope orders.</div>'; return; }
+  var blob = new Blob([r.csv], { type: 'text/csv;charset=utf-8' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'tcgplayer-shipping-import-' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+  trackEvent('tcg_import');
+  var html = '<div class="loaded-state" style="margin-top:10px;"><span>✓ ' + r.included.length + ' order' + (r.included.length !== 1 ? 's' : '') + ' in the import file</span></div>';
+  if (r.skipped.length) html += '<p class="tip">Left out (no tracking number, "Shipped" option off): ' + esc(r.skipped.join(', ')) + '</p>';
+  if (r.missingRequired.length) html += '<div class="error-box" style="margin-top:8px;">Heads up: ' + esc(r.missingRequired.join(', ')) + (r.missingRequired.length === 1 ? ' is' : ' are') + ' $49.99 or more and marked "Shipped" without tracking. TCGplayer requires tracking at that value and will reject ' + (r.missingRequired.length === 1 ? 'it' : 'them') + ' — paste the tracking number and download again.</div>';
+  msg.innerHTML = html;
+});
 
 document.getElementById('tracking-list').addEventListener('click', function (e) {
   var btn = e.target.closest('.tr-copy');

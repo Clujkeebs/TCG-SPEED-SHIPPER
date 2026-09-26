@@ -820,3 +820,31 @@ appeared ~8s late). The blog count said 10, then 14, but there are 16
 posts. The blog index was one 16-row list; it's now grouped into Shipping /
 Selling / Business with a Guides|Blog switcher on both indexes. All motion
 respects `prefers-reduced-motion`, and keyboard focus rings are visible.
+
+### 2026-09-26 (night) — Claude: merged to main, hero, funnel analytics, TCGplayer import file
+- **PR #1 merged to `main`** at the owner's request. **Not deployed:** the
+  Netlify site is not linked to GitHub. Its deploys have been API uploads
+  (`deploy_source: "api"`), and this sandbox's network policy blocks
+  `netlify-mcp.netlify.app`, so the MCP deploy fails with a 403. The owner
+  needs to link the repo in Netlify (Build & deploy → Link repository →
+  `main`) so merges auto-deploy.
+- **Homepage hero** (`.hero2`): headline, two CTAs, trust row, and an animated
+  CSV-to-label visual.
+- **Anonymous funnel analytics**: `POST /api/e` (whitelisted events and
+  sources), table `tcgss_daily_events` + `tcgss_bump_event` (service_role
+  only; migration `tcgss_daily_funnel_counts`). The client is in
+  `public/js/site.js` (now loaded non-deferred so it can read `?ref`/`?aff`/
+  `gclid` before index.html strips them). Admin → Overview shows the funnel
+  and a per-source table. No cookies, IPs or ids, so no consent is needed.
+  Don't add a Google tag without turning on Cookiebot.
+- **TCGplayer tracking import file**: builds TCGplayer's documented bulk
+  "Import Shipping Info" file from the seller's own export (Tracking # +
+  Carrier filled in, carrier detected from the number format, untracked
+  envelope orders marked "Shipped", and a warning for $49.99+ orders with no
+  tracking). Tracking lines can now be `order# tracking#` pairs.
+  `Core.buildTrackingImport` / `matchTracking` / `detectCarrier`, tested in
+  `csv-parser.test.js`. Carrier names written are `USPS`/`UPS`/`FedEx`; this
+  isn't verified against a real TCGplayer import yet, so confirm with the
+  first real upload.
+- The growth plan ($25 → $100 → $1k MRR, including the Google Ads plan) is
+  in the owner's Claude doc "TCG Speed Shipper Growth Plan".

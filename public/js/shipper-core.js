@@ -179,6 +179,90 @@
     return { tier: tier, label: TIERS[tier].label, short: TIERS[tier].short };
   }
 
+  /* ── TCGplayer tracking import ──
+     TCGplayer's documented bulk flow: take the original shipping export,
+     fill in each order's tracking number (the export already has "Tracking #"
+     and "Carrier" columns), and import that file back in the Seller Portal.
+     Orders that ship without tracking are marked with the word "Shipped".
+     This builds that file from the seller's own export, so every column
+     TCGplayer expects is exactly as TCGplayer wrote it. */
+  function detectCarrier(num) {
+    var n = String(num || '').replace(/\s+/g, '').toUpperCase();
+    if (/^1Z[0-9A-Z]{16}$/.test(n)) return 'UPS';
+    if (/^(9[1-5]\d{18,24}|82\d{8}|[A-Z]{2}\d{9}US)$/.test(n)) return 'USPS';
+    if (/^(\d{12}|\d{15}|96\d{20})$/.test(n)) return 'FedEx';
+    return '';
+  }
+
+  // Lines are either "<tracking>" (matched to orders by position, as the
+  // Tracking panel always has) or "<order #> <tracking>" (matched by order
+  // number, so order doesn't matter).
+  function matchTracking(lines, orderNumbers) {
+    var byOrder = {}, positional = [], known = {};
+    orderNumbers.forEach(function (o) { if (o) known[String(o).toUpperCase()] = o; });
+    lines.forEach(function (raw) {
+      var line = String(raw || '').trim();
+      if (!line) return;
+      var parts = line.split(/[\s,;\t]+/).filter(Boolean);
+      if (parts.length >= 2 && known[parts[0].toUpperCase()]) byOrder[known[parts[0].toUpperCase()]] = parts.slice(1).join('');
+      else positional.push(line.replace(/\s+/g, ''));
+    });
+    return orderNumbers.map(function (o, i) { return byOrder[o] || positional[i] || ''; });
+  }
+
+  function csvField(v) {
+    v = v == null ? '' : String(v);
+    return /[",\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  }
+
+  // csvText: the seller's original TCGplayer export. tracking: { orderNumber:
+  // trackingNumber }. opts.markShipped: orders with no number get "Shipped".
+  // Returns { csv, included, skipped, missingRequired } or { error }.
+  function buildTrackingImport(csvText, tracking, opts) {
+    opts = opts || {};
+    var rows = readCSVRows(csvText);
+    if (rows.length < 2) return { error: 'The original CSV is empty.' };
+    var headers = rows[0].slice();
+    var orderCol = findColumn(headers, MAPS.orderNumber);
+    if (orderCol === -1) return { error: 'This file has no order number column, so TCGplayer could not match it. Use the TCGplayer shipping export.' };
+    var norm = headers.map(normHeader);
+    var trackCol = norm.indexOf('tracking');
+    if (trackCol === -1) trackCol = norm.indexOf('trackingnumber');
+    if (trackCol === -1) { headers.push('Tracking #'); trackCol = headers.length - 1; }
+    var carrierCol = norm.indexOf('carrier');
+    if (carrierCol === -1) { headers.push('Carrier'); carrierCol = headers.length - 1; }
+    var valueCol = findColumn(headers, MAPS.orderValue);
+
+    var out = [headers], included = [], skipped = [], missingRequired = [], seen = {};
+    for (var r = 1; r < rows.length; r++) {
+      var row = rows[r].slice();
+      while (row.length < headers.length) row.push('');
+      var on = (row[orderCol] || '').trim();
+      if (!on) continue;
+      var num = (tracking[on] || '').trim();
+      var value = valueCol === -1 ? null : parseMoney(row[valueCol]);
+      if (num) {
+        row[trackCol] = num;
+        row[carrierCol] = detectCarrier(num) || row[carrierCol] || opts.defaultCarrier || 'USPS';
+      } else if (opts.markShipped) {
+        if (typeof value === 'number' && value >= 49.99 && !seen[on]) missingRequired.push(on);
+        row[trackCol] = 'Shipped';
+        row[carrierCol] = row[carrierCol] || opts.defaultCarrier || 'USPS';
+      } else {
+        if (!seen[on]) skipped.push(on);
+        seen[on] = true;
+        continue;
+      }
+      if (!seen[on]) included.push(on);
+      seen[on] = true;
+      out.push(row);
+    }
+    return {
+      csv: out.map(function (rw) { return rw.map(csvField).join(','); }).join('\r\n') + '\r\n',
+      included: included, skipped: skipped, missingRequired: missingRequired
+    };
+  }
+
   /* ── Pasted addresses ── */
 
   var CITY_STATE_ZIP_RE = /^(.+?),?\s+([A-Za-z]{2})\.?\s+(\d{5}(?:[-\s]?\d{4})?)$/;
@@ -266,6 +350,9 @@
     fitFontSize: fitFontSize,
     parseMoney: parseMoney,
     shippingTier: shippingTier,
+    detectCarrier: detectCarrier,
+    matchTracking: matchTracking,
+    buildTrackingImport: buildTrackingImport,
     MAPS: MAPS
   };
 });
