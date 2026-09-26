@@ -198,6 +198,16 @@ async function isPaidPlanInvoice(invoice) {
   const subId = invoice.subscription ||
     (invoice.parent && invoice.parent.subscription_details && invoice.parent.subscription_details.subscription);
   if (!subId) return false;
+  const priceIds = [];
+  const lines = invoice.lines && Array.isArray(invoice.lines.data) ? invoice.lines.data : [];
+  lines.forEach((line) => {
+    const price = line && line.price;
+    const priceId = typeof price === 'string' ? price : price && price.id;
+    if (priceId) priceIds.push(priceId);
+    const detailPrice = line && line.pricing && line.pricing.price_details && line.pricing.price_details.price;
+    if (typeof detailPrice === 'string' && detailPrice) priceIds.push(detailPrice);
+  });
+  if (priceIds.length) return priceIds.some((id) => !!PRICE_TO_PLAN[id]);
   try {
     const sub = await stripe.subscriptions.retrieve(typeof subId === 'string' ? subId : subId.id);
     const item = sub && sub.items && sub.items.data[0];
@@ -831,10 +841,22 @@ router.post('/create-checkout-session', express.json(), requireStripe, requireSu
     // Checked after the IP rule above: if the 100%-off code was refused, the
     // friend still gets their free month instead of being charged at once.
     const stillFullyFree = isFullyFreeCoupon(appliedPromo && appliedPromo.coupon);
-    const friendTrial = referredFriend && !stillFullyFree && !(await hadAnySubscription(customerId));
-    const renewalText = friendTrial
-      ? 'Your first ' + FRIEND_TRIAL_DAYS + ' days are free (referral reward). After that this subscription renews automatically every ' + interval + ' at the price shown until you cancel. Cancel before the free period ends and you are never charged. '
-      : 'This subscription renews automatically every ' + interval + ' at the price shown until you cancel. ';
+    const friendEligible = referredFriend && !(await hadAnySubscription(customerId));
+    const cancelText = 'Cancel any time online from Manage Billing on the Pricing page; you keep access through the end of the paid period. ' +
+      'By subscribing you agree to the Terms of Service at ' + SITE_URL + '/terms.html';
+    const setFriendTrial = (params, on) => {
+      const renewalText = on
+        ? 'Your first ' + FRIEND_TRIAL_DAYS + ' days are free (referral reward). After that this subscription renews automatically every ' + interval + ' at the price shown until you cancel. Cancel before the free period ends and you are never charged. '
+        : 'This subscription renews automatically every ' + interval + ' at the price shown until you cancel. ';
+      if (params.custom_text) params.custom_text.submit.message = renewalText + cancelText;
+      if (on) {
+        params.subscription_data = { trial_period_days: FRIEND_TRIAL_DAYS, metadata: { referral_trial: 'true' } };
+        params.payment_method_collection = 'always';
+      } else {
+        delete params.subscription_data;
+        params.payment_method_collection = 'if_required';
+      }
+    };
 
     const sessionParams = {
       mode: 'subscription',
@@ -852,16 +874,11 @@ router.post('/create-checkout-session', express.json(), requireStripe, requireSu
       // terms and how to cancel to be clear at the point of purchase.
       custom_text: {
         submit: {
-          message: renewalText +
-            'Cancel any time online from Manage Billing on the Pricing page; you keep access through the end of the paid period. ' +
-            'By subscribing you agree to the Terms of Service at ' + SITE_URL + '/terms.html',
+          message: 'This subscription renews automatically every ' + interval + ' at the price shown until you cancel. ' + cancelText,
         },
       },
     };
-    if (friendTrial) {
-      sessionParams.subscription_data = { trial_period_days: FRIEND_TRIAL_DAYS, metadata: { referral_trial: 'true' } };
-      sessionParams.payment_method_collection = 'always';
-    }
+    setFriendTrial(sessionParams, friendEligible && !stillFullyFree);
     if (appliedPromo) {
       sessionParams.discounts = [{ promotion_code: appliedPromo.id }];
       if (isFreeRedemption) {
@@ -902,6 +919,7 @@ router.post('/create-checkout-session', express.json(), requireStripe, requireSu
       delete sessionParams.discounts;
       delete sessionParams.metadata;
       sessionParams.allow_promotion_codes = true;
+      setFriendTrial(sessionParams, friendEligible);
       session = await createSession(sessionParams);
       promoApplied = false;
       promoDeniedReason = promoDeniedReason || 'not_applicable';
