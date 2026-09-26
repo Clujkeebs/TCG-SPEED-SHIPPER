@@ -2146,6 +2146,7 @@ function showBlockedMessage(gate, count) {
     box.innerHTML = '<div class="error-box">Could not reach the server to verify your plan. Check your connection and try again — you have not been charged any labels.</div>';
   } else {
     var left = Math.max(gate.limit - gate.used, 0);
+    trackEvent('limit_hit');
     var title = left === 0
       ? 'You\'ve used all ' + gate.limit + ' ' + (gate.plan === 'free' ? 'free ' : '') + 'labels this month'
       : 'This batch needs ' + count + ' labels — you have ' + left + ' left';
