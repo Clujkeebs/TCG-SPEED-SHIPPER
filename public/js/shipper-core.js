@@ -62,7 +62,8 @@
     item:        { names: ['product name', 'item name', 'card name', 'product', 'item', 'card', 'description'], avoid: /weight|count|qty|quantity|value|price|cost|total|fee|date|id$|number|line|condition|sku/ },
     quantity:    { names: ['quantity', 'qty'] },
     itemCount:   { names: ['item count', 'itemcount', 'number of items'] },
-    shipMethod:  { names: ['shipping method', 'ship method', 'shipping type', 'shipping service'] }
+    shipMethod:  { names: ['shipping method', 'ship method', 'shipping type', 'shipping service'] },
+    orderValue:  { names: ['value of products', 'product value', 'order value', 'products total', 'item total', 'subtotal', 'order total'], avoid: /ship|fee|tax|count|weight|quantity/ }
   };
 
   // Exact (normalized) matches win over substring matches, across ALL
@@ -123,7 +124,8 @@
         var entry = {
           firstName: fn, lastName: ln, addr1: get('addr1'), addr2: get('addr2'),
           city: get('city'), state: get('state'), zip: get('zip'), country: get('country'),
-          orderNumber: onum, shipMethod: get('shipMethod'), itemCount: 0, items: []
+          orderNumber: onum, shipMethod: get('shipMethod'), itemCount: 0, items: [],
+          orderValue: parseMoney(get('orderValue'))
         };
         orderMap[mapKey] = entry; orderList.push(entry);
       }
@@ -140,6 +142,41 @@
       }
     }
     return orderList;
+  }
+
+  // "$1,234.50", "12.00 USD", "(3.00)" → number; blank or junk → null.
+  function parseMoney(s) {
+    var t = String(s == null ? '' : s).replace(/[,$\s]|usd/gi, '');
+    if (!t) return null;
+    var n = parseFloat(t.replace(/^\((.*)\)$/, '-$1'));
+    return isFinite(n) ? n : null;
+  }
+
+  /* ── Shipping plan ──
+     TCGplayer's published seller shipping guidelines: tracking is
+     recommended over $20, required at $49.99 and up, and signature
+     confirmation is required at $250 and up. Under $20, a stamped plain white
+     envelope (PWE) is the normal way to ship. When the export has no order
+     value, the buyer's chosen shipping method is the best signal we have. */
+  var TIERS = {
+    signature:   { rank: 3, label: 'Signature required', short: 'Signature' },
+    tracking:    { rank: 2, label: 'Tracking required', short: 'Tracking' },
+    recommended: { rank: 1, label: 'Tracking recommended', short: 'Tracking rec.' },
+    envelope:    { rank: 0, label: 'Envelope OK', short: 'Envelope' },
+    unknown:     { rank: -1, label: '', short: '' }
+  };
+  function shippingTier(o) {
+    var v = o.orderValue;
+    var expedited = /expedit|priority|express|overnight|tracked|2[- ]?day/i.test(o.shipMethod || '');
+    var tier;
+    if (typeof v === 'number') {
+      tier = v >= 250 ? 'signature' : v >= 49.99 ? 'tracking' : v > 20 ? 'recommended' : 'envelope';
+      // A buyer who paid for expedited shipping expects tracking regardless.
+      if (expedited && TIERS[tier].rank < TIERS.tracking.rank) tier = 'tracking';
+    } else {
+      tier = expedited ? 'tracking' : 'unknown';
+    }
+    return { tier: tier, label: TIERS[tier].label, short: TIERS[tier].short };
   }
 
   /* ── Pasted addresses ── */
@@ -166,7 +203,7 @@
         addr1: streetLines[0] || '',
         addr2: streetLines.slice(1).join(', '),
         city: m[1].replace(/,\s*$/, ''), state: m[2].toUpperCase(), zip: m[3].replace(/\s/, '-'),
-        country: '', orderNumber: '', shipMethod: '', itemCount: 0, items: []
+        country: '', orderNumber: '', shipMethod: '', itemCount: 0, items: [], orderValue: null
       });
     });
     return { good: good, bad: bad };
@@ -227,6 +264,8 @@
     fullName: fullName,
     pdfSafe: pdfSafe,
     fitFontSize: fitFontSize,
+    parseMoney: parseMoney,
+    shippingTier: shippingTier,
     MAPS: MAPS
   };
 });

@@ -74,6 +74,28 @@ section('Pasted addresses');
   check('CRLF input handled', core.parsePastedAddresses('A B\r\n1 St\r\nX, NY 10001').good.length === 1);
 }
 
+section('Shipping plan');
+{
+  const csv = [
+    'Order #,FirstName,LastName,Address1,City,State,PostalCode,Shipping Method,Item Count,Value Of Products,Shipping Fee Paid',
+    'A,Ann,Lee,1 St,X,NY,10001,Standard,1,$4.50,0.99',
+    'B,Bo,Kim,2 St,X,NY,10001,Standard,2,35.00,0.99',
+    'C,Cy,Ng,3 St,X,NY,10001,Standard,9,"1,049.99",0.99',
+    'D,Di,Ro,4 St,X,NY,10001,Expedited,1,3.00,5.99',
+    'E,Ed,Po,5 St,X,NY,10001,Standard,4,49.99,0.99',
+  ].join('\n');
+  const o = core.parseCSV(csv);
+  check('"Value Of Products" parsed, not "Shipping Fee Paid"', o[0].orderValue === 4.5, String(o[0].orderValue));
+  check('thousands separator handled', o[2].orderValue === 1049.99);
+  check('under $20 → envelope', core.shippingTier(o[0]).tier === 'envelope');
+  check('$20–49.98 → tracking recommended', core.shippingTier(o[1]).tier === 'recommended');
+  check('$49.99 → tracking required', core.shippingTier(o[4]).tier === 'tracking');
+  check('$250+ → signature', core.shippingTier(o[2]).tier === 'signature');
+  check('expedited buyer always gets tracking', core.shippingTier(o[3]).tier === 'tracking');
+  check('no value, standard → unknown (no guessing)', core.shippingTier({ orderValue: null, shipMethod: 'Standard' }).tier === 'unknown');
+  check('parseMoney junk → null', core.parseMoney('n/a') === null && core.parseMoney('') === null);
+}
+
 section('PDF-safe text');
 {
   check('Latin-1 accents untouched', core.pdfSafe('José Müller') === 'José Müller');

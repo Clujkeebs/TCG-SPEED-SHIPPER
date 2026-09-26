@@ -718,3 +718,56 @@ reset email) and the Checkout disclosure text in the actual Stripe UI.
 Still open (owner-only dashboard actions, unchanged): leaked-password
 protection, and custom SMTP for password-reset email reliability. The
 recovery flow now works end-to-end, but only if the email arrives.
+
+### 2026-09-26 (later) — Claude: shipping plan, blog, outreach review
+**Numbers at this entry:** 7 active subscriptions (4 Premium, 3 Base), 5
+signups in the last 7 days, 456 labels printed this month, about 70% of
+them by a single Premium user.
+
+**New feature: Shipping Plan** (`index.html` + `shippingTier`/`parseMoney`
+in `public/js/shipper-core.js`, tested in `csv-parser.test.js`). It reads
+"Value Of Products" from TCGplayer's shipping export and tags each order by
+TCGplayer's published seller guidelines: over $20 tracking recommended,
+$49.99+ tracking required, $250+ signature required. Buyers who paid for
+expedited shipping always go to tracked. With no value column it falls back
+to "unknown" (no guessing) unless the method is expedited. A "Print" filter
+(all / envelopes only / tracked only / not yet marked shipped) decides which
+orders go into the PDF. **Billing changed from per-batch to per-order**
+(`paidOrderKeys`): printing envelopes then tracked labels from one CSV costs
+the same as printing everything once, and a later re-download is free. The
+thresholds are TCGplayer's rules, not ours. If TCGplayer changes them,
+update `shippingTier` and the new guidelines blog post together.
+
+**Blog:** four new posts targeting low-competition queries from keyword
+research: tcgplayer-shipping-guidelines (~210/mo for "tcgplayer shipping
+guidelines"), how-to-ship-trading-cards-in-a-plain-white-envelope,
+tcgplayer-shipping-not-confirmed (~120/mo combined), and
+tcgplayer-free-shipping-for-sellers (~140/mo for "tcgplayer free shipping").
+Also added to the blog index, sitemap and Blog JSON-LD, with cross-links
+from five older posts. The homepage meta description and WebApplication
+schema now mention envelopes, Avery and the shipping plan. The site audit
+scored 100/100 on on-page SEO, so there were no technical fixes to make.
+Search Console is **not** connected to the SEO tooling here, so no real
+ranking or click data is available. Connecting it is the next SEO unlock.
+
+**Outreach, reviewed and paused:** about 200 sent threads in 30 days, nearly
+all the same "30% revenue-share partnership" pitch to TCGplayer hobby shops.
+The result was **zero human replies**: only auto-responders, plus 8 bounces
+that hurt the Gmail account's sender reputation. Two problems:
+(1) wrong audience. Large shops ship with bulk tools and have no audience of
+small sellers to promote to. (2) **The emails aren't CAN-SPAM compliant**:
+cold commercial email needs a physical postal address and an opt-out line,
+and they had neither. Don't send more cold commercial email without both.
+The owner needs to supply a mailing address (a P.O. box works).
+What was done instead:
+- Sent: a personal thank-you and feedback request to the top power user.
+- Drafted in Gmail, not sent: a "what's new" email to the 7 paying
+  customers (BCC). It's a product-update message to existing subscribers,
+  but it announces features that only exist after this branch merges and
+  deploys, so send it after that. Also drafted: a win-back email to the 4
+  dormant August free accounts. It's commercial, so it has an opt-out line
+  and a `[YOUR MAILING ADDRESS]` placeholder that must be filled before
+  sending.
+The 2 extra free accounts `onecard*` are the same person as the
+`onecardpokemon` Base subscriber (from the old signup bug), so they're
+excluded from the free-user emails.
