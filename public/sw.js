@@ -6,10 +6,14 @@
      the network, uncached, so plans, usage and billing are always live.
    - Pages are network-first: a deploy is seen on the next load when online,
      and the last copy is used only when offline.
-   - Static files (our CSS/JS/fonts/icons and the self-hosted /vendor libraries) are
-     stale-while-revalidate: instant from cache, refreshed in the background.
+   - Our own code (JS, CSS, JSON, CSV, the manifest) is network-first too, so a
+     fix (e.g. a security fix in shipper-core.js) is live on the very first
+     online load after a deploy, never one visit late.
+   - Only files that can't change under the same URL are cache-first
+     (stale-while-revalidate): versioned /vendor/ libraries, fonts, images,
+     and pinned CDN files.
    Bump VERSION to force-drop every old cache. */
-var VERSION = 'v2';
+var VERSION = 'v3';
 var CACHE = 'tcgss-' + VERSION;
 var PRECACHE = [
   '/', '/css/site.css', '/js/site.js', '/js/shipper-core.js', '/fonts/fonts.css',
@@ -32,6 +36,13 @@ self.addEventListener('activate', function (e) {
   }).then(function () { return self.clients.claim(); }));
 });
 
+// Content that never changes under the same URL, so serving it from cache is
+// always correct.
+function isImmutable(url) {
+  if (url.origin !== self.location.origin) return CDN.test(url.href);
+  return /^\/vendor\//.test(url.pathname) || /\.(png|svg|ico|webp|jpg|woff2?)$/.test(url.pathname);
+}
+
 function isBypassed(url) {
   if (url.origin === self.location.origin) {
     return /^\/(api|\.netlify|admin|affiliate)(\/|$)/.test(url.pathname) || url.pathname === '/sw.js';
@@ -51,6 +62,16 @@ self.addEventListener('fetch', function (e) {
       return res;
     }).catch(function () {
       return caches.match(req, { ignoreSearch: true }).then(function (hit) { return hit || caches.match('/'); });
+    }));
+    return;
+  }
+
+  if (!isImmutable(url)) {
+    e.respondWith(fetch(req).then(function (res) {
+      if (res.ok) { var copy = res.clone(); caches.open(CACHE).then(function (c) { c.put(req, copy); }); }
+      return res;
+    }).catch(function () {
+      return caches.match(req, { ignoreSearch: true }).then(function (hit) { return hit || Response.error(); });
     }));
     return;
   }

@@ -12,7 +12,8 @@ file is for state.
 - [ ] C-4 · Yearly "save 2 months" nudge in the upgrade card · blocked:C-3
 - [ ] C-5 · Review Devin's PRs as they land (#10 ✅, #11 one fix, #12 ✅) · now
 - [ ] C-6 · "Rule-change alerts" newsletter: server side, double opt-in, unsubscribe · blocked:owner (SMTP + mailing address)
-- [ ] C-7 · Self-host jsPDF/QRCode instead of the CDN · review · this PR
+- [x] C-7 · Self-host jsPDF/QRCode instead of the CDN · done · #15
+- [ ] C-9 · CSV formula-injection guard in `csvField` (TCGplayer import + Pirate Ship export) · review · this PR
 - [ ] C-8 · IMb envelope tracking, server-side scan ingestion · blocked:owner (USPS Mailer ID + Informed Visibility)
 - [x] C-0 · Two-sided referrals, share prompt, upgrade card, 40% partners, redirect, PWA, build fix · done · #6 #8 #9
 
