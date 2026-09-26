@@ -38,6 +38,13 @@ custom slip message, QR codes, saved return-address profiles, no branding).
   - Premium price: `price_1U00srPpFiI6sg2W7Ps9Z7qK`
   - Webhook → `/api/stripe-webhook`, events: `checkout.session.completed`,
     `customer.subscription.created/updated/deleted`.
+- **Offline / installable (PWA)**: `public/sw.js` + `public/manifest.webmanifest`,
+  registered from `site.js`. Pages are network-first (deploys show up on the
+  next online load, so no version bump is needed for normal changes). Static
+  files and the pinned CDN libs are stale-while-revalidate. `/api`, `/admin`,
+  `/affiliate`, Supabase and Stripe are **never** cached. If you change the
+  PRECACHE list, or ever need to force-drop old caches, bump `VERSION` in
+  `sw.js`. If you add a new CDN library, pin its version in the URL.
 - **Netlify site ID**: `eed4a636-ed96-43b5-841c-0e5e03d245dc`.
 
 ### Required env vars (set in Netlify's dashboard — never commit these)
