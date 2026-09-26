@@ -326,7 +326,11 @@ async function loadSetupChecks() {
     rows.forEach(renderRow);
     return;
   }
-  var seen = f.stripe_events || {}, last = f.stripe_last || {};
+  var seen = Object.assign({}, f.stripe_events || {}), last = f.stripe_last || {};
+  var badSig = seen.signature_failed || 0;
+  delete seen.signature_failed;
+  if (badSig) row(false, badSig + ' webhook deliveries failed the signature check (30 days, last ' + last.signature_failed + ')',
+    'The signing secret changed, e.g. the endpoint was re-created. Copy Stripe → Developers → Webhooks → your endpoint → Signing secret into STRIPE_WEBHOOK_SECRET in Netlify.');
   var any = Object.keys(seen).length;
   var note = function (t) { return seen[t] ? seen[t] + ' in 30 days, last ' + last[t] : 'none in 30 days'; };
   row(any > 0, 'Stripe webhooks arriving: ' + (any ? Object.keys(seen).length + ' event types' : 'none recorded yet (counting started with this version)'), 'Check Stripe → Developers → Webhooks: endpoint https://tcgspeedshipper.com/api/stripe-webhook.');

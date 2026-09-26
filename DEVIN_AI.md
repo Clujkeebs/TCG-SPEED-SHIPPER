@@ -39,9 +39,10 @@ custom slip message, QR codes, saved return-address profiles, no branding).
   - Webhook → `/api/stripe-webhook`, events: `checkout.session.completed`,
     `customer.subscription.created/updated/deleted`.
 - **Offline / installable (PWA)**: `public/sw.js` + `public/manifest.webmanifest`,
-  registered from `site.js`. Pages are network-first (deploys show up on the
-  next online load, so no version bump is needed for normal changes). Static
-  files and the pinned CDN libs are stale-while-revalidate. `/api`, `/admin`,
+  registered from `site.js`. Pages **and our own JS/CSS** are network-first,
+  so a deploy (including a security fix) is live on the next online load, and
+  no version bump is needed for normal changes. Only unchanging URLs
+  (`/vendor/*`, fonts, images) are stale-while-revalidate. `/api`, `/admin`,
   `/affiliate`, Supabase and Stripe are **never** cached. If you change the
   PRECACHE list, or ever need to force-drop old caches, bump `VERSION` in
   `sw.js`. Third-party browser libraries are self-hosted in `public/vendor/`
