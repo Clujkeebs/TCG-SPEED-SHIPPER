@@ -96,6 +96,40 @@ section('Shipping plan');
   check('parseMoney junk → null', core.parseMoney('n/a') === null && core.parseMoney('') === null);
 }
 
+section('TCGplayer tracking import file');
+{
+  const csv = [
+    'Order #,FirstName,LastName,Address1,City,State,PostalCode,Value Of Products,Tracking #,Carrier',
+    'A,Ann,"Lee, Jr.",1 St,X,NY,10001,4.50,,',
+    'B,Bo,Kim,2 St,X,NY,10001,60.00,,',
+    'C,Cy,Ng,3 St,X,NY,10001,8.00,,',
+  ].join('\r\n');
+  check('USPS number detected', core.detectCarrier('9400 1000 0000 0000 0000 00') === 'USPS');
+  check('UPS number detected', core.detectCarrier('1Z999AA10123456784') === 'UPS');
+  check('FedEx number detected', core.detectCarrier('123456789012') === 'FedEx');
+  check('positional matching', core.matchTracking(['111', '222'], ['A', 'B', 'C']).join() === '111,222,');
+  check('order-number matching wins, in any order', core.matchTracking(['C 333', 'A 111'], ['A', 'B', 'C']).join() === '111,,333');
+
+  const r = core.buildTrackingImport(csv, { B: '9400100000000000000000' }, { markShipped: true });
+  const rows = core.readCSVRows(r.csv);
+  check('keeps every original column and header', rows[0].join('|') === 'Order #|FirstName|LastName|Address1|City|State|PostalCode|Value Of Products|Tracking #|Carrier');
+  check('tracked order gets number + detected carrier', rows[2][8] === '9400100000000000000000' && rows[2][9] === 'USPS');
+  check('untracked orders marked "Shipped"', rows[1][8] === 'Shipped' && rows[3][8] === 'Shipped');
+  check('quoted fields survive the round trip', rows[1][2] === 'Lee, Jr.');
+  check('CRLF line endings', /\r\n/.test(r.csv));
+
+  const r2 = core.buildTrackingImport(csv, { B: '9400100000000000000000' }, { markShipped: false });
+  check('without "mark shipped", untracked orders are left out and reported', r2.included.join() === 'B' && r2.skipped.join() === 'A,C');
+
+  const r3 = core.buildTrackingImport(csv, {}, { markShipped: true });
+  check('flags a $49.99+ order marked Shipped without tracking (TCGplayer will reject it)', r3.missingRequired.join() === 'B');
+
+  const noCols = core.buildTrackingImport('Order #,FirstName,LastName,Address1\nA,Ann,Lee,1 St', { A: '1Z999AA10123456784' }, {});
+  const nr = core.readCSVRows(noCols.csv);
+  check('adds Tracking #/Carrier columns when the export lacks them', nr[0].slice(-2).join() === 'Tracking #,Carrier' && nr[1][4] === '1Z999AA10123456784' && nr[1][5] === 'UPS');
+  check('refuses a file with no order numbers', !!core.buildTrackingImport('Name,Address 1\nA,1 St', {}, {}).error);
+}
+
 section('PDF-safe text');
 {
   check('Latin-1 accents untouched', core.pdfSafe('José Müller') === 'José Müller');

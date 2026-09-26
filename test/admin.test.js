@@ -127,7 +127,7 @@ server.listen(0, async () => {
   try {
     console.log('\n-- Access control --');
     const routes = [
-      ['GET', '/api/admin/overview'], ['GET', '/api/admin/users'], ['GET', '/api/admin/events'], ['GET', '/api/admin/newsletter'],
+      ['GET', '/api/admin/overview'], ['GET', '/api/admin/users'], ['GET', '/api/admin/funnel'], ['GET', '/api/admin/events'], ['GET', '/api/admin/newsletter'],
       ['POST', '/api/admin/events/clear'], ['POST', '/api/admin/users/u_paid/grant-premium'], ['POST', '/api/admin/users/u_paid/revoke-free'],
       ['POST', '/api/admin/users/u_paid/reset-usage'], ['POST', '/api/admin/users/u_paid/sync'], ['POST', '/api/admin/users/u_paid/recovery-link'],
       ['POST', '/api/admin/users/u_paid/delete'],
@@ -186,6 +186,21 @@ server.listen(0, async () => {
     reset(); state.prepare = { ok: false, reason: 'has_affiliate_earnings' };
     r = await req('POST', '/api/admin/users/u_free/delete', { confirmEmail: 'free@example.com' }, OWNER);
     check('refused when the database says no (e.g. affiliate earnings)', r.status === 400 && /affiliate/.test(r.body.error) && !calls.some((c) => c[0] === 'deleteUser'));
+
+    console.log('\n-- Anonymous funnel events --');
+    reset();
+    r = await req('POST', '/api/e', { e: 'csv_loaded', s: 'reddit' });
+    check('a known event is counted with its source', r.status === 202 && calls.some((c) => c[1] === 'tcgss_bump_event' && c[2].p_event === 'csv_loaded' && c[2].p_source === 'reddit'));
+    reset();
+    r = await req('POST', '/api/e', { e: 'visit', s: '<script>' });
+    check('an unknown source is bucketed as "other"', calls.some((c) => c[1] === 'tcgss_bump_event' && c[2].p_source === 'other'));
+    reset();
+    r = await req('POST', '/api/e', { e: 'drop table', s: 'google' });
+    check('an unknown event is rejected and nothing is written', r.status === 400 && !calls.some((c) => c[1] === 'tcgss_bump_event'));
+    reset();
+    r = await req('POST', '/api/e', { e: 'visit', s: 'google', email: 'x@y.z', ip: '1.2.3.4' });
+    const bump = calls.find((c) => c[1] === 'tcgss_bump_event');
+    check('only event + source ever reach the database', bump && Object.keys(bump[2]).sort().join() === 'p_event,p_source');
 
     console.log('\n-- Client error reports --');
     reset();
