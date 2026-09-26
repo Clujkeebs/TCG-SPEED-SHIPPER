@@ -32,6 +32,14 @@ them.
   Settings → General → Project name. It's the display name only, so nothing
   breaks. ⏱ 1 min
 
+- [ ] **Install the Dual Agent System in both agents** (one time): paste
+  the two blocks from `docs/agents/INSTALL.md` into Devin → Knowledge and
+  claude.ai → Settings → Profile. After that, "we're rocking the dual agent
+  system" works in any repo. ⏱ 5 min
+- [ ] **Look over `docs/agents/PERMISSIONS.md`**: it's the fence for what
+  the agents may do without asking (send email, spend money, Stripe changes,
+  trades). Edit it to taste. ⏱ 5 min
+
 ## 🔐 Security (accounts only you control)
 
 - [ ] **Mark secrets as secret in Netlify:** `STRIPE_SECRET_KEY`,
