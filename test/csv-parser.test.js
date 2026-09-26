@@ -143,6 +143,17 @@ section('TCGplayer tracking import file');
   check('refuses a file with no order numbers', !!core.buildTrackingImport('Name,Address 1\nA,1 St', {}, {}).error);
 }
 
+section('CSV formula injection');
+{
+  const csv = 'Order #,FirstName,LastName,Address1,City,State,PostalCode,Value Of Products,Tracking #,Carrier\n' +
+    'A,"=HYPERLINK(""http://x"")",Lee,@SUM(1),X,NY,10001,-5.00,,';
+  const out = core.readCSVRows(core.buildTrackingImport(csv, { A: '9400100000000000000000' }, {}).csv);
+  check('a formula-looking name is neutralised', out[1][1] === "'=HYPERLINK(\"http://x\")", out[1][1]);
+  check('a leading @ is neutralised', out[1][3] === "'@SUM(1)", out[1][3]);
+  check('plain negative numbers are left alone', out[1][7] === '-5.00', out[1][7]);
+  check('normal values untouched', out[1][2] === 'Lee' && out[1][8] === '9400100000000000000000');
+}
+
 section('PDF-safe text');
 {
   check('Latin-1 accents untouched', core.pdfSafe('José Müller') === 'José Müller');
