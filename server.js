@@ -68,9 +68,30 @@ function requireStripe(req, res, next) {
   next();
 }
 
-const PRICE_TO_PLAN = {};
-if (process.env.STRIPE_PRICE_BASE) PRICE_TO_PLAN[process.env.STRIPE_PRICE_BASE] = 'base';
-if (process.env.STRIPE_PRICE_PREMIUM) PRICE_TO_PLAN[process.env.STRIPE_PRICE_PREMIUM] = 'premium';
+// Prices new customers are sold, per plan and billing interval. Monthly is
+// required; yearly is optional and only offered once its env var is set.
+const SALE_PRICES = {
+  base: { month: process.env.STRIPE_PRICE_BASE || null, year: process.env.STRIPE_PRICE_BASE_ANNUAL || null },
+  premium: { month: process.env.STRIPE_PRICE_PREMIUM || null, year: process.env.STRIPE_PRICE_PREMIUM_ANNUAL || null },
+};
+
+// Every price id that grants a plan, including retired ones. When a price
+// goes up, STRIPE_PRICE_BASE moves to the new price, but existing customers
+// stay on the old one (grandfathered) and must keep their plan. The original
+// launch prices are listed here so they keep working no matter what the env
+// vars say later; add any other retired id to STRIPE_LEGACY_PRICES
+// ("price_x:base,price_y:premium").
+const LAUNCH_PRICES = { price_1U00soPpFiI6sg2WQvzev0Rm: 'base', price_1U00srPpFiI6sg2W7Ps9Z7qK: 'premium' };
+const PRICE_TO_PLAN = Object.assign({}, LAUNCH_PRICES);
+String(process.env.STRIPE_LEGACY_PRICES || '').split(',').forEach((pair) => {
+  const [id, plan] = pair.split(':').map((x) => (x || '').trim());
+  if (id && (plan === 'base' || plan === 'premium')) PRICE_TO_PLAN[id] = plan;
+});
+for (const plan of Object.keys(SALE_PRICES)) {
+  for (const interval of Object.keys(SALE_PRICES[plan])) {
+    if (SALE_PRICES[plan][interval]) PRICE_TO_PLAN[SALE_PRICES[plan][interval]] = plan;
+  }
+}
 
 const app = express();
 app.set('trust proxy', 1);
@@ -181,7 +202,12 @@ async function applyPendingReferralCredits(referrerProfileId, stripeCustomerId) 
     if (!price || typeof price.unit_amount !== 'number') {
       price = await stripe.prices.retrieve(price ? price.id : subscription.items.data[0].price.id);
     }
-    const amount = price.unit_amount;
+    // "One free month" on a yearly plan is a twelfth of the yearly price,
+    // not a whole year of credit.
+    const perMonth = price.recurring && price.recurring.interval === 'year'
+      ? Math.round(price.unit_amount / (12 * (price.recurring.interval_count || 1)))
+      : price.unit_amount;
+    const amount = perMonth;
     const currency = price.currency || 'usd';
     if (!amount) { for (const credit of claimed) await supabaseAdmin.rpc('tcgss_release_referral_credit', { p_credit_id: credit.id }); return; }
 
@@ -345,11 +371,14 @@ router.get('/health', (req, res) => {
     stripe_webhook_secret: !!process.env.STRIPE_WEBHOOK_SECRET,
     price_base: !!process.env.STRIPE_PRICE_BASE,
     price_premium: !!process.env.STRIPE_PRICE_PREMIUM,
+    price_base_annual: !!process.env.STRIPE_PRICE_BASE_ANNUAL,
+    price_premium_annual: !!process.env.STRIPE_PRICE_PREMIUM_ANNUAL,
     supabase_url: !!process.env.SUPABASE_URL,
     supabase_service_key: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
     site_url: SITE_URL,
   };
-  const missing = Object.keys(config).filter((k) => config[k] === false);
+  // Yearly prices are optional, so their absence doesn't mark the deploy unhealthy.
+  const missing = Object.keys(config).filter((k) => config[k] === false && !/_annual$/.test(k));
   res.json({
     ok: missing.length === 0,
     clients: { stripe: !!stripe, supabase_admin: !!supabaseAdmin },
@@ -604,13 +633,41 @@ router.get('/validate-promo-code', requireStripe, requireSupabase, async (req, r
   }
 });
 
+// What each plan costs right now, read from Stripe so the pricing page can
+// never disagree with what Checkout will charge. Cached per warm container.
+let plansCache = null, plansCacheAt = 0;
+router.get('/plans', requireStripe, async (req, res) => {
+  try {
+    if (!plansCache || Date.now() - plansCacheAt > 10 * 60 * 1000) {
+      const out = {};
+      for (const plan of Object.keys(SALE_PRICES)) {
+        out[plan] = {};
+        for (const interval of Object.keys(SALE_PRICES[plan])) {
+          const id = SALE_PRICES[plan][interval];
+          if (!id) continue;
+          const pr = await stripe.prices.retrieve(id);
+          if (pr && pr.active !== false && typeof pr.unit_amount === 'number') {
+            out[plan][interval] = { amount: pr.unit_amount, currency: pr.currency || 'usd' };
+          }
+        }
+      }
+      plansCache = out; plansCacheAt = Date.now();
+    }
+    res.set('Cache-Control', 'public, max-age=300');
+    res.json({ plans: plansCache });
+  } catch (err) {
+    await logError('plans', err);
+    res.status(500).json({ error: 'Could not load plans' });
+  }
+});
+
 router.post('/create-checkout-session', express.json(), requireStripe, requireSupabase, requireUser, async (req, res) => {
   try {
     const plan = req.body && req.body.plan;
-    const priceId = plan === 'premium' ? process.env.STRIPE_PRICE_PREMIUM
-      : plan === 'base' ? process.env.STRIPE_PRICE_BASE
-      : null;
-    if (!priceId) return res.status(400).json({ error: 'Unknown plan' });
+    const interval = (req.body && req.body.interval) === 'year' ? 'year' : 'month';
+    const priceId = SALE_PRICES[plan] ? SALE_PRICES[plan][interval] : null;
+    if (!SALE_PRICES[plan]) return res.status(400).json({ error: 'Unknown plan' });
+    if (!priceId) return res.status(400).json({ error: interval === 'year' ? 'Yearly billing isn\'t available for that plan yet.' : 'Unknown plan' });
 
     const ipHash = hashIp(getClientIp(req));
 
@@ -715,7 +772,7 @@ router.post('/create-checkout-session', express.json(), requireStripe, requireSu
       // terms and how to cancel to be clear at the point of purchase.
       custom_text: {
         submit: {
-          message: 'This subscription renews automatically every month at the price shown until you cancel. ' +
+          message: 'This subscription renews automatically every ' + interval + ' at the price shown until you cancel. ' +
             'Cancel any time online from Manage Billing on the Pricing page; you keep access through the end of the paid period. ' +
             'By subscribing you agree to the Terms of Service at ' + SITE_URL + '/terms.html',
         },
