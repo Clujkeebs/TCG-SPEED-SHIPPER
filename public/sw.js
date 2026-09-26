@@ -6,16 +6,15 @@
      the network, uncached, so plans, usage and billing are always live.
    - Pages are network-first: a deploy is seen on the next load when online,
      and the last copy is used only when offline.
-   - Static files (our CSS/JS/fonts/icons and the pinned CDN libraries) are
+   - Static files (our CSS/JS/fonts/icons and the self-hosted /vendor libraries) are
      stale-while-revalidate: instant from cache, refreshed in the background.
    Bump VERSION to force-drop every old cache. */
-var VERSION = 'v1';
+var VERSION = 'v2';
 var CACHE = 'tcgss-' + VERSION;
 var PRECACHE = [
   '/', '/css/site.css', '/js/site.js', '/js/shipper-core.js', '/fonts/fonts.css',
   '/favicon.svg', '/icon-192.png', '/manifest.webmanifest',
-  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'
+  '/vendor/jspdf-2.5.1.umd.min.js', '/vendor/qrcode-1.0.0.min.js'
 ];
 var CDN = /^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net)\//;
 
