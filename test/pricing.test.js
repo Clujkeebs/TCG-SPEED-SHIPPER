@@ -205,6 +205,11 @@ server.listen(0, async () => {
     await req('POST', '/api/stripe-webhook', { type: 'invoice.payment_succeeded', data: { object: { id: 'in_0', customer: 'cus_1', amount_paid: 0, currency: 'usd' } } }, { 'stripe-signature': 'x' });
     check('a $0 trial invoice does not', !calls.some((c) => c[0] === 'rpc' && c[1] === 'tcgss_record_referral_conversion'));
 
+    console.log('\n-- Webhook delivery counts (admin setup checks) --');
+    reset();
+    await req('POST', '/api/stripe-webhook', paid(), { 'stripe-signature': 'x' });
+    check('each verified webhook delivery is counted by event type', calls.some((c) => c[0] === 'rpc' && c[1] === 'tcgss_bump_event'));
+
     console.log('\n-- Health --');
     const h = await req('GET', '/api/health');
     check('a missing yearly price does not mark the deploy unhealthy', h.body.ok === true && h.body.config.price_premium_annual === false);
