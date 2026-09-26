@@ -144,6 +144,10 @@ a { color: var(--accent); }
         <p class="muted" style="font-size:12px;margin-top:8px;">Anonymous daily counts, no cookies. "Visits" = browser sessions. Google Ads clicks show as <span class="mono">google_ads</span> (auto-tagged with gclid).</p>
       </div>
       <div class="card">
+        <h2>Setup checks</h2>
+        <div id="setup-checks"><p class="muted">Checking…</p></div>
+      </div>
+      <div class="card">
         <h2>Newest users</h2>
         <div class="table-scroll"><table><thead><tr><th>Email</th><th>Plan</th><th>Joined</th><th>Labels (mo)</th></tr></thead><tbody id="newest"></tbody></table></div>
       </div>
@@ -297,6 +301,52 @@ async function loadOverview() {
   g.appendChild(stat('Labels this month', o.labels.this_month, o.labels.active_users_this_month + ' active users · ' + o.labels.last_month + ' last month'));
   g.appendChild(stat('Errors, 7 days', o.errors_7d, o.errors_7d ? 'See Errors & Activity' : 'All quiet'));
   g.appendChild(stat('Newsletter', o.newsletter, 'subscribers'));
+}
+
+/* ── Setup checks: config + which Stripe webhook events actually arrive ── */
+async function loadSetupChecks() {
+  var box = clear($('setup-checks'));
+  var h = await fetch('/api/health').then(function (r) { return r.json(); }).catch(function () { return null; });
+  var fErr = null;
+  var f = await api('/funnel?days=30').catch(function (e) { fErr = e; return null; });
+
+  var rows = [];
+  function row(ok, text, fix) { rows.push([ok, text, fix]); }
+  if (h) {
+    row(h.ok, h.ok ? 'Server config complete' : 'Missing server config: ' + (h.missing || []).join(', '), 'Set these in Netlify → Environment variables, then redeploy.');
+    row(/^https:\/\/tcgspeedshipper\.com$/.test(h.config.site_url), 'Site URL: ' + h.config.site_url, 'Set PUBLIC_SITE_URL=https://tcgspeedshipper.com in Netlify.');
+    // Mirrors the pricing page: the yearly toggle shows when either plan has a yearly price.
+    var yb = h.config.price_base_annual, yp = h.config.price_premium_annual;
+    row(yb || yp, 'Yearly prices: ' + (yb && yp ? 'Base and Premium' : yb ? 'Base only (Premium is monthly-only)' : yp ? 'Premium only (Base is monthly-only)' : 'not set, so the yearly toggle stays hidden'),
+      'Create yearly prices in Stripe and set STRIPE_PRICE_BASE_ANNUAL / STRIPE_PRICE_PREMIUM_ANNUAL.');
+  } else row(false, 'Could not reach /api/health', '');
+  if (!f) {
+    // Don't turn a failed request into "Stripe isn't sending events".
+    row(false, 'Webhook delivery counts unavailable: ' + (fErr && fErr.message ? fErr.message : 'request failed'), 'Reload. If it persists, check Errors & Activity.');
+    rows.forEach(renderRow);
+    return;
+  }
+  var seen = Object.assign({}, f.stripe_events || {}), last = f.stripe_last || {};
+  var badSig = seen.signature_failed || 0;
+  delete seen.signature_failed;
+  if (badSig) row(false, badSig + ' webhook deliveries failed the signature check (30 days, last ' + last.signature_failed + ')',
+    'The signing secret changed, e.g. the endpoint was re-created. Copy Stripe → Developers → Webhooks → your endpoint → Signing secret into STRIPE_WEBHOOK_SECRET in Netlify.');
+  var any = Object.keys(seen).length;
+  var note = function (t) { return seen[t] ? seen[t] + ' in 30 days, last ' + last[t] : 'none in 30 days'; };
+  row(any > 0, 'Stripe webhooks arriving: ' + (any ? Object.keys(seen).length + ' event types' : 'none recorded yet (counting started with this version)'), 'Check Stripe → Developers → Webhooks: endpoint https://tcgspeedshipper.com/api/stripe-webhook.');
+  ['checkout.session.completed', 'customer.subscription.updated', 'invoice.payment_succeeded'].forEach(function (t) {
+    // An invoice event is expected whenever anyone has paid; if checkouts
+    // arrive but invoices never do, the event isn't enabled on the endpoint.
+    var ok = !!seen[t] || (t === 'invoice.payment_succeeded' ? !seen['checkout.session.completed'] : !any);
+    row(ok, t + ': ' + note(t), t === 'invoice.payment_succeeded'
+      ? 'Enable invoice.payment_succeeded on the Stripe webhook endpoint: referral rewards and partner commission depend on it.'
+      : 'Make sure this event is enabled on the Stripe webhook endpoint.');
+  });
+  rows.forEach(renderRow);
+  function renderRow(r) {
+    box.appendChild(el('p', { style: 'margin:4px 0;' }, [el('span', { text: (r[0] ? '✅ ' : '⚠️ ') + r[1] }),
+      r[0] || !r[2] ? el('span') : el('span', { cls: 'muted', text: ' → ' + r[2] })]));
+  }
 }
 
 var FUNNEL = [['visit', 'Visits'], ['csv_loaded', 'CSV loaded'], ['pdf_downloaded', 'PDFs'], ['signup', 'Signups'], ['checkout_started', 'Checkouts'], ['upgraded', 'Upgrades']];
@@ -527,6 +577,7 @@ async function start() {
   try {
     await Promise.all([loadOverview(), loadUsers(), loadRecentErrors()]);
     loadFunnel().catch(function (e) { clear($('funnel')).appendChild(el('p', { cls: 'muted', text: 'Funnel unavailable: ' + e.message })); });
+    loadSetupChecks().catch(function (e) { clear($('setup-checks')).appendChild(el('p', { cls: 'muted', text: 'Checks unavailable: ' + e.message })); });
     $('app').style.display = 'block';
     loadNewsletter().catch(function () {});
     var tab = (location.hash || '').slice(1);
