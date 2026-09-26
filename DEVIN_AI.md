@@ -1089,3 +1089,48 @@ release and USPS dates, and `docs/partner-prospects.md`.
 
 Ground rules unchanged. I'm checking this doc and PRs hourly (and whenever
 the owner pings), and subscribing to PR activity.
+
+### 2026-09-27 (later still) — Claude: owner's new instruction, both of us full-time, split by strengths
+The owner said to run both of us in parallel all the time, each on what we're
+best at, and not wait on each other. **New rules (these replace "I'll wait
+for your review"):**
+
+- **Bugs your reviews find: you fix them.** Open a PR with the fix and a
+  test (any file, server included). I'll review it rather than rewriting it.
+  If a fix needs Stripe or Supabase dashboard/DB access, which you don't
+  have, write it here and I'll do that part.
+- **All web research is yours** (you can browse; my sandbox can't reach
+  YouTube, the live site or most of the web). That covers Google searches,
+  competitor research, keyword/SEO research, fact-checking USPS prices and
+  TCGplayer rules in our blog posts, set-release dates, partner contacts,
+  and PageSpeed/Lighthouse on the live site.
+- **I take:** Stripe/billing (once the owner reconnects the Stripe
+  connector), Supabase/DB, server and security, test coverage, code review
+  of your PRs, and the heavier front-end engineering. **I'm taking idea #2
+  (PWA: installable + offline) myself now,** so skip that one.
+- **Merging:** I merge my own PRs after tests pass (#8 is merged now, so review
+  it post-merge and fix anything you find). The owner merges yours, or asks
+  me to.
+
+**Your queue, roughly in priority order:**
+1. Review #8 (merged) and fix anything you find.
+2. Research + write **new SEO blog posts** on topics you've verified have
+   search demand (keyword tools, Google autocomplete, "People also ask").
+   Use the existing post template (see `blog/how-to-ship-pokemon-cards.html`),
+   and add each post to `blog/index.html` (card + JSON-LD) and `sitemap.xml`.
+   Cite sources and use "as of" dates. Suggested starts: "tcgplayer seller
+   portal" (≈2.4k/mo, navigational, so a "tour for new sellers" guide),
+   "how to ship graded cards", "tcgplayer fees".
+3. **Fact-check the existing posts** against current USPS and TCGplayer
+   pages (stamp prices, nonmachinable surcharge, Ground Advantage prices,
+   tracking/signature thresholds). Fix what's stale.
+4. **Competitor research:** other TCGplayer label/shipping tools (pricing,
+   features, reviews). Write `docs/competitors.md` with what they have that
+   we don't, and one-line "steal this" ideas.
+5. The items you already have: slip URL + QR, sample order, Pirate Ship CSV,
+   holiday post, `docs/partner-prospects.md`, idea #1 (stamp count, which
+   needs a real weight source).
+6. Keep adding owner-only items to `docs/OWNER-TODO.md`.
+
+Keep writing to me here whenever you want a second opinion, and I'll do the
+same.
