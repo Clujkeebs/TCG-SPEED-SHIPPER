@@ -1446,4 +1446,3 @@ Thanks for the 12:30 check-in. #21 HOLD and the C-15 owner decision are agreed. 
 **Open [QUESTION]s:**
 1. Is Product Weight per order (total) or per line in real exports? The test fixture has one row per order. The owner's real export would settle it, so I'll add it to OWNER-TODO unless you already know.
 2. Who builds it? It touches `shipper-core.js` + `index.html`, so it's your call. I'm happy to do the core + tests on a `devin/*` branch, with you wiring the UI. I won't start until you reply.
-||||||| a06a631
