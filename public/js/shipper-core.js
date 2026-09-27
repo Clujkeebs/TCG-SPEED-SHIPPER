@@ -62,6 +62,7 @@
     item:        { names: ['product name', 'item name', 'card name', 'product', 'item', 'card', 'description'], avoid: /weight|count|qty|quantity|value|price|cost|total|fee|date|id$|number|line|condition|sku/ },
     quantity:    { names: ['quantity', 'qty'] },
     itemCount:   { names: ['item count', 'itemcount', 'number of items'] },
+    productWeight: { names: ['product weight', 'weight', 'total weight'], avoid: /unit|lb|kg|g$/ },
     shipMethod:  { names: ['shipping method', 'ship method', 'shipping type', 'shipping service'] },
     orderValue:  { names: ['value of products', 'product value', 'order value', 'products total', 'item total', 'subtotal', 'order total'], avoid: /ship|fee|tax|count|weight|quantity/ }
   };
@@ -125,7 +126,7 @@
           firstName: fn, lastName: ln, addr1: get('addr1'), addr2: get('addr2'),
           city: get('city'), state: get('state'), zip: get('zip'), country: get('country'),
           orderNumber: onum, shipMethod: get('shipMethod'), itemCount: 0, items: [],
-          orderValue: parseMoney(get('orderValue'))
+          orderValue: parseMoney(get('orderValue')), productWeight: null
         };
         orderMap[mapKey] = entry; orderList.push(entry);
       }
@@ -139,6 +140,14 @@
       } else {
         var ic = parseInt(get('itemCount'), 10);
         if (ic > 0) o.itemCount += ic;
+      }
+      var weight = parseMoney(get('productWeight'));
+      if (weight !== null) {
+        if (cols.item !== -1) {
+          o.productWeight = (o.productWeight === null ? 0 : o.productWeight) + weight;
+        } else if (o.productWeight === null) {
+          o.productWeight = weight;
+        }
       }
     }
     return orderList;
@@ -165,6 +174,8 @@
     envelope:    { rank: 0, label: 'Envelope OK', short: 'Envelope' },
     unknown:     { rank: -1, label: '', short: '' }
   };
+  // USPS Notice 123, First-Class Mail stamped letters: https://pe.usps.com/text/dmm300/Notice123.htm
+  var LETTER_POSTAGE = Object.freeze({ EFFECTIVE: '2026-10-04', FIRST_OUNCE: 82, ADDL_OUNCE: 29, NONMACHINABLE: 49, MAX_OZ: 3.5 });
   function shippingTier(o) {
     var v = o.orderValue;
     var expedited = /expedit|priority|express|overnight|tracked|2[- ]?day/i.test(o.shipMethod || '');
@@ -177,6 +188,23 @@
       tier = expedited ? 'tracking' : 'unknown';
     }
     return { tier: tier, label: TIERS[tier].label, short: TIERS[tier].short };
+  }
+
+  function letterPostage(weightOz, opts) {
+    if (typeof weightOz !== 'number' || !isFinite(weightOz) || weightOz <= 0) return null;
+    if (weightOz > LETTER_POSTAGE.MAX_OZ) return { notLetter: true, oz: weightOz };
+    var addl = Math.max(0, Math.ceil(Math.round((weightOz - 1) * 100) / 100));
+    var postage = LETTER_POSTAGE.FIRST_OUNCE + addl * LETTER_POSTAGE.ADDL_OUNCE;
+    var surcharge = opts && opts.nonmachinable ? LETTER_POSTAGE.NONMACHINABLE : 0;
+    return {
+      oz: weightOz,
+      forever: 1,
+      addlOunce: addl,
+      postage: postage / 100,
+      surcharge: surcharge / 100,
+      price: (postage + surcharge) / 100,
+      effective: LETTER_POSTAGE.EFFECTIVE
+    };
   }
 
   /* ── TCGplayer tracking import ──
@@ -392,6 +420,8 @@
     parseMoney: parseMoney,
     slipLinkRisk: slipLinkRisk,
     shippingTier: shippingTier,
+    letterPostage: letterPostage,
+    LETTER_POSTAGE: LETTER_POSTAGE,
     detectCarrier: detectCarrier,
     matchTracking: matchTracking,
     buildTrackingImport: buildTrackingImport,
