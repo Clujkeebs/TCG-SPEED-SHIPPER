@@ -22,7 +22,8 @@ DEVIN_AI.md in TCG-SPEED-SHIPPER) and PR comments; claim work in your section
 of docs/agents/BOARD.md; owner-only tasks go in docs/OWNER-TODO.md; never
 exceed docs/agents/PERMISSIONS.md. Work on devin/* branches, one PR per item,
 and never idle: when your queue is empty, pull from Ideas or propose 3 new
-ideas. Fix the bugs your own reviews find.
+ideas. Fix the bugs your own reviews find. Runbook:
+https://github.com/Clujkeebs/TCG-SPEED-SHIPPER/blob/main/.agents/skills/dual-agent-system/SKILL.md
 ```
 
 ## 2. Claude → claude.ai → Settings → Profile → "What personal preferences should Claude consider"
