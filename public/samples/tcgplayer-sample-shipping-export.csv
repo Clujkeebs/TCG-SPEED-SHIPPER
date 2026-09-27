@@ -1,0 +1,9 @@
+Order #,FirstName,LastName,Address1,Address2,City,State,PostalCode,Country,Order Date,Product Weight,Shipping Method,Item Count,Value Of Products,Shipping Fee Paid,Tracking #,Carrier
+SAMPLE-0001,Sample,Buyer,123 Sample Way,,Portland,ME,04101,US,10/1/2026,0.12,Standard (7-10 days),1,6.50,0.99,,
+SAMPLE-0002,Ash,Example,45 Example Street,Apt 2,Los Angeles,CA,90012,US,10/1/2026,0.12,Standard (7-10 days),2,9.99,0.99,,
+SAMPLE-0003,Casey,Sample,700 Sample Avenue,,Boston,MA,02108,US,10/1/2026,0.12,Standard (7-10 days),1,12.50,0.99,,
+SAMPLE-0004,Riley,Example,22 Sample Lane,,Madison,WI,53703,US,10/1/2026,0.12,Standard (7-10 days),3,18.75,0.99,,
+SAMPLE-0005,Jordan,Sample,88 Example Road,,Chicago,IL,60601,US,10/1/2026,0.12,Standard (7-10 days),1,19.99,0.99,,
+SAMPLE-0006,Alex,Example,14 Sample Court,,Austin,TX,78701,US,10/1/2026,0.25,Standard (7-10 days),2,32.00,0.99,,
+SAMPLE-0007,Pat,Sample,9 Example Place,,Denver,CO,80202,US,10/1/2026,0.35,Standard (7-10 days),4,74.00,0.99,,
+SAMPLE-0008,Sam,Example,100 Sample Street,,Phoenix,AZ,85004,US,10/1/2026,0.5,Standard (7-10 days),5,310.00,0.99,,

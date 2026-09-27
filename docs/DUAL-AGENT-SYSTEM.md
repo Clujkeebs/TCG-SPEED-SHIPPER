@@ -1,6 +1,6 @@
 # The Dual Agent System (DAS)
 
-**Version 1.0 · 2026-09-27 · Authors: Claude (Claude Code) + Devin (Cognition),
+**Version 1.1 · 2026-09-27 · Authors: Claude + Devin (Claude Code + Cognition),
 at the owner's (Clujkeebs) request.** Both agents follow this. Either one can
 propose a change by PR. Nothing changes without both agreeing and the owner not
 objecting.
@@ -32,10 +32,14 @@ trades or deletes anything outside **`docs/agents/PERMISSIONS.md`**.
 
 | | **Devin (Scout)** | **Claude (Builder)** |
 |---|---|---|
-| Superpower | Live web browsing, long autonomous research, its own VM and browser, automatic PR review (Devin Review) | Deep reasoning over big codebases, connectors (Supabase, Stripe, Netlify, Gmail, Drive, GitHub, Docs), tests, security, careful edits |
+| Superpower | Live web browsing, long autonomous research, its own VM and real Chrome (incl. phone-width device emulation), a parallel helper agent for implementation and test runs, automatic PR review (Devin Review) | Deep reasoning over big codebases, connectors (Supabase, Stripe, Netlify, Gmail, Drive, GitHub, Docs), tests, security, careful edits |
 | Owns | Web research · SEO/keywords · competitor/market scans · fact-checking with sources · content and copy · partner/lead research · PageSpeed/UX audits of the live site · self-contained front-end features · design exploration | Architecture · server/API · database and migrations · payments/billing · auth/security · test suites · integrations · deploy/config · owner-facing plans and docs · reviewing and merging |
 | Reviews | Every Claude PR (Devin Review runs automatically) | Every Devin PR (tests run on a checkout, diff read line by line) |
 | Tie-breaker | Facts about the outside world | Facts about the code and systems |
+
+The split is **ownership, not capability**: Devin can write and test backend
+code too, and Claude can research. In this repo Devin has no Supabase, Stripe,
+Netlify or Gmail connectors, so anything that needs them stays Claude's.
 
 **Tool rule:** whoever *has* the tool does the step. If a step needs the web,
 it's Devin's, even inside Claude's feature. If it needs a connector or the
@@ -75,7 +79,9 @@ Both agents do this in parallel. Neither waits for the other.
 - Task line: `- [ ] ID · title · status · branch/PR · notes`.
   - IDs are `C-12` (Claude) or `D-7` (Devin).
   - Status is one of `now` · `next` · `review` · `blocked:<who/what>` · `done`.
-- **At most 2 items at `now`** per agent. Finish before starting more.
+- **At most 2 items at `now`** per agent (4 if the agent is running a
+  helper agent, and each item has its own branch). Finish before starting
+  more.
 - **Claiming** work from the other agent's section: ask in the log and wait
   for a yes, or, after 60 min of silence, take it and say so.
 - **Board edits ride along** in your next PR. There's no need for a PR just to
@@ -129,6 +135,10 @@ Tags:
   next one. 🟢 is optional. Reply to every thread, then resolve it.
 - **Conflicts:** merge `main` into your branch. Never rebase or force-push a
   branch the other agent has touched.
+- **Log conflicts are routine**, because both agents append to the bottom of
+  the log. Resolve them by keeping both sides in timestamp order. Never drop
+  or reword an entry. Before committing, grep for `<<<<<<<`, `|||||||`,
+  `=======` and `>>>>>>>`.
 - **File ownership** (defaults; the board can override per task): Claude owns
   server, database, billing, auth, config and tests. Devin owns content,
   research docs and the front-end pieces it claims. Touching the other's
@@ -150,8 +160,15 @@ loop:
 ```
 
 Claude keeps a scheduled hourly check-in running (routine/trigger) and
-subscribes to PR activity. Devin checks the log and PRs at every task
-boundary.
+subscribes to PR activity.
+
+Devin heartbeats at every task boundary. While a Devin session is active,
+GitHub events on PRs it opened (new comments, CI failures, merge conflicts)
+reach it right away. Devin **can't promise a timed 30–60 min heartbeat**:
+once a session waits on the owner, it sleeps, and only the owner can wake
+it. So, Claude: put anything urgent for Devin in a **comment on one of
+Devin's open PRs**, as well as in the log. Log entries on an unmerged branch
+may not be seen until that PR merges.
 
 ## 7. The owner: protect their time
 
@@ -176,7 +193,8 @@ The roles stay the same; the work changes.
 
 - **Software/app:**
   - Devin: user research, competitor features, UX audit, copy, docs
-    fact-check, front-end features.
+    fact-check, front-end features, and browser checks of UI PRs at phone
+    and desktop widths.
   - Claude: architecture, backend, database, billing, security, tests,
     deploy, code review.
 - **Marketing/growth:**
@@ -248,7 +266,8 @@ reached; otherwise from this spec:
 - `docs/OWNER-TODO.md`
 - `AGENTS.md` and `CLAUDE.md` (pointers that tell any agent to read this
   file first)
-- `.claude/skills/dual-agent-system/SKILL.md` (the trigger)
+- `.claude/skills/dual-agent-system/SKILL.md` (Claude's trigger/runbook)
+- `.agents/skills/dual-agent-system/SKILL.md` (Devin's runbook)
 
 Devin posts its `[CHECK-IN]` and research plan as soon as the log exists.
 
