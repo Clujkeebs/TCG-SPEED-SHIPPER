@@ -212,6 +212,11 @@
 
   function csvField(v) {
     v = v == null ? '' : String(v);
+    // Spreadsheet formula injection: a buyer-supplied name or address that
+    // starts with = + - @ (or a tab/CR) would run as a formula if the seller
+    // opens the file in Excel or Sheets. A leading ' makes it plain text.
+    // Plain numbers like -5.00 are left alone.
+    if (/^[=+\-@\t\r]/.test(v) && !/^[+-]?\d+(\.\d+)?$/.test(v)) v = "'" + v;
     return /[",\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
   }
 

@@ -170,15 +170,23 @@ module.exports = function mountAdminRoutes(router, d) {
       const since = new Date(Date.now() - (days - 1) * 864e5).toISOString().slice(0, 10);
       const { data, error } = await db().from('tcgss_daily_events').select('day, event, source, count').gte('day', since);
       if (error) throw error;
-      const totals = {}, bySource = {}, byDay = {};
+      const totals = {}, bySource = {}, byDay = {}, stripeEvents = {}, stripeLast = {};
       for (const r of data || []) {
+        // Stripe webhook delivery counts live in the same table but aren't
+        // part of the visitor funnel.
+        if (r.event.indexOf('stripe:') === 0) {
+          const t = r.event.slice(7);
+          stripeEvents[t] = (stripeEvents[t] || 0) + r.count;
+          if (!stripeLast[t] || r.day > stripeLast[t]) stripeLast[t] = r.day;
+          continue;
+        }
         totals[r.event] = (totals[r.event] || 0) + r.count;
         const s = bySource[r.source] || (bySource[r.source] = {});
         s[r.event] = (s[r.event] || 0) + r.count;
         const d = byDay[r.day] || (byDay[r.day] = {});
         d[r.event] = (d[r.event] || 0) + r.count;
       }
-      res.json({ days, totals, by_source: bySource, by_day: byDay });
+      res.json({ days, totals, by_source: bySource, by_day: byDay, stripe_events: stripeEvents, stripe_last: stripeLast });
     } catch (err) {
       res.status(500).json({ error: 'Could not load funnel: ' + err.message });
     }
