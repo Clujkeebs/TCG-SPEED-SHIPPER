@@ -11,7 +11,8 @@
 <link rel="canonical" href="https://tcgspeedshipper.com/" />
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <link rel="icon" href="/favicon.ico" sizes="32x32" />
-<link rel="apple-touch-icon" href="/favicon.ico" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link rel="manifest" href="/manifest.webmanifest" />
 <meta name="theme-color" content="#2d6a4f" />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://tcgspeedshipper.com/" />
@@ -34,9 +35,7 @@
 {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "Does TCGplayer provide shipping labels?", "acceptedAnswer": {"@type": "Answer", "text": "No — TCGplayer itself doesn't generate or sell shipping labels for standard marketplace sellers. You buy postage yourself, usually through USPS Click-N-Ship, Pirate Ship, PayPal, or a carrier account, then enter the tracking number on the order. TCGplayer gives you a packing-list CSV export of your open orders; turning that CSV into a print-ready label is what TCGPlayer Speed Shipper does."}}, {"@type": "Question", "name": "What's the fastest way to ship TCGplayer orders?", "acceptedAnswer": {"@type": "Answer", "text": "Export your packing list CSV, upload it to TCGPlayer Speed Shipper, and download print-ready labels — no manual retyping of names and addresses. Paired with a 4x6 thermal printer, most sellers go from CSV export to a stack of labels in under five minutes."}}, {"@type": "Question", "name": "How do I export my TCGPlayer packing list?", "acceptedAnswer": {"@type": "Answer", "text": "Log in to TCGPlayer, go to Orders, click Packing List, then hit Export to download your CSV file."}}, {"@type": "Question", "name": "Is TCGPlayer Speed Shipper free?", "acceptedAnswer": {"@type": "Answer", "text": "The Free plan needs no account and includes 10 labels a month. Paid plans start at $2.99/mo (or $29/yr) for 500 labels a month, and $5.99/mo for unlimited labels plus paste-address labels and custom design tools."}}, {"@type": "Question", "name": "What printers work with 4x6 labels?", "acceptedAnswer": {"@type": "Answer", "text": "Any 4x6 thermal label printer — Rollo, Dymo 4XL, MUNBYN. For 8.5x11, any home printer works."}}, {"@type": "Question", "name": "Can I print multiple labels per page?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. Choose 8.5x11 format and select 1, 2, 3, or 4 labels per page."}}, {"@type": "Question", "name": "Can I print on Avery sheets or straight onto envelopes?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. Choose Avery 5160 (30 address labels per sheet) or #10 envelope as the format, print at 100% scale, and add your stamp. Available on every plan, including Free."}}, {"@type": "Question", "name": "Does it include packing slips?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. Toggle packing slips on before downloading and each label will be followed by a matching slip."}}]}
 </script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="/js/shipper-core.js"></script>
 <link rel="stylesheet" href="/fonts/fonts.css">
 
@@ -52,7 +51,7 @@
   --text: #1c1b18;
   --text-secondary: #4a473e;
   --muted: #6b6960;
-  --hint: #9e9a90;
+  --hint: #716d64;
   --accent: #2d6a4f;
   --accent-light: #40916c;
   --accent-bg: #edf7f1;
@@ -105,7 +104,7 @@ body { font-family: 'Source Serif 4', Georgia, serif; background: var(--bg); col
 .nav-tabs { display: flex; flex: 1; }
 .nav-tab {
   flex: 1; display: flex; align-items: center; justify-content: center;
-  font-size: 12px; color: rgba(255,255,255,.45);
+  font-size: 12px; color: rgba(255,255,255,.62);
   font-family: 'JetBrains Mono', monospace; font-weight: 500;
   cursor: pointer; border: none; background: none;
   border-bottom: 2px solid transparent;
@@ -872,33 +871,33 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
       </div>
       <div class="grid-2 mb">
         <div class="field">
-          <label>Store / Your Name</label>
+          <label for="s-name">Store / Your Name</label>
           <input type="text" id="s-name" placeholder="Dragon's Hoard Cards" autocomplete="organization" />
         </div>
         <div class="field">
-          <label>Phone (optional)</label>
+          <label for="s-phone">Phone (optional)</label>
           <input type="text" id="s-phone" placeholder="" autocomplete="tel" />
         </div>
       </div>
       <div class="field mb">
-        <label>Street Address</label>
+        <label for="s-addr1">Street Address</label>
         <input type="text" id="s-addr1" placeholder="123 Main St" autocomplete="address-line1" />
       </div>
       <div class="field mb">
-        <label>Apt / Suite (optional)</label>
+        <label for="s-addr2">Apt / Suite (optional)</label>
         <input type="text" id="s-addr2" placeholder="" autocomplete="address-line2" />
       </div>
       <div class="grid-3">
         <div class="field">
-          <label>City</label>
+          <label for="s-city">City</label>
           <input type="text" id="s-city" placeholder="Springfield" autocomplete="address-level2" />
         </div>
         <div class="field">
-          <label>State</label>
+          <label for="s-state">State</label>
           <input type="text" id="s-state" placeholder="IL" autocomplete="address-level1" />
         </div>
         <div class="field">
-          <label>ZIP</label>
+          <label for="s-zip">ZIP</label>
           <input type="text" id="s-zip" placeholder="62701" autocomplete="postal-code" />
         </div>
       </div>
@@ -1111,7 +1110,7 @@ Chicago, IL 60601</div>
             </div>
           </div>
           <div class="field">
-            <label>Font</label>
+            <label for="d-font">Font</label>
             <select class="opt-select" id="d-font" style="width:100%;">
               <option value="helvetica">Sans (Helvetica)</option>
               <option value="times">Serif (Times)</option>
@@ -1120,7 +1119,7 @@ Chicago, IL 60601</div>
           </div>
         </div>
         <div class="field mb">
-          <label>Packing Slip Message</label>
+          <label for="d-message">Packing Slip Message</label>
           <input type="text" id="d-message" placeholder="Thank you for your order!" />
         </div>
         <div class="field mb">
@@ -1139,7 +1138,7 @@ Chicago, IL 60601</div>
         </p>
         <div class="grid-2 mb">
           <div class="field" style="grid-column:1/-1;">
-            <label>Profile Name</label>
+            <label for="profile-name">Profile Name</label>
             <input type="text" id="profile-name" placeholder="Main Warehouse" />
           </div>
         </div>
@@ -1168,11 +1167,11 @@ Chicago, IL 60601</div>
         </p>
         <div class="grid-2 mb">
           <div class="field">
-            <label>Email</label>
+            <label for="auth-email">Email</label>
             <input type="text" id="auth-email" placeholder="you@email.com" autocomplete="email" />
           </div>
           <div class="field">
-            <label>Password</label>
+            <label for="auth-password">Password</label>
             <input type="password" id="auth-password" placeholder="At least 8 characters" autocomplete="current-password" />
           </div>
         </div>
@@ -1227,7 +1226,7 @@ Chicago, IL 60601</div>
       <div class="section-label">Promo Code</div>
       <div class="grid-2 mb" style="align-items:end;">
         <div class="field">
-          <label>Code</label>
+          <label for="promo-input">Code</label>
           <input type="text" id="promo-input" placeholder="e.g. LAUNCH20" autocapitalize="characters" />
         </div>
         <div class="field">
@@ -1438,6 +1437,11 @@ Chicago, IL 60601</div>
     <div class="faq-item">
       <button class="faq-q">What do the paid plans include? <span class="faq-arrow">▼</span></button>
       <div class="faq-a">The Free plan needs no account and includes 10 labels a month. Base is $2.99/mo (or $29/yr) for 500 labels a month — plenty for most small sellers. Premium is $5.99/mo for unlimited labels, plus paste-address label generation, the Design Studio (custom colors, fonts, a custom packing-slip message, QR codes, and multiple saved return-address profiles), and no "Powered by" branding on packing slips. See the <a href="#" onclick="switchTab('pricing');return false;">Pricing</a> tab for details.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">Does it work offline, or as an app? <span class="faq-arrow">▼</span></button>
+      <div class="faq-a">Yes. After you've opened the site once, label generation keeps working with no signal, which is handy at card shows. Free-plan labels work fully offline. Signed-in paid plans need a connection when you download, so your monthly count stays accurate. To install it like an app: in Chrome or Edge, click the install icon in the address bar; on iPhone, tap Share → Add to Home Screen; on Android, open the ⋮ menu → Install app.</div>
     </div>
 
     <div class="faq-item">
@@ -2775,9 +2779,48 @@ function buildPDF(fmt, list){
   return doc;
 }
 
+/* The PDF and QR libraries (~385 KB) are only needed to build a download, so
+   they're not loaded with the page. They're fetched once the page is idle (or
+   on the first download click); the service worker caches them for offline. */
+var PDF_LIBS = ['/vendor/jspdf-2.5.1.umd.min.js', '/vendor/qrcode-1.0.0.min.js'];
+var pdfLibsPromise = null, pdfLibsAttempt = 0;
+function pdfLibsReady() { return !!(window.jspdf && window.jspdf.jsPDF && window.QRCode); }
+function loadPdfLibs() {
+  if (pdfLibsReady()) return Promise.resolve();
+  if (pdfLibsPromise) return pdfLibsPromise;
+  // A retry uses a fresh URL: browsers can reuse a failed script load and
+  // never fire onerror again, which would leave the button waiting forever.
+  var attempt = pdfLibsAttempt++;
+  pdfLibsPromise = Promise.race([
+    Promise.all(PDF_LIBS.map(function (src) {
+      return new Promise(function (resolve, reject) {
+        var sc = document.createElement('script');
+        sc.src = attempt ? src + '?retry=' + attempt : src; sc.async = false;
+        sc.onload = resolve;
+        sc.onerror = function () { sc.remove(); reject(new Error('Could not load ' + src)); };
+        document.head.appendChild(sc);
+      });
+    })),
+    new Promise(function (_, reject) { setTimeout(function () { reject(new Error('PDF tools timed out')); }, 20000); })
+  ]).then(function () { if (!pdfLibsReady()) throw new Error('PDF tools missing'); })
+    .catch(function (err) { pdfLibsPromise = null; throw err; });
+  return pdfLibsPromise;
+}
+(function warmPdfLibs() {
+  var go = function () { loadPdfLibs().catch(function () {}); };
+  if ('requestIdleCallback' in window) window.addEventListener('load', function () { requestIdleCallback(go, { timeout: 4000 }); });
+  else window.addEventListener('load', function () { setTimeout(go, 1500); });
+})();
+
 function triggerDownload(btn){
   if(!orders.length){ alert('Please upload a CSV file first.'); return; }
-  if(!window.jspdf||!window.jspdf.jsPDF){ alert('PDF library not ready — wait a moment.'); return; }
+  if(!pdfLibsReady()){
+    var label = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Loading PDF tools...';
+    loadPdfLibs().then(function () { btn.disabled = false; btn.textContent = label; triggerDownload(btn); })
+      .catch(function () { btn.disabled = false; btn.textContent = label; alert('Could not load the PDF tools. Check your connection and try again.'); });
+    return;
+  }
   var list = printList();
   if(!list.length){ alert('No orders match the "Print" filter — pick a different one.'); return; }
 

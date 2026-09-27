@@ -187,4 +187,12 @@
       for (var i = 0; i < y.length; i++) y[i].textContent = String(new Date().getFullYear());
     } catch (e) {}
   });
+
+  /* ── Offline + installable ──
+     Registers /sw.js (see that file for what it will and won't cache). */
+  try {
+    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost') && !/^\/(admin|affiliate)\//.test(location.pathname)) {
+      window.addEventListener('load', function () { navigator.serviceWorker.register('/sw.js').catch(function () {}); });
+    }
+  } catch (e) {}
 })();

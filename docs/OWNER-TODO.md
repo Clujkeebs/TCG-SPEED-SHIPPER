@@ -15,38 +15,47 @@ them.
 
 ## 🔥 Blocking right now
 
-- [ ] 🔥 **Deploy on Netlify.** PRs #6–#8 are merged but not live. ⏱ 2 min
-- [ ] 🔥 **Make merges deploy themselves.** Netlify already builds a preview
-  for every PR (it comments on them), so GitHub is connected, but merges to
-  `main` haven't gone live without you. Check Netlify → Deploys: if it says
-  **"Auto publishing is stopped"**, click *Start auto publishing*.
-  Otherwise, go to Site configuration → Build & deploy → Branches and set the
-  production branch to `main`. After that, nobody needs to deploy by hand.
-  ⏱ 3 min
-- [ ] 🔥 **Reconnect the Stripe connector** at claude.ai/customize/connectors
-  (it shows "connect incomplete"), then start a new Claude session. Once it's
-  connected, Claude creates the new prices, checks the webhook, and sets up
-  the customer portal, so those tasks aren't on this list. ⏱ 3 min
-- [ ] 🔥 **Until Stripe is reconnected, check one thing by hand:** Stripe →
-  Developers → Webhooks → your endpoint → the event list must include
-  **`invoice.payment_succeeded`**. Referral rewards and affiliate commission
-  now fire only from that event. If it's missing, add it. The other events
-  should be `checkout.session.completed` and
-  `customer.subscription.created/updated/deleted`. ⏱ 3 min
+- [ ] 🔥 **Merge Devin's finished PRs** (Devin is out of usage, so these are
+  stranded until someone merges them). Each is reviewed and tested by Claude.
+  Merge on GitHub in this order: **#11** (partner list +
+  competitors), **#12** (fee corrections), **#16** (referral billing fixes),
+  **#17** (sample-order button), **#21** (slip QR), **#18** (Pirate Ship
+  export), **#10** (holiday dates, so glance at the dates first).
+  **#14** (fees post + calculator) and **#19** (DAS v1.1) each have a small
+  merge conflict (a test-list line, and log entries that both went at the
+  end of the log). GitHub can't auto-merge those. The fastest path is to
+  reply **"you can merge Devin's reviewed PRs"**: Claude merges all nine and
+  resolves both conflicts itself. ⏱ 1 min to reply, or ~10 min to click
+- [ ] **Stripe session with Claude (planned for tomorrow):**
+  - reconnect the Stripe connector at claude.ai/customize/connectors
+  - start a new Claude session
+  - say "do the Stripe prices"
+
+  Claude then creates the $2.99 / $29-yr / $59-yr prices, sets them up, and
+  checks the webhook events and the customer portal. ⏱ 10 min
+- [x] ~~Webhook URL updated to the new domain~~: done by you 2026-09-27. The
+  admin dashboard's **Setup checks** card shows whether
+  `invoice.payment_succeeded` is arriving; Claude confirms it in the Stripe
+  session.
+- [x] ~~Mark Netlify secrets as secret~~: done by you 2026-09-26.
 - [ ] **Rename the Supabase project** "vischeck" → "TCG Player": Project
   Settings → General → Project name. It's the display name only, so nothing
   breaks. ⏱ 1 min
 
+- [ ] **Install the Dual Agent System in both agents** (one time): paste
+  the two blocks from `docs/agents/INSTALL.md` into Devin → Knowledge and
+  claude.ai → Settings → Profile. After that, "we're rocking the dual agent
+  system" works in any repo. ⏱ 5 min
+- [ ] **Look over `docs/agents/PERMISSIONS.md`**: it's the fence for what
+  the agents may do without asking (send email, spend money, Stripe changes,
+  trades). Edit it to taste. ⏱ 5 min
+
 ## 🔐 Security (accounts only you control)
 
-- [ ] **Mark secrets as secret in Netlify:** `STRIPE_SECRET_KEY`,
-  `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_WEBHOOK_SECRET` are stored as plain,
-  readable values. Netlify → Environment variables → each one → *Contains
-  secret values*. ⏱ 3 min
 - [ ] **Rotate the Stripe secret key and the Supabase service-role key.**
   Both have been readable in plain text by every tool connected to Netlify,
   including AI agents. Make a new Stripe key (or better, a *restricted* key
-  with only the permissions the app uses), put it in Netlify, redeploy, and
+  with only the permissions the app uses), put it in Netlify (it takes effect with the next merge), and
   delete the old one. Do the same for Supabase's service-role key. ⏱ 15 min
 - [ ] **Turn on leaked-password protection** in Supabase → Authentication →
   Attack Protection. ⏱ 1 min
@@ -112,7 +121,7 @@ them.
   from them and a 1099-NEC from you. Collect the W-9 when you activate a
   partner. ⏱ per partner
 - [ ] **Send the partner outreach emails.** The template is in Gmail drafts.
-  Devin is building a prospect list in `docs/partner-prospects.md`. Sending
+  The prospect list is `docs/partner-prospects.md` (lands with #11). Sending
   should come from you: it's your name and reputation, and it needs the
   mailing address above. ⏱ 5 min per email
 
@@ -142,7 +151,7 @@ them.
   envelope. Check alignment, then tell us if anything is off by even a
   millimeter. ⏱ 15 min
 - [ ] **Try the Pirate Ship export on your real Pirate Ship account** once
-  Devin ships it: import the file, buy one label, paste the tracking back.
+  #18 is merged: import the file, buy one label, paste the tracking back.
   ⏱ 10 min
 
 ## 🏢 Business
@@ -153,6 +162,9 @@ them.
   Chrome extension (parked for now). ⏱ 10 min
 - [ ] *(optional)* **Refill OpenRush credits,** the SEO data tool Claude uses
   for keyword research. It ran out mid-research. 💵
+- [ ] *(optional)* **Top up Devin** when you want the two-agent setup back.
+  Devin Review (the automatic PR reviewer) is also out ("trial expired").
+  Until then Claude works solo and reviews its own PRs with tests. 💵
 
 ---
 

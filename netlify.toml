@@ -3,6 +3,15 @@
   functions = "netlify/functions"
   command = "npm install"
 
+# SUPABASE_URL is marked secret in Netlify, but it is public by design: the
+# browser needs it to sign users in (it sits next to the public anon key in
+# index.html and admin/index.html). Without this, Netlify's secret scan finds
+# it in the built pages and fails every deploy. The real secrets
+# (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SUPABASE_SERVICE_ROLE_KEY) are
+# still scanned.
+[build.environment]
+  SECRETS_SCAN_OMIT_KEYS = "SUPABASE_URL"
+
 # server.js require()s ./admin.js; the bundler normally follows that on its
 # own, but listing it makes sure the admin API can never be left out of the
 # deployed function.
@@ -71,3 +80,22 @@
     Referrer-Policy = "no-referrer"
     X-Robots-Tag = "noindex, nofollow"
     Cache-Control = "no-store"
+
+# The service worker must always be re-checked so a deploy reaches everyone.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+    Service-Worker-Allowed = "/"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+
+# Self-hosted third-party libraries. The version is in the file name, so a
+# new version is a new URL and these can be cached forever.
+[[headers]]
+  for = "/vendor/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
