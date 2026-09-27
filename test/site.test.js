@@ -74,5 +74,16 @@ for (const p of pages) {
 }
 console.log('  checked ' + links + ' internal links');
 
+console.log('\n-- Scripts --');
+// Libraries are self-hosted under /vendor/ with the version in the file name.
+// A CDN <script> costs an extra connection before first paint, and a floating
+// version (e.g. @2) lets the CDN change our code without a deploy.
+for (const p of pages) {
+  const ext = [...p.html.matchAll(/<script[^>]+src="(https?:\/\/[^"]+)"/g)].map((m) => m[1]);
+  check(p.url + ': no third-party <script src>', ext.length === 0, ext.join(', '));
+}
+const vendored = fs.readdirSync(path.join(PUB, 'vendor')).filter((f) => f.endsWith('.js'));
+for (const f of vendored) check('/vendor/' + f + ': version in the file name', /-\d+\.\d+\.\d+[.-]/.test(f));
+
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 process.exit(failed ? 1 : 0);
