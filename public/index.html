@@ -397,6 +397,14 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
 .ship-plan-filter select { max-width: 100%; }
 .ship-plan-summary { font-size: 13px; line-height: 1.6; color: var(--text); margin: 8px 0 0; }
 .ship-plan-note { font-size: 12px; color: var(--accent); margin: 4px 0 0; }
+.stamp-plan { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); }
+.stamp-summary { font-size: 13px; line-height: 1.6; color: var(--text); margin: 0 0 8px; }
+.stamp-opts { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; font-size: 13px; color: var(--text-secondary); }
+.stamp-opts input[type=number] { width: 80px; padding: 6px 8px; font-size: 13px; margin: 0 4px; }
+.stamp-rigid { display: inline-flex; gap: 6px; align-items: center; }
+.stamp-fine { font-size: 12px; color: var(--hint); margin: 8px 0 0; line-height: 1.5; }
+.stamp-tag { display: inline-block; margin-top: 6px; font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--text-secondary); background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; }
+.stamp-tag.warn { color: var(--danger); border-color: #f5c0bb; }
 .ship-plan-note:empty { display: none; }
 .ship-plan-fine { font-size: 11px; color: var(--hint); margin: 6px 0 0; line-height: 1.5; }
 .ship-plan-fine a { color: inherit; }
@@ -947,6 +955,15 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
         </div>
         <p class="ship-plan-summary" id="ship-plan-summary"></p>
         <p class="ship-plan-note" id="ship-plan-note"></p>
+        <div class="stamp-plan" id="stamp-plan" style="display:none;">
+          <p class="stamp-summary" id="stamp-summary" role="status"></p>
+          <div class="stamp-opts">
+            <label for="pkg-oz">Envelope + toploader + slip
+              <input type="number" id="pkg-oz" min="0" max="3" step="0.05" inputmode="decimal" placeholder="e.g. 0.6"> oz</label>
+            <label class="stamp-rigid"><input type="checkbox" id="pwe-rigid"> Rigid envelope (nonmachinable, +$0.49)</label>
+          </div>
+          <p class="stamp-fine">Estimate: TCGplayer's product weight plus your packaging, at USPS stamped-letter prices (from <span id="stamp-effective"></span>). Weigh anything close to the next ounce. <a href="/blog/how-many-stamps-to-mail-a-trading-card.html">How many stamps? →</a></p>
+        </div>
         <div id="pirate-ship-export" style="display:none;margin-top:10px;">
           <button type="button" class="btn-ghost" id="pirate-ship-download"></button>
           <p style="font-size:12px;color:var(--hint);margin:6px 0 0;line-height:1.5;">Upload it at pirateship.com → Ship → Import Spreadsheet, then paste the tracking numbers back here for your TCGplayer import.</p>
@@ -2466,6 +2483,7 @@ function renderShipPlan(toPrint) {
       document.getElementById('pirate-ship-download').textContent = 'Download Pirate Ship CSV (' + trackedOrders.length + ' tracked orders)';
     }
   }
+  renderStampPlan();
   var sel = document.getElementById('print-filter');
   if (sel.value !== printFilter) sel.value = printFilter;
   var note = document.getElementById('ship-plan-note');
@@ -2473,6 +2491,64 @@ function renderShipPlan(toPrint) {
     (toPrint.length ? 'Printing ' + toPrint.length + ' of ' + orders.length + ' orders. Dimmed cards are left out of this download.' : 'No orders match this filter.');
   box.style.display = 'block';
 }
+
+/* ── Stamp estimate for envelope orders (D-7 / C-18) ── */
+var STAMP_PKG_KEY = 'tcgss_pkg_oz', STAMP_RIGID_KEY = 'tcgss_pwe_rigid';
+function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+function lsRemove(k) { try { localStorage.removeItem(k); } catch (e) {} }
+function stampSettings() {
+  var v = parseFloat(lsGet(STAMP_PKG_KEY));
+  return { pkg: isFinite(v) && v >= 0 && v <= 3 ? v : null, rigid: lsGet(STAMP_RIGID_KEY) === '1' };
+}
+var lastStampPlan = null;
+function money(n) { return '$' + n.toFixed(2); }
+function renderStampPlan() {
+  var box = document.getElementById('stamp-plan');
+  if (!box) return;
+  var st = stampSettings();
+  var plan = Core.stampPlan(orders, st.pkg, { nonmachinable: st.rigid });
+  lastStampPlan = plan;
+  var envelopes = orders.filter(function (o) { return Core.shippingTier(o).tier === 'envelope'; }).length;
+  var weighed = envelopes - plan.noWeight;
+  if (!weighed) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  var pkgIn = document.getElementById('pkg-oz'), rigidIn = document.getElementById('pwe-rigid');
+  if (document.activeElement !== pkgIn) pkgIn.value = st.pkg === null ? '' : String(st.pkg);
+  rigidIn.checked = st.rigid;
+  document.getElementById('stamp-effective').textContent = new Date(Core.LETTER_POSTAGE.EFFECTIVE + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  var out;
+  if (plan.needsPackaging) {
+    out = '<b>Stamp estimate:</b> enter what your empty envelope, toploader and slip weigh to count stamps for ' + weighed + ' envelope order' + (weighed !== 1 ? 's' : '') + '.';
+  } else {
+    var bits = ['<b>' + plan.forever + '</b> Forever'];
+    if (plan.addlOunce) bits.push('<b>' + plan.addlOunce + '</b> additional-ounce');
+    if (plan.nonmachinable) bits.push('<b>' + plan.nonmachinable + '</b> nonmachinable surcharge');
+    out = '<b>Stamps for ' + plan.letters + ' envelope' + (plan.letters !== 1 ? 's' : '') + ':</b> ' + bits.join(' + ') + ' ≈ <b>' + money(plan.total) + '</b>';
+    if (plan.notLetter) out += '<br><span style="color:var(--danger);">' + plan.notLetter + ' envelope order' + (plan.notLetter !== 1 ? 's are' : ' is') + ' over 3.5 oz: that ships as a package, not a stamped letter.</span>';
+  }
+  if (plan.noWeight) out += '<br><span style="color:var(--hint);">' + plan.noWeight + ' envelope order' + (plan.noWeight !== 1 ? 's have' : ' has') + ' no weight in the file.</span>';
+  document.getElementById('stamp-summary').innerHTML = out;
+}
+function stampTagFor(i) {
+  var p = lastStampPlan && lastStampPlan.perOrder[i];
+  if (!p) return '';
+  if (p.notLetter) return '<div class="stamp-tag warn">Over 3.5 oz: not a letter</div>';
+  var oz = 1 + p.addlOunce;
+  return '<div class="stamp-tag">~' + oz + ' oz · ' + money(p.price) + ' in stamps</div>';
+}
+(function () {
+  var pkgIn = document.getElementById('pkg-oz'), rigidIn = document.getElementById('pwe-rigid');
+  if (!pkgIn) return;
+  pkgIn.addEventListener('input', function () {
+    var v = parseFloat(pkgIn.value);
+    if (pkgIn.value === '' || (isFinite(v) && v >= 0 && v <= 3)) {
+      if (pkgIn.value === '') lsRemove(STAMP_PKG_KEY); else lsSet(STAMP_PKG_KEY, String(v));
+      renderPreviews();
+    }
+  });
+  rigidIn.addEventListener('change', function () { lsSet(STAMP_RIGID_KEY, rigidIn.checked ? '1' : '0'); renderPreviews(); });
+})();
 
 function isTrackedOrder(o) {
   var tier = Core.shippingTier(o).tier;
@@ -2534,7 +2610,7 @@ function renderPreviews() {
       '<div class="label-from"><strong>'+esc(s.name||'Your Name')+'</strong>'+
       esc(s.addr1||'')+(s.addr2?', '+esc(s.addr2):'')+'<br>'+esc(sLine2)+'</div>'+
       '<div class="label-to"><strong>'+esc(Core.fullName(o))+'</strong>'+
-      '<span>'+al.join('<br>')+'</span>'+slip+(o.shipMethod?'<div class="slip-tag ship-tag">'+esc(o.shipMethod)+'</div>':'')+tierTag+'</div>';
+      '<span>'+al.join('<br>')+'</span>'+slip+(o.shipMethod?'<div class="slip-tag ship-tag">'+esc(o.shipMethod)+'</div>':'')+tierTag+stampTagFor(i)+'</div>';
     list.appendChild(div);
   });
 

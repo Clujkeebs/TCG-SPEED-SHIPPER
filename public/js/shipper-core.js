@@ -207,6 +207,31 @@
     };
   }
 
+  // Stamps for a batch: only envelope-tier orders (the ones that go out as
+  // plain white envelopes), each weighed as TCGplayer's product weight plus the
+  // seller's own packaging weight. Returns null until the seller has entered
+  // their packaging weight: an estimate without it would undercount.
+  function stampPlan(orders, packagingOz, opts) {
+    var pkg = typeof packagingOz === 'number' && isFinite(packagingOz) && packagingOz >= 0 ? packagingOz : null;
+    var plan = { letters: 0, forever: 0, addlOunce: 0, nonmachinable: 0, total: 0, notLetter: 0, noWeight: 0, perOrder: [] };
+    (orders || []).forEach(function (o, i) {
+      if (shippingTier(o).tier !== 'envelope') { plan.perOrder[i] = null; return; }
+      if (typeof o.productWeight !== 'number' || !(o.productWeight > 0)) { plan.noWeight++; plan.perOrder[i] = null; return; }
+      if (pkg === null) { plan.perOrder[i] = null; return; }
+      var p = letterPostage(Math.round((o.productWeight + pkg) * 1000) / 1000, opts);
+      plan.perOrder[i] = p;
+      if (!p) return;
+      if (p.notLetter) { plan.notLetter++; return; }
+      plan.letters++;
+      plan.forever += p.forever;
+      plan.addlOunce += p.addlOunce;
+      if (p.surcharge) plan.nonmachinable++;
+      plan.total = Math.round((plan.total + p.price) * 100) / 100;
+    });
+    plan.needsPackaging = pkg === null;
+    return plan;
+  }
+
   /* ── TCGplayer tracking import ──
      TCGplayer's documented bulk flow: take the original shipping export,
      fill in each order's tracking number (the export already has "Tracking #"
@@ -421,6 +446,7 @@
     slipLinkRisk: slipLinkRisk,
     shippingTier: shippingTier,
     letterPostage: letterPostage,
+    stampPlan: stampPlan,
     LETTER_POSTAGE: LETTER_POSTAGE,
     detectCarrier: detectCarrier,
     matchTracking: matchTracking,

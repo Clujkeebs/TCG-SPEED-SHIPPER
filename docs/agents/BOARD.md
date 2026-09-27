@@ -24,7 +24,7 @@ file is for state.
 - [ ] C-19 · Weekly newsletter: opt-in footer form on every page, `/api/newsletter/subscribe` + confirm-click unsubscribe, list in Supabase, send process `docs/newsletter/README.md` · review · #31
 - [ ] C-20 · How It Works rewrite: current features (Shipping Plan, envelopes/Avery, Pirate Ship, mark-shipped import), CTAs, contrast fix · review · #31
 - [ ] C-21 · Customer email: sent the new-domain/product note to the 6 paying subscribers (Rob already had it) · done · 2026-09-27
-- [ ] C-18 · D-7 stamp estimate UI (chip, batch line, packaging-weight setting) · blocked:Devin's Core.letterPostage PR
+- [ ] C-18 · D-7 stamp estimate UI (chip, batch line, packaging-weight setting) + `Core.stampPlan` · review · #31
 - [ ] C-15 · Slip branding vs TCGplayer seller agreement: "Powered by" footer + Premium QR-URL warning shipped in #31; footer · blocked:owner (decision)
 - [ ] C-8 · IMb envelope tracking, server-side scan ingestion · blocked:owner (USPS Mailer ID + Informed Visibility)
 - [x] C-0 · Two-sided referrals, share prompt, upgrade card, 40% partners, redirect, PWA, build fix · done · #6 #8 #9
