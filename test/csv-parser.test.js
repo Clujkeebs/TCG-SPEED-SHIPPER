@@ -64,6 +64,33 @@ section('Item-level export (one row per card)');
   check('item count sums quantities', orders[0].itemCount === 5);
 }
 
+section('Product weight parsing');
+{
+  const orderLevel = [
+    'Order #,First Name,Last Name,Address 1,City,State,Zip,Product Weight,Item Count',
+    'A,Ann,Lee,1 St,X,NY,10001,0.25,3',
+    'A,Ann,Lee,1 St,X,NY,10001,0.25,3'
+  ].join('\n');
+  const orderOrders = core.parseCSV(orderLevel);
+  check('order-level weight is read once for a repeated order', orderOrders.length === 1 && orderOrders[0].productWeight === 0.25, JSON.stringify(orderOrders));
+  check('Product Weight is not detected as an item-name column', core.findColumn(['Product Weight'], core.MAPS.item) === -1);
+
+  const lineLevel = [
+    'Order Number,Buyer Name,Address 1,City,State,Postal Code,Product Name,Product Weight,Quantity',
+    '1001,Sam Q Public,10 Elm St,Dover,DE,19901,Lightning Bolt,0.1,4',
+    '1001,Sam Q Public,10 Elm St,Dover,DE,19901,Black Lotus,0.2,1'
+  ].join('\n');
+  const lineOrders = core.parseCSV(lineLevel);
+  check('line-level weights sum per order', lineOrders.length === 1 && Math.abs(lineOrders[0].productWeight - 0.3) < 1e-10, JSON.stringify(lineOrders));
+
+  const blank = core.parseCSV('Order #,First Name,Last Name,Address 1,Product Weight\nB,Bob,Roe,2 St,');
+  check('blank weight stays null', blank[0].productWeight === null);
+  const nonnumeric = core.parseCSV('Order #,First Name,Last Name,Address 1,Product Weight\nB,Bob,Roe,2 St,n/a');
+  check('nonnumeric weight stays null', nonnumeric[0].productWeight === null);
+  const noWeight = core.parseCSV('Order #,First Name,Last Name,Address 1\nC,Cy,Ng,3 St');
+  check('missing weight column stays null', noWeight[0].productWeight === null);
+}
+
 section('Messy files');
 {
   const bom = '﻿First Name,Last Name,Address 1,City,State,Zip\nA,B,"1 Line\nBreak St",X,NY,10001\n\n';
@@ -107,6 +134,28 @@ section('Shipping plan');
   check('expedited buyer always gets tracking', core.shippingTier(o[3]).tier === 'tracking');
   check('no value, standard → unknown (no guessing)', core.shippingTier({ orderValue: null, shipMethod: 'Standard' }).tier === 'unknown');
   check('parseMoney junk → null', core.parseMoney('n/a') === null && core.parseMoney('') === null);
+}
+
+section('Letter postage estimates');
+{
+  const one = core.letterPostage(1);
+  check('1 oz costs $0.82 with no additional ounces', one.price === 0.82 && one.addlOunce === 0, JSON.stringify(one));
+  check('result includes one Forever stamp and the effective date', one.forever === 1 && one.effective === core.LETTER_POSTAGE.EFFECTIVE);
+  check('0.5 oz costs $0.82', core.letterPostage(0.5).price === 0.82);
+  check('2 oz costs $1.11', core.letterPostage(2).price === 1.11);
+  check('floating-point noise at 2 oz does not add another ounce', core.letterPostage(2.0000000001).addlOunce === 1);
+  check('3 oz costs $1.40', core.letterPostage(3).price === 1.4);
+  const max = core.letterPostage(3.5);
+  check('3.5 oz costs $1.69 with three additional ounces', max.price === 1.69 && max.addlOunce === 3, JSON.stringify(max));
+  check('1.01 oz costs $1.11', core.letterPostage(1.01).price === 1.11);
+  const tooHeavy = core.letterPostage(3.51);
+  check('3.51 oz is not a letter', tooHeavy.notLetter === true && tooHeavy.oz === 3.51, JSON.stringify(tooHeavy));
+  [0, -1, NaN, null, '2'].forEach(function (weight) {
+    check(String(weight) + ' oz input is invalid', core.letterPostage(weight) === null);
+  });
+  const nonmachinable = core.letterPostage(1, { nonmachinable: true });
+  check('nonmachinable 1 oz includes a $0.49 surcharge', nonmachinable.price === 1.31 && nonmachinable.surcharge === 0.49 && nonmachinable.postage === 0.82, JSON.stringify(nonmachinable));
+  check('LETTER_POSTAGE is frozen', Object.isFrozen(core.LETTER_POSTAGE));
 }
 
 section('TCGplayer tracking import file');
