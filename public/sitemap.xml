@@ -63,7 +63,7 @@
 
 <url>
   <loc>https://tcgspeedshipper.com/blog/how-to-start-selling-on-tcgplayer.html</loc>
-  <lastmod>2026-09-13T00:00:00+00:00</lastmod>
+  <lastmod>2026-09-26T00:00:00+00:00</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.7</priority>
 </url>
@@ -77,14 +77,14 @@
 
 <url>
   <loc>https://tcgspeedshipper.com/blog/how-to-price-cards-to-sell-fast-on-tcgplayer.html</loc>
-  <lastmod>2026-09-13T00:00:00+00:00</lastmod>
+  <lastmod>2026-09-26T00:00:00+00:00</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.7</priority>
 </url>
 
 <url>
   <loc>https://tcgspeedshipper.com/blog/tcgplayer-vs-ebay-vs-whatnot.html</loc>
-  <lastmod>2026-09-13T00:00:00+00:00</lastmod>
+  <lastmod>2026-09-26T00:00:00+00:00</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.7</priority>
 </url>
@@ -119,14 +119,14 @@
 
 <url>
   <loc>https://tcgspeedshipper.com/blog/how-much-does-it-cost-to-ship-trading-cards.html</loc>
-  <lastmod>2026-09-13T00:00:00+00:00</lastmod>
+  <lastmod>2026-09-26T00:00:00+00:00</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.6</priority>
 </url>
 
 <url>
   <loc>https://tcgspeedshipper.com/blog/surviving-the-holiday-shipping-rush-tcgplayer.html</loc>
-  <lastmod>2026-09-13T00:00:00+00:00</lastmod>
+  <lastmod>2026-09-26T00:00:00+00:00</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.6</priority>
 </url>
@@ -195,6 +195,12 @@
   <priority>0.7</priority>
 </url>
 <url>
+  <loc>https://tcgspeedshipper.com/blog/how-to-ship-graded-cards.html</loc>
+  <lastmod>2026-09-27T00:00:00+00:00</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.7</priority>
+</url>
+<url>
   <loc>https://tcgspeedshipper.com/blog/how-to-ship-baseball-cards.html</loc>
   <lastmod>2026-09-27T00:00:00+00:00</lastmod>
   <changefreq>monthly</changefreq>
@@ -217,5 +223,11 @@
   <lastmod>2026-09-27T00:00:00+00:00</lastmod>
   <changefreq>monthly</changefreq>
   <priority>0.5</priority>
+</url>
+<url>
+  <loc>https://tcgspeedshipper.com/blog/tcgplayer-fees-explained.html</loc>
+  <lastmod>2026-09-26T00:00:00+00:00</lastmod>
+  <changefreq>monthly</changefreq>
+  <priority>0.7</priority>
 </url>
 </urlset>

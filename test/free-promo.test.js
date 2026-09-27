@@ -26,7 +26,7 @@ const stripeStub = {
   checkout: {
     sessions: {
       create: async (p) => {
-        calls.push(['checkout.sessions.create', p]);
+        calls.push(['checkout.sessions.create', JSON.parse(JSON.stringify(p))]);
         if (state.checkoutShouldFail && p.discounts) { state.checkoutShouldFail = false; throw new Error('coupon not applicable to this price'); }
         return { url: 'https://checkout.stripe.com/x', id: 'cs_test_1' };
       },
@@ -230,6 +230,30 @@ function check(name, cond, detail) {
   state.checkoutShouldFail = true;
   res = await req('POST', '/api/create-checkout-session', { plan: 'premium', promoCode: 'FREEMONTH' }, fromIp('8.8.8.8'));
   check('falls back to a working checkout without the discount', res.status === 200 && res.body.promoApplied === false && typeof res.body.url === 'string');
+
+  console.log('\n-- A referred friend keeps their free month when Stripe rejects a free promo --');
+  reset();
+  state.profile = { stripe_customer_id: null, is_lifetime_free: false, referred_by: 'referrer_1' };
+  state.checkoutShouldFail = true;
+  res = await req('POST', '/api/create-checkout-session', { plan: 'base', promoCode: 'FREEMONTH' }, fromIp('9.9.9.9'));
+  const referredCalls = calls.filter((c) => c[0] === 'checkout.sessions.create');
+  const referredFirst = referredCalls[0] && referredCalls[0][1];
+  const referredLast = referredCalls[referredCalls.length - 1] && referredCalls[referredCalls.length - 1][1];
+  check('referred fallback reports that the promo did not apply', res.status === 200 && res.body.promoApplied === false);
+  check('the first fully-free checkout has no referral trial', referredFirst && !referredFirst.subscription_data);
+  check('the retry adds the free referral trial and requires a payment method',
+    referredLast && referredLast.subscription_data && referredLast.subscription_data.trial_period_days === 30 &&
+      referredLast.payment_method_collection === 'always' &&
+      referredLast.custom_text.submit.message.includes('free (referral reward)'), JSON.stringify(referredLast));
+
+  reset();
+  state.checkoutShouldFail = true;
+  res = await req('POST', '/api/create-checkout-session', { plan: 'base', promoCode: 'FREEMONTH' }, fromIp('10.10.10.10'));
+  const unreferredCalls = calls.filter((c) => c[0] === 'checkout.sessions.create');
+  const unreferredRetry = unreferredCalls[unreferredCalls.length - 1] && unreferredCalls[unreferredCalls.length - 1][1];
+  check('an unreferred fallback keeps normal payment collection and no subscription trial',
+    res.status === 200 && unreferredRetry && !unreferredRetry.subscription_data &&
+      unreferredRetry.payment_method_collection === 'if_required', JSON.stringify(unreferredRetry));
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   server.close();
