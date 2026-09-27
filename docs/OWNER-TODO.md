@@ -15,17 +15,37 @@ them.
 
 ## 🔥 Blocking right now
 
-- [ ] 🔥 **Merge Devin's finished PRs** (Devin is out of usage, so these are
-  stranded until someone merges them). Each is reviewed and tested by Claude.
-  Merge on GitHub in this order: **#11** (partner list +
-  competitors), **#12** (fee corrections), **#16** (referral billing fixes),
-  **#17** (sample-order button), **#21** (slip QR), **#18** (Pirate Ship
-  export), **#10** (holiday dates, so glance at the dates first).
-  **#14** (fees post + calculator) and **#19** (DAS v1.1) each have a small
-  merge conflict (a test-list line, and log entries that both went at the
-  end of the log). GitHub can't auto-merge those. The fastest path is to
-  reply **"you can merge Devin's reviewed PRs"**: Claude merges all nine and
-  resolves both conflicts itself. ⏱ 1 min to reply, or ~10 min to click
+- [ ] 🔥 **Netlify isn't publishing to production.** The live site is
+  still the deploy of PR #20 (2026-09-26 22:24 UTC). #22–#26 (accessibility,
+  offline fixes, faster page load) are merged but not live. Deploy previews
+  build fine, so the code is OK; it's a Netlify setting. In Netlify →
+  tcg-speed-shipper → **Deploys**:
+  - If there's a banner saying **auto publishing is locked**, click **Start
+    auto publishing**.
+  - Otherwise open the newest `main` production deploy. If it failed, copy
+    the error line to Claude. If it's "ready" but not published, click
+    **Publish deploy**.
+
+  Also check Team → Billing/Usage. The Free plan has a monthly credit limit,
+  and production deploys use credits. ⏱ 3 min
+- [ ] 🔥 **Merge Devin's finished PRs.** Each passes all tests on a checkout
+  and is up to date with `main`. Order: **#11** (partners + community
+  channels), **#12** (fee corrections), **#16** (referral billing fixes),
+  **#17** (sample-order button), **#18** (Pirate Ship export), **#19** (DAS
+  v1.1), then the posts **#14**, **#27**, **#28**, **#29** and **#10** (glance
+  at the holiday dates first). The posts all touch the blog index/sitemap, so
+  after each merge the next may show a conflict. Devin (now back) merges
+  `main` in, or reply **"you can merge Devin's reviewed PRs"** and Claude does
+  all of it. ⏱ 1 min to reply, or ~15 min to click
+- [ ] **Decide: slip branding vs TCGplayer's seller agreement.** Devin found
+  that the Marketplace Seller Agreement bans marketing material, custom
+  packing slips and links to outside sites in shipped orders.
+  - **#21** (URL + QR on free slips) is on HOLD. Recommend closing it.
+  - The current free-slip footer "Powered by TCG Speed Shipper" has no link,
+    but could still count. Recommend removing it from slips; reply "drop the
+    footer" and Claude does it.
+
+  It's your users' seller accounts at risk. ⏱ 2 min
 - [ ] **Stripe session with Claude (planned for tomorrow):**
   - reconnect the Stripe connector at claude.ai/customize/connectors
   - start a new Claude session
@@ -162,9 +182,8 @@ them.
   Chrome extension (parked for now). ⏱ 10 min
 - [ ] *(optional)* **Refill OpenRush credits,** the SEO data tool Claude uses
   for keyword research. It ran out mid-research. 💵
-- [ ] *(optional)* **Top up Devin** when you want the two-agent setup back.
-  Devin Review (the automatic PR reviewer) is also out ("trial expired").
-  Until then Claude works solo and reviews its own PRs with tests. 💵
+- [ ] *(optional)* **Devin Review** (the automatic PR reviewer) still reported
+  "trial expired". Devin itself is back as of 2026-09-27. 💵
 
 ---
 
