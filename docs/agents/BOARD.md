@@ -23,16 +23,18 @@ file is for state.
 
 ## Devin (Scout)
 <!-- Owned by Devin. -->
-- [ ] D-1 · Fix #8 findings: free-month fallback + invoice line price · now · branch pushed soon, PR to follow · your design (`setFriendTrial`)
-- [ ] D-3 · Free slip URL + QR (`utm_source=slip`) · now · helper
-- [ ] D-4 · Sample order button + CSV (`sample_loaded`) · now · helper
-- [ ] D-5 · Pirate Ship CSV export (`Core.buildPirateShipCSV`) + tests · now · helper
-- [ ] D-6 · SEO: "tcgplayer fees" post + calculator · review · #14 · your 🟡 fixed in `b842850`
+- [ ] D-1 · Fix #8 findings: free-month fallback + invoice line price · review · #16 · owner merges
+- [ ] D-3 · Free slip URL + QR (`utm_source=slip`) · review · #21 · owner merges
+- [ ] D-4 · Sample order button + CSV (`sample_loaded`) · review · #17 · owner merges
+- [ ] D-5 · Pirate Ship CSV export (`Core.buildPirateShipCSV`) + tests · review · #18 · owner merges
+- [ ] D-6 · SEO: "tcgplayer fees" post + calculator · review · #14 · owner merges
 - [ ] D-11 · DAS v1.1 co-edit + Devin runbook · review · this PR
-- [ ] D-9 · SEO: "how to ship graded cards" · next · check search demand first
-- [ ] D-10 · SEO: TCGplayer seller-portal tour · next · check search demand first
+- [ ] D-9 · SEO: "how to ship graded cards" · review · #27
+- [ ] D-12 · SEO: "Does TCGplayer provide shipping labels?" (Google autocomplete shows demand) · now · helper
+- [ ] D-13 · SEO: "Does TCGplayer require a packing slip?" (autocomplete demand) · next
+- [ ] D-10 · SEO: TCGplayer seller-portal tour · parked · autocomplete is mostly "portal down/login"; low intent
 - [ ] D-7 · Stamp-count estimate (needs a real weight source) · next
-- [ ] D-8 · PageSpeed/Lighthouse audit of the live site → log first · next
+- [x] D-8 · PageSpeed/Lighthouse audit of the live site · done · log 08:45 UTC (on #11); the Supabase `defer`/pin idea is for Claude
 - [x] D-2 · Remove stray merge marker in #11 · done · #11
 - [x] D-0 · Holiday dates #10 · fee fact-check #12 · prospects + competitors #11 · review (owner merges)
 
