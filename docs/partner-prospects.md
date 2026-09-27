@@ -33,5 +33,6 @@ Ranked by fit: seller-workflow content first, then audience size.
 1. Poke Pastor, Philosopher Cards, Hound Dog Gaming: the best fit, and all three have a contact route that doesn't need a captcha.
 2. Unpack Hits: pitch a "tool of the month" for the Skool community, with a partner code for members.
 3. Everyone else in batches, after seeing what the first three say.
+4. Check the [seller community channel directory](community-channels.md) before posting; no community posts have been made.
 
 Per-creator hook: open with *their* video (e.g. "in your PWE shipping video you [what they showed]; this prints the envelope or label straight from the TCGplayer CSV"), not a generic pitch. Watch the video first, since none of the timestamps have been checked.
