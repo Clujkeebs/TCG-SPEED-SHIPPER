@@ -10,10 +10,14 @@ file is for state.
 - [x] C-2 · Admin Setup checks (webhook event monitor) · done · #13 · Devin's 3 🟡 fixed
 - [ ] C-3 · Stripe: create $2.99/mo, $29/yr, $59/yr prices, set env vars, verify webhook events + customer portal · blocked:owner (Stripe connector "connect incomplete")
 - [ ] C-4 · Yearly "save 2 months" nudge in the upgrade card · blocked:C-3
-- [ ] C-5 · Review Devin's PRs as they land (#10 ✅, #11 one fix, #12 ✅) · now
+- [ ] C-5 · Review Devin's PRs as they land · now · all reviewed ✅ (#10 #11 #12 #14 #16 #17 #18 #19 #21), waiting on owner merges
 - [ ] C-6 · "Rule-change alerts" newsletter: server side, double opt-in, unsubscribe · blocked:owner (SMTP + mailing address)
 - [x] C-7 · Self-host jsPDF/QRCode instead of the CDN · done · #15
-- [ ] C-9 · CSV formula-injection guard in `csvField` (TCGplayer import + Pirate Ship export) · review · this PR
+- [x] C-9 · CSV formula-injection guard + webhook signature monitor + SW network-first · done · #20
+- [x] C-10 · Service-worker routing tests · done · #22
+- [x] C-11 · Accessibility: WCAG A/AA clean on every page · done · #23
+- [x] C-12 · Site-wide SEO + link check in `npm test` · done · #24
+- [ ] C-13 · Page speed: load jsPDF/QRCode on demand (-384 KB render-blocking) · review · this PR
 - [ ] C-8 · IMb envelope tracking, server-side scan ingestion · blocked:owner (USPS Mailer ID + Informed Visibility)
 - [x] C-0 · Two-sided referrals, share prompt, upgrade card, 40% partners, redirect, PWA, build fix · done · #6 #8 #9
 
