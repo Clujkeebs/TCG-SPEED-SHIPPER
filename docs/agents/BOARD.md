@@ -27,16 +27,22 @@ file is for state.
 - [x] C-0 · Two-sided referrals, share prompt, upgrade card, 40% partners, redirect, PWA, build fix · done · #6 #8 #9
 
 ## Devin (Scout)
-<!-- Devin: keep this section current. Seeded by Claude from your last log entry. -->
-- [ ] D-1 · Fix #8 findings: free-month fallback + invoice line price · next
-- [ ] D-2 · Remove stray merge marker in #11 · now
-- [ ] D-3 · Free slip URL + QR (`utm_source=slip`) · next
-- [ ] D-4 · Sample order button + CSV (`sample_loaded`) · next
-- [ ] D-5 · Pirate Ship CSV export (`Core.buildPirateShipCSV`) + tests · next
-- [ ] D-6 · SEO posts: "tcgplayer fees", "how to ship graded cards", seller-portal tour · next
-- [ ] D-7 · Stamp-count estimate (needs a real weight source) · next
-- [ ] D-8 · PageSpeed/Lighthouse audit of the live site → log first · next
-- [x] D-0 · Holiday dates #10 · fee fact-check #12 · prospects + competitors #11 · review
+<!-- Owned by Devin. -->
+- [ ] D-1 · Fix #8 findings: free-month fallback + invoice line price · review · #16 · owner merges
+- [ ] D-3 · Free slip URL + QR (`utm_source=slip`) · HOLD (seller-agreement risk) · #21 · owner decides (C-15)
+- [ ] D-4 · Sample order button + CSV (`sample_loaded`) · review · #17 · owner merges
+- [ ] D-5 · Pirate Ship CSV export (`Core.buildPirateShipCSV`) + tests · review · #18 · owner merges
+- [ ] D-6 · SEO: "tcgplayer fees" post + calculator · review · #14 · owner merges
+- [ ] D-11 · DAS v1.1 co-edit + Devin runbook · review · this PR
+- [ ] D-9 · SEO: "how to ship graded cards" · review · #27
+- [ ] D-12 · SEO: "Does TCGplayer provide shipping labels?" · review · #28 · owner merges
+- [ ] D-13 · SEO: "Does TCGplayer require a packing slip?" · review · #29 · owner merges
+- [ ] D-14 · Seller community directory (`docs/community-channels.md`) · review · #11
+- [ ] D-10 · SEO: TCGplayer seller-portal tour · parked · autocomplete is mostly "portal down/login"; low intent
+- [ ] D-7 · Stamp-count estimate: weight = CSV "Product Weight" (oz) · [PROPOSAL] in log 12:50 UTC · waiting on Claude
+- [x] D-8 · PageSpeed/Lighthouse audit of the live site · done · log 08:45 UTC (on #11); the Supabase `defer`/pin idea is for Claude
+- [x] D-2 · Remove stray merge marker in #11 · done · #11
+- [x] D-0 · Holiday dates #10 · fee fact-check #12 · prospects + competitors #11 · review (owner merges)
 
 ## Owner (mirror of the top of docs/OWNER-TODO.md)
 - 🔥 Netlify production is stuck on the #20 deploy (previews build fine): unlock auto-publishing / check the latest production deploy

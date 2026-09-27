@@ -2,6 +2,8 @@
    turn a TCGplayer export into labels. A parsing bug here prints a wrong
    address on a real package, so the tricky real-world shapes are pinned. */
 const core = require('../public/js/shipper-core.js');
+const fs = require('fs');
+const path = require('path');
 
 let passed = 0, failed = 0;
 function check(name, cond, extra) {
@@ -26,6 +28,17 @@ section('TCGplayer shipping export');
   check('shipping method captured', orders[1].shipMethod === 'Expedited');
   check('ZIP+4 preserved', orders[1].zip === '73301-1234');
   check('US country is not printed', core.addrLines(orders[0]).indexOf('US') === -1);
+}
+
+section('Sample shipping export');
+{
+  const csv = fs.readFileSync(path.join(__dirname, '..', 'public', 'samples', 'tcgplayer-sample-shipping-export.csv'), 'utf8');
+  const orders = core.parseCSV(csv);
+  const tiers = { envelope: 0, recommended: 0, tracking: 0, signature: 0 };
+  orders.forEach(function (o) { tiers[core.shippingTier(o).tier]++; });
+  check('parses 8 sample orders', orders.length === 8, String(orders.length));
+  check('sample order tier mix', JSON.stringify(tiers) === JSON.stringify({ envelope: 5, recommended: 1, tracking: 1, signature: 1 }), JSON.stringify(tiers));
+  check('leading-zero ZIP is preserved', orders.some(function (o) { return o.zip === '02108'; }));
 }
 
 section('Header order does not fool column matching');
@@ -140,6 +153,26 @@ section('TCGplayer tracking import file');
   const nr = core.readCSVRows(noCols.csv);
   check('adds Tracking #/Carrier columns when the export lacks them', nr[0].slice(-2).join() === 'Tracking #,Carrier' && nr[1][4] === '1Z999AA10123456784' && nr[1][5] === 'UPS');
   check('refuses a file with no order numbers', !!core.buildTrackingImport('Name,Address 1\nA,1 St', {}, {}).error);
+}
+
+section('Pirate Ship tracked-order export');
+{
+  const orders = [
+    { firstName: 'Ann, "Ace"', lastName: 'Lee', addr1: '1 "Main", Apt', addr2: '', city: 'Boston', state: 'MA', zip: '02108', country: '', orderNumber: 'S1', itemCount: 1 },
+    { firstName: 'Bill', lastName: 'One', addr1: '2 Oak St', addr2: 'Suite 4', city: 'Austin', state: 'TX', zip: '73301-1234', country: 'US', orderNumber: 'S2', itemCount: 3 },
+    { firstName: 'No', lastName: 'Number', addr1: '3 Elm St', addr2: '', city: 'Reno', state: 'NV', zip: '89501', country: ' ', orderNumber: '', itemCount: 3 }
+  ];
+  const result = core.buildPirateShipCSV(orders);
+  const rows = core.readCSVRows(result.csv);
+  check('exact Pirate Ship header', rows[0].join(',') === 'Name,Address,Address Line 2,City,State,Zipcode,Country,Order ID,Rubber Stamp 1', rows[0].join(','));
+  check('comma and quote escaping in name and address', result.csv.indexOf('"Ann, ""Ace"" Lee","1 ""Main"", Apt"') !== -1, result.csv);
+  check('blank address line 2 stays empty', rows[1][2] === '');
+  check('blank country defaults to US', rows[1][6] === 'US' && rows[3][6] === 'US');
+  check('ZIP+4 and leading-zero ZIP are preserved', rows[1][5] === '02108' && rows[2][5] === '73301-1234');
+  check('count matches the input', result.count === orders.length, String(result.count));
+  check('one-item stamp', rows[1][8] === 'TCGplayer S1 · 1 item', rows[1][8]);
+  check('three-item stamp', rows[2][8] === 'TCGplayer S2 · 3 items', rows[2][8]);
+  check('item stamp works without an order number', rows[3][8] === '3 items', rows[3][8]);
 }
 
 section('CSV formula injection');

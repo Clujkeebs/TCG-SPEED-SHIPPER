@@ -186,6 +186,18 @@ server.listen(0, async () => {
     await req('POST', '/api/stripe-webhook', paid(), { 'stripe-signature': 'x' });
     check('their first real payment records the referral conversion', converted());
 
+    reset(); state.profile = { id: 'user_1', referred_by: 'referrer_1' }; state.subs = [sub('price_unknown')];
+    await req('POST', '/api/stripe-webhook', paid({ lines: { data: [{ price: { id: 'price_base_299' } }] } }), { 'stripe-signature': 'x' });
+    check('the invoice line price records a conversion even if the current subscription price is unknown', converted());
+
+    reset(); state.profile = { id: 'user_1', referred_by: 'referrer_1' }; state.subs = [sub('price_base_299')];
+    await req('POST', '/api/stripe-webhook', paid({ lines: { data: [{ price: { id: 'price_unknown' } }] } }), { 'stripe-signature': 'x' });
+    check('an unknown invoice line price does not convert based on the current subscription price', !converted());
+
+    reset(); state.profile = { id: 'user_1', referred_by: 'referrer_1' }; state.subs = [sub('price_unknown')];
+    await req('POST', '/api/stripe-webhook', paid({ lines: { data: [{ pricing: { price_details: { price: 'price_base_299' } } }] } }), { 'stripe-signature': 'x' });
+    check('the newer invoice line price shape records a conversion', converted());
+
     reset(); state.profile = { id: 'user_1', referred_by: 'referrer_1' }; state.subs = [sub('price_base_299')];
     await req('POST', '/api/stripe-webhook', { type: 'checkout.session.completed', data: { object: { client_reference_id: 'user_1', subscription: 'sub_1', customer: 'cus_1' } } }, { 'stripe-signature': 'x' });
     check('an active $0 checkout (100%-off code) earns the referrer nothing', !converted());
