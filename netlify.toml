@@ -92,3 +92,10 @@
   for = "/manifest.webmanifest"
   [headers.values]
     Content-Type = "application/manifest+json"
+
+# Self-hosted third-party libraries. The version is in the file name, so a
+# new version is a new URL and these can be cached forever.
+[[headers]]
+  for = "/vendor/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

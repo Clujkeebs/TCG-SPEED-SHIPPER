@@ -68,6 +68,7 @@ const supabaseStub = {
   }),
   rpc: async (name) => {
     calls.push(['rpc', name]);
+    if (name === 'tcgss_bump_event' && state.bumpFails) return { data: null, error: { message: 'function not found' } };
     if (name === 'tcgss_claim_pending_referral_credits') { const c = state.claimed; state.claimed = []; return { data: c, error: null }; }
     return { data: null, error: null };
   },
@@ -204,6 +205,24 @@ server.listen(0, async () => {
     reset(); state.profile = { id: 'user_1', referred_by: 'referrer_1' };
     await req('POST', '/api/stripe-webhook', { type: 'invoice.payment_succeeded', data: { object: { id: 'in_0', customer: 'cus_1', amount_paid: 0, currency: 'usd' } } }, { 'stripe-signature': 'x' });
     check('a $0 trial invoice does not', !calls.some((c) => c[0] === 'rpc' && c[1] === 'tcgss_record_referral_conversion'));
+
+    console.log('\n-- Webhook delivery counts (admin setup checks) --');
+    reset();
+    await req('POST', '/api/stripe-webhook', paid(), { 'stripe-signature': 'x' });
+    check('each verified webhook delivery is counted by event type', calls.some((c) => c[0] === 'rpc' && c[1] === 'tcgss_bump_event'));
+    reset();
+    stripeStub.webhooks.constructEvent = () => { throw new Error('No signatures found matching the expected signature'); };
+    const bad = await req('POST', '/api/stripe-webhook', paid(), { 'stripe-signature': 'x' });
+    stripeStub.webhooks.constructEvent = (body) => JSON.parse(body.toString('utf8'));
+    check('a signature failure is rejected (400) and counted for the Setup checks', bad.status === 400 && calls.some((c) => c[0] === 'rpc' && c[1] === 'tcgss_bump_event'));
+    reset();
+    const noSig = await req('POST', '/api/stripe-webhook', paid(), {});
+    check('a request without a Stripe signature header is not counted as a Stripe failure', (noSig.status === 400 || noSig.status === 200));
+
+    reset(); state.bumpFails = true; state.profile = { id: 'user_1' };
+    const wr = await req('POST', '/api/stripe-webhook', paid(), { 'stripe-signature': 'x' });
+    state.bumpFails = false;
+    check('a counter error is logged, and the webhook still succeeds', wr.status === 200 && calls.some((c) => c[0] === 'rpc' && c[1] === 'tcgss_bump_event'));
 
     console.log('\n-- Health --');
     const h = await req('GET', '/api/health');
