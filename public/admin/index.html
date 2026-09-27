@@ -12,7 +12,7 @@
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --bg: #f7f5f0; --surface: #fff; --border: #e4e0d8; --text: #1c1b18; --muted: #6b6960; --hint: #9e9a90;
+  --bg: #f7f5f0; --surface: #fff; --border: #e4e0d8; --text: #1c1b18; --muted: #6b6960; --hint: #716d64;
   --accent: #2d6a4f; --accent-bg: #edf7f1; --danger: #b42318; --danger-bg: #fdecea; --warn: #9a6a00; --warn-bg: #fdf6e3;
   --radius: 12px; --mono: 'JetBrains Mono', ui-monospace, monospace;
 }
@@ -137,7 +137,7 @@ a { color: var(--accent); }
           <select id="funnel-days" class="btn" style="font-weight:400;"><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option></select>
         </div>
         <div class="funnel" id="funnel"></div>
-        <div class="table-scroll" style="margin-top:14px;"><table>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table" style="margin-top:14px;"><table>
           <thead><tr><th>Source</th><th>Visits</th><th>CSV loaded</th><th>PDFs</th><th>Signups</th><th>Checkouts</th><th>Upgrades</th><th>Visit → paid</th></tr></thead>
           <tbody id="funnel-sources"></tbody>
         </table></div>
@@ -149,7 +149,7 @@ a { color: var(--accent); }
       </div>
       <div class="card">
         <h2>Newest users</h2>
-        <div class="table-scroll"><table><thead><tr><th>Email</th><th>Plan</th><th>Joined</th><th>Labels (mo)</th></tr></thead><tbody id="newest"></tbody></table></div>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Email</th><th>Plan</th><th>Joined</th><th>Labels (mo)</th></tr></thead><tbody id="newest"></tbody></table></div>
       </div>
       <div class="card">
         <h2>Recent errors</h2>
@@ -164,7 +164,7 @@ a { color: var(--accent); }
         <button class="btn" id="copy-emails" type="button">Copy emails</button>
         <button class="btn" id="export-users" type="button">Export CSV</button>
       </div>
-      <div class="table-scroll"><table>
+      <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table>
         <thead><tr>
           <th data-sort="email">Email</th><th data-sort="plan">Plan</th><th data-sort="subscription_status">Status</th>
           <th data-sort="labels_this_month">Labels (mo)</th><th data-sort="labels_total">Labels (all)</th>
@@ -181,7 +181,7 @@ a { color: var(--accent); }
         <button class="btn" id="events-refresh" type="button">Refresh</button>
         <button class="btn danger" id="events-clear" type="button">Clear errors &amp; warnings</button>
       </div>
-      <div class="table-scroll"><table>
+      <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table>
         <thead><tr><th>When</th><th>Level</th><th>Source</th><th>Message</th><th>Details</th></tr></thead>
         <tbody id="events-body"></tbody>
       </table></div>
@@ -198,7 +198,7 @@ a { color: var(--accent); }
         </div>
         <div id="aff-msg"></div>
       </div>
-      <div class="table-scroll"><table>
+      <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table>
         <thead><tr><th>Name</th><th>Email</th><th>Code</th><th>Status</th><th>Signups</th><th>Paying</th><th>Owed</th><th>Paid</th><th></th></tr></thead>
         <tbody id="aff-body"></tbody>
       </table></div>
@@ -206,7 +206,7 @@ a { color: var(--accent); }
 
     <section class="panel" id="p-newsletter">
       <div class="toolbar"><button class="btn" id="copy-news" type="button">Copy all emails</button></div>
-      <div class="table-scroll"><table><thead><tr><th>Email</th><th>Source</th><th>Signed up</th></tr></thead><tbody id="news-body"></tbody></table></div>
+      <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Email</th><th>Source</th><th>Signed up</th></tr></thead><tbody id="news-body"></tbody></table></div>
     </section>
   </div>
 </div>
@@ -326,7 +326,11 @@ async function loadSetupChecks() {
     rows.forEach(renderRow);
     return;
   }
-  var seen = f.stripe_events || {}, last = f.stripe_last || {};
+  var seen = Object.assign({}, f.stripe_events || {}), last = f.stripe_last || {};
+  var badSig = seen.signature_failed || 0;
+  delete seen.signature_failed;
+  if (badSig) row(false, badSig + ' webhook deliveries failed the signature check (30 days, last ' + last.signature_failed + ')',
+    'The signing secret changed, e.g. the endpoint was re-created. Copy Stripe → Developers → Webhooks → your endpoint → Signing secret into STRIPE_WEBHOOK_SECRET in Netlify.');
   var any = Object.keys(seen).length;
   var note = function (t) { return seen[t] ? seen[t] + ' in 30 days, last ' + last[t] : 'none in 30 days'; };
   row(any > 0, 'Stripe webhooks arriving: ' + (any ? Object.keys(seen).length + ' event types' : 'none recorded yet (counting started with this version)'), 'Check Stripe → Developers → Webhooks: endpoint https://tcgspeedshipper.com/api/stripe-webhook.');

@@ -375,6 +375,7 @@ function makeThrottle(maxAttempts, windowMs) {
     return recent.length > maxAttempts;
   };
 }
+const tooManySignatureLogs = makeThrottle(1, 10 * 60 * 1000);
 const tooManySignupAttempts = makeThrottle(8, 10 * 60 * 1000);
 // Promo codes are guessable strings; this slows down brute-forcing them.
 const tooManyPromoChecks = makeThrottle(20, 10 * 60 * 1000);
@@ -483,6 +484,14 @@ router.post('/stripe-webhook', express.raw({ type: '*/*' }), requireStripe, requ
     event = stripe.webhooks.constructEvent(req.body, req.headers['stripe-signature'], process.env.STRIPE_WEBHOOK_SECRET);
   } catch (err) {
     console.error('Stripe webhook signature verification failed:', err.message);
+    // A real Stripe delivery (it carries a signature header) that fails
+    // verification almost always means STRIPE_WEBHOOK_SECRET doesn't match the
+    // endpoint's signing secret, e.g. after the endpoint was re-created. Count
+    // it for the admin Setup checks, and log it at most every 10 minutes.
+    if (req.headers['stripe-signature'] && supabaseAdmin) {
+      try { await supabaseAdmin.rpc('tcgss_bump_event', { p_event: 'stripe:signature_failed', p_source: 'stripe' }); } catch (e) { /* diagnostics only */ }
+      if (!tooManySignatureLogs('all')) await logError('webhook.signature', 'Stripe webhook signature check failed. Check that STRIPE_WEBHOOK_SECRET matches the endpoint signing secret in Stripe.', err.message);
+    }
     return res.status(400).send('Webhook Error: ' + err.message);
   }
 

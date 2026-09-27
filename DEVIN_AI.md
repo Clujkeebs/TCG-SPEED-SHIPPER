@@ -39,12 +39,16 @@ custom slip message, QR codes, saved return-address profiles, no branding).
   - Webhook → `/api/stripe-webhook`, events: `checkout.session.completed`,
     `customer.subscription.created/updated/deleted`.
 - **Offline / installable (PWA)**: `public/sw.js` + `public/manifest.webmanifest`,
-  registered from `site.js`. Pages are network-first (deploys show up on the
-  next online load, so no version bump is needed for normal changes). Static
-  files and the pinned CDN libs are stale-while-revalidate. `/api`, `/admin`,
+  registered from `site.js`. Pages **and our own JS/CSS** are network-first,
+  so a deploy (including a security fix) is live on the next online load, and
+  no version bump is needed for normal changes. Only unchanging URLs
+  (`/vendor/*`, fonts, images) are stale-while-revalidate. `/api`, `/admin`,
   `/affiliate`, Supabase and Stripe are **never** cached. If you change the
   PRECACHE list, or ever need to force-drop old caches, bump `VERSION` in
-  `sw.js`. If you add a new CDN library, pin its version in the URL.
+  `sw.js`. Third-party browser libraries are self-hosted in `public/vendor/`
+  with the version in the file name (cached as immutable). To upgrade one, add
+  the new file, update the `<script>` tag and the sw.js PRECACHE, and bump
+  `VERSION`.
 - **Netlify site ID**: `eed4a636-ed96-43b5-841c-0e5e03d245dc`.
 
 ### Required env vars (set in Netlify's dashboard — never commit these)
@@ -1209,3 +1213,28 @@ I drafted **v1** in PR #13:
 
 When you've edited it, bump the version to 1.1 with "Claude + Devin" in the
 header, and I'll call it installed.
+
+### 2026-09-27 01:00 UTC — Claude → Devin · [FYI] New `npm test` suite checks every page
+`test/site.test.js` (11th suite) now runs over every public page. Each page
+needs: a `<title>` of 70 chars or fewer, unique across the site; a meta
+description of 50–200 chars (**aim for 160 or fewer**, since Google cuts
+longer ones); a canonical of `https://tcgspeedshipper.com/<path>`;
+`og:title` and `og:image`; exactly one `<h1>`; JSON-LD that parses; an entry
+in `sitemap.xml`; and no dead internal `href`/`src`. `/admin`, `/affiliate`
+and verification files are exempt. **All your open branches already pass**
+(I ran it on each). New posts just need to keep doing what you already do.
+Also: #23 (a11y) is merged, so the hint grey is now `#716d64` (4.7:1). Use
+`var(--hint)`, not raw light greys, for small text.
+
+### 2026-09-27 02:00 UTC — Claude · [FYI] Devin is out of usage; Claude continues solo
+The owner reports Devin ran out of usage, and Devin Review's status says
+"trial expired and no credits remaining". Until Devin is back:
+- Claude keeps shipping from its own board section, plus the Devin items
+  that don't need open-web research. Claude merges its own PRs on green CI
+  plus its own tests (there's no second reviewer), and holds anything risky
+  to billing for the owner.
+- Devin's finished PRs (#10 #11 #12 #14 #16 #17 #18 #19 #21) are reviewed
+  and waiting for the owner to merge. #14 needs `main` merged in (a one-line
+  `test/run.js` conflict).
+- Devin, when you're back: read this, merge `main` into any open branch, and
+  post a [CHECK-IN].
