@@ -268,6 +268,27 @@
     };
   }
 
+  function buildPirateShipCSV(orders) {
+    orders = orders || [];
+    var rows = [['Name', 'Address', 'Address Line 2', 'City', 'State', 'Zipcode', 'Country', 'Order ID', 'Rubber Stamp 1']];
+    orders.forEach(function (o) {
+      var itemCount = parseInt(o.itemCount, 10);
+      var items = itemCount > 0 ? itemCount + (itemCount === 1 ? ' item' : ' items') : '';
+      var orderNumber = o.orderNumber == null ? '' : String(o.orderNumber);
+      var stamp = orderNumber
+        ? 'TCGplayer ' + orderNumber + (items ? ' · ' + items : '')
+        : items;
+      rows.push([
+        fullName(o), o.addr1, o.addr2, o.city, o.state, o.zip,
+        String(o.country || '').trim() || 'US', orderNumber, stamp
+      ]);
+    });
+    return {
+      csv: rows.map(function (row) { return row.map(csvField).join(','); }).join('\r\n') + '\r\n',
+      count: orders.length
+    };
+  }
+
   /* ── Pasted addresses ── */
 
   var CITY_STATE_ZIP_RE = /^(.+?),?\s+([A-Za-z]{2})\.?\s+(\d{5}(?:[-\s]?\d{4})?)$/;
@@ -358,6 +379,7 @@
     detectCarrier: detectCarrier,
     matchTracking: matchTracking,
     buildTrackingImport: buildTrackingImport,
+    buildPirateShipCSV: buildPirateShipCSV,
     MAPS: MAPS
   };
 });
