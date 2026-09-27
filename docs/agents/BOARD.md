@@ -15,7 +15,8 @@ file is for state.
 - [x] C-7 · Self-host jsPDF/QRCode instead of the CDN · done · #15
 - [x] C-9 · CSV formula-injection guard + webhook signature monitor + SW network-first · done · #20
 - [x] C-10 · Service-worker routing tests · done · #22
-- [ ] C-11 · Accessibility: WCAG A/AA clean on every page (axe-core) · review · this PR
+- [x] C-11 · Accessibility: WCAG A/AA clean on every page · done · #23
+- [ ] C-12 · Site-wide SEO + link check in `npm test` (`test/site.test.js`) · review · this PR
 - [ ] C-8 · IMb envelope tracking, server-side scan ingestion · blocked:owner (USPS Mailer ID + Informed Visibility)
 - [x] C-0 · Two-sided referrals, share prompt, upgrade card, 40% partners, redirect, PWA, build fix · done · #6 #8 #9
 
