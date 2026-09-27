@@ -13,3 +13,7 @@ billing, security, tests, integrations, code review. Devin is the Scout
 - Keep an hourly check-in scheduled and subscribe to PR activity while DAS
   is running.
 - Never put secrets, model identifiers or user PII in commits.
+- **Deploys are automatic.** Every merge to `main` goes live through Netlify.
+  Never ask the owner to deploy.
+- Once a day, refresh `docs/OWNER-TODO.md` against reality and send it to the
+  owner as one short document (the "Owner to-do digest" routine does this).
