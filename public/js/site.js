@@ -154,6 +154,43 @@
   window.TCGSSTrack = track;
   if (!/^\/admin\//.test(location.pathname)) track('visit', true);
 
+  /* ── Weekly newsletter signup (footer, every page) ──
+     Injected here so no page file has to change. Posts to
+     /api/newsletter/subscribe; the hidden "website" field is a bot trap. */
+  function initNewsletter() {
+    var brand = document.querySelector('footer.sf .sf-brand');
+    if (!brand || brand.querySelector('.sf-news') || /^\/(admin|affiliate)\//.test(location.pathname)) return;
+    var where = /^\/blog\//.test(location.pathname) ? 'blog' : /^\/guide\//.test(location.pathname) ? 'guide'
+      : /^\/partners/.test(location.pathname) ? 'partners' : location.pathname === '/' ? 'home' : 'footer';
+    var form = document.createElement('form');
+    form.className = 'sf-news';
+    form.setAttribute('novalidate', '');
+    form.innerHTML =
+      '<label for="sf-news-email">Weekly seller newsletter</label>' +
+      '<p>One short email a week: a shipping tip, TCGplayer and USPS changes, new features. Unsubscribe in one click.</p>' +
+      '<div class="sf-news-row"><input id="sf-news-email" type="email" name="email" autocomplete="email" placeholder="you@example.com" required>' +
+      '<button type="submit">Subscribe</button></div>' +
+      '<input class="sf-news-hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">' +
+      '<p class="sf-news-msg" role="status" aria-live="polite"></p>';
+    brand.appendChild(form);
+    var msg = form.querySelector('.sf-news-msg'), btn = form.querySelector('button');
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var email = form.email.value.trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.textContent = 'Enter a valid email.'; form.email.focus(); return; }
+      btn.disabled = true; msg.textContent = 'Subscribing…';
+      fetch('/api/newsletter/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, source: where, website: form.website.value }) })
+        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (res) {
+          if (res.ok) { msg.textContent = '✓ You\'re in. The next issue comes Tuesday.'; form.email.value = ''; track('newsletter_signup'); }
+          else msg.textContent = res.j.error || 'Could not subscribe. Try again later.';
+        })
+        .catch(function () { msg.textContent = 'Could not reach the server. Try again later.'; })
+        .then(function () { btn.disabled = false; });
+    });
+  }
+
   /* ── 3. Scroll reveal ──
      Only for content that starts below the fold, so nothing visible on
      load ever blinks. Without IntersectionObserver (or with reduced motion),
@@ -182,6 +219,7 @@
   ready(function () {
     try { initReveal(); } catch (e) {}
     try { initConsent(); } catch (e) {}
+    try { initNewsletter(); } catch (e) {}
     try {
       var y = document.querySelectorAll('[data-year]');
       for (var i = 0; i < y.length; i++) y[i].textContent = String(new Date().getFullYear());

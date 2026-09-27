@@ -1122,7 +1122,7 @@ router.post('/client-error', express.json({ limit: '8kb' }), async (req, res) =>
 // and source names are accepted, so the table can't be filled with junk, and
 // only daily totals are stored — no cookie, IP, or user id, which is why no
 // consent banner is needed for it.
-const FUNNEL_EVENTS = ['visit', 'csv_loaded', 'pdf_downloaded', 'signup', 'checkout_started', 'upgraded', 'pricing_viewed', 'tcg_import', 'share_clicked', 'upgrade_prompt', 'limit_hit', 'sample_loaded'];
+const FUNNEL_EVENTS = ['visit', 'csv_loaded', 'pdf_downloaded', 'signup', 'checkout_started', 'upgraded', 'pricing_viewed', 'tcg_import', 'share_clicked', 'upgrade_prompt', 'limit_hit', 'sample_loaded', 'newsletter_signup'];
 const FUNNEL_SOURCES = ['direct', 'google', 'google_ads', 'bing', 'reddit', 'youtube', 'tiktok', 'facebook', 'instagram', 'discord', 'twitter', 'tcgplayer', 'email', 'referral', 'affiliate', 'slip', 'whatnot', 'ebay', 'other'];
 const tooManyEvents = makeThrottle(120, 10 * 60 * 1000);
 router.post('/e', express.json({ limit: '1kb' }), async (req, res) => {
@@ -1136,6 +1136,73 @@ router.post('/e', express.json({ limit: '1kb' }), async (req, res) => {
     if (error) console.error('funnel event failed:', error.message);
   } catch (e) { /* analytics must never break anything */ }
   res.status(202).json({ ok: true });
+});
+
+// Weekly seller newsletter. The list lives in tcgss_newsletter_subscribers
+// (server-only). Issues are sent one by one from the owner's Gmail, each with
+// its own unsubscribe link, so no email service is needed.
+// Subscribing always answers the same way, so the form can't be used to find
+// out who is on the list. The honeypot field `website` is invisible to people
+// and filled in by bots.
+const NEWSLETTER_SOURCES = ['footer', 'blog', 'guide', 'home', 'partners', 'account', 'other'];
+const tooManyNewsletterSignups = makeThrottle(5, 10 * 60 * 1000);
+router.post('/newsletter/subscribe', express.json({ limit: '2kb' }), async (req, res) => {
+  const b = req.body || {};
+  const email = String(b.email || '').trim().toLowerCase().slice(0, 254);
+  if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'Enter a valid email.' });
+  if (b.website) return res.json({ ok: true }); // bot
+  const ip = getClientIp(req);
+  if (tooManyNewsletterSignups(ip)) return res.status(429).json({ error: 'Too many attempts — try again in a few minutes.' });
+  if (!supabaseAdmin) return res.status(503).json({ error: 'Signups are unavailable right now.' });
+  const source = NEWSLETTER_SOURCES.includes(b.source) ? b.source : 'other';
+  try {
+    const { error } = await supabaseAdmin.from('tcgss_newsletter_subscribers').upsert(
+      { email, status: 'subscribed', source, ip_hash: hashIp(ip), unsubscribed_at: null },
+      { onConflict: 'email' });
+    if (error) throw error;
+    res.json({ ok: true });
+  } catch (err) {
+    await logError('newsletter', 'subscribe failed:', err);
+    res.status(500).json({ error: 'Could not subscribe — try again later.' });
+  }
+});
+
+// Unsubscribe is a page with a button (GET shows it, POST does it): link
+// scanners in mail filters open every link in an email, and a one-GET
+// unsubscribe would silently remove people who never clicked.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function newsletterPage(title, body) {
+  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<meta name="robots" content="noindex"><title>' + title + ' · TCG Speed Shipper</title>' +
+    '<style>body{font:16px/1.5 system-ui,sans-serif;background:#f7f5f0;color:#1f1d1a;margin:0;padding:48px 16px}' +
+    'main{max-width:440px;margin:0 auto;background:#fff;border:1px solid #e4e0d6;border-radius:12px;padding:28px}' +
+    'h1{font-size:22px;margin:0 0 10px}button{font:inherit;background:#2d6a4f;color:#fff;border:0;border-radius:8px;padding:10px 18px;cursor:pointer}' +
+    'a{color:#2d6a4f}</style></head><body><main><h1>' + title + '</h1>' + body + '</main></body></html>';
+}
+router.get('/newsletter/unsubscribe', (req, res) => {
+  const t = String(req.query.t || '');
+  res.set('Cache-Control', 'no-store');
+  if (!UUID_RE.test(t)) return res.status(400).send(newsletterPage('Link not recognized', '<p>This unsubscribe link looks incomplete. Reply to any newsletter email with “unsubscribe” and we’ll take you off by hand.</p>'));
+  res.send(newsletterPage('Unsubscribe from the newsletter?',
+    '<p>You’ll stop getting the weekly TCG Speed Shipper email. Your account (if you have one) isn’t affected.</p>' +
+    '<form method="post"><input type="hidden" name="t" value="' + t + '"><button type="submit">Unsubscribe</button></form>'));
+});
+router.post('/newsletter/unsubscribe', express.urlencoded({ extended: false, limit: '1kb' }), async (req, res) => {
+  const t = String((req.body && req.body.t) || req.query.t || '');
+  res.set('Cache-Control', 'no-store');
+  if (!UUID_RE.test(t)) return res.status(400).send(newsletterPage('Link not recognized', '<p>Reply to any newsletter email with “unsubscribe” and we’ll take you off by hand.</p>'));
+  if (!supabaseAdmin) return res.status(503).send(newsletterPage('Try again shortly', '<p>We couldn’t reach the list just now. Please try again in a minute.</p>'));
+  try {
+    const { error } = await supabaseAdmin.from('tcgss_newsletter_subscribers')
+      .update({ status: 'unsubscribed', unsubscribed_at: new Date().toISOString() })
+      .eq('unsub_token', t);
+    if (error) throw error;
+    // Same answer whether or not the token matched: nothing to learn from it.
+    res.send(newsletterPage('You’re unsubscribed', '<p>You won’t get the weekly email anymore. Changed your mind? Sign up again at the bottom of <a href="https://tcgspeedshipper.com/blog/">any blog page</a>.</p>'));
+  } catch (err) {
+    await logError('newsletter', 'unsubscribe failed:', err);
+    res.status(500).send(newsletterPage('Something went wrong', '<p>Please try again, or reply to the email with “unsubscribe”.</p>'));
+  }
 });
 
 require('./admin')(router, {

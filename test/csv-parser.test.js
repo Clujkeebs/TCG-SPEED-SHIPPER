@@ -114,6 +114,26 @@ section('Pasted addresses');
   check('CRLF input handled', core.parsePastedAddresses('A B\r\n1 St\r\nX, NY 10001').good.length === 1);
 }
 
+section('Stamp plan for envelope orders');
+{
+  const env = (w) => ({ orderValue: 5, productWeight: w });
+  const orders = [env(0.2), env(0.9), env(3.4), { orderValue: 60, productWeight: 0.1 }, env(null)];
+  let p = core.stampPlan(orders, null);
+  check('no packaging weight → no totals yet', p.needsPackaging === true && p.letters === 0 && p.total === 0);
+  check('orders missing a weight are counted', p.noWeight === 1);
+  p = core.stampPlan(orders, 0.5);
+  check('tracked orders are left out', p.perOrder[3] === null);
+  check('0.2 + 0.5 oz → 1 oz letter', p.perOrder[0] && p.perOrder[0].addlOunce === 0);
+  check('0.9 + 0.5 oz → 2 oz letter (1 additional ounce)', p.perOrder[1] && p.perOrder[1].addlOunce === 1);
+  check('3.4 + 0.5 oz → over 3.5 oz, not a letter', p.perOrder[2] && p.perOrder[2].notLetter === true && p.notLetter === 1);
+  const one = core.letterPostage(0.7), two = core.letterPostage(1.4);
+  check('batch totals add up', p.letters === 2 && p.forever === 2 && p.addlOunce === 1 && p.total === Math.round((one.price + two.price) * 100) / 100, JSON.stringify(p));
+  p = core.stampPlan([env(0.2)], 0.5, { nonmachinable: true });
+  check('rigid envelopes add the nonmachinable surcharge', p.nonmachinable === 1 && p.total === core.letterPostage(0.7, { nonmachinable: true }).price);
+  check('negative packaging weight is ignored', core.stampPlan([env(0.2)], -1).needsPackaging === true);
+  check('float noise: 0.5 + 0.5 is exactly 1 oz, not 2', core.stampPlan([env(0.5)], 0.5).perOrder[0].addlOunce === 0);
+}
+
 section('Slip QR link vs TCGplayer seller agreement');
 {
   const r = core.slipLinkRisk;

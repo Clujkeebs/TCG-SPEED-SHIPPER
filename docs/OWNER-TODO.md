@@ -28,15 +28,17 @@ them.
 
   Also check Team → Billing/Usage. The Free plan has a monthly credit limit,
   and production deploys use credits. ⏱ 3 min
-- [ ] 🔥 **Merge Devin's finished PRs.** Each passes all tests on a checkout
-  and is up to date with `main`. Order: **#11** (partners + community
-  channels), **#12** (fee corrections), **#16** (referral billing fixes),
-  **#17** (sample-order button), **#18** (Pirate Ship export), **#19** (DAS
-  v1.1), then the posts **#14**, **#27**, **#28**, **#29** and **#10** (glance
-  at the holiday dates first). The posts all touch the blog index/sitemap, so
-  after each merge the next may show a conflict. Devin (now back) merges
-  `main` in, or reply **"you can merge Devin's reviewed PRs"** and Claude does
-  all of it. ⏱ 1 min to reply, or ~15 min to click
+- [ ] 🔥 **Reply with a mailing address for email footers** (a PO box or a
+  virtual mailbox is fine). The law (CAN-SPAM) requires a physical address in
+  every marketing email. It's the one thing holding back all of these:
+  - the win-back email to free users
+  - partner/referral outreach (Devin is finding 30 new people now)
+  - the weekly newsletter (first issue Tue Sep 29)
+
+  Just paste it in chat; it only goes in email footers, never in the repo.
+  ⏱ 1 min (+ errand if you need a PO box)
+- [x] ~~Merge Devin's finished PRs~~: done 2026-09-27 (Devin merged them with
+  your OK). Everything except #21 is in.
 - [ ] **Decide: slip branding vs TCGplayer's seller agreement.** Devin found
   that the Marketplace Seller Agreement bans marketing material, custom
   packing slips and links to outside sites in shipped orders.

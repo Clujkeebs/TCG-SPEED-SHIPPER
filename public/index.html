@@ -397,6 +397,14 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
 .ship-plan-filter select { max-width: 100%; }
 .ship-plan-summary { font-size: 13px; line-height: 1.6; color: var(--text); margin: 8px 0 0; }
 .ship-plan-note { font-size: 12px; color: var(--accent); margin: 4px 0 0; }
+.stamp-plan { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); }
+.stamp-summary { font-size: 13px; line-height: 1.6; color: var(--text); margin: 0 0 8px; }
+.stamp-opts { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; font-size: 13px; color: var(--text-secondary); }
+.stamp-opts input[type=number] { width: 80px; padding: 6px 8px; font-size: 13px; margin: 0 4px; }
+.stamp-rigid { display: inline-flex; gap: 6px; align-items: center; }
+.stamp-fine { font-size: 12px; color: var(--hint); margin: 8px 0 0; line-height: 1.5; }
+.stamp-tag { display: inline-block; margin-top: 6px; font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--text-secondary); background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; }
+.stamp-tag.warn { color: var(--danger); border-color: #f5c0bb; }
 .ship-plan-note:empty { display: none; }
 .ship-plan-fine { font-size: 11px; color: var(--hint); margin: 6px 0 0; line-height: 1.5; }
 .ship-plan-fine a { color: inherit; }
@@ -479,7 +487,12 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
   margin-bottom: .6rem; letter-spacing: -.02em;
 }
 .hiw-hero p { font-size: 16px; color: var(--muted); line-height: 1.75; margin-bottom: 1rem; max-width: 560px; }
-.steps { display: flex; flex-direction: column; gap: 10px; margin-bottom: 2rem; }
+.steps { display: flex; flex-direction: column; gap: 10px; margin: 0 0 2rem; padding: 0; list-style: none; }
+.hiw-cta { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.hiw-cta .btn-dl, .hiw-cta .btn-ghost { width: auto; }
+.step-time { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500; color: var(--accent); background: rgba(45,106,79,.08); border-radius: 999px; padding: 2px 8px; margin-left: 6px; white-space: nowrap; vertical-align: 1px; }
+.hiw-end { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem 1.5rem; margin: 0 0 1rem; box-shadow: var(--shadow-sm); }
+.hiw-end p { font-size: 15px; color: var(--text); margin: 0 0 12px; }
 .step {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 1.25rem 1.5rem;
@@ -492,7 +505,6 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
   font-size: 24px; font-weight: 600;
   color: var(--accent); font-family: 'JetBrains Mono', monospace;
   flex-shrink: 0; line-height: 1; margin-top: 2px;
-  opacity: .6;
 }
 .step-body h3 { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 5px; }
 .step-body p { font-size: 14px; color: var(--muted); line-height: 1.7; margin: 0; }
@@ -760,23 +772,6 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
 .auth-note.err { background: var(--danger-bg); border: 1px solid #f5c0bb; color: var(--danger); }
 .auth-note.ok { background: var(--success-bg); border: 1px solid #b6e8cc; color: var(--success); }
 
-/* ── Newsletter signup ── */
-.newsletter-box { max-width: 360px; margin: 1.75rem auto 0; }
-.newsletter-label {
-  font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace;
-  text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px;
-}
-.newsletter-row { display: flex; gap: 8px; }
-.newsletter-row input[type=text] { flex: 1; font-size: 13px; padding: 9px 12px; }
-.newsletter-row button {
-  background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm);
-  padding: 0 18px; font-size: 13px; font-family: 'Source Serif 4', serif; font-weight: 600;
-  cursor: pointer; white-space: nowrap; transition: transform .15s, opacity .15s;
-}
-.newsletter-row button:hover { transform: translateY(-1px); }
-.newsletter-row button:disabled { opacity: .5; cursor: not-allowed; transform: none; }
-@media (max-width: 420px) { .newsletter-row { flex-direction: column; } }
-
 /* ── Post-download share card + upgrade prompt ── */
 .share-toast { position: fixed; left: 50%; bottom: 18px; transform: translate(-50%, 20px); opacity: 0;
   width: min(440px, calc(100vw - 32px)); background: var(--surface, #fff); border: 1px solid var(--border);
@@ -960,6 +955,15 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
         </div>
         <p class="ship-plan-summary" id="ship-plan-summary"></p>
         <p class="ship-plan-note" id="ship-plan-note"></p>
+        <div class="stamp-plan" id="stamp-plan" style="display:none;">
+          <p class="stamp-summary" id="stamp-summary" role="status"></p>
+          <div class="stamp-opts">
+            <label for="pkg-oz">Envelope + toploader + slip
+              <input type="number" id="pkg-oz" min="0" max="3" step="0.05" inputmode="decimal" placeholder="e.g. 0.6"> oz</label>
+            <label class="stamp-rigid"><input type="checkbox" id="pwe-rigid"> Rigid envelope (nonmachinable, +$0.49)</label>
+          </div>
+          <p class="stamp-fine">Estimate: TCGplayer's product weight plus your packaging, at USPS stamped-letter prices (from <span id="stamp-effective"></span>). Weigh anything close to the next ounce. <a href="/blog/how-many-stamps-to-mail-a-trading-card.html">How many stamps? →</a></p>
+        </div>
         <div id="pirate-ship-export" style="display:none;margin-top:10px;">
           <button type="button" class="btn-ghost" id="pirate-ship-download"></button>
           <p style="font-size:12px;color:var(--hint);margin:6px 0 0;line-height:1.5;">Upload it at pirateship.com → Ship → Import Spreadsheet, then paste the tracking numbers back here for your TCGplayer import.</p>
@@ -1304,44 +1308,56 @@ Chicago, IL 60601</div>
 
     <div class="hiw-hero">
       <h2>How It Works</h2>
-      <p>TCGPlayer Speed Shipper turns your packing list CSV into print-ready PDF shipping labels in under two minutes. Here's every step from export to print.</p>
+      <p>From TCGplayer export to a printed stack of labels in about two minutes. No retyping addresses, no account needed for your first 10 labels a month.</p>
+      <div class="hiw-cta">
+        <button type="button" class="btn-dl" data-hiw-go="upload">Upload my CSV</button>
+        <button type="button" class="btn-ghost" data-hiw-go="sample">Try a sample order first</button>
+      </div>
     </div>
 
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">01</div>
+    <ol class="steps">
+      <li class="step">
+        <div class="step-num" aria-hidden="true">01</div>
         <div class="step-body">
-          <h3>Export your packing list from TCGPlayer</h3>
-          <p>Log in to your TCGPlayer seller account → Orders → Packing List → Export. This gives you a CSV file with all your buyer names and shipping addresses.</p>
+          <h3>Export your orders from TCGplayer <span class="step-time">30 sec</span></h3>
+          <p>In the Seller Portal: <strong>Orders → Packing List → Export</strong>. You get a CSV with every buyer's name and address. The shipping export also includes order values, which the Shipping Plan (step 3) uses.</p>
         </div>
-      </div>
-      <div class="step">
-        <div class="step-num">02</div>
+      </li>
+      <li class="step">
+        <div class="step-num" aria-hidden="true">02</div>
         <div class="step-body">
-          <h3>Enter your return address once</h3>
-          <p>Type in your store name and address on the Home tab. It saves automatically to your browser — you'll never have to type it again.</p>
+          <h3>Enter your return address once <span class="step-time">one time</span></h3>
+          <p>Your store name and address save in your browser, so every future batch skips this step.</p>
         </div>
-      </div>
-      <div class="step">
-        <div class="step-num">03</div>
+      </li>
+      <li class="step">
+        <div class="step-num" aria-hidden="true">03</div>
         <div class="step-body">
-          <h3>Upload the CSV file</h3>
-          <p>Tap the upload zone or drag and drop your file. The tool reads every order instantly — no waiting, no processing, no server.</p>
+          <h3>Drop in the CSV and check the Shipping Plan <span class="step-time">5 sec</span></h3>
+          <p>Every order is read instantly, in your browser. Buyer addresses never touch our server. Each order is tagged <strong>Envelope OK</strong>, <strong>Tracking recommended</strong>, <strong>Tracking required</strong> ($49.99+) or <strong>Signature required</strong> ($250+), using TCGplayer's own thresholds, so you know what goes in a PWE and what needs a tracked label.</p>
         </div>
-      </div>
-      <div class="step">
-        <div class="step-num">04</div>
+      </li>
+      <li class="step">
+        <div class="step-num" aria-hidden="true">04</div>
         <div class="step-body">
-          <h3>Choose your format</h3>
-          <p>Pick 4×6 thermal for a label printer, or 8.5×11 with 1, 2, 3, or 4 labels per sheet for a regular printer. Toggle packing slips on or off.</p>
+          <h3>Pick your format and print <span class="step-time">30 sec</span></h3>
+          <p><strong>4×6 thermal</strong> for a label printer, <strong>8.5×11</strong> (1–4 per sheet), <strong>#10 envelopes</strong> printed directly, or <strong>Avery 5160</strong> sheets (30 per page). Turn on packing slips if you use them. Download the PDF and print at 100% scale.</p>
         </div>
-      </div>
-      <div class="step">
-        <div class="step-num">05</div>
+      </li>
+      <li class="step">
+        <div class="step-num" aria-hidden="true">05</div>
         <div class="step-body">
-          <h3>Download and print</h3>
-          <p>Hit Download PDF. Open the file and send it to your printer. For thermal printers, set margins to none and match your label size. Done.</p>
+          <h3>Mark the whole batch shipped <span class="step-time">1 min</span></h3>
+          <p>Buying tracked postage on Pirate Ship? Download the <strong>Pirate Ship CSV</strong> of just your tracked orders. Then paste your tracking numbers, click <strong>Match to Orders</strong>, and download the <strong>TCGplayer import file</strong>: one upload in the Seller Portal marks every order shipped.</p>
         </div>
+      </li>
+    </ol>
+
+    <div class="hiw-end">
+      <p><strong>Ready?</strong> Your first 10 labels this month are free, with no account needed.</p>
+      <div class="hiw-cta">
+        <button type="button" class="btn-dl" data-hiw-go="upload">Make my labels</button>
+        <button type="button" class="btn-ghost" data-hiw-go="pricing">See plans ($2.99/mo for 500 labels)</button>
       </div>
     </div>
 
@@ -1366,7 +1382,7 @@ Chicago, IL 60601</div>
       <div class="why-card">
         <div class="why-icon">🖨️</div>
         <div class="why-title">Any Printer</div>
-        <div class="why-desc">Thermal 4×6 or standard 8.5×11 — your choice.</div>
+        <div class="why-desc">Thermal 4×6, 8.5×11, #10 envelopes or Avery 5160 sheets.</div>
       </div>
       <div class="why-card">
         <div class="why-icon">📦</div>
@@ -1374,9 +1390,9 @@ Chicago, IL 60601</div>
         <div class="why-desc">One toggle adds a slip to every order.</div>
       </div>
       <div class="why-card">
-        <div class="why-icon">💾</div>
-        <div class="why-title">Remembers You</div>
-        <div class="why-desc">Return address auto-saves in your browser.</div>
+        <div class="why-icon">✅</div>
+        <div class="why-title">Marks Orders Shipped</div>
+        <div class="why-desc">Paste tracking numbers and get one TCGplayer import file for the whole batch.</div>
       </div>
     </div>
 
@@ -1616,14 +1632,6 @@ Chicago, IL 60601</div>
         <span class="brand-by">by Clujkeebs</span>
         <p>Print-ready labels, envelopes, and packing slips from your TCGplayer orders. Built by a TCGplayer seller, for sellers.</p>
         <a class="sf-mail" href="mailto:clujkeebs@gmail.com">clujkeebs@gmail.com</a>
-        <div class="sf-news newsletter-box">
-          <div class="newsletter-label">Occasional product updates</div>
-          <div class="newsletter-row">
-            <input type="text" id="newsletter-email" placeholder="you@email.com" autocomplete="email" aria-label="Email for product updates" />
-            <button id="newsletter-submit" type="button">Subscribe</button>
-          </div>
-          <p class="tip" id="newsletter-msg"></p>
-        </div>
       </div>
       <div>
         <h4>Product</h4>
@@ -2475,6 +2483,7 @@ function renderShipPlan(toPrint) {
       document.getElementById('pirate-ship-download').textContent = 'Download Pirate Ship CSV (' + trackedOrders.length + ' tracked orders)';
     }
   }
+  renderStampPlan();
   var sel = document.getElementById('print-filter');
   if (sel.value !== printFilter) sel.value = printFilter;
   var note = document.getElementById('ship-plan-note');
@@ -2482,6 +2491,64 @@ function renderShipPlan(toPrint) {
     (toPrint.length ? 'Printing ' + toPrint.length + ' of ' + orders.length + ' orders. Dimmed cards are left out of this download.' : 'No orders match this filter.');
   box.style.display = 'block';
 }
+
+/* ── Stamp estimate for envelope orders (D-7 / C-18) ── */
+var STAMP_PKG_KEY = 'tcgss_pkg_oz', STAMP_RIGID_KEY = 'tcgss_pwe_rigid';
+function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+function lsRemove(k) { try { localStorage.removeItem(k); } catch (e) {} }
+function stampSettings() {
+  var v = parseFloat(lsGet(STAMP_PKG_KEY));
+  return { pkg: isFinite(v) && v >= 0 && v <= 3 ? v : null, rigid: lsGet(STAMP_RIGID_KEY) === '1' };
+}
+var lastStampPlan = null;
+function money(n) { return '$' + n.toFixed(2); }
+function renderStampPlan() {
+  var box = document.getElementById('stamp-plan');
+  if (!box) return;
+  var st = stampSettings();
+  var plan = Core.stampPlan(orders, st.pkg, { nonmachinable: st.rigid });
+  lastStampPlan = plan;
+  var envelopes = orders.filter(function (o) { return Core.shippingTier(o).tier === 'envelope'; }).length;
+  var weighed = envelopes - plan.noWeight;
+  if (!weighed) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  var pkgIn = document.getElementById('pkg-oz'), rigidIn = document.getElementById('pwe-rigid');
+  if (document.activeElement !== pkgIn) pkgIn.value = st.pkg === null ? '' : String(st.pkg);
+  rigidIn.checked = st.rigid;
+  document.getElementById('stamp-effective').textContent = new Date(Core.LETTER_POSTAGE.EFFECTIVE + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  var out;
+  if (plan.needsPackaging) {
+    out = '<b>Stamp estimate:</b> enter what your empty envelope, toploader and slip weigh to count stamps for ' + weighed + ' envelope order' + (weighed !== 1 ? 's' : '') + '.';
+  } else {
+    var bits = ['<b>' + plan.forever + '</b> Forever'];
+    if (plan.addlOunce) bits.push('<b>' + plan.addlOunce + '</b> additional-ounce');
+    if (plan.nonmachinable) bits.push('<b>' + plan.nonmachinable + '</b> nonmachinable surcharge');
+    out = '<b>Stamps for ' + plan.letters + ' envelope' + (plan.letters !== 1 ? 's' : '') + ':</b> ' + bits.join(' + ') + ' ≈ <b>' + money(plan.total) + '</b>';
+    if (plan.notLetter) out += '<br><span style="color:var(--danger);">' + plan.notLetter + ' envelope order' + (plan.notLetter !== 1 ? 's are' : ' is') + ' over 3.5 oz: that ships as a package, not a stamped letter.</span>';
+  }
+  if (plan.noWeight) out += '<br><span style="color:var(--hint);">' + plan.noWeight + ' envelope order' + (plan.noWeight !== 1 ? 's have' : ' has') + ' no weight in the file.</span>';
+  document.getElementById('stamp-summary').innerHTML = out;
+}
+function stampTagFor(i) {
+  var p = lastStampPlan && lastStampPlan.perOrder[i];
+  if (!p) return '';
+  if (p.notLetter) return '<div class="stamp-tag warn">Over 3.5 oz: not a letter</div>';
+  var oz = 1 + p.addlOunce;
+  return '<div class="stamp-tag">~' + oz + ' oz · ' + money(p.price) + ' in stamps</div>';
+}
+(function () {
+  var pkgIn = document.getElementById('pkg-oz'), rigidIn = document.getElementById('pwe-rigid');
+  if (!pkgIn) return;
+  pkgIn.addEventListener('input', function () {
+    var v = parseFloat(pkgIn.value);
+    if (pkgIn.value === '' || (isFinite(v) && v >= 0 && v <= 3)) {
+      if (pkgIn.value === '') lsRemove(STAMP_PKG_KEY); else lsSet(STAMP_PKG_KEY, String(v));
+      renderPreviews();
+    }
+  });
+  rigidIn.addEventListener('change', function () { lsSet(STAMP_RIGID_KEY, rigidIn.checked ? '1' : '0'); renderPreviews(); });
+})();
 
 function isTrackedOrder(o) {
   var tier = Core.shippingTier(o).tier;
@@ -2543,7 +2610,7 @@ function renderPreviews() {
       '<div class="label-from"><strong>'+esc(s.name||'Your Name')+'</strong>'+
       esc(s.addr1||'')+(s.addr2?', '+esc(s.addr2):'')+'<br>'+esc(sLine2)+'</div>'+
       '<div class="label-to"><strong>'+esc(Core.fullName(o))+'</strong>'+
-      '<span>'+al.join('<br>')+'</span>'+slip+(o.shipMethod?'<div class="slip-tag ship-tag">'+esc(o.shipMethod)+'</div>':'')+tierTag+'</div>';
+      '<span>'+al.join('<br>')+'</span>'+slip+(o.shipMethod?'<div class="slip-tag ship-tag">'+esc(o.shipMethod)+'</div>':'')+tierTag+stampTagFor(i)+'</div>';
     list.appendChild(div);
   });
 
@@ -3614,44 +3681,18 @@ function awaitPlanUpgrade(attempt) {
   }, 1500);
 }
 
-/* ── Newsletter signup ── */
-(function () {
-  var emailInput = document.getElementById('newsletter-email');
-  var submitBtn = document.getElementById('newsletter-submit');
-  var msg = document.getElementById('newsletter-msg');
-  if (!submitBtn) return;
-
-  function setMsg(text, kind) {
-    msg.textContent = text;
-    msg.style.color = kind === 'ok' ? 'var(--success)' : kind === 'err' ? 'var(--danger)' : '';
-  }
-
-  var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-  async function subscribe() {
-    var email = emailInput.value.trim();
-    if (!EMAIL_RE.test(email)) { setMsg('Enter a valid email.', 'err'); return; }
-    if (!sb) { setMsg('Sign-up is unavailable right now — try again later.', 'err'); return; }
-    submitBtn.disabled = true; var orig = submitBtn.textContent; submitBtn.textContent = 'Subscribing...';
-    try {
-      var res = await sb.from('tcgss_newsletter_subscribers').insert({ email: email, source: 'footer' });
-      if (res.error) {
-        if (res.error.code === '23505') setMsg('You’re already on the list.', 'ok');
-        else throw res.error;
-      } else {
-        setMsg('✓ Subscribed — thanks!', 'ok');
-        emailInput.value = '';
-      }
-    } catch (e) {
-      setMsg('Could not subscribe — try again.', 'err');
-    }
-    submitBtn.disabled = false; submitBtn.textContent = orig;
-  }
-
-  submitBtn.addEventListener('click', subscribe);
-  emailInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') subscribe(); });
-})();
-
+/* How It Works calls to action */
+document.querySelectorAll('[data-hiw-go]').forEach(function (b) {
+  b.addEventListener('click', function () {
+    var go = b.getAttribute('data-hiw-go');
+    if (go === 'pricing') { switchTab('pricing'); return; }
+    switchTab('home');
+    var target = document.getElementById(go === 'sample' ? 'sample-order-btn' : 'upload-zone');
+    if (!target) return;
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (go === 'sample') target.click();
+  });
+});
 openTabFromHash();
 loadAddr();
 loadPlans();
