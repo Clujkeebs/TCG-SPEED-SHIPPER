@@ -17,13 +17,15 @@ them.
 
 - [ ] 🔥 **Merge Devin's finished PRs** (Devin is out of usage, so these are
   stranded until someone merges them). Each is reviewed and tested by Claude.
-  Merge on GitHub in this order: **#19** (DAS v1.1), **#11** (partner list +
+  Merge on GitHub in this order: **#11** (partner list +
   competitors), **#12** (fee corrections), **#16** (referral billing fixes),
   **#17** (sample-order button), **#21** (slip QR), **#18** (Pirate Ship
   export), **#10** (holiday dates, so glance at the dates first).
-  **#14** (fees post + calculator) has a one-line merge conflict. The fastest
-  path is to reply **"you can merge Devin's reviewed PRs"**: Claude merges all
-  nine and fixes #14's conflict itself. ⏱ 1 min to reply, or ~10 min to click
+  **#14** (fees post + calculator) and **#19** (DAS v1.1) each have a small
+  merge conflict (a test-list line, and log entries that both went at the
+  end of the log). GitHub can't auto-merge those. The fastest path is to
+  reply **"you can merge Devin's reviewed PRs"**: Claude merges all nine and
+  resolves both conflicts itself. ⏱ 1 min to reply, or ~10 min to click
 - [ ] **Stripe session with Claude (planned for tomorrow):**
   - reconnect the Stripe connector at claude.ai/customize/connectors
   - start a new Claude session
