@@ -142,7 +142,7 @@
         if (ic > 0) o.itemCount += ic;
       }
       var weight = parseMoney(get('productWeight'));
-      if (weight !== null) {
+      if (weight !== null && weight > 0) {
         if (cols.item !== -1) {
           o.productWeight = (o.productWeight === null ? 0 : o.productWeight) + weight;
         } else if (o.productWeight === null) {

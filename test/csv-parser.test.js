@@ -114,6 +114,17 @@ section('Pasted addresses');
   check('CRLF input handled', core.parsePastedAddresses('A B\r\n1 St\r\nX, NY 10001').good.length === 1);
 }
 
+section('Product weight parsing edge cases');
+{
+  const csv = ['Order #,FirstName,LastName,Address1,City,State,PostalCode,Product Name,Quantity,Product Weight',
+    'W-1,Ann,Lee,1 A St,Reno,NV,89501,Card A,1,0.2',
+    'W-1,Ann,Lee,1 A St,Reno,NV,89501,Card B,1,(0.1)',
+    'W-2,Bo,Kim,2 B St,Reno,NV,89501,Card C,1,0'].join('\n');
+  const o = core.parseCSV(csv);
+  check('a negative line weight does not reduce the order total', o[0].productWeight === 0.2, String(o[0].productWeight));
+  check('a zero weight leaves the order without a weight', o[1].productWeight === null, String(o[1].productWeight));
+}
+
 section('Stamp plan for envelope orders');
 {
   const env = (w) => ({ orderValue: 5, productWeight: w });
