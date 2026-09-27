@@ -960,6 +960,10 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
         </div>
         <p class="ship-plan-summary" id="ship-plan-summary"></p>
         <p class="ship-plan-note" id="ship-plan-note"></p>
+        <div id="pirate-ship-export" style="display:none;margin-top:10px;">
+          <button type="button" class="btn-ghost" id="pirate-ship-download"></button>
+          <p style="font-size:12px;color:var(--hint);margin:6px 0 0;line-height:1.5;">Upload it at pirateship.com → Ship → Import Spreadsheet, then paste the tracking numbers back here for your TCGplayer import.</p>
+        </div>
         <p class="ship-plan-fine">Based on TCGplayer's seller shipping guidelines (tracking over $49.99, signature at $250+, tracking recommended over $20). Always check the order in TCGplayer. <a href="/blog/tcgplayer-shipping-guidelines.html">Read the guidelines →</a></p>
       </div>
       <div class="shipped-progress" id="shipped-progress" style="display:none;">
@@ -2462,12 +2466,25 @@ function renderShipPlan(toPrint) {
   summary.innerHTML = known
     ? parts.join(' · ')
     : 'This file has no order values, so orders can\'t be sorted by postage type. TCGplayer\'s shipping export includes them.';
+  var pirateExport = document.getElementById('pirate-ship-export');
+  if (pirateExport) {
+    var trackedOrders = orders.filter(isTrackedOrder);
+    pirateExport.style.display = trackedOrders.length ? 'block' : 'none';
+    if (trackedOrders.length) {
+      document.getElementById('pirate-ship-download').textContent = 'Download Pirate Ship CSV (' + trackedOrders.length + ' tracked orders)';
+    }
+  }
   var sel = document.getElementById('print-filter');
   if (sel.value !== printFilter) sel.value = printFilter;
   var note = document.getElementById('ship-plan-note');
   note.textContent = printFilter === 'all' ? '' :
     (toPrint.length ? 'Printing ' + toPrint.length + ' of ' + orders.length + ' orders. Dimmed cards are left out of this download.' : 'No orders match this filter.');
   box.style.display = 'block';
+}
+
+function isTrackedOrder(o) {
+  var tier = Core.shippingTier(o).tier;
+  return tier === 'recommended' || tier === 'tracking' || tier === 'signature';
 }
 
 var lastAnimatedBatch = null;
@@ -2919,6 +2936,17 @@ document.getElementById('print-filter').addEventListener('change',function(){
   printFilter=this.value;
   try { localStorage.setItem(PRINT_FILTER_KEY, printFilter); } catch (e) {}
   if(orders.length) renderPreviews();
+});
+document.getElementById('pirate-ship-download').addEventListener('click',function(){
+  var trackedOrders = orders.filter(isTrackedOrder);
+  if(!trackedOrders.length) return;
+  var result = Core.buildPirateShipCSV(trackedOrders);
+  var blob = new Blob([result.csv], { type: 'text/csv;charset=utf-8' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'pirate-ship-tracked-orders.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
 });
 document.getElementById('fmt-main').addEventListener('change',function(){ setFormat(this.value); });
 document.getElementById('slip-top').addEventListener('change',function(){ setSlips(this.checked); });
