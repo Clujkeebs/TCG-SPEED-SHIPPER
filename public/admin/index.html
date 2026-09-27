@@ -330,7 +330,7 @@ function deployRow(v, row) {
   }
   var liveText = short(v.live.commit) + ', built ' + ago(v.live.built_at);
   if (v.live.context !== 'production') { row(true, 'Live version: ' + liveText + ' (' + v.live.context + ' build; only production is compared with main)'); return; }
-  if (!v.main) { row(true, 'Live version: ' + liveText + ' (could not reach GitHub to compare with main)'); return; }
+  if (!v.main) { row(false, 'Live version: ' + liveText + ' (could not reach GitHub to compare with main)', 'Reload this page to retry, or compare this commit with the latest one on GitHub by hand.'); return; }
   if (v.main.sha === v.live.commit) { row(true, 'Production is up to date with main (' + liveText + ')'); return; }
   var fresh = v.main.date && (Date.now() - Date.parse(v.main.date)) < DEPLOY_GRACE_MIN * 60000;
   if (fresh) { row(true, 'Production: deploying ' + short(v.main.sha) + ' (merged ' + ago(v.main.date) + '); live is ' + liveText); return; }
