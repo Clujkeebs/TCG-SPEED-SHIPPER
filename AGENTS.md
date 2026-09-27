@@ -9,5 +9,7 @@ If the owner says "we're rocking the dual agent system" (or "DAS", "lock
 in"), run the boot sequence in §2 of that doc and keep working per §6 until
 told to stop.
 
+**Devin:** your runbook is `.agents/skills/dual-agent-system/SKILL.md`.
+
 Project facts (architecture, billing rules, auth model) are in `DEVIN_AI.md`.
 Tests: `npm test`.
