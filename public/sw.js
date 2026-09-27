@@ -13,12 +13,13 @@
      (stale-while-revalidate): versioned /vendor/ libraries, fonts, images,
      and pinned CDN files.
    Bump VERSION to force-drop every old cache. */
-var VERSION = 'v3';
+var VERSION = 'v4';
 var CACHE = 'tcgss-' + VERSION;
 var PRECACHE = [
   '/', '/css/site.css', '/js/site.js', '/js/shipper-core.js', '/fonts/fonts.css',
   '/favicon.svg', '/icon-192.png', '/manifest.webmanifest',
-  '/vendor/jspdf-2.5.1.umd.min.js', '/vendor/qrcode-1.0.0.min.js'
+  '/vendor/jspdf-2.5.1.umd.min.js', '/vendor/qrcode-1.0.0.min.js',
+  '/vendor/supabase-js-2.111.0.umd.js'
 ];
 var CDN = /^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net)\//;
 
