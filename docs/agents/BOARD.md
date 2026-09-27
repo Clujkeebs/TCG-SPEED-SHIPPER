@@ -22,7 +22,7 @@ file is for state.
 - [ ] C-16 · `npm test` fails on leftover merge-conflict markers in any tracked text file · review · this PR
 - [ ] C-17 · "Production is behind main" admin check (build writes /version.json; compared with GitHub main) · review · this PR
 - [ ] C-18 · D-7 stamp estimate UI (chip, batch line, packaging-weight setting) · blocked:Devin's Core.letterPostage PR
-- [ ] C-15 · Slip branding vs TCGplayer seller agreement: "Powered by" footer + Premium QR-URL hint · blocked:owner (decision)
+- [ ] C-15 · Slip branding vs TCGplayer seller agreement: "Powered by" footer + Premium QR-URL warning shipped in #31; footer · blocked:owner (decision)
 - [ ] C-8 · IMb envelope tracking, server-side scan ingestion · blocked:owner (USPS Mailer ID + Informed Visibility)
 - [x] C-0 · Two-sided referrals, share prompt, upgrade card, 40% partners, redirect, PWA, build fix · done · #6 #8 #9
 

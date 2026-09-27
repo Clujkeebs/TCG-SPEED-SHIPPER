@@ -315,6 +315,21 @@
 
   function fullName(o) { return ((o.firstName || '') + ' ' + (o.lastName || '')).trim(); }
 
+  // The QR link a Premium user prints on packing slips. TCGplayer's
+  // Marketplace Seller Agreement bans slips, links or messages that send
+  // buyers to an outside website (Pro web-store orders excepted), so a link
+  // that leaves tcgplayer.com is flagged in the Design Studio. Returns null
+  // (fine or empty), 'offsite', or 'invalid'.
+  function slipLinkRisk(url) {
+    var u = String(url || '').trim();
+    if (!u) return null;
+    var host;
+    try { host = new URL(/^[a-z][a-z0-9+.-]*:/i.test(u) ? u : 'https://' + u).hostname.toLowerCase(); }
+    catch (e) { return 'invalid'; }
+    if (!host || host.indexOf('.') === -1) return 'invalid';
+    return /(^|\.)tcgplayer\.com$/.test(host) ? null : 'offsite';
+  }
+
   // jsPDF's built-in fonts only cover Windows-1252. Anything outside it
   // (e.g. "Łódź", "Đặng", CJK) used to print as garbage on the label — which
   // for an address means a misdelivery. Strip accents where that yields a
@@ -354,6 +369,7 @@
     pdfSafe: pdfSafe,
     fitFontSize: fitFontSize,
     parseMoney: parseMoney,
+    slipLinkRisk: slipLinkRisk,
     shippingTier: shippingTier,
     detectCarrier: detectCarrier,
     matchTracking: matchTracking,
