@@ -1131,8 +1131,9 @@ Chicago, IL 60601</div>
           <input type="text" id="d-message" placeholder="Thank you for your order!" />
         </div>
         <div class="field mb">
-          <label>Storefront / Review URL <span style="font-weight:400;color:var(--hint);">(adds a QR code to packing slips)</span></label>
-          <input type="text" id="d-qr-url" placeholder="https://www.tcgplayer.com/search/all/product?seller=yourstore" />
+          <label for="d-qr-url">Storefront / Review URL <span style="font-weight:400;color:var(--hint);">(adds a QR code to packing slips)</span></label>
+          <input type="text" id="d-qr-url" placeholder="https://www.tcgplayer.com/search/all/product?seller=yourstore" aria-describedby="d-qr-warn" />
+          <p class="tip" id="d-qr-warn" role="status" style="display:none;margin-top:6px;color:#8a4b00;"></p>
         </div>
         <p class="tip" id="design-saved-msg" style="opacity:0;transition:opacity .4s;">✓ Saved</p>
       </div>
@@ -3232,6 +3233,7 @@ document.getElementById('tracking-copy-all-btn').addEventListener('click', funct
     fontSelect.value = p.font || 'helvetica';
     messageInput.value = p.message || '';
     qrInput.value = p.qrUrl || '';
+    if (qrWarn) checkQrLink();
   }
 
   function persistDesignForm(){
@@ -3261,6 +3263,18 @@ document.getElementById('tracking-copy-all-btn').addEventListener('click', funct
   [fontSelect, messageInput, qrInput].forEach(function(el){
     el.addEventListener('change', persistDesignForm);
   });
+
+  // TCGplayer's seller agreement: no links to outside websites on
+  // Marketplace packing slips. Warn, don't block: Pro web-store orders are allowed.
+  var qrWarn = document.getElementById('d-qr-warn');
+  function checkQrLink(){
+    var risk = Core.slipLinkRisk(qrInput.value);
+    qrWarn.textContent = risk === 'offsite'
+      ? '⚠️ This link leaves tcgplayer.com. TCGplayer\'s Seller Agreement doesn\'t allow packing slips that send Marketplace buyers to an outside website (orders from your Pro web store are the exception). Use your TCGplayer storefront link to stay safe.'
+      : risk === 'invalid' ? 'That doesn\'t look like a web address. Paste the full link, e.g. https://www.tcgplayer.com/...' : '';
+    qrWarn.style.display = risk ? '' : 'none';
+  }
+  qrInput.addEventListener('input', checkQrLink);
 
   document.getElementById('save-profile-btn').addEventListener('click', function(){
     var label = document.getElementById('profile-name').value.trim();

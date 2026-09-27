@@ -114,6 +114,18 @@ section('Pasted addresses');
   check('CRLF input handled', core.parsePastedAddresses('A B\r\n1 St\r\nX, NY 10001').good.length === 1);
 }
 
+section('Slip QR link vs TCGplayer seller agreement');
+{
+  const r = core.slipLinkRisk;
+  check('empty is fine', r('') === null && r('   ') === null && r(null) === null);
+  check('tcgplayer.com store link is fine', r('https://www.tcgplayer.com/search/all/product?seller=abc') === null);
+  check('tcgplayer.com without scheme is fine', r('tcgplayer.com/sellers/abc') === null);
+  check('subdomain of tcgplayer.com is fine', r('https://shop.tcgplayer.com/x') === null);
+  check('own website is offsite', r('https://mycardshop.com') === 'offsite');
+  check('look-alike host is offsite', r('https://tcgplayer.com.evil.io/x') === 'offsite' && r('https://nottcgplayer.com') === 'offsite');
+  check('bare word is invalid', r('mystore') === 'invalid');
+}
+
 section('Shipping plan');
 {
   const csv = [

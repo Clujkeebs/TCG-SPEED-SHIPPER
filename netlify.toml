@@ -1,7 +1,7 @@
 [build]
   publish = "public"
   functions = "netlify/functions"
-  command = "npm install"
+  command = "npm install && node scripts/stamp-version.js"
 
 # SUPABASE_URL is marked secret in Netlify, but it is public by design: the
 # browser needs it to sign users in (it sits next to the public anon key in
@@ -95,6 +95,12 @@
 
 # Self-hosted third-party libraries. The version is in the file name, so a
 # new version is a new URL and these can be cached forever.
+# Which commit is live. Never cached, so the admin check always sees the truth.
+[[headers]]
+  for = "/version.json"
+  [headers.values]
+    Cache-Control = "no-cache"
+
 [[headers]]
   for = "/vendor/*"
   [headers.values]

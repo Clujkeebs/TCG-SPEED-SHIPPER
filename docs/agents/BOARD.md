@@ -18,8 +18,11 @@ file is for state.
 - [x] C-11 · Accessibility: WCAG A/AA clean on every page · done · #23
 - [x] C-12 · Site-wide SEO + link check in `npm test` · done · #24
 - [x] C-13 · Page speed: load jsPDF/QRCode on demand (-384 KB render-blocking) · done · #26
-- [ ] C-14 · Self-host supabase-js pinned at 2.111.0 (no CDN connection before first paint; no floating @2) · review · this PR
-- [ ] C-15 · Slip branding vs TCGplayer seller agreement: "Powered by" footer + Premium QR-URL hint · blocked:owner (decision)
+- [x] C-14 · Self-host supabase-js pinned at 2.111.0 (no CDN connection before first paint; no floating @2) · done · #30
+- [ ] C-16 · `npm test` fails on leftover merge-conflict markers in any tracked text file · review · this PR
+- [ ] C-17 · "Production is behind main" admin check (build writes /version.json; compared with GitHub main) · review · this PR
+- [ ] C-18 · D-7 stamp estimate UI (chip, batch line, packaging-weight setting) · blocked:Devin's Core.letterPostage PR
+- [ ] C-15 · Slip branding vs TCGplayer seller agreement: "Powered by" footer + Premium QR-URL warning shipped in #31; footer · blocked:owner (decision)
 - [ ] C-8 · IMb envelope tracking, server-side scan ingestion · blocked:owner (USPS Mailer ID + Informed Visibility)
 - [x] C-0 · Two-sided referrals, share prompt, upgrade card, 40% partners, redirect, PWA, build fix · done · #6 #8 #9
 

@@ -304,6 +304,39 @@ async function loadOverview() {
 }
 
 /* ── Setup checks: config + which Stripe webhook events actually arrive ── */
+// Is production running the latest `main`? /version.json is written at build
+// time (scripts/stamp-version.js); GitHub says what `main` is. A merge that
+// never reaches production (a failed build, locked auto-publishing) used to
+// go unnoticed for hours.
+var REPO = 'Clujkeebs/TCG-SPEED-SHIPPER';
+var DEPLOY_GRACE_MIN = 15; // a normal build + publish takes a few minutes
+async function liveVersion() {
+  var out = { live: null, main: null };
+  out.live = await fetch('/version.json', { cache: 'no-store' })
+    .then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+  out.main = await fetch('https://api.github.com/repos/' + REPO + '/commits/main', { headers: { Accept: 'application/vnd.github+json' } })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (j) { return j && j.sha ? { sha: j.sha, date: j.commit && j.commit.committer && j.commit.committer.date } : null; })
+    .catch(function () { return null; });
+  return out;
+}
+function deployRow(v, row) {
+  var fix = 'Netlify → Deploys: open the newest production deploy. If it failed, fix the error; if auto publishing is locked, click Start auto publishing.';
+  var short = function (s) { return String(s || '').slice(0, 7); };
+  var ago = function (iso) { var m = Math.round((Date.now() - Date.parse(iso)) / 60000); return m < 90 ? m + ' min ago' : Math.round(m / 60) + ' h ago'; };
+  if (!v.live || !v.live.commit) {
+    row(false, 'Live version: unknown (this deploy has no /version.json, so it predates version stamping)', 'If this is still here after the next merge, production is not publishing. ' + fix);
+    return;
+  }
+  var liveText = short(v.live.commit) + ', built ' + ago(v.live.built_at);
+  if (v.live.context !== 'production') { row(true, 'Live version: ' + liveText + ' (' + v.live.context + ' build; only production is compared with main)'); return; }
+  if (!v.main) { row(false, 'Live version: ' + liveText + ' (could not reach GitHub to compare with main)', 'Reload this page to retry, or compare this commit with the latest one on GitHub by hand.'); return; }
+  if (v.main.sha === v.live.commit) { row(true, 'Production is up to date with main (' + liveText + ')'); return; }
+  var fresh = v.main.date && (Date.now() - Date.parse(v.main.date)) < DEPLOY_GRACE_MIN * 60000;
+  if (fresh) { row(true, 'Production: deploying ' + short(v.main.sha) + ' (merged ' + ago(v.main.date) + '); live is ' + liveText); return; }
+  row(false, 'Production is behind main: live ' + liveText + '; main is ' + short(v.main.sha) + (v.main.date ? ', merged ' + ago(v.main.date) : ''), fix);
+}
+
 async function loadSetupChecks() {
   var box = clear($('setup-checks'));
   var h = await fetch('/api/health').then(function (r) { return r.json(); }).catch(function () { return null; });
@@ -320,6 +353,7 @@ async function loadSetupChecks() {
     row(yb || yp, 'Yearly prices: ' + (yb && yp ? 'Base and Premium' : yb ? 'Base only (Premium is monthly-only)' : yp ? 'Premium only (Base is monthly-only)' : 'not set, so the yearly toggle stays hidden'),
       'Create yearly prices in Stripe and set STRIPE_PRICE_BASE_ANNUAL / STRIPE_PRICE_PREMIUM_ANNUAL.');
   } else row(false, 'Could not reach /api/health', '');
+  deployRow(await liveVersion(), row);
   if (!f) {
     // Don't turn a failed request into "Stripe isn't sending events".
     row(false, 'Webhook delivery counts unavailable: ' + (fErr && fErr.message ? fErr.message : 'request failed'), 'Reload. If it persists, check Errors & Activity.');

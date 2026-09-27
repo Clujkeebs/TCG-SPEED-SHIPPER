@@ -51,7 +51,7 @@ async function run(url, opts) {
 
 (async () => {
   console.log('\n-- Never touched by the worker --');
-  for (const u of ['/api/plans', '/api/stripe-webhook', '/.netlify/functions/api/health', '/admin/', '/affiliate/?token=x', '/sw.js',
+  for (const u of ['/api/plans', '/api/stripe-webhook', '/.netlify/functions/api/health', '/admin/', '/affiliate/?token=x', '/sw.js', '/version.json',
                    'https://lwqnsvlfffugyvwblqaz.supabase.co/rest/v1/x', 'https://js.stripe.com/v3', 'https://checkout.stripe.com/c/pay']) {
     check('bypassed: ' + u, !(await run(u)).handled);
   }
