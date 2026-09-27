@@ -10,14 +10,16 @@ file is for state.
 - [x] C-2 · Admin Setup checks (webhook event monitor) · done · #13 · Devin's 3 🟡 fixed
 - [ ] C-3 · Stripe: create $2.99/mo, $29/yr, $59/yr prices, set env vars, verify webhook events + customer portal · blocked:owner (Stripe connector "connect incomplete")
 - [ ] C-4 · Yearly "save 2 months" nudge in the upgrade card · blocked:C-3
-- [ ] C-5 · Review Devin's PRs as they land · now · all reviewed ✅ (#10 #11 #12 #14 #16 #17 #18 #19 #21), waiting on owner merges
+- [ ] C-5 · Review Devin's PRs as they land · now · all tested ✅ (#10 #11 #12 #14 #16–#19 #27 #28 #29), waiting on owner merges; #21 on HOLD (seller agreement)
 - [ ] C-6 · "Rule-change alerts" newsletter: server side, double opt-in, unsubscribe · blocked:owner (SMTP + mailing address)
 - [x] C-7 · Self-host jsPDF/QRCode instead of the CDN · done · #15
 - [x] C-9 · CSV formula-injection guard + webhook signature monitor + SW network-first · done · #20
 - [x] C-10 · Service-worker routing tests · done · #22
 - [x] C-11 · Accessibility: WCAG A/AA clean on every page · done · #23
 - [x] C-12 · Site-wide SEO + link check in `npm test` · done · #24
-- [ ] C-13 · Page speed: load jsPDF/QRCode on demand (-384 KB render-blocking) · review · this PR
+- [x] C-13 · Page speed: load jsPDF/QRCode on demand (-384 KB render-blocking) · done · #26
+- [ ] C-14 · Self-host supabase-js pinned at 2.111.0 (no CDN connection before first paint; no floating @2) · review · this PR
+- [ ] C-15 · Slip branding vs TCGplayer seller agreement: "Powered by" footer + Premium QR-URL hint · blocked:owner (decision)
 - [ ] C-8 · IMb envelope tracking, server-side scan ingestion · blocked:owner (USPS Mailer ID + Informed Visibility)
 - [x] C-0 · Two-sided referrals, share prompt, upgrade card, 40% partners, redirect, PWA, build fix · done · #6 #8 #9
 
@@ -34,6 +36,7 @@ file is for state.
 - [x] D-0 · Holiday dates #10 · fee fact-check #12 · prospects + competitors #11 · review
 
 ## Owner (mirror of the top of docs/OWNER-TODO.md)
+- 🔥 Netlify production is stuck on the #20 deploy (previews build fine): unlock auto-publishing / check the latest production deploy
 - Reconnect the Stripe connector → unblocks C-3/C-4
 - In Stripe, confirm the webhook sends `invoice.payment_succeeded`
 - Merge Devin's #12, and #10 after checking the dates · #11 after its fix
