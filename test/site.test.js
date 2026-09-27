@@ -85,5 +85,34 @@ for (const p of pages) {
 const vendored = fs.readdirSync(path.join(PUB, 'vendor')).filter((f) => f.endsWith('.js'));
 for (const f of vendored) check('/vendor/' + f + ': version in the file name', /-\d+\.\d+\.\d+[.-]/.test(f));
 
+console.log('\n-- Leftover merge-conflict markers --');
+// Both agents append to the same log and edit the same blog index/sitemap, so
+// conflicts get resolved by hand often. A leftover `<<<<<<<` / `|||||||` /
+// `>>>>>>>` line has slipped through more than once.
+const ROOT = path.join(__dirname, '..');
+let tracked;
+try {
+  tracked = require('child_process').execFileSync('git', ['ls-files', '-z'], { cwd: ROOT, encoding: 'utf8' }).split('\0').filter(Boolean);
+} catch (e) {
+  tracked = null; // not a git checkout: skip rather than guess
+}
+if (tracked) {
+  const TEXT = /\.(md|html|js|css|json|xml|txt|toml|sql|yml|yaml|csv|webmanifest)$/i;
+  let scanned = 0;
+  for (const f of tracked) {
+    if (!TEXT.test(f) || f.startsWith('public/vendor/')) continue;
+    const full = path.join(ROOT, f);
+    if (!fs.existsSync(full)) continue;
+    scanned++;
+    const lines = fs.readFileSync(full, 'utf8').split('\n');
+    const bad = [];
+    lines.forEach((l, i) => { if (/^(<{7}|\|{7}|>{7})( |$)/.test(l)) bad.push(i + 1); });
+    check(f + ': no merge-conflict markers', bad.length === 0, 'line ' + bad.join(', '));
+  }
+  console.log('  scanned ' + scanned + ' tracked text files');
+} else {
+  console.log('  skipped (not a git checkout)');
+}
+
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 process.exit(failed ? 1 : 0);

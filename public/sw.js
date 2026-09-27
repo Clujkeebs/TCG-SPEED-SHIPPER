@@ -46,7 +46,7 @@ function isImmutable(url) {
 
 function isBypassed(url) {
   if (url.origin === self.location.origin) {
-    return /^\/(api|\.netlify|admin|affiliate)(\/|$)/.test(url.pathname) || url.pathname === '/sw.js';
+    return /^\/(api|\.netlify|admin|affiliate)(\/|$)/.test(url.pathname) || url.pathname === '/sw.js' || url.pathname === '/version.json';
   }
   return !CDN.test(url.href); // Supabase, Stripe, analytics, anything else
 }
