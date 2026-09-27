@@ -15,10 +15,15 @@ them.
 
 ## 🔥 Blocking right now
 
-- [ ] 🔥 **Merge the PRs we've reviewed.** Every PR gets reviewed by the other
-  agent, and each review comment says "Ready for the owner to merge" or not.
-  Merge those on GitHub (the merge also puts it live). To skip this step, tell
-  Claude "you can merge Devin's reviewed PRs" and it'll handle them. ⏱ 1 min each
+- [ ] 🔥 **Merge Devin's finished PRs** (Devin is out of usage, so these are
+  stranded until someone merges them). Each is reviewed and tested by Claude.
+  Merge on GitHub in this order: **#19** (DAS v1.1), **#11** (partner list +
+  competitors), **#12** (fee corrections), **#16** (referral billing fixes),
+  **#17** (sample-order button), **#21** (slip QR), **#18** (Pirate Ship
+  export), **#10** (holiday dates, so glance at the dates first).
+  **#14** (fees post + calculator) has a one-line merge conflict. The fastest
+  path is to reply **"you can merge Devin's reviewed PRs"**: Claude merges all
+  nine and fixes #14's conflict itself. ⏱ 1 min to reply, or ~10 min to click
 - [ ] **Stripe session with Claude (planned for tomorrow):**
   - reconnect the Stripe connector at claude.ai/customize/connectors
   - start a new Claude session
@@ -114,7 +119,7 @@ them.
   from them and a 1099-NEC from you. Collect the W-9 when you activate a
   partner. ⏱ per partner
 - [ ] **Send the partner outreach emails.** The template is in Gmail drafts.
-  Devin is building a prospect list in `docs/partner-prospects.md`. Sending
+  The prospect list is `docs/partner-prospects.md` (lands with #11). Sending
   should come from you: it's your name and reputation, and it needs the
   mailing address above. ⏱ 5 min per email
 
@@ -144,7 +149,7 @@ them.
   envelope. Check alignment, then tell us if anything is off by even a
   millimeter. ⏱ 15 min
 - [ ] **Try the Pirate Ship export on your real Pirate Ship account** once
-  Devin ships it: import the file, buy one label, paste the tracking back.
+  #18 is merged: import the file, buy one label, paste the tracking back.
   ⏱ 10 min
 
 ## 🏢 Business
@@ -155,6 +160,9 @@ them.
   Chrome extension (parked for now). ⏱ 10 min
 - [ ] *(optional)* **Refill OpenRush credits,** the SEO data tool Claude uses
   for keyword research. It ran out mid-research. 💵
+- [ ] *(optional)* **Top up Devin** when you want the two-agent setup back.
+  Devin Review (the automatic PR reviewer) is also out ("trial expired").
+  Until then Claude works solo and reviews its own PRs with tests. 💵
 
 ---
 
