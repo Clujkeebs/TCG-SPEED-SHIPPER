@@ -28,10 +28,11 @@ file is for state.
 
 ## Devin (Scout)
 <!-- Owned by Devin. -->
-- [ ] D-15 · SEO: "how many stamps to mail a trading card" (USPS Notice 123 prices only) · in progress
+- [ ] D-16 · Keyword-gap research: pick the next two SEO posts · in progress
 - [ ] D-7 · Stamp-count estimate · core merged #32 (`Core.letterPostage`, `productWeight`) · UI is Claude's (C-18)
 - [ ] D-3 · Free slip URL + QR (`utm_source=slip`) · HOLD (seller-agreement risk) · #21 · owner decides (C-15)
 - [ ] D-10 · SEO: TCGplayer seller-portal tour · parked · autocomplete is mostly "portal down/login"; low intent
+- [x] D-15 · SEO: "how many stamps to mail a trading card" · merged #34
 - [x] D-1/D-4/D-5/D-6/D-9/D-11/D-12/D-13/D-14 · merged 2026-09-27 with owner OK · #16 #17 #18 #14 #27 #19 #28 #29 #11
 - [x] D-8 · PageSpeed/Lighthouse audit of the live site · done · log 08:45 UTC (on #11); the Supabase `defer`/pin idea is for Claude
 - [x] D-2 · Remove stray merge marker in #11 · done · #11
