@@ -2,6 +2,8 @@
    turn a TCGplayer export into labels. A parsing bug here prints a wrong
    address on a real package, so the tricky real-world shapes are pinned. */
 const core = require('../public/js/shipper-core.js');
+const fs = require('fs');
+const path = require('path');
 
 let passed = 0, failed = 0;
 function check(name, cond, extra) {
@@ -26,6 +28,17 @@ section('TCGplayer shipping export');
   check('shipping method captured', orders[1].shipMethod === 'Expedited');
   check('ZIP+4 preserved', orders[1].zip === '73301-1234');
   check('US country is not printed', core.addrLines(orders[0]).indexOf('US') === -1);
+}
+
+section('Sample shipping export');
+{
+  const csv = fs.readFileSync(path.join(__dirname, '..', 'public', 'samples', 'tcgplayer-sample-shipping-export.csv'), 'utf8');
+  const orders = core.parseCSV(csv);
+  const tiers = { envelope: 0, recommended: 0, tracking: 0, signature: 0 };
+  orders.forEach(function (o) { tiers[core.shippingTier(o).tier]++; });
+  check('parses 8 sample orders', orders.length === 8, String(orders.length));
+  check('sample order tier mix', JSON.stringify(tiers) === JSON.stringify({ envelope: 5, recommended: 1, tracking: 1, signature: 1 }), JSON.stringify(tiers));
+  check('leading-zero ZIP is preserved', orders.some(function (o) { return o.zip === '02108'; }));
 }
 
 section('Header order does not fool column matching');
