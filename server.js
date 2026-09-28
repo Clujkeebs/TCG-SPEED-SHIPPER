@@ -132,7 +132,18 @@ function periodEndOf(subscription) {
   return ts ? new Date(ts * 1000).toISOString() : null;
 }
 
+// A price the env vars don't list can still be mapped by the plan_key set on
+// it in Stripe (every price created since 2026-09-28 has one). This way a
+// newly added price, or a host whose env vars lag behind, never leaves a
+// paying customer without their plan.
+function learnPrice(price) {
+  if (!price || typeof price !== 'object' || !price.id || PRICE_TO_PLAN[price.id]) return;
+  const key = price.metadata && price.metadata.plan_key;
+  if (key === 'base' || key === 'premium') PRICE_TO_PLAN[price.id] = key;
+}
+
 async function applySubscriptionToProfile(subscription) {
+  learnPrice(subscription.items.data[0].price);
   const priceId = subscription.items.data[0].price.id;
   const active = ['active', 'trialing'].includes(subscription.status);
   // An active subscription on a price we don't recognise means our price env
@@ -232,6 +243,7 @@ async function isPaidPlanInvoice(invoice) {
   const lines = invoice.lines && Array.isArray(invoice.lines.data) ? invoice.lines.data : [];
   lines.forEach((line) => {
     const price = line && line.price;
+    learnPrice(price);
     const priceId = typeof price === 'string' ? price : price && price.id;
     if (priceId) priceIds.push(priceId);
     const detailPrice = line && line.pricing && line.pricing.price_details && line.pricing.price_details.price;
@@ -241,6 +253,7 @@ async function isPaidPlanInvoice(invoice) {
   try {
     const sub = await stripe.subscriptions.retrieve(typeof subId === 'string' ? subId : subId.id);
     const item = sub && sub.items && sub.items.data[0];
+    if (item) learnPrice(item.price);
     return !!(item && PRICE_TO_PLAN[item.price.id]);
   } catch (err) {
     await logError('webhook.invoice', 'Could not check the subscription on invoice', invoice.id, err);
@@ -543,6 +556,7 @@ router.post('/stripe-webhook', express.raw({ type: '*/*' }), requireStripe, requ
         const userId = session.client_reference_id;
         if (userId && session.subscription) {
           const subscription = await stripe.subscriptions.retrieve(session.subscription);
+          learnPrice(subscription.items.data[0].price);
           const priceId = subscription.items.data[0].price.id;
           if (!PRICE_TO_PLAN[priceId]) {
             // Someone just paid for a price we can't map to a plan. Record the
