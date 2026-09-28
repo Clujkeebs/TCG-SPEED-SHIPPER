@@ -118,11 +118,13 @@ const HEADER_RULES = [
     'Referrer-Policy': 'strict-origin-when-cross-origin',
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=()',
   } },
+  // HTTPS only (Netlify sent this). No includeSubDomains until www has its
+  // own certificate, or browsers would pin a broken host.
+  { test: () => process.env.RAILWAY_ENVIRONMENT_NAME === 'production', headers: { 'Strict-Transport-Security': 'max-age=31536000' } },
   { test: (p) => p.startsWith('/affiliate/'), headers: { 'Referrer-Policy': 'no-referrer', 'X-Robots-Tag': 'noindex, nofollow' } },
   { test: (p) => p.startsWith('/admin/') || p === '/admin', headers: { 'Referrer-Policy': 'no-referrer', 'X-Robots-Tag': 'noindex, nofollow', 'Cache-Control': 'no-store' } },
   { test: (p) => p === '/sw.js', headers: { 'Cache-Control': 'no-cache', 'Service-Worker-Allowed': '/' } },
   { test: (p) => p === '/version.json', headers: { 'Cache-Control': 'no-cache' } },
-  { test: (p) => p.startsWith('/vendor/'), headers: { 'Cache-Control': 'public, max-age=31536000, immutable' } },
 ];
 app.use((req, res, next) => {
   for (const rule of HEADER_RULES) if (rule.test(req.path)) res.set(rule.headers);
@@ -1286,7 +1288,11 @@ app.use(express.static(PUBLIC_DIR, {
   extensions: ['html'],
   cacheControl: false, // HEADER_RULES decides; everything else revalidates
   setHeaders(res, filePath) {
-    if (!res.get('Cache-Control')) res.set('Cache-Control', 'public, max-age=0, must-revalidate');
+    // Versioned libraries never change under the same URL. Set here (only
+    // runs for files that exist) so a mistyped /vendor/ URL's 404 isn't
+    // cached for a year.
+    if (filePath.includes(require('path').sep + 'vendor' + require('path').sep)) res.set('Cache-Control', 'public, max-age=31536000, immutable');
+    else if (!res.get('Cache-Control')) res.set('Cache-Control', 'public, max-age=0, must-revalidate');
     if (filePath.endsWith('.webmanifest')) res.set('Content-Type', 'application/manifest+json');
   },
 }));
@@ -1305,12 +1311,18 @@ app.use((req, res) => {
 async function selfCheck() {
   const out = [];
   if (stripe) {
-    try { await stripe.balance.retrieve(); out.push('stripe_key=OK'); }
+    // A call the app itself needs (works with a restricted key), which also
+    // proves the Base price ID is valid.
+    try {
+      if (process.env.STRIPE_PRICE_BASE) await stripe.prices.retrieve(process.env.STRIPE_PRICE_BASE);
+      else await stripe.balance.retrieve();
+      out.push('stripe_key=OK');
+    }
     catch (e) { out.push('stripe_key=FAILED(' + (e.type || e.code || 'error') + ')'); }
   } else out.push('stripe_key=MISSING');
   if (supabaseAdmin) {
     try {
-      const { error } = await supabaseAdmin.from('tcgss_profiles').select('id', { head: true, count: 'exact' }).limit(1);
+      const { error } = await supabaseAdmin.from('tcgss_profiles').select('id').limit(1);
       out.push(error ? 'supabase_key=FAILED(' + (error.code || 'error') + ')' : 'supabase_key=OK');
     } catch (e) { out.push('supabase_key=FAILED(exception)'); }
   } else out.push('supabase_key=MISSING');
