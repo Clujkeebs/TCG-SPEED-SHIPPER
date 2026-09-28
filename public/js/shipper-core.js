@@ -137,10 +137,10 @@
       var qty = parseInt(get('quantity'), 10);
       if (item) {
         var label = (qty > 1 ? qty + '× ' : '') + item;
-        if (o.items.indexOf(label) === -1) {
-          o.items.push(label);
-          o.lines.push({ name: item, qty: qty > 0 ? qty : 1, set: get('setName'), condition: get('condition') });
-        }
+        if (o.items.indexOf(label) === -1) o.items.push(label);
+        // Every row goes on the pull sheet: two variants can share a display
+        // label (same name and qty, different set or condition).
+        o.lines.push({ name: item, qty: qty > 0 ? qty : 1, set: get('setName'), condition: get('condition') });
         o.itemCount += qty > 0 ? qty : 1;
       } else {
         var ic = parseInt(get('itemCount'), 10);
@@ -247,11 +247,16 @@
       (o.lines || []).forEach(function (l) {
         var key = [l.name, l.set || '', l.condition || ''].join('\u0001').toLowerCase();
         var r = byKey[key];
-        if (!r) { r = byKey[key] = { name: l.name, set: l.set || '', condition: l.condition || '', qty: 0, orders: [] }; rows.push(r); }
+        if (!r) { r = byKey[key] = { name: l.name, set: l.set || '', condition: l.condition || '', qty: 0, orders: [], perOrder: {} }; rows.push(r); }
         r.qty += l.qty;
         total += l.qty;
         if (r.orders.indexOf(ref) === -1) r.orders.push(ref);
+        r.perOrder[ref] = (r.perOrder[ref] || 0) + l.qty;
       });
+    });
+    // "A ×3, B": which order gets how many copies.
+    rows.forEach(function (r) {
+      r.orderText = r.orders.map(function (ref) { return r.perOrder[ref] > 1 ? ref + ' ×' + r.perOrder[ref] : ref; }).join(', ');
     });
     rows.sort(function (a, b) {
       return a.set.localeCompare(b.set, 'en', { sensitivity: 'base' }) || a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }) || a.condition.localeCompare(b.condition);

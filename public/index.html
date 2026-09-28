@@ -3086,13 +3086,14 @@ function buildPullSheetPDF(ps){
     doc.setFont('helvetica','normal');
     doc.setFontSize(9.5); var name=doc.splitTextToSize(pdfSafe(r.name),X.set-X.card-8);
     doc.setFontSize(8.5); var set=doc.splitTextToSize(pdfSafe(r.set||'—'),X.cond-X.set-8);
-    doc.setFontSize(8); var ords=doc.splitTextToSize(r.orders.map(pdfSafe).join(', '),W-M-X.ord-6);
-    var lines=Math.max(name.length,set.length,ords.length), h=lines*11+5;
+    var cond=doc.splitTextToSize(pdfSafe(r.condition||'—'),X.ord-X.cond-8);
+    doc.setFontSize(8); var ords=doc.splitTextToSize(pdfSafe(r.orderText),W-M-X.ord-6);
+    var lines=Math.max(name.length,set.length,cond.length,ords.length), h=lines*11+5;
     if(y+h>bottom){ doc.setFontSize(8); doc.setTextColor(150,150,150); doc.text('page '+page,W/2,LETTER_H-20,{align:'center'}); doc.addPage('letter','portrait'); page++; y=header(); }
     doc.setDrawColor(120,120,120); doc.setLineWidth(0.7); doc.rect(X.box,y-8,9,9);
     doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(0,0,0); doc.text(String(r.qty),X.qty,y);
     doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.text(name,X.card,y);
-    doc.setFontSize(8.5); doc.setTextColor(60,60,60); doc.text(set,X.set,y); doc.text(pdfSafe(r.condition||'—').slice(0,14),X.cond,y);
+    doc.setFontSize(8.5); doc.setTextColor(60,60,60); doc.text(set,X.set,y); doc.text(cond,X.cond,y);
     doc.setFontSize(8); doc.setTextColor(90,90,90); doc.text(ords,X.ord,y);
     y+=h; doc.setDrawColor(235,235,235); doc.setLineWidth(0.4); doc.line(M,y-9,W-M,y-9);
   });
