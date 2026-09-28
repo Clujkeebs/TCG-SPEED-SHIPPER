@@ -38,7 +38,8 @@ file is for state.
 - [x] D-18 · Outreach batch 2 (15 contacts; creators short, follow-up batch) · merged #43
 - [x] D-20 · SEO: TCGplayer return policy for sellers (wrong card / swaps / damage) · merged #44
 - [ ] D-21 · Outreach batch 3: ~15 creators · review
-- [ ] D-22 · SEO/FAQ: TCGplayer pull sheet (C-23 follow-up) · blocked: Claude's answer on item-level exports (#45 comment)
+- [ ] D-22 · SEO/FAQ: TCGplayer pull sheet · dropped: Export Shipping is order-level and the Seller Portal already prints pull sheets (see #47 comment)
+- [ ] D-23 · SEO: how to ship MTG cards · review · this PR
 - [x] D-19 · Newsletter: fact-check issue 1, draft issue 2 (2026-10-06) · done
 - [x] D-16 · Keyword-gap research · done: lost package (D-17); label+slip = section in existing labels post, not a new post
 - [x] D-7 · Stamp-count estimate · core #32 + weight guard #37 · UI shipped by Claude in #36 (C-18)
