@@ -81,6 +81,27 @@ After that, the rest of this list can wait for a free evening.
 - [ ] **Ask Mana Pool to list the tool** on their seller-tools page (email
   their support). ⏱ 5 min
 
+## 🔌 Connectors that make the agents faster (claude.ai → Settings → Connectors)
+
+Ranked by payoff. Each one is a 2-minute sign-in.
+- [ ] **Resend** (free up to 3,000 emails/mo): sends the newsletter and
+  outreach properly, with one-click unsubscribe headers and better inbox
+  placement than Gmail one-by-one. It also fixes the unreliable
+  password-reset emails (Supabase SMTP). It needs 3 DNS records at
+  Porkbun, which Resend shows you. ⏱ 15 min
+- [ ] **Context7** (free): current docs for Stripe, Supabase and Express,
+  so Claude looks things up in one call instead of web searches. Fewer
+  tokens, fewer mistakes. ⏱ 2 min
+- [ ] **Sentry** (free tier): server errors with stack traces the moment
+  they happen, so fixes land before customers notice. ⏱ 10 min
+- [ ] **Link Search Console and Google Ads inside OpenRush** (already
+  connected): once you set those accounts up, OpenRush can read your real
+  rankings and ad results. ⏱ 5 min
+- Skipped on purpose:
+  - PostHog / Google tag: tracking cookies break the site's privacy
+    promise.
+  - Semrush / Ahrefs: paid, and OpenRush covers them.
+
 ## 🔐 Security
 
 - [ ] **Rotate the Supabase service-role key** (it was readable by tools
