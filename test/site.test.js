@@ -85,6 +85,15 @@ for (const p of pages) {
 const vendored = fs.readdirSync(path.join(PUB, 'vendor')).filter((f) => f.endsWith('.js'));
 for (const f of vendored) check('/vendor/' + f + ': version in the file name', /-\d+\.\d+\.\d+[.-]/.test(f));
 
+console.log('\n-- Duplicate top-level functions in a page --');
+// Two `function money()` declarations in one page: the later one silently
+// replaced the first, and live prices showed "$299.00/mo" (2026-09-28).
+for (const p of pages) {
+  const names = [...p.html.matchAll(/^function (\w+)\s*\(/gm)].map((m) => m[1]);
+  const dup = [...new Set(names.filter((n, i) => names.indexOf(n) !== i))];
+  check(p.url + ': no duplicate top-level function names', dup.length === 0, dup.join(', '));
+}
+
 console.log('\n-- Leftover merge-conflict markers --');
 // Both agents append to the same log and edit the same blog index/sitemap, so
 // conflicts get resolved by hand often. A leftover `<<<<<<<` / `|||||||` /
