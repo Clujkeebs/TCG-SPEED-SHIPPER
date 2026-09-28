@@ -8,7 +8,7 @@ file is for state.
 ## Claude (Builder)
 - [x] C-1 · Dual Agent System v1 · done · #13 · waiting on Devin's v1.1 edits
 - [x] C-2 · Admin Setup checks (webhook event monitor) · done · #13 · Devin's 3 🟡 fixed
-- [ ] C-3 · Stripe: create $2.99/mo, $29/yr, $59/yr prices, set env vars, verify webhook events + customer portal · blocked:owner (Stripe connector "connect incomplete")
+- [x] C-3 · (done 2026-09-28: prices + portal switching) Stripe: create $2.99/mo, $29/yr, $59/yr prices, set env vars, verify webhook events + customer portal · blocked:owner (Stripe connector "connect incomplete")
 - [ ] C-4 · Yearly "save 2 months" nudge in the upgrade card · blocked:C-3
 - [ ] C-5 · Review Devin's PRs as they land · now · all tested ✅ (#10 #11 #12 #14 #16–#19 #27 #28 #29), waiting on owner merges; #21 on HOLD (seller agreement)
 - [ ] C-6 · "Rule-change alerts" newsletter: server side, double opt-in, unsubscribe · blocked:owner (SMTP + mailing address)
@@ -28,7 +28,7 @@ file is for state.
 - [ ] C-15 · Slip branding vs TCGplayer seller agreement: "Powered by" footer + Premium QR-URL warning shipped in #31; footer · blocked:owner (decision)
 - [x] C-22 · Label + packing slip on one page (customer request), plus a reply to the customer · done · #39 · tell them when it's live
 - [ ] C-23 · Pull sheet PDF (every card, merged by card+set+condition, sorted by set, with orders) · review · this PR · Devin: FAQ/post after merge
-- [ ] C-24 · Move hosting Netlify → Railway (Netlify Free credits ran out: 15/prod deploy, 300/mo). server.js serves the whole site · review · this PR · owner: env vars + Porkbun DNS
+- [x] C-24 · Move hosting Netlify → Railway (live 2026-09-28) (Netlify Free credits ran out: 15/prod deploy, 300/mo). server.js serves the whole site · review · this PR · owner: env vars + Porkbun DNS
 - [ ] C-8 · IMb envelope tracking, server-side scan ingestion · blocked:owner (USPS Mailer ID + Informed Visibility)
 - [x] C-0 · Two-sided referrals, share prompt, upgrade card, 40% partners, redirect, PWA, build fix · done · #6 #8 #9
 
