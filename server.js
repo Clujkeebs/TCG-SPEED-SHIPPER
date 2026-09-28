@@ -1297,9 +1297,29 @@ app.use((req, res) => {
 
 // Railway runs `npm start` → this listener serves the whole site. On Netlify
 // the function wrapper imports `app` instead and this doesn't run.
+// On boot, prove each secret works (one harmless read each) and log only
+// OK/FAILED, never a value, so a new host can be verified from its logs.
+async function selfCheck() {
+  const out = [];
+  if (stripe) {
+    try { await stripe.balance.retrieve(); out.push('stripe_key=OK'); }
+    catch (e) { out.push('stripe_key=FAILED(' + (e.type || e.code || 'error') + ')'); }
+  } else out.push('stripe_key=MISSING');
+  if (supabaseAdmin) {
+    try {
+      const { error } = await supabaseAdmin.from('tcgss_profiles').select('id', { head: true, count: 'exact' }).limit(1);
+      out.push(error ? 'supabase_key=FAILED(' + (error.code || 'error') + ')' : 'supabase_key=OK');
+    } catch (e) { out.push('supabase_key=FAILED(exception)'); }
+  } else out.push('supabase_key=MISSING');
+  out.push('webhook_secret=' + (process.env.STRIPE_WEBHOOK_SECRET ? (/^whsec_/.test(process.env.STRIPE_WEBHOOK_SECRET) ? 'PRESENT' : 'WRONG_FORMAT') : 'MISSING'));
+  ['STRIPE_PRICE_BASE', 'STRIPE_PRICE_PREMIUM'].forEach((k) => out.push(k + '=' + (process.env[k] ? 'SET' : 'MISSING')));
+  console.log('[self-check] ' + out.join(' '));
+}
+
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log('TCG Speed Shipper listening on port ' + PORT);
+    selfCheck().catch(() => {});
   });
 }
 
