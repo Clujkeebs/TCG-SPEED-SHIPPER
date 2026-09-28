@@ -48,13 +48,11 @@ them.
     footer" and Claude does it.
 
   It's your users' seller accounts at risk. ⏱ 2 min
-- [ ] **Stripe session with Claude (planned for tomorrow):**
-  - reconnect the Stripe connector at claude.ai/customize/connectors
-  - start a new Claude session
-  - say "do the Stripe prices"
-
-  Claude then creates the $2.99 / $29-yr / $59-yr prices, sets them up, and
-  checks the webhook events and the customer portal. ⏱ 10 min
+- [ ] *(later, whenever)* **New Stripe prices.** You said to let this one
+  be. When you feel like it, the no-connector route is quickest: in Stripe →
+  Product catalog, add $2.99/mo and $29/yr prices to Base and $59/yr to
+  Premium, then paste the four `price_…` IDs (plus the old Base monthly one)
+  to Claude, who sets them in Netlify. ⏱ 5 min
 - [x] ~~Webhook URL updated to the new domain~~: done by you 2026-09-27. The
   admin dashboard's **Setup checks** card shows whether
   `invoice.payment_succeeded` is arriving; Claude confirms it in the Stripe

@@ -970,6 +970,10 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
           <button type="button" class="btn-ghost" id="pirate-ship-download"></button>
           <p style="font-size:12px;color:var(--hint);margin:6px 0 0;line-height:1.5;">Upload it at pirateship.com → Ship → Import Spreadsheet, then paste the tracking numbers back here for your TCGplayer import.</p>
         </div>
+        <div id="pull-sheet-export" style="display:none;margin-top:10px;">
+          <button type="button" class="btn-ghost" id="pull-sheet-download"></button>
+          <p style="font-size:12px;color:var(--hint);margin:6px 0 0;line-height:1.5;">Every card in this batch on one checklist, sorted by set, with the orders each goes to. Free, and it doesn't use labels.</p>
+        </div>
         <p class="ship-plan-fine">Based on TCGplayer's seller shipping guidelines (tracking over $49.99, signature at $250+, tracking recommended over $20). Always check the order in TCGplayer. <a href="/blog/tcgplayer-shipping-guidelines.html">Read the guidelines →</a></p>
       </div>
       <div class="shipped-progress" id="shipped-progress" style="display:none;">
@@ -2485,6 +2489,12 @@ function renderShipPlan(toPrint) {
       document.getElementById('pirate-ship-download').textContent = 'Download Pirate Ship CSV (' + trackedOrders.length + ' tracked orders)';
     }
   }
+  var pullBox = document.getElementById('pull-sheet-export');
+  if (pullBox) {
+    var ps = Core.pullSheet(orders);
+    pullBox.style.display = ps.rows.length ? 'block' : 'none';
+    if (ps.rows.length) document.getElementById('pull-sheet-download').textContent = 'Download pull sheet (' + ps.totalCards + ' card' + (ps.totalCards !== 1 ? 's' : '') + ')';
+  }
   renderStampPlan();
   var sel = document.getElementById('print-filter');
   if (sel.value !== printFilter) sel.value = printFilter;
@@ -3052,6 +3062,54 @@ document.getElementById('pirate-ship-download').addEventListener('click',functio
   a.download = 'pirate-ship-tracked-orders.csv';
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+});
+function buildPullSheetPDF(ps){
+  var jsPDF=window.jspdf.jsPDF;
+  var doc=new jsPDF({unit:'pt',format:'letter',orientation:'portrait'});
+  var M=36, W=LETTER_W, bottom=LETTER_H-40;
+  var X={ box:M, qty:M+18, card:M+50, set:M+288, cond:M+408, ord:M+470 };
+  var orderCount=orders.length, page=1;
+  function header(){
+    doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(0,0,0);
+    doc.text('Pull sheet',M,M+8);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(110,110,110);
+    doc.text(ps.totalCards+' cards · '+ps.rows.length+' lines · '+orderCount+' orders · '+new Date().toLocaleDateString('en-US'),W-M,M+8,{align:'right'});
+    var y=M+30;
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(120,120,120);
+    doc.text('QTY',X.qty,y); doc.text('CARD',X.card,y); doc.text('SET',X.set,y); doc.text('COND.',X.cond,y); doc.text('ORDERS',X.ord,y);
+    doc.setDrawColor(200,200,200); doc.setLineWidth(0.5); doc.line(M,y+5,W-M,y+5);
+    return y+18;
+  }
+  var y=header();
+  ps.rows.forEach(function(r){
+    // Measure each column at the size it's drawn in.
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(9.5); var name=doc.splitTextToSize(pdfSafe(r.name),X.set-X.card-8);
+    doc.setFontSize(8.5); var set=doc.splitTextToSize(pdfSafe(r.set||'—'),X.cond-X.set-8);
+    var cond=doc.splitTextToSize(pdfSafe(r.condition||'—'),X.ord-X.cond-8);
+    doc.setFontSize(8); var ords=doc.splitTextToSize(pdfSafe(r.orderText),W-M-X.ord-6);
+    var lines=Math.max(name.length,set.length,cond.length,ords.length), h=lines*11+5;
+    if(y+h>bottom){ doc.setFontSize(8); doc.setTextColor(150,150,150); doc.text('page '+page,W/2,LETTER_H-20,{align:'center'}); doc.addPage('letter','portrait'); page++; y=header(); }
+    doc.setDrawColor(120,120,120); doc.setLineWidth(0.7); doc.rect(X.box,y-8,9,9);
+    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(0,0,0); doc.text(String(r.qty),X.qty,y);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.text(name,X.card,y);
+    doc.setFontSize(8.5); doc.setTextColor(60,60,60); doc.text(set,X.set,y); doc.text(cond,X.cond,y);
+    doc.setFontSize(8); doc.setTextColor(90,90,90); doc.text(ords,X.ord,y);
+    y+=h; doc.setDrawColor(235,235,235); doc.setLineWidth(0.4); doc.line(M,y-9,W-M,y-9);
+  });
+  doc.setFontSize(8); doc.setTextColor(150,150,150); doc.text('page '+page,W/2,LETTER_H-20,{align:'center'});
+  return doc;
+}
+document.getElementById('pull-sheet-download').addEventListener('click',function(){
+  var ps = Core.pullSheet(orders);
+  if(!ps.rows.length) return;
+  var btn=this, label=btn.textContent;
+  btn.disabled=true; btn.textContent='Building pull sheet...';
+  loadPdfLibs().then(function(){
+    try { buildPullSheetPDF(ps).save('pull-sheet.pdf'); trackEvent('pull_sheet'); }
+    catch(err){ alert('PDF error: '+err.message); }
+  }).catch(function(){ alert('Could not load the PDF tools. Check your connection and try again.'); })
+    .then(function(){ btn.disabled=false; btn.textContent=label; });
 });
 document.getElementById('fmt-main').addEventListener('change',function(){ setFormat(this.value); });
 document.getElementById('slip-top').addEventListener('change',function(){ setSlips(this.checked); });

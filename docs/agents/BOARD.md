@@ -27,6 +27,7 @@ file is for state.
 - [ ] C-18 · D-7 stamp estimate UI (chip, batch line, packaging-weight setting) + `Core.stampPlan` · review · #31
 - [ ] C-15 · Slip branding vs TCGplayer seller agreement: "Powered by" footer + Premium QR-URL warning shipped in #31; footer · blocked:owner (decision)
 - [x] C-22 · Label + packing slip on one page (customer request), plus a reply to the customer · done · #39 · tell them when it's live
+- [ ] C-23 · Pull sheet PDF (every card, merged by card+set+condition, sorted by set, with orders) · review · this PR · Devin: FAQ/post after merge
 - [ ] C-8 · IMb envelope tracking, server-side scan ingestion · blocked:owner (USPS Mailer ID + Informed Visibility)
 - [x] C-0 · Two-sided referrals, share prompt, upgrade card, 40% partners, redirect, PWA, build fix · done · #6 #8 #9
 

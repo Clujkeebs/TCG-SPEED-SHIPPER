@@ -125,6 +125,39 @@ section('Product weight parsing edge cases');
   check('a zero weight leaves the order without a weight', o[1].productWeight === null, String(o[1].productWeight));
 }
 
+section('Pull sheet');
+{
+  const csv = ['Order #,FirstName,LastName,Address1,City,State,PostalCode,Product Name,Set Name,Condition,Quantity',
+    'P-1,Ann,Lee,1 A St,Reno,NV,89501,Pikachu,Base Set,Near Mint,2',
+    'P-1,Ann,Lee,1 A St,Reno,NV,89501,Charizard,Base Set,Lightly Played,1',
+    'P-2,Bo,Kim,2 B St,Reno,NV,89501,pikachu,Base Set,Near Mint,1',
+    'P-2,Bo,Kim,2 B St,Reno,NV,89501,Pikachu,Jungle,Near Mint,1',
+    'P-3,Cy,Oh,3 C St,Reno,NV,89501,Abra,Base Set,Near Mint,1'].join('\n');
+  const orders = core.parseCSV(csv);
+  check('set and condition columns are read', orders[0].lines[0].set === 'Base Set' && orders[0].lines[0].condition === 'Near Mint');
+  check('item names are unaffected by the new columns', orders[0].items[0] === '2× Pikachu', orders[0].items[0]);
+  const ps = core.pullSheet(orders);
+  const pika = ps.rows.find((r) => r.name.toLowerCase() === 'pikachu' && r.set === 'Base Set');
+  check('same card + set + condition merges across orders (case-insensitive)', pika && pika.qty === 3 && pika.orders.join(',') === 'P-1,P-2', JSON.stringify(pika));
+  check('same name in a different set stays separate', ps.rows.filter((r) => r.name.toLowerCase() === 'pikachu').length === 2);
+  check('sorted by set, then name', ps.rows.map((r) => r.set + ':' + r.name).join('|') === 'Base Set:Abra|Base Set:Charizard|Base Set:Pikachu|Jungle:Pikachu', ps.rows.map((r) => r.set + ':' + r.name).join('|'));
+  check('total card count', ps.totalCards === 6);
+  const v = core.parseCSV(['Order #,FirstName,LastName,Address1,City,State,PostalCode,Product Name,Set Name,Condition,Quantity',
+    'V-1,Ann,Lee,1 A St,Reno,NV,89501,Pikachu,Base Set,Near Mint,1',
+    'V-1,Ann,Lee,1 A St,Reno,NV,89501,Pikachu,Jungle,Near Mint,1',
+    'V-1,Ann,Lee,1 A St,Reno,NV,89501,Bolt,M10,Lightly Played,1',
+    'V-1,Ann,Lee,1 A St,Reno,NV,89501,Bolt,M10,Lightly Played Foil,1',
+    'V-2,Bo,Kim,2 B St,Reno,NV,89501,Bolt,M10,Lightly Played,3'].join('\n'));
+  const vs = core.pullSheet(v);
+  check('same-name variants in one order both reach the pull sheet', vs.rows.filter((r) => r.name === 'Pikachu').length === 2, JSON.stringify(vs.rows.map((r) => r.name + '/' + r.set)));
+  check('foil condition stays a separate row with its full name', vs.rows.some((r) => r.condition === 'Lightly Played Foil'));
+  const bolt = vs.rows.find((r) => r.name === 'Bolt' && r.condition === 'Lightly Played');
+  check('per-order split is kept ("V-1, V-2 ×3")', bolt && bolt.qty === 4 && bolt.orderText === 'V-1, V-2 ×3', bolt && bolt.orderText);
+  check('display item labels still dedupe', v[0].items.filter((x) => x === 'Pikachu').length === 1);
+  const ship = core.parseCSV('Order #,FirstName,LastName,Address1,City,State,PostalCode,Item Count\nS-1,A,B,1 St,X,NV,89501,3');
+  check('an order-level export (no product names) gives an empty pull sheet', core.pullSheet(ship).rows.length === 0);
+}
+
 section('Stamp plan for envelope orders');
 {
   const env = (w) => ({ orderValue: 5, productWeight: w });

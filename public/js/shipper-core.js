@@ -63,6 +63,8 @@
     quantity:    { names: ['quantity', 'qty'] },
     itemCount:   { names: ['item count', 'itemcount', 'number of items'] },
     productWeight: { names: ['product weight', 'weight', 'total weight'], avoid: /unit|lb|kg|g$/ },
+    setName:     { names: ['set name', 'set', 'expansion', 'edition'], avoid: /offset|reset|asset|setting/ },
+    condition:   { names: ['condition'] },
     shipMethod:  { names: ['shipping method', 'ship method', 'shipping type', 'shipping service'] },
     orderValue:  { names: ['value of products', 'product value', 'order value', 'products total', 'item total', 'subtotal', 'order total'], avoid: /ship|fee|tax|count|weight|quantity/ }
   };
@@ -125,7 +127,7 @@
         var entry = {
           firstName: fn, lastName: ln, addr1: get('addr1'), addr2: get('addr2'),
           city: get('city'), state: get('state'), zip: get('zip'), country: get('country'),
-          orderNumber: onum, shipMethod: get('shipMethod'), itemCount: 0, items: [],
+          orderNumber: onum, shipMethod: get('shipMethod'), itemCount: 0, items: [], lines: [],
           orderValue: parseMoney(get('orderValue')), productWeight: null
         };
         orderMap[mapKey] = entry; orderList.push(entry);
@@ -136,6 +138,9 @@
       if (item) {
         var label = (qty > 1 ? qty + '× ' : '') + item;
         if (o.items.indexOf(label) === -1) o.items.push(label);
+        // Every row goes on the pull sheet: two variants can share a display
+        // label (same name and qty, different set or condition).
+        o.lines.push({ name: item, qty: qty > 0 ? qty : 1, set: get('setName'), condition: get('condition') });
         o.itemCount += qty > 0 ? qty : 1;
       } else {
         var ic = parseInt(get('itemCount'), 10);
@@ -230,6 +235,33 @@
     });
     plan.needsPackaging = pkg === null;
     return plan;
+  }
+
+  // Pull sheet: every card across the batch, merged by card + set +
+  // condition, with the orders it goes to, sorted by set then name so the
+  // seller walks their binders once. Needs an export with product names.
+  function pullSheet(orders) {
+    var byKey = {}, rows = [], total = 0;
+    (orders || []).forEach(function (o, i) {
+      var ref = o.orderNumber || ('#' + (i + 1));
+      (o.lines || []).forEach(function (l) {
+        var key = [l.name, l.set || '', l.condition || ''].join('\u0001').toLowerCase();
+        var r = byKey[key];
+        if (!r) { r = byKey[key] = { name: l.name, set: l.set || '', condition: l.condition || '', qty: 0, orders: [], perOrder: {} }; rows.push(r); }
+        r.qty += l.qty;
+        total += l.qty;
+        if (r.orders.indexOf(ref) === -1) r.orders.push(ref);
+        r.perOrder[ref] = (r.perOrder[ref] || 0) + l.qty;
+      });
+    });
+    // "A ×3, B": which order gets how many copies.
+    rows.forEach(function (r) {
+      r.orderText = r.orders.map(function (ref) { return r.perOrder[ref] > 1 ? ref + ' ×' + r.perOrder[ref] : ref; }).join(', ');
+    });
+    rows.sort(function (a, b) {
+      return a.set.localeCompare(b.set, 'en', { sensitivity: 'base' }) || a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }) || a.condition.localeCompare(b.condition);
+    });
+    return { rows: rows, totalCards: total };
   }
 
   /* ── TCGplayer tracking import ──
@@ -447,6 +479,7 @@
     shippingTier: shippingTier,
     letterPostage: letterPostage,
     stampPlan: stampPlan,
+    pullSheet: pullSheet,
     LETTER_POSTAGE: LETTER_POSTAGE,
     detectCarrier: detectCarrier,
     matchTracking: matchTracking,
