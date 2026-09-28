@@ -15,7 +15,7 @@ them.
 
 ## 🔥 Blocking right now
 
-- [ ] 🔥 **Netlify isn't publishing to production.** The live site is
+- [ ] 🔥 **Netlify isn't publishing to production** (the agents can't do this: Netlify's API doesn't let them unlock publishing, and this environment's network blocks their deploy tool). The live site is
   still the deploy of PR #20 (2026-09-26 22:24 UTC). #22–#26 (accessibility,
   offline fixes, faster page load) are merged but not live. Deploy previews
   build fine, so the code is OK; it's a Netlify setting. In Netlify →
