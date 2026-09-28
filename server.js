@@ -96,6 +96,9 @@ for (const plan of Object.keys(SALE_PRICES)) {
 const app = express();
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
+// Gzip/Brotli-negotiated compression (Netlify's CDN did this for us).
+// The Stripe webhook reads a raw body, which compression doesn't touch.
+app.use(require('compression')());
 
 // When this runs as the whole site (Railway), it does what Netlify's CDN and
 // netlify.toml did: www → apex, and the same security and cache headers.

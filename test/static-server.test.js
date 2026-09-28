@@ -20,9 +20,9 @@ Module._load = origLoad;
 
 const http = require('http');
 const server = http.createServer(app);
-function get(p, host) {
+function get(p, host, extra) {
   return new Promise((resolve, reject) => {
-    const r = http.request({ host: '127.0.0.1', port: server.address().port, path: p, headers: { Host: host || 'tcgspeedshipper.com' } }, (res) => {
+    const r = http.request({ host: '127.0.0.1', port: server.address().port, path: p, headers: Object.assign({ Host: host || 'tcgspeedshipper.com' }, extra || {}) }, (res) => {
       let d = ''; res.on('data', (c) => { d += c; }); res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, body: d }));
     });
     r.on('error', reject); r.end();
@@ -41,6 +41,8 @@ server.listen(0, async () => {
     check('security headers on pages', r.headers['x-frame-options'] === 'DENY' && r.headers['x-content-type-options'] === 'nosniff' && /frame-ancestors 'none'/.test(r.headers['content-security-policy']));
     check('pages revalidate (no stale HTML after a deploy)', /max-age=0/.test(r.headers['cache-control']), r.headers['cache-control']);
     check('no x-powered-by', !r.headers['x-powered-by']);
+    r = await get('/', null, { 'Accept-Encoding': 'gzip' });
+    check('pages are gzip-compressed when the browser accepts it', r.headers['content-encoding'] === 'gzip', r.headers['content-encoding']);
 
     r = await get('/partners');
     check('pretty URL /partners → partners.html', r.status === 200 && /partner/i.test(r.body));
