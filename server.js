@@ -95,6 +95,36 @@ for (const plan of Object.keys(SALE_PRICES)) {
 
 const app = express();
 app.set('trust proxy', 1);
+app.disable('x-powered-by');
+
+// When this runs as the whole site (Railway), it does what Netlify's CDN and
+// netlify.toml did: www → apex, and the same security and cache headers.
+// Under Netlify's function these are harmless (Netlify adds its own too).
+const CANONICAL_HOST = 'tcgspeedshipper.com';
+app.use((req, res, next) => {
+  if (req.hostname === 'www.' + CANONICAL_HOST) {
+    return res.redirect(301, 'https://' + CANONICAL_HOST + req.originalUrl);
+  }
+  next();
+});
+const HEADER_RULES = [
+  { test: () => true, headers: {
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Content-Security-Policy': "frame-ancestors 'none'",
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=()',
+  } },
+  { test: (p) => p.startsWith('/affiliate/'), headers: { 'Referrer-Policy': 'no-referrer', 'X-Robots-Tag': 'noindex, nofollow' } },
+  { test: (p) => p.startsWith('/admin/') || p === '/admin', headers: { 'Referrer-Policy': 'no-referrer', 'X-Robots-Tag': 'noindex, nofollow', 'Cache-Control': 'no-store' } },
+  { test: (p) => p === '/sw.js', headers: { 'Cache-Control': 'no-cache', 'Service-Worker-Allowed': '/' } },
+  { test: (p) => p === '/version.json', headers: { 'Cache-Control': 'no-cache' } },
+  { test: (p) => p.startsWith('/vendor/'), headers: { 'Cache-Control': 'public, max-age=31536000, immutable' } },
+];
+app.use((req, res, next) => {
+  for (const rule of HEADER_RULES) if (rule.test(req.path)) res.set(rule.headers);
+  next();
+});
 
 function periodEndOf(subscription) {
   const ts = subscription.current_period_end ||
@@ -1217,15 +1247,45 @@ require('./admin')(router, {
 app.use('/api', router);
 app.use('/.netlify/functions/api', router);
 
+// Which commit is live, for the admin "production is behind main" check.
+// Railway gives the commit at runtime; on Netlify the build writes the file.
+if (process.env.RAILWAY_GIT_COMMIT_SHA) {
+  const BOOTED_AT = new Date().toISOString();
+  app.get('/version.json', (req, res) => {
+    res.json({
+      commit: process.env.RAILWAY_GIT_COMMIT_SHA,
+      context: process.env.RAILWAY_ENVIRONMENT_NAME === 'production' ? 'production' : (process.env.RAILWAY_ENVIRONMENT_NAME || 'railway'),
+      branch: process.env.RAILWAY_GIT_BRANCH || null,
+      built_at: BOOTED_AT,
+      host: 'railway',
+    });
+  });
+}
+
+// The site itself (on Netlify the CDN serves this and the function never sees
+// these paths). Pretty URLs: /partners → partners.html, /blog/ → index.html.
+const PUBLIC_DIR = require('path').join(__dirname, 'public');
+app.use(express.static(PUBLIC_DIR, {
+  extensions: ['html'],
+  cacheControl: false, // HEADER_RULES decides; everything else revalidates
+  setHeaders(res, filePath) {
+    if (!res.get('Cache-Control')) res.set('Cache-Control', 'public, max-age=0, must-revalidate');
+    if (filePath.endsWith('.webmanifest')) res.set('Content-Type', 'application/manifest+json');
+  },
+}));
+
 app.use((req, res) => {
-  res.status(404).json({ error: 'Not found', path: req.path });
+  if (/^\/(api|\.netlify)\//.test(req.path)) return res.status(404).json({ error: 'Not found', path: req.path });
+  res.status(404).type('html').send('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Page not found · TCG Speed Shipper</title></head>' +
+    '<body style="font:16px/1.5 system-ui,sans-serif;background:#f7f5f0;color:#1f1d1a;padding:48px 16px;text-align:center"><h1 style="font-size:24px">Page not found</h1>' +
+    '<p>That page doesn’t exist. <a href="/" style="color:#2d6a4f">Go to the label generator</a> or <a href="/blog/" style="color:#2d6a4f">the blog</a>.</p></body></html>');
 });
 
-// Netlify's CDN serves public/ in production. This listener only runs when the
-// file is executed directly (`node server.js`) for local API testing.
+// Railway runs `npm start` → this listener serves the whole site. On Netlify
+// the function wrapper imports `app` instead and this doesn't run.
 if (require.main === module) {
   app.listen(PORT, () => {
-    console.log('TCG Speed Shipper API listening on port ' + PORT);
+    console.log('TCG Speed Shipper listening on port ' + PORT);
   });
 }
 
