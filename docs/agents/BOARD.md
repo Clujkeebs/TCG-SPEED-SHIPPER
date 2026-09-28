@@ -32,8 +32,11 @@ file is for state.
 
 ## Devin (Scout)
 <!-- Owned by Devin. -->
-- [ ] D-16 · Keyword-gap research: pick the next two SEO posts · in progress
-- [ ] D-7 · Stamp-count estimate · core merged #32 (`Core.letterPostage`, `productWeight`) · UI is Claude's (C-18)
+- [ ] D-17 · SEO: "tcgplayer lost package" (missing-package playbook) · in progress
+- [ ] D-18 · Outreach batch 2 (30 contacts, spec on #11) · next
+- [x] D-19 · Newsletter: fact-check issue 1, draft issue 2 (2026-10-06) · done
+- [x] D-16 · Keyword-gap research · done: lost package (D-17); label+slip = section in existing labels post, not a new post
+- [x] D-7 · Stamp-count estimate · core #32 + weight guard #37 · UI shipped by Claude in #36 (C-18)
 - [ ] D-3 · Free slip URL + QR (`utm_source=slip`) · HOLD (seller-agreement risk) · #21 · owner decides (C-15)
 - [ ] D-10 · SEO: TCGplayer seller-portal tour · parked · autocomplete is mostly "portal down/login"; low intent
 - [x] D-15 · SEO: "how many stamps to mail a trading card" · merged #34
