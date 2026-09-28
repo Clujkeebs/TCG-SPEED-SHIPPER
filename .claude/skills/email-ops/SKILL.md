@@ -6,10 +6,14 @@ description: Send or draft TCG Speed Shipper emails correctly - weekly newslette
 # Email ops
 
 ## Always
-- **Physical mailing address** in every marketing email footer. It's in
-  chat or `docs/OWNER-TODO.md` item 1, and never goes in the repo. No
-  address means **draft only** (`mcp__Gmail__create_draft`), and the item
-  gets flagged in OWNER-TODO.
+- **Physical mailing address** in every marketing email footer. Read it
+  from the Gmail draft titled "TCGSS mailing address (email footer)"
+  (`mcp__Gmail__list_drafts`, query `subject:"TCGSS mailing address"`).
+  Never put it in the repo. If the draft is missing, **draft only** and
+  flag it in OWNER-TODO.
+- **Before any send**, check `in:sent to:<address>`. The Sep 13–25
+  campaign already emailed about 200 shops (0 replies). Never double-send.
+  Shop cold email is paused (`docs/outreach/README.md`, Findings).
 - **One recipient per email.** Never CC or BCC a list. Plain real links,
   never `google.com/url` wrappers.
 - **Honor opt-outs:** before sending, search Gmail for

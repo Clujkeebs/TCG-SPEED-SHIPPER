@@ -52,8 +52,8 @@ description: IDs and facts for TCG Speed Shipper's production stack (Railway, Su
 - Sends go from the owner's Gmail (clujkeebs@gmail.com). Sign off "Sam"
   or "Sam (Clujkeebs)".
 - **Marketing email needs the owner's physical mailing address in the
-  footer.** Check `docs/OWNER-TODO.md` item 1. No address means no send:
-  draft only.
+  footer.** It's on file in the Gmail draft "TCGSS mailing address (email
+  footer)". Never commit it.
 - Customer mmuszak34 (label + slip request) has been answered twice. The
   owner says don't reply again.
 

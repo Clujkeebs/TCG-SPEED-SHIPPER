@@ -12,19 +12,10 @@ done. **Legend:** ⏱ your time · 🔥 do first · 💵 costs money
 
 ## 🏠 When you get home: do these in order (~45 min total)
 
-1. [ ] 🔥 **Paste a real physical mailing address in chat** (street address,
-   USPS PO box or virtual mailbox; avoid your home address). The law (CAN-SPAM) requires it in every
-   marketing email. **It's the only thing holding back all of the
-   marketing:**
-   - newsletter issue 1 (goes out Tuesday 7:52am PT automatically once the
-     address is on file)
-   - 22 partner/referral outreach emails, written and ready
-   - the win-back email to free users
-
-   It only goes in email footers, never in the repo. Options: a USPS PO Box
-   (usps.com → PO Boxes, pick a small box, roughly $20–40 per 6 months
-   depending on the post office) or a virtual mailbox service (roughly
-   $10–20/mo). 💵 ⏱ 1 min to paste, + errand
+1. [x] ~~Mailing address~~: done 2026-09-28. It's used only in email
+   footers (it lives in a Gmail draft, not on the site). Unblocked: 8
+   creator partner emails sent, a welcome email to the newest free user,
+   and the newsletter every Tuesday.
 2. [ ] 🔥 **Fix `www` at Porkbun** (it shows a security warning right now):
    Porkbun → tcgspeedshipper.com → DNS → edit the **CNAME** for `www`:
    change `oeiwafy8.up.railway.app` to **`zpcjr8pk.up.railway.app`**. If
