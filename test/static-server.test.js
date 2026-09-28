@@ -52,6 +52,10 @@ server.listen(0, async () => {
     const vendor = require('fs').readdirSync(path.join(__dirname, '..', 'public', 'vendor')).find((f) => f.endsWith('.js'));
     r = await get('/vendor/' + vendor);
     check('/vendor/* is cached for a year, immutable', /immutable/.test(r.headers['cache-control']) && /max-age=31536000/.test(r.headers['cache-control']), r.headers['cache-control']);
+    r = await get('/vendor/no-such-lib.js');
+    check('a missing /vendor/ file is a 404 that is NOT cached for a year', r.status === 404 && !/immutable/.test(r.headers['cache-control'] || ''), r.headers['cache-control']);
+    r = await get('/');
+    check('HSTS on production', /max-age=31536000/.test(r.headers['strict-transport-security'] || '') && !/includeSubDomains/.test(r.headers['strict-transport-security']), r.headers['strict-transport-security']);
     r = await get('/sw.js');
     check('/sw.js is never cached', r.headers['cache-control'] === 'no-cache' && r.headers['service-worker-allowed'] === '/', r.headers['cache-control']);
     r = await get('/manifest.webmanifest');
