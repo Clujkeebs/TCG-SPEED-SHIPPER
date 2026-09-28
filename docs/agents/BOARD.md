@@ -32,6 +32,8 @@ file is for state.
 - [x] C-25 · Health check: 0 server errors/24h; cut-off blog links + /favicon.png now redirect · done · #54
 - [ ] C-26 · Newsletter list growth: opt-in in the post-download popup + /newsletter page + footer link on every page · review · this PR
 - [ ] C-27 · Marketing plan (`docs/MARKETING-PLAN.md`) + outreach queue of 22 (`docs/outreach/README.md`) · done · this PR · sending blocked:owner (mailing address)
+- [x] C-28 · Enterprise plan card + FAQ, creator section in issue 1, Google Ads kit · done · #56
+- [ ] C-29 · Project skills in `.claude/skills/` (ops-facts, ship, health-check, funnel, email-ops, owner-digest) · review · this PR
 - [ ] C-8 · IMb envelope tracking, server-side scan ingestion · blocked:owner (USPS Mailer ID + Informed Visibility)
 - [x] C-0 · Two-sided referrals, share prompt, upgrade card, 40% partners, redirect, PWA, build fix · done · #6 #8 #9
 

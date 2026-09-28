@@ -18,6 +18,10 @@ Monday morning.
 | Newsletter subscribers | 0 | the form only lived in the footer |
 | Active partners | 0 | no outreach sent yet |
 
+**Where visits come from (7d):** 240 direct, 16 Google search, 1 Bing,
+4 other. Almost nobody finds us through search yet, so Search Console
+and the SEO posts have the most room to grow.
+
 **What that says:**
 - The product converts: more than half of all accounts pay.
 - The bottleneck is **top of funnel**. Too few sellers find us, and when
