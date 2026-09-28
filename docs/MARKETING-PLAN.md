@@ -42,7 +42,11 @@ and the SEO posts have the most room to grow.
 
 ## The five channels, ranked by expected return per hour
 
-### 1. Partner / referral outreach (biggest lever, ready to go)
+### 1. Partner / referral outreach (creators only; shop cold email paused)
+- **2026-09-28:** an older campaign (Sep 13–25) had already emailed about
+  200 shops and creators with 0 human replies. Today 8 new creators got
+  personalized 40% offers. They get one follow-up on Oct 5, then we stop.
+  Devin finds 10 more creators a week; no more shops.
 - **22 personalized emails are written and queued** in
   `docs/outreach/README.md`: 10 creators and 12 shops, all public business
   contacts Devin verified at the source.
