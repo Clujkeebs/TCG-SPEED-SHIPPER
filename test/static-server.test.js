@@ -80,6 +80,13 @@ server.listen(0, async () => {
     const v = JSON.parse(r.body);
     check('/version.json reports the Railway commit as production', v.commit === 'abc1234def5678' && v.context === 'production' && r.headers['cache-control'] === 'no-cache', r.body);
 
+    r = await get('/blog/can-you-ship-t');
+    check('cut-off blog link → 301 to the one matching post', r.status === 301 && r.headers.location === '/blog/can-you-ship-trading-cards-media-mail', r.headers.location);
+    r = await get('/blog/how-to');
+    check('ambiguous or short partial slug stays a 404', r.status === 404);
+    r = await get('/favicon.png');
+    check('/favicon.png → the PNG icon', r.status === 301 && r.headers.location === '/icon-192.png');
+
     r = await get('/../server.js');
     check('no path traversal out of public/', r.status === 404 && !/require\(/.test(r.body));
   } catch (e) { fail++; console.log('  FAIL  threw: ' + e.stack); }

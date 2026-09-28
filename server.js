@@ -1297,6 +1297,20 @@ app.use(express.static(PUBLIC_DIR, {
   },
 }));
 
+// Links that get cut off when shared (seen in the logs as /blog/can-you-ship-t):
+// if exactly one post starts with the partial slug, send the reader there.
+const BLOG_SLUGS = (() => {
+  try { return require('fs').readdirSync(require('path').join(PUBLIC_DIR, 'blog')).filter((f) => f.endsWith('.html') && f !== 'index.html').map((f) => f.slice(0, -5)); }
+  catch (e) { return []; }
+})();
+app.get('/favicon.png', (req, res) => res.redirect(301, '/icon-192.png'));
+app.get(/^\/blog\/[a-z0-9-]{8,}$/, (req, res, next) => {
+  const part = req.path.slice(6);
+  const hits = BLOG_SLUGS.filter((s) => s.startsWith(part));
+  if (hits.length === 1) return res.redirect(301, '/blog/' + hits[0]);
+  next();
+});
+
 app.use((req, res) => {
   if (/^\/(api|\.netlify)\//.test(req.path)) return res.status(404).json({ error: 'Not found', path: req.path });
   res.status(404).type('html').send('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Page not found · TCG Speed Shipper</title></head>' +
