@@ -61,3 +61,18 @@ Collected 2026-09-28 by Devin. Every email string was fetched and matched on its
 
 - **#7 TKO Toy Company is in Canada**, so CASL applies, not just CAN-SPAM. The email is conspicuously published and the pitch fits its business, which is the implied-consent basis. Still, send only a business-relevant pitch with an unsubscribe link, or skip it.
 - Troll and Toad was dropped: it's a large retailer, and the only public address is customer support.
+
+## Outreach batch 3 (creators)
+
+| # | Name | Type (creator / shop / community) | Audience or size | Public business email | Source URL where that email is published | Personalization hook |
+|---|---|---|---|---|---|---|
+| 1 | [PokeNE](https://www.youtube.com/@PokeNE) | creator | 65.6K YouTube subscribers | Brian@PokeNE.com | [Terms and conditions](https://www.pokene.com/terms-and-conditions) | In ["Stop B*tching and Work - Build a Pokemon Card Business"](https://www.youtube.com/watch?v=7qS1tFy7D-E) (May 21, 2026), PokeNE talks about building a Pokémon card business. |
+| 2 | [Mattcaster Mage MTG](https://www.youtube.com/@MattcasterMage) | creator | 38.5K YouTube subscribers | mtgrobinson@gmail.com | [Business-inquiries line in video description](https://www.youtube.com/watch?v=tLGT2XWnRPY) | ["MTG Market Movers - May 20th - Modern Shaken Up! Crashing Footfalls!"](https://www.youtube.com/watch?v=tLGT2XWnRPY) (May 20, 2026) tracks Magic card price changes. |
+| 3 | [Brainstorm Brewery](https://www.youtube.com/BrainstormBrewery) | creator | 3.8K YouTube subscribers | brainstormbrew@gmail.com | [Episode #714](https://brainstormbrewery.com/we-are-all-vendors-now-brainstorm-brewery-714-magic-finance/) | ["We Are All Vendors Now"](https://brainstormbrewery.com/we-are-all-vendors-now-brainstorm-brewery-714-magic-finance/) (Aug. 21, 2026) includes a segment on vending an event. |
+| 4 | [Monsters & Mana Marketplace](https://www.youtube.com/@Mons_mana) | creator | 5.9K YouTube subscribers | mons.mana.market@gmail.com | [Refund policy](https://monstersandmana.com/policies/refund-policy) | ["How We Price Magic Cards FAIRLY (TCGPlayer + ManaBox)"](https://www.youtube.com/shorts/MwH0owTxlQY) (Apr. 10, 2026) explains their card-pricing approach. |
+| 5 | [Card N All Gaming](https://www.youtube.com/@CardNAllGaming) | creator | 28.8K YouTube subscribers | support@cardnallgaming.com | [Contact information](https://cardnallgaming.com/policies/contact-information) | ["What I’ve Learned Running Game Stores for 10 Years"](https://www.youtube.com/watch?v=5r1-L4JRTmI) shares card-shop operating experience. |
+| 6 | [GemTCG](https://www.youtube.com/@GemTCG) | creator | 7.48K YouTube subscribers | asassine44@gmail.com | [Public eBay store](https://www.ebay.co.uk/str/kickznkardzstore) | ["How to list cards on Shopify FAST"](https://www.youtube.com/watch?v=npLQxABqcvs) (Jan. 16, 2026) demonstrates listing trading cards for sale. |
+
+Collected 2026-09-28 by Devin. Every email string was fetched and matched on its source page. Sending waits on the owner's mailing address (CAN-SPAM).
+
+No included creator was confirmed to be non-US in the fetched public sources.
