@@ -70,6 +70,9 @@ server.listen(0, async () => {
 
     await req('POST', '/api/newsletter/subscribe', { email: 'a@b.co', source: 'evil<script>' });
     check('unknown source becomes "other"', state.upserts[1] && state.upserts[1].row.source === 'other');
+    await req('POST', '/api/newsletter/subscribe', { email: 'c@d.co', source: 'post_download' });
+    await req('POST', '/api/newsletter/subscribe', { email: 'e@f.co', source: 'newsletter_page' });
+    check('post-download popup and /newsletter page sources are kept', state.upserts[2] && state.upserts[2].row.source === 'post_download' && state.upserts[3] && state.upserts[3].row.source === 'newsletter_page');
 
     r = await req('POST', '/api/newsletter/subscribe', { email: 'not-an-email' });
     check('invalid email rejected', r.status === 400);

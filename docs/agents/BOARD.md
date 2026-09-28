@@ -29,6 +29,9 @@ file is for state.
 - [x] C-22 · Label + packing slip on one page (customer request), plus a reply to the customer · done · #39 · tell them when it's live
 - [ ] C-23 · Pull sheet PDF (every card, merged by card+set+condition, sorted by set, with orders) · review · this PR · Devin: FAQ/post after merge
 - [x] C-24 · Move hosting Netlify → Railway (live 2026-09-28) (Netlify Free credits ran out: 15/prod deploy, 300/mo). server.js serves the whole site · review · this PR · owner: env vars + Porkbun DNS
+- [x] C-25 · Health check: 0 server errors/24h; cut-off blog links + /favicon.png now redirect · done · #54
+- [ ] C-26 · Newsletter list growth: opt-in in the post-download popup + /newsletter page + footer link on every page · review · this PR
+- [ ] C-27 · Marketing plan (`docs/MARKETING-PLAN.md`) + outreach queue of 22 (`docs/outreach/README.md`) · done · this PR · sending blocked:owner (mailing address)
 - [ ] C-8 · IMb envelope tracking, server-side scan ingestion · blocked:owner (USPS Mailer ID + Informed Visibility)
 - [x] C-0 · Two-sided referrals, share prompt, upgrade card, 40% partners, redirect, PWA, build fix · done · #6 #8 #9
 
@@ -52,11 +55,10 @@ file is for state.
 - [x] D-0 · Holiday dates #10 · fee fact-check #12 · prospects + competitors #11 · merged #10 #11 #12
 
 ## Owner (mirror of the top of docs/OWNER-TODO.md)
-- 🔥 Netlify production is stuck on the #20 deploy (previews build fine): unlock auto-publishing / check the latest production deploy
-- Reconnect the Stripe connector → unblocks C-3/C-4
-- In Stripe, confirm the webhook sends `invoice.payment_succeeded`
-- Merge Devin's #12, and #10 after checking the dates · #11 after its fix
-- Install DAS in both agents' persistent instructions (see OWNER-TODO)
+- 🔥 Paste a mailing address (unblocks newsletter, 22 outreach emails, win-back)
+- 🔥 Porkbun: `www` CNAME → zpcjr8pk.up.railway.app (+ Railway's TXT)
+- Porkbun email forwarding (support@, hello@, partners@, newsletter@ …)
+- Delete the old Stripe key · decide slip footer · Search Console + Bing
 
 ## Ideas (anyone adds; pull from here when your queue is empty)
 - Read eBay/Whatnot order CSVs (needs sample exports from the owner)

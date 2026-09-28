@@ -249,6 +249,12 @@
   <priority>0.7</priority>
 </url>
 <url>
+  <loc>https://tcgspeedshipper.com/newsletter.html</loc>
+  <lastmod>2026-09-28T00:00:00+00:00</lastmod>
+  <changefreq>weekly</changefreq>
+  <priority>0.6</priority>
+</url>
+<url>
   <loc>https://tcgspeedshipper.com/partners.html</loc>
   <lastmod>2026-09-27T00:00:00+00:00</lastmod>
   <changefreq>monthly</changefreq>

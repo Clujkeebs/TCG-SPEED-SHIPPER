@@ -33,7 +33,8 @@ carry `?utm_source=email&utm_campaign=newsletter-YYYY-MM-DD`.
 - The table is `tcgss_newsletter_subscribers`. Send to rows with
   `status = 'subscribed'`. It's server-only and read through the Supabase
   connector. Never commit emails.
-- **Opt-in only:** the footer form on every page, plus people who ask. Having
+- **Opt-in only:** the footer form on every page, the `/newsletter.html`
+  page, the "labels ready" popup after a download, plus people who ask. Having
   an account does **not** add anyone (the privacy policy promises this).
 - **Unsubscribe link** for each recipient:
   `https://tcgspeedshipper.com/api/newsletter/unsubscribe?t=<unsub_token>`.
