@@ -791,6 +791,8 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
 .upsell .plans button { height: auto; padding: 10px 12px; flex-direction: column; align-items: flex-start; text-align: left; gap: 2px; width: 100%; }
 .upsell .plans b { font-size: 14px; } .upsell .plans small { font-size: 12px; opacity: .85; font-weight: 400; }
 .upsell .gift { margin-top: 10px; font-size: 12.5px; color: var(--accent, #2d6a4f); }
+.upsell .yearly-nudge { margin-top: 8px; font-size: 13px; color: var(--text-secondary, #555); }
+.upsell .linkish { background: none; border: 0; padding: 0; font: inherit; color: var(--accent, #2d6a4f); text-decoration: underline; cursor: pointer; }
 @media (max-width: 480px) { .upsell .plans { grid-template-columns: 1fr; } }
 .invite-banner { margin: 0 0 14px; padding: 12px 14px; border-radius: 12px; background: var(--accent-bg, #e8f3ee); color: var(--text); font-size: 13.5px; border: 1px solid var(--border); }
 </style>
@@ -2140,8 +2142,13 @@ function planPriceText(plan) {
 }
 // Upgrade buttons inside prompts reuse the Pricing tab's own buttons, so there
 // is exactly one checkout code path (sign-in check, plan switching, promo).
-function startUpgrade(plan) {
+function setBillingInterval(interval) {
+  var b = document.querySelector('#billing-toggle button[data-interval="' + interval + '"]');
+  if (b && !document.getElementById('billing-toggle').hidden) b.click();
+}
+function startUpgrade(plan, interval) {
   trackEvent('upgrade_prompt');
+  if (interval) setBillingInterval(interval);
   var btn = document.querySelector('.pricing-grid [data-plan="' + plan + '"]');
   if (session && btn && !btn.disabled) { btn.click(); return; }
   switchTab('pricing');
@@ -2156,14 +2163,22 @@ function upsellHTML(title, body) {
     ? '<button class="btn-dl" type="button" data-up="premium"><b>Premium — ' + esc(planPriceText('premium')) + '</b><small>Unlimited labels + Design Studio</small></button>'
     : '<button class="btn-ghost" type="button" data-up="base"><b>Base — ' + esc(planPriceText('base')) + '</b><small>500 labels / month</small></button>' +
       '<button class="btn-dl" type="button" data-up="premium"><b>Premium — ' + esc(planPriceText('premium')) + '</b><small>Unlimited + Design Studio</small></button>';
-  return '<div class="upsell" role="status"><h4>' + esc(title) + '</h4><p>' + esc(body) + '</p><div class="plans">' + plans + '</div>' +
+  // Yearly is cheaper per label; offer it right here, not only on Pricing.
+  var yearly = ['base', 'premium'].filter(function (p) {
+    return (!onBase || p === 'premium') && plansInfo && plansInfo[p] && plansInfo[p].year && plansInfo[p].month;
+  }).map(function (p) {
+    var y = plansInfo[p].year.amount, save = Math.round(12 - y / plansInfo[p].month.amount);
+    return '<button type="button" class="linkish" data-up="' + p + '" data-interval="year">' + capitalize(p) + ' ' + esc(money(y)) + '/yr' + (save >= 1 ? ' (' + save + ' mo free)' : '') + '</button>';
+  });
+  var yearlyLine = yearly.length ? '<div class="yearly-nudge">Or pay yearly: ' + yearly.join(' · ') + '</div>' : '';
+  return '<div class="upsell" role="status"><h4>' + esc(title) + '</h4><p>' + esc(body) + '</p><div class="plans">' + plans + '</div>' + yearlyLine +
     (wasInvited() ? '<div class="gift">🎁 You were invited — your first month is free. Cancel before it ends and you pay nothing.</div>'
                   : '<div class="gift">Cancel any time from Manage Billing. Your order data never leaves your browser.</div>') +
     '</div>';
 }
 document.addEventListener('click', function (e) {
   var b = e.target.closest && e.target.closest('[data-up]');
-  if (b) { e.preventDefault(); startUpgrade(b.getAttribute('data-up')); }
+  if (b) { e.preventDefault(); startUpgrade(b.getAttribute('data-up'), b.getAttribute('data-interval')); }
 });
 
 function showBlockedMessage(gate, count) {
@@ -2514,7 +2529,7 @@ function stampSettings() {
   return { pkg: isFinite(v) && v >= 0 && v <= 3 ? v : null, rigid: lsGet(STAMP_RIGID_KEY) === '1' };
 }
 var lastStampPlan = null;
-function money(n) { return '$' + n.toFixed(2); }
+function dollars(n) { return '$' + n.toFixed(2); }
 function renderStampPlan() {
   var box = document.getElementById('stamp-plan');
   if (!box) return;
@@ -2536,7 +2551,7 @@ function renderStampPlan() {
     var bits = ['<b>' + plan.forever + '</b> Forever'];
     if (plan.addlOunce) bits.push('<b>' + plan.addlOunce + '</b> additional-ounce');
     if (plan.nonmachinable) bits.push('<b>' + plan.nonmachinable + '</b> nonmachinable surcharge');
-    out = '<b>Stamps for ' + plan.letters + ' envelope' + (plan.letters !== 1 ? 's' : '') + ':</b> ' + bits.join(' + ') + ' ≈ <b>' + money(plan.total) + '</b>';
+    out = '<b>Stamps for ' + plan.letters + ' envelope' + (plan.letters !== 1 ? 's' : '') + ':</b> ' + bits.join(' + ') + ' ≈ <b>' + dollars(plan.total) + '</b>';
     if (plan.notLetter) out += '<br><span style="color:var(--danger);">' + plan.notLetter + ' envelope order' + (plan.notLetter !== 1 ? 's are' : ' is') + ' over 3.5 oz: that ships as a package, not a stamped letter.</span>';
   }
   if (plan.noWeight) out += '<br><span style="color:var(--hint);">' + plan.noWeight + ' envelope order' + (plan.noWeight !== 1 ? 's have' : ' has') + ' no weight in the file.</span>';
@@ -2547,7 +2562,7 @@ function stampTagFor(i) {
   if (!p) return '';
   if (p.notLetter) return '<div class="stamp-tag warn">Over 3.5 oz: not a letter</div>';
   var oz = 1 + p.addlOunce;
-  return '<div class="stamp-tag">~' + oz + ' oz · ' + money(p.price) + ' in stamps</div>';
+  return '<div class="stamp-tag">~' + oz + ' oz · ' + dollars(p.price) + ' in stamps</div>';
 }
 (function () {
   var pkgIn = document.getElementById('pkg-oz'), rigidIn = document.getElementById('pwe-rigid');
