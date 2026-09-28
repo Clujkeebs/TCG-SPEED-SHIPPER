@@ -95,6 +95,39 @@ for (const plan of Object.keys(SALE_PRICES)) {
 
 const app = express();
 app.set('trust proxy', 1);
+app.disable('x-powered-by');
+// Gzip/Brotli-negotiated compression (Netlify's CDN did this for us).
+// The Stripe webhook reads a raw body, which compression doesn't touch.
+app.use(require('compression')());
+
+// When this runs as the whole site (Railway), it does what Netlify's CDN and
+// netlify.toml did: www → apex, and the same security and cache headers.
+// Under Netlify's function these are harmless (Netlify adds its own too).
+const CANONICAL_HOST = 'tcgspeedshipper.com';
+app.use((req, res, next) => {
+  if (req.hostname === 'www.' + CANONICAL_HOST) {
+    return res.redirect(301, 'https://' + CANONICAL_HOST + req.originalUrl);
+  }
+  next();
+});
+const HEADER_RULES = [
+  { test: () => true, headers: {
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Content-Security-Policy': "frame-ancestors 'none'",
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=()',
+  } },
+  { test: (p) => p.startsWith('/affiliate/'), headers: { 'Referrer-Policy': 'no-referrer', 'X-Robots-Tag': 'noindex, nofollow' } },
+  { test: (p) => p.startsWith('/admin/') || p === '/admin', headers: { 'Referrer-Policy': 'no-referrer', 'X-Robots-Tag': 'noindex, nofollow', 'Cache-Control': 'no-store' } },
+  { test: (p) => p === '/sw.js', headers: { 'Cache-Control': 'no-cache', 'Service-Worker-Allowed': '/' } },
+  { test: (p) => p === '/version.json', headers: { 'Cache-Control': 'no-cache' } },
+  { test: (p) => p.startsWith('/vendor/'), headers: { 'Cache-Control': 'public, max-age=31536000, immutable' } },
+];
+app.use((req, res, next) => {
+  for (const rule of HEADER_RULES) if (rule.test(req.path)) res.set(rule.headers);
+  next();
+});
 
 function periodEndOf(subscription) {
   const ts = subscription.current_period_end ||
@@ -102,7 +135,18 @@ function periodEndOf(subscription) {
   return ts ? new Date(ts * 1000).toISOString() : null;
 }
 
+// A price the env vars don't list can still be mapped by the plan_key set on
+// it in Stripe (every price created since 2026-09-28 has one). This way a
+// newly added price, or a host whose env vars lag behind, never leaves a
+// paying customer without their plan.
+function learnPrice(price) {
+  if (!price || typeof price !== 'object' || !price.id || PRICE_TO_PLAN[price.id]) return;
+  const key = price.metadata && price.metadata.plan_key;
+  if (key === 'base' || key === 'premium') PRICE_TO_PLAN[price.id] = key;
+}
+
 async function applySubscriptionToProfile(subscription) {
+  learnPrice(subscription.items.data[0].price);
   const priceId = subscription.items.data[0].price.id;
   const active = ['active', 'trialing'].includes(subscription.status);
   // An active subscription on a price we don't recognise means our price env
@@ -202,6 +246,7 @@ async function isPaidPlanInvoice(invoice) {
   const lines = invoice.lines && Array.isArray(invoice.lines.data) ? invoice.lines.data : [];
   lines.forEach((line) => {
     const price = line && line.price;
+    learnPrice(price);
     const priceId = typeof price === 'string' ? price : price && price.id;
     if (priceId) priceIds.push(priceId);
     const detailPrice = line && line.pricing && line.pricing.price_details && line.pricing.price_details.price;
@@ -211,6 +256,7 @@ async function isPaidPlanInvoice(invoice) {
   try {
     const sub = await stripe.subscriptions.retrieve(typeof subId === 'string' ? subId : subId.id);
     const item = sub && sub.items && sub.items.data[0];
+    if (item) learnPrice(item.price);
     return !!(item && PRICE_TO_PLAN[item.price.id]);
   } catch (err) {
     await logError('webhook.invoice', 'Could not check the subscription on invoice', invoice.id, err);
@@ -513,6 +559,7 @@ router.post('/stripe-webhook', express.raw({ type: '*/*' }), requireStripe, requ
         const userId = session.client_reference_id;
         if (userId && session.subscription) {
           const subscription = await stripe.subscriptions.retrieve(session.subscription);
+          learnPrice(subscription.items.data[0].price);
           const priceId = subscription.items.data[0].price.id;
           if (!PRICE_TO_PLAN[priceId]) {
             // Someone just paid for a price we can't map to a plan. Record the
@@ -1217,15 +1264,65 @@ require('./admin')(router, {
 app.use('/api', router);
 app.use('/.netlify/functions/api', router);
 
+// Which commit is live, for the admin "production is behind main" check.
+// Railway gives the commit at runtime; on Netlify the build writes the file.
+if (process.env.RAILWAY_GIT_COMMIT_SHA) {
+  const BOOTED_AT = new Date().toISOString();
+  app.get('/version.json', (req, res) => {
+    res.json({
+      commit: process.env.RAILWAY_GIT_COMMIT_SHA,
+      context: process.env.RAILWAY_ENVIRONMENT_NAME === 'production' ? 'production' : (process.env.RAILWAY_ENVIRONMENT_NAME || 'railway'),
+      branch: process.env.RAILWAY_GIT_BRANCH || null,
+      built_at: BOOTED_AT,
+      host: 'railway',
+    });
+  });
+}
+
+// The site itself (on Netlify the CDN serves this and the function never sees
+// these paths). Pretty URLs: /partners → partners.html, /blog/ → index.html.
+const PUBLIC_DIR = require('path').join(__dirname, 'public');
+app.use(express.static(PUBLIC_DIR, {
+  extensions: ['html'],
+  cacheControl: false, // HEADER_RULES decides; everything else revalidates
+  setHeaders(res, filePath) {
+    if (!res.get('Cache-Control')) res.set('Cache-Control', 'public, max-age=0, must-revalidate');
+    if (filePath.endsWith('.webmanifest')) res.set('Content-Type', 'application/manifest+json');
+  },
+}));
+
 app.use((req, res) => {
-  res.status(404).json({ error: 'Not found', path: req.path });
+  if (/^\/(api|\.netlify)\//.test(req.path)) return res.status(404).json({ error: 'Not found', path: req.path });
+  res.status(404).type('html').send('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Page not found · TCG Speed Shipper</title></head>' +
+    '<body style="font:16px/1.5 system-ui,sans-serif;background:#f7f5f0;color:#1f1d1a;padding:48px 16px;text-align:center"><h1 style="font-size:24px">Page not found</h1>' +
+    '<p>That page doesn’t exist. <a href="/" style="color:#2d6a4f">Go to the label generator</a> or <a href="/blog/" style="color:#2d6a4f">the blog</a>.</p></body></html>');
 });
 
-// Netlify's CDN serves public/ in production. This listener only runs when the
-// file is executed directly (`node server.js`) for local API testing.
+// Railway runs `npm start` → this listener serves the whole site. On Netlify
+// the function wrapper imports `app` instead and this doesn't run.
+// On boot, prove each secret works (one harmless read each) and log only
+// OK/FAILED, never a value, so a new host can be verified from its logs.
+async function selfCheck() {
+  const out = [];
+  if (stripe) {
+    try { await stripe.balance.retrieve(); out.push('stripe_key=OK'); }
+    catch (e) { out.push('stripe_key=FAILED(' + (e.type || e.code || 'error') + ')'); }
+  } else out.push('stripe_key=MISSING');
+  if (supabaseAdmin) {
+    try {
+      const { error } = await supabaseAdmin.from('tcgss_profiles').select('id', { head: true, count: 'exact' }).limit(1);
+      out.push(error ? 'supabase_key=FAILED(' + (error.code || 'error') + ')' : 'supabase_key=OK');
+    } catch (e) { out.push('supabase_key=FAILED(exception)'); }
+  } else out.push('supabase_key=MISSING');
+  out.push('webhook_secret=' + (process.env.STRIPE_WEBHOOK_SECRET ? (/^whsec_/.test(process.env.STRIPE_WEBHOOK_SECRET) ? 'PRESENT' : 'WRONG_FORMAT') : 'MISSING'));
+  ['STRIPE_PRICE_BASE', 'STRIPE_PRICE_PREMIUM'].forEach((k) => out.push(k + '=' + (process.env[k] ? 'SET' : 'MISSING')));
+  console.log('[self-check] ' + out.join(' '));
+}
+
 if (require.main === module) {
   app.listen(PORT, () => {
-    console.log('TCG Speed Shipper API listening on port ' + PORT);
+    console.log('TCG Speed Shipper listening on port ' + PORT);
+    selfCheck().catch(() => {});
   });
 }
 
