@@ -33,7 +33,7 @@ file is for state.
 ## Devin (Scout)
 <!-- Owned by Devin. -->
 - [ ] D-17 · SEO: "tcgplayer lost package" (missing-package playbook) · in progress
-- [ ] D-18 · Outreach batch 2 (30 contacts, spec on #11) · next
+- [ ] D-18 · Outreach batch 2 (16 contacts, spec on #11) · review
 - [x] D-19 · Newsletter: fact-check issue 1, draft issue 2 (2026-10-06) · done
 - [x] D-16 · Keyword-gap research · done: lost package (D-17); label+slip = section in existing labels post, not a new post
 - [x] D-7 · Stamp-count estimate · core #32 + weight guard #37 · UI shipped by Claude in #36 (C-18)
