@@ -1193,7 +1193,7 @@ router.post('/e', express.json({ limit: '1kb' }), async (req, res) => {
 // Subscribing always answers the same way, so the form can't be used to find
 // out who is on the list. The honeypot field `website` is invisible to people
 // and filled in by bots.
-const NEWSLETTER_SOURCES = ['footer', 'blog', 'guide', 'home', 'partners', 'account', 'other'];
+const NEWSLETTER_SOURCES = ['footer', 'blog', 'guide', 'home', 'partners', 'account', 'post_download', 'newsletter_page', 'other'];
 const tooManyNewsletterSignups = makeThrottle(5, 10 * 60 * 1000);
 router.post('/newsletter/subscribe', express.json({ limit: '2kb' }), async (req, res) => {
   const b = req.body || {};

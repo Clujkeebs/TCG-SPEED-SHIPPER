@@ -162,3 +162,11 @@ button:active:not(:disabled), .btn:active, .btn-dl:active, .nav-cta:active { tra
 
 /* Scrollable tables are keyboard-focusable (tabindex=0); show where focus is. */
 .table-scroll:focus-visible { outline: 2px solid var(--accent, #2d6a4f); outline-offset: 2px; }
+/* In-page newsletter form (<div data-news-slot>, e.g. /newsletter.html) on a light background. */
+.news-slot .sf-news { max-width: none; margin-top: 16px; }
+.news-slot .sf-news label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.news-slot .sf-news p:not(.sf-news-msg) { display: none; }
+.news-slot .sf-news input[type=email] { background: #fff !important; border: 1px solid #b7e4c7 !important; color: #1c1b18 !important; font-size: 16px; padding: 11px 12px; }
+.news-slot .sf-news input::placeholder { color: #716d64; }
+.news-slot .sf-news button { background: #2d6a4f; color: #fff; padding: 11px 18px; }
+.news-slot .sf-news .sf-news-msg { color: #2d6a4f; font-weight: 600; }

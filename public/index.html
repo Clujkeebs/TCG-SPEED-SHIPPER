@@ -784,6 +784,11 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
 .share-toast p { font-size: 13px; color: var(--muted); margin: 0 0 12px; line-height: 1.45; }
 .share-toast .row { display: flex; gap: 8px; flex-wrap: wrap; }
 .share-toast .row button, .share-toast .row a { flex: 1 1 auto; min-width: 110px; height: 38px; font-size: 13px; justify-content: center; text-decoration: none; }
+.share-toast form.news { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.share-toast form.news label { display: block; font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.share-toast form.news input[type=email] { flex: 2 1 160px; height: 38px; font-size: 14px; }
+.share-toast .news-msg { margin: 6px 0 0; font-size: 12.5px; }
+.share-toast .sf-news-hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 .share-toast .x { position: absolute; top: 6px; right: 8px; background: none; border: 0; font-size: 20px; line-height: 1; color: var(--muted); cursor: pointer; padding: 4px 6px; }
 @media (prefers-reduced-motion: reduce) { .share-toast { transition: none; } }
 .upsell { margin-top: 10px; padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface, #fff); }
@@ -1666,6 +1671,7 @@ Chicago, IL 60601</div>
         <ul>
           <li><a href="/support.html">Support</a></li>
           <li><a href="/partners.html">Partner program</a></li>
+          <li><a href="/newsletter.html">Newsletter</a></li>
           <li><a href="/terms.html">Terms of Service</a></li>
           <li><a href="/privacy.html">Privacy Policy</a></li>
           <li><button type="button" data-cookie-settings>Cookie settings</button></li>
@@ -2225,6 +2231,8 @@ var SHARE_ASK_KEY = 'tcgss_share_ask_v1';
 function shareLink() {
   return referralStats && referralStats.code ? location.origin + '/?ref=' + referralStats.code : location.origin + '/';
 }
+var NEWS_ASKED_KEY = 'tcgss_news_signed_up';
+function newsAsked() { try { return localStorage.getItem(NEWS_ASKED_KEY) === '1'; } catch (e) { return true; } }
 function maybeAskForShare(labelCount) {
   var last = 0;
   try { last = Number(localStorage.getItem(SHARE_ASK_KEY) || 0); } catch (e) { return; }
@@ -2240,7 +2248,13 @@ function maybeAskForShare(labelCount) {
       ? 'Know another seller still typing addresses by hand? Send them your link: <strong>they get a free month, and so do you</strong> when they subscribe.'
       : 'Saved you some time? Help another seller out — share TCG Speed Shipper with your card shop, Discord, or group chat. It\'s free to use.') + '</p>' +
     '<div class="row"><button class="btn-dl" type="button" data-share="native">Share</button>' +
-    '<button class="btn-ghost" type="button" data-share="copy">Copy link</button></div>';
+    '<button class="btn-ghost" type="button" data-share="copy">Copy link</button></div>' +
+    (newsAsked() ? '' :
+    '<form class="news" novalidate><label for="st-news-email">Get one shipping tip every Tuesday</label>' +
+    '<div class="row"><input id="st-news-email" type="email" name="email" autocomplete="email" placeholder="you@example.com" required>' +
+    '<button class="btn-ghost" type="submit">Subscribe</button></div>' +
+    '<input class="sf-news-hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">' +
+    '<p class="news-msg" role="status" aria-live="polite"></p></form>');
   // Sit above the cookie notice rather than behind it.
   var cc = document.querySelector('.cc.show');
   if (cc) t.style.bottom = (cc.getBoundingClientRect().height + 30) + 'px';
@@ -2249,6 +2263,27 @@ function maybeAskForShare(labelCount) {
   var timer = setTimeout(close, 20000);
   function close() { clearTimeout(timer); t.classList.remove('show'); setTimeout(function () { t.remove(); }, 300); }
   t.querySelector('.x').addEventListener('click', close);
+  var nf = t.querySelector('form.news');
+  if (nf) {
+    // Typing an email shouldn't be cut off by the auto-close.
+    nf.addEventListener('focusin', function () { clearTimeout(timer); });
+    nf.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var msg = nf.querySelector('.news-msg'), email = nf.email.value.trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.textContent = 'Enter a valid email.'; nf.email.focus(); return; }
+      nf.querySelector('button').disabled = true; msg.textContent = 'Subscribing…';
+      fetch('/api/newsletter/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, source: 'post_download', website: nf.website.value }) })
+        .then(function (r) {
+          if (!r.ok) throw new Error();
+          try { localStorage.setItem(NEWS_ASKED_KEY, '1'); } catch (err) {}
+          trackEvent('newsletter_signup');
+          msg.textContent = '✓ You\'re in. The next issue comes Tuesday.';
+          setTimeout(close, 2500);
+        })
+        .catch(function () { msg.textContent = 'Could not subscribe. Try again later.'; nf.querySelector('button').disabled = false; });
+    });
+  }
   t.addEventListener('click', async function (e) {
     var b = e.target.closest('[data-share]'); if (!b) return;
     var url = shareLink();
