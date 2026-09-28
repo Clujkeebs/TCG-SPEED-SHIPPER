@@ -4,7 +4,7 @@
   "private": true,
   "description": "TCGPlayer shipping label generator with Free/Base/Premium plans.",
   "engines": {
-    "node": ">=18"
+    "node": ">=22 <23"
   },
   "scripts": {
     "start": "node server.js",
@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
+    "compression": "1.8.2",
     "express": "^4.19.2",
     "serverless-http": "^3.2.0",
     "stripe": "^16.9.0"

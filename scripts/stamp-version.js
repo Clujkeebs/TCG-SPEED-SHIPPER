@@ -3,7 +3,8 @@
    compares it with the head of `main` on GitHub and warns when production
    has fallen behind. On 2026-09-27 production sat on an old deploy for ~14 h
    while deploy previews kept building, and nothing flagged it.
-   Netlify sets COMMIT_REF and CONTEXT during builds. */
+   Netlify sets COMMIT_REF and CONTEXT during builds. (On Railway, server.js
+   answers /version.json itself from RAILWAY_GIT_COMMIT_SHA.) */
 const fs = require('fs');
 const path = require('path');
 

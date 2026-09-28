@@ -15,19 +15,15 @@ them.
 
 ## 🔥 Blocking right now
 
-- [ ] 🔥 **Netlify isn't publishing to production** (the agents can't do this: Netlify's API doesn't let them unlock publishing, and this environment's network blocks their deploy tool). The live site is
-  still the deploy of PR #20 (2026-09-26 22:24 UTC). #22–#26 (accessibility,
-  offline fixes, faster page load) are merged but not live. Deploy previews
-  build fine, so the code is OK; it's a Netlify setting. In Netlify →
-  tcg-speed-shipper → **Deploys**:
-  - If there's a banner saying **auto publishing is locked**, click **Start
-    auto publishing**.
-  - Otherwise open the newest `main` production deploy. If it failed, copy
-    the error line to Claude. If it's "ready" but not published, click
-    **Publish deploy**.
-
-  Also check Team → Billing/Usage. The Free plan has a monthly credit limit,
-  and production deploys use credits. ⏱ 3 min
+- [x] ~~Netlify stuck (free credits ran out)~~: **moved to Railway 2026-09-28.**
+  The site runs on Railway (your $5 Hobby plan) with unlimited deploys, and
+  every merge goes live. DNS is at Porkbun.
+- [ ] **Delete the old Stripe secret key** (Stripe → Developers → API keys):
+  the one that *isn't* named "Railway". Do it after a day of Railway running
+  clean. Nothing uses the old key anymore. ⏱ 1 min
+- [ ] *(later)* **Netlify:** leave the site alone for now. It still redirects
+  the old tcg-speed-shipper.netlify.app address. After a month you can
+  delete it, or keep it as a free backup.
 - [ ] 🔥 **Reply with a mailing address for email footers** (a PO box or a
   virtual mailbox is fine). The law (CAN-SPAM) requires a physical address in
   every marketing email. It's the one thing holding back all of these:
@@ -48,11 +44,9 @@ them.
     footer" and Claude does it.
 
   It's your users' seller accounts at risk. ⏱ 2 min
-- [ ] *(later, whenever)* **New Stripe prices.** You said to let this one
-  be. When you feel like it, the no-connector route is quickest: in Stripe →
-  Product catalog, add $2.99/mo and $29/yr prices to Base and $59/yr to
-  Premium, then paste the four `price_…` IDs (plus the old Base monthly one)
-  to Claude, who sets them in Netlify. ⏱ 5 min
+- [x] ~~New Stripe prices~~: done 2026-09-28. Base $2.99/mo · $29/yr,
+  Premium $5.99/mo · $59/yr. Existing subscribers keep their price. Customers
+  can switch plans and billing period in the Manage billing portal.
 - [x] ~~Webhook URL updated to the new domain~~: done by you 2026-09-27. The
   admin dashboard's **Setup checks** card shows whether
   `invoice.payment_succeeded` is arriving; Claude confirms it in the Stripe

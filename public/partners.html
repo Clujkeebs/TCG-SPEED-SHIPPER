@@ -247,47 +247,5 @@ table.calc th { font-weight:600; color:var(--text); }
   </div>
 </footer>
 
-<script>
-(function () {
-  'use strict';
-  // Signed-in email, if any, read from the Supabase session this site keeps in
-  // localStorage — just so the support email can be matched to an account.
-  function accountEmail() {
-    try {
-      var raw = localStorage.getItem('sb-lwqnsvlfffugyvwblqaz-auth-token');
-      var j = raw && JSON.parse(raw);
-      return (j && j.user && j.user.email) || '';
-    } catch (e) { return ''; }
-  }
-  function details() {
-    return [
-      'Account email: ' + (accountEmail() || '(not signed in on this browser)'),
-      'Browser: ' + navigator.userAgent,
-      'Screen: ' + window.screen.width + 'x' + window.screen.height,
-      'Time: ' + new Date().toString()
-    ].join('\n');
-  }
-  var mail = document.getElementById('email-support');
-  mail.href = 'mailto:clujkeebs@gmail.com?subject=' + encodeURIComponent('TCG Speed Shipper support') +
-    '&body=' + encodeURIComponent('What I was doing:\n\nWhat I expected:\n\nWhat happened instead:\n\n---\n' + details() + '\n');
-
-  document.getElementById('copy-diag').addEventListener('click', function () {
-    var btn = this, text = details();
-    function done(ok) { btn.textContent = ok ? 'Copied!' : 'Copy failed — details are in the email draft'; setTimeout(function () { btn.textContent = 'Copy Browser Details'; }, 1800); }
-    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(false); });
-    else done(false);
-  });
-
-  var line = document.getElementById('status-line');
-  function setStatus(color, text) { line.innerHTML = '<span class="status-dot" style="background:' + color + '"></span>'; line.appendChild(document.createTextNode(text)); }
-  fetch('/api/health', { cache: 'no-store' })
-    .then(function (r) { return r.json(); })
-    .then(function (j) {
-      if (j && j.ok) setStatus('#2d6a4f', 'All systems working — sign-in, billing, and label generation are up.');
-      else setStatus('#c0392b', 'Accounts or billing are having a problem right now. We\'ve likely noticed, but please email us. Free-plan label generation still works.');
-    })
-    .catch(function () { setStatus('#b7791f', 'Couldn\'t reach the status check. If sign-in isn\'t working, please email us.'); });
-})();
-</script>
 </body>
 </html>
