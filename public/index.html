@@ -695,6 +695,10 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
 }
 .price-card li::before { content: '✓'; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
 .price-card button { width: 100%; justify-content: center; }
+.enterprise-card { display: grid; grid-template-columns: minmax(180px, 1fr) 2fr; gap: 6px 28px; align-items: start; margin-top: -2px; }
+.enterprise-card ul { margin-bottom: 0; }
+.enterprise-card .btn-dl { display: inline-flex; justify-content: center; text-decoration: none; width: 100%; }
+@media (max-width: 700px) { .enterprise-card { grid-template-columns: 1fr; } .enterprise-card .btn-dl { margin-bottom: 8px; } }
 .plan-note { font-size: 12px; color: var(--hint); font-family: 'JetBrains Mono', monospace; margin-top: 1rem; text-align: center; }
 
 /* ── Design studio ── */
@@ -1314,6 +1318,22 @@ Chicago, IL 60601</div>
         <button class="btn-dl" data-plan="premium">Upgrade to Premium</button>
       </div>
     </div>
+    <div class="price-card enterprise-card fade-in-up" id="enterprise">
+      <div class="ent-head">
+        <h3>Enterprise</h3>
+        <div class="price-amt">Custom</div>
+        <div class="price-sub">for card shops &amp; high-volume sellers</div>
+        <a class="btn-dl" id="enterprise-cta" href="mailto:clujkeebs@gmail.com?subject=Enterprise%20plan&amp;body=Shop%20or%20store%20name%3A%0AOrders%20per%20week%3A%0AWhere%20you%20sell%20(TCGplayer%2C%20eBay%2C%20Whatnot%2C%20Shopify%2C%20in-store)%3A%0AWhat%20you%27d%20like%20automated%3A%0A">Talk to us</a>
+      </div>
+      <ul>
+        <li><strong>Custom automation:</strong> scheduled order imports, and hand-offs to the tools you already use (Shopify, eBay, Whatnot, your POS)</li>
+        <li><strong>Custom software</strong> built around your shipping and fulfillment workflow</li>
+        <li><strong>Advanced shipping:</strong> bulk tracking uploads, carrier rules by order value, and tracking for stamped envelopes (USPS Intelligent Mail, coming soon)</li>
+        <li>Team accounts for multiple packers and stores</li>
+        <li>Onboarding call and priority support</li>
+        <li>Everything in Premium</li>
+      </ul>
+    </div>
     <p class="plan-note">Paid plans are subscriptions that <strong>renew automatically</strong> each month (or each year, if you choose yearly) at the price shown until you cancel. Already subscribed? You keep the price you signed up at. Cancel any time, online, from Manage Billing — you keep access until the end of the period you've paid for. Prices in USD. See the <a href="/terms.html">Terms of Service</a> and <a href="/terms.html#refunds">refund policy</a>. Questions? <a href="/support.html">Support</a>.</p>
 
   </div><!-- end pricing tab -->
@@ -1482,6 +1502,11 @@ Chicago, IL 60601</div>
     <div class="faq-item">
       <button class="faq-q">Does it work offline, or as an app? <span class="faq-arrow">▼</span></button>
       <div class="faq-a">Yes. After you've opened the site once, label generation keeps working with no signal, which is handy at card shows. Free-plan labels work fully offline. Signed-in paid plans need a connection when you download, so your monthly count stays accurate. To install it like an app: in Chrome or Edge, click the install icon in the address bar; on iPhone, tap Share → Add to Home Screen; on Android, open the ⋮ menu → Install app.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">Do you have a plan for card shops or high-volume sellers? <span class="faq-arrow">▼</span></button>
+      <div class="faq-a">Yes: Enterprise. It's custom-priced and built around how you ship: automated order imports, connections to Shopify, eBay, Whatnot or your POS, bulk tracking, team accounts for several packers, and custom features for your workflow. <a href="#enterprise">Tell us what you ship</a> and we'll reply within a day.</div>
     </div>
 
     <div class="faq-item">
@@ -1700,6 +1725,7 @@ document.documentElement.classList.add('js-ready');
 'use strict';
 
 var orders = [];
+document.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('#enterprise-cta')) trackEvent('enterprise_clicked'); });
 function trackEvent(e, once) { try { if (window.TCGSSTrack) window.TCGSSTrack(e, once); } catch (err) {} }
 var trackingNumbers = [];
 var lastCsvText = null; // the seller's original export, kept only in memory for the TCGplayer import file // parallel to orders, by index; matched via the Tracking Numbers panel
@@ -2416,6 +2442,12 @@ document.getElementById('nav-brand').addEventListener('click', function (e) { e.
 function openTabFromHash() {
   var name = (window.location.hash || '').replace('#', '');
   if (VALID_TABS.indexOf(name) !== -1) switchTab(name, true);
+  else if (name === 'enterprise') {
+    // /#enterprise (ads sitelink, FAQ) opens Pricing at the Enterprise card.
+    switchTab('pricing', true);
+    var ent = document.getElementById('enterprise');
+    if (ent) setTimeout(function () { ent.scrollIntoView({ block: 'center' }); }, 50);
+  }
 }
 window.addEventListener('hashchange', openTabFromHash);
 

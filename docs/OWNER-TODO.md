@@ -12,8 +12,8 @@ done. **Legend:** ⏱ your time · 🔥 do first · 💵 costs money
 
 ## 🏠 When you get home: do these in order (~45 min total)
 
-1. [ ] 🔥 **Paste a mailing address in chat** (PO box or virtual mailbox is
-   fine; avoid your home address). The law (CAN-SPAM) requires it in every
+1. [ ] 🔥 **Paste a real physical mailing address in chat** (street address,
+   USPS PO box or virtual mailbox; avoid your home address). The law (CAN-SPAM) requires it in every
    marketing email. **It's the only thing holding back all of the
    marketing:**
    - newsletter issue 1 (goes out Tuesday 7:52am PT automatically once the
@@ -73,6 +73,11 @@ After that, the rest of this list can wait for a free evening.
 - [ ] **Community posts from your own account** (one a week, rules first):
   the ranked list is `docs/community-channels.md`. Agents never post as you.
   ⏱ 20 min per post
+- [ ] **Google Ads test ($150 cap):** everything is ready in
+  `docs/google-ads/README.md`: settings, 3 ad groups, keywords, negatives,
+  15 headlines, 4 descriptions, sitelinks, images and logos. You create
+  the account and add the card (~20 min), then paste it all in. Do it
+  after Search Console. 💵 ⏱ 45 min
 - [ ] **Ask Mana Pool to list the tool** on their seller-tools page (email
   their support). ⏱ 5 min
 
