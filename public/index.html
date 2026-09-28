@@ -836,6 +836,7 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
       <option value="letter2">8.5×11 — 2 up</option>
       <option value="letter3">8.5×11 — 3 up</option>
       <option value="letter4">8.5×11 — 4 up</option>
+      <option value="labelslip">8.5×11 — Label + slip</option>
       <option value="avery5160">Avery 5160 — 30/sheet</option>
       <option value="env10">#10 Envelope</option>
     </select>
@@ -925,6 +926,7 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
           <option value="letter2">8.5×11 — 2 per page</option>
           <option value="letter3">8.5×11 — 3 per page</option>
           <option value="letter4">8.5×11 — 4 per page</option>
+          <option value="labelslip">8.5×11 — Label + packing slip on one page</option>
           <option value="avery5160">Avery 5160 address labels — 30 per sheet</option>
           <option value="env10">#10 envelope (PWE)</option>
         </select>
@@ -2563,7 +2565,7 @@ function renderPreviews() {
   var toPrint=printList();
   var n=toPrint.length;
   var txt=(n===total ? '' : n+' of ')+total+' label'+(total!==1?'s':'');
-  if (slipsOn) txt+=' + '+n+' slip'+(n!==1?'s':'');
+  if (slipsOn || format==='labelslip') txt+=' + '+n+' slip'+(n!==1?'s':'')+(format==='labelslip'?' (one page each)':'');
 
   // Surface the remaining allowance up front, so hitting the limit is never a
   // surprise that only appears after clicking Download.
@@ -2604,7 +2606,7 @@ function renderPreviews() {
     // return-address form), and cap the stagger so card #200 isn't 8s late.
     if (animateCards) div.style.animationDelay = Math.min(i, 12) * 0.035 + 's';
     else div.style.animation = 'none';
-    var slip=slipsOn?'<div class="slip-tag">+ packing slip</div>':'';
+    var slip=(slipsOn||format==='labelslip')?'<div class="slip-tag">+ packing slip</div>':'';
     div.innerHTML='<label class="label-shipped"><input type="checkbox" data-key="'+esc(key)+'"'+(isShipped?' checked':'')+'> shipped</label>'+
       '<div class="label-num" title="'+(o.orderNumber?'Order #'+esc(o.orderNumber):'')+'">#'+(i+1)+'</div>'+
       '<div class="label-from"><strong>'+esc(s.name||'Your Name')+'</strong>'+
@@ -2808,6 +2810,19 @@ function drawPackingSlip(doc,o,s,W,H,design){
   }
 }
 
+// Draws into a region of a page: the same jsPDF calls drawPackingSlip uses,
+// with x/y shifted by (ox, oy).
+function offsetDoc(doc,ox,oy){
+  var d={ internal: doc.internal };
+  ['setFont','setFontSize','setTextColor','setDrawColor','setLineWidth','splitTextToSize','getTextWidth','setFillColor'].forEach(function(m){
+    if(typeof doc[m]==='function') d[m]=doc[m].bind(doc);
+  });
+  d.text=function(t,x,y,opt){ return doc.text(t,x+ox,y+oy,opt); };
+  d.line=function(x1,y1,x2,y2){ return doc.line(x1+ox,y1+oy,x2+ox,y2+oy); };
+  d.rect=function(x,y,w,h,st){ return doc.rect(x+ox,y+oy,w,h,st); };
+  d.addImage=function(img,f,x,y,w,h){ return doc.addImage(img,f,x+ox,y+oy,w,h); };
+  return d;
+}
 var LETTER_W=612, LETTER_H=792;
 var AVERY_5160={ cols:3, rows:10, left:13.5, top:36, w:189, h:72, pitchX:198, pitchY:72 };
 
@@ -2838,6 +2853,26 @@ function buildPDF(fmt, list){
       orders.forEach(function(o){ doc2.addPage('letter','portrait'); drawPackingSlip(doc2,o,s,LETTER_W,LETTER_H,design); });
     }
     return doc2;
+  }
+
+  // Label + slip on one letter page: label centered in the top half, that
+  // order's packing slip in the bottom half, a dashed cut/fold line between.
+  // One page per order, so labels and slips can't get out of order.
+  if(fmt==='labelslip'){
+    var HALF=LETTER_H/2;
+    var docLS=new jsPDF({unit:'pt',format:'letter',orientation:'portrait'});
+    orders.forEach(function(o,i){
+      if(i>0) docLS.addPage('letter','portrait');
+      drawLabel(docLS,o,s,(LETTER_W-432)/2,(HALF-288)/2,432,288,design);
+      docLS.setDrawColor(170,170,170); docLS.setLineWidth(0.5);
+      if(docLS.setLineDashPattern) docLS.setLineDashPattern([4,3],0);
+      docLS.line(18,HALF,LETTER_W-18,HALF);
+      if(docLS.setLineDashPattern) docLS.setLineDashPattern([],0);
+      docLS.setFont('helvetica','normal'); docLS.setFontSize(6.5); docLS.setTextColor(170,170,170);
+      docLS.text('cut or fold',LETTER_W-18,HALF-4,{align:'right'});
+      drawPackingSlip(offsetDoc(docLS,0,HALF),o,s,LETTER_W,HALF,design);
+    });
+    return docLS;
   }
 
   var PW=fmt==='4x6'?432:612, PH=fmt==='4x6'?288:792;
@@ -2959,6 +2994,7 @@ var FORMAT_TIPS = {
   letter2: '8.5×11: any printer, print at 100% ("actual size") and cut on the lines.',
   letter3: '8.5×11: any printer, print at 100% ("actual size") and cut on the lines.',
   letter4: '8.5×11: any printer, print at 100% ("actual size") and cut on the lines.',
+  labelslip: 'Label + packing slip: one page per order, with the label on top and that order\'s packing slip below. Print at 100% ("actual size"), cut or fold on the dashed line, and the slip goes in the package. Works on plain paper or half-sheet shipping labels (8.5×5.5).',
   avery5160: 'Avery 5160/8160 (or any 30-up 2⅝″ × 1″ sheet): print at 100% ("actual size"), not "fit to page". Recipient address only — perfect for PWE/stamped envelopes. Packing slips, if on, print after the labels on plain paper.',
   env10: '#10 envelope (9½″ × 4⅛″): feed envelopes per your printer\'s guide and print at 100%. Add your stamp top-right. Packing slips, if on, print after the envelopes on plain paper.'
 };
@@ -2968,6 +3004,7 @@ function setFormat(val){
   document.getElementById('fmt-top').value=val;
   document.getElementById('fmt-main').value=val;
   var tip=document.getElementById('fmt-tip'); if(tip) tip.textContent=FORMAT_TIPS[val];
+  if(orders.length) renderPreviews();
   try { localStorage.setItem(FORMAT_KEY, val); } catch (e) {}
 }
 try { var savedFmt = localStorage.getItem(FORMAT_KEY); if (savedFmt) setFormat(savedFmt); } catch (e) {}
