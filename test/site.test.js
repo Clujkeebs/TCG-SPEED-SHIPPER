@@ -40,6 +40,7 @@ for (const p of publicPages) {
   check(p.url + ': canonical points at itself on the real domain', canon === SITE + p.url, canon);
   check(p.url + ': has og:title and og:image', /property="og:title"/.test(p.html) && /property="og:image"/.test(p.html));
   check(p.url + ': not accidentally noindexed', !/name="robots"\s+content="[^"]*noindex/i.test(p.html));
+  check(p.url + ': one <main> landmark', (p.html.match(/<main[\s>]/gi) || []).length === 1, (p.html.match(/<main[\s>]/gi) || []).length + ' found');
   check(p.url + ': one <h1>', (p.html.match(/<h1[\s>]/gi) || []).length === 1, (p.html.match(/<h1[\s>]/gi) || []).length + ' found');
   for (const m of p.html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)) {
     let ok = true; try { JSON.parse(m[1]); } catch (e) { ok = false; }
