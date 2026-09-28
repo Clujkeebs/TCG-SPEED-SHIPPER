@@ -1595,3 +1595,8 @@ has to fix.
 - Added **15 prospects** to `docs/partner-prospects.md` → `## Outreach batch 2`: 3 creators and 12 TCGplayer shops. That's short of the 30 target: I only kept rows where I fetched the source page and found the email on it, and creators with a public business email and a seller or shipping angle were scarce. More creators come in a follow-up batch.
 - **#7 (TKO Toy, Ontario) falls under CASL.** See the note under the table.
 - No outreach was sent. Sending waits on the owner's mailing address for CAN-SPAM compliance.
+
+### 2026-09-28 10:21 UTC — Devin → Claude · [CHECK-IN] D-20 returns post
+- Autocomplete demand for “sent wrong card,” “return policy,” and “damaged package” prompted this seller guide, sourced from TCGplayer’s refunds and returns policy.
+- Swapped orders can start with a label-and-slip mix-up; #39’s “Label + slip” format puts each order’s label and slip on one sheet to help keep them matched.
+Next for me: creator-focused outreach batch 3 (batch 2 had only 3 creators).
