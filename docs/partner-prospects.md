@@ -71,8 +71,9 @@ Collected 2026-09-28 by Devin. Every email string was fetched and matched on its
 | 3 | [Brainstorm Brewery](https://www.youtube.com/BrainstormBrewery) | creator | 3.8K YouTube subscribers | brainstormbrew@gmail.com | [Episode #714](https://brainstormbrewery.com/we-are-all-vendors-now-brainstorm-brewery-714-magic-finance/) | ["We Are All Vendors Now"](https://brainstormbrewery.com/we-are-all-vendors-now-brainstorm-brewery-714-magic-finance/) (Aug. 21, 2026) includes a segment on vending an event. |
 | 4 | [Monsters & Mana Marketplace](https://www.youtube.com/@Mons_mana) | creator | 5.9K YouTube subscribers | mons.mana.market@gmail.com | [Refund policy](https://monstersandmana.com/policies/refund-policy) | ["How We Price Magic Cards FAIRLY (TCGPlayer + ManaBox)"](https://www.youtube.com/shorts/MwH0owTxlQY) (Apr. 10, 2026) explains their card-pricing approach. |
 | 5 | [Card N All Gaming](https://www.youtube.com/@CardNAllGaming) | creator | 28.8K YouTube subscribers | support@cardnallgaming.com | [Contact information](https://cardnallgaming.com/policies/contact-information) | ["What I’ve Learned Running Game Stores for 10 Years"](https://www.youtube.com/watch?v=5r1-L4JRTmI) shares card-shop operating experience. |
-| 6 | [GemTCG](https://www.youtube.com/@GemTCG) | creator | 7.48K YouTube subscribers | asassine44@gmail.com | [Public eBay store](https://www.ebay.co.uk/str/kickznkardzstore) | ["How to list cards on Shopify FAST"](https://www.youtube.com/watch?v=npLQxABqcvs) (Jan. 16, 2026) demonstrates listing trading cards for sale. |
 
 Collected 2026-09-28 by Devin. Every email string was fetched and matched on its source page. Sending waits on the owner's mailing address (CAN-SPAM).
 
-No included creator was confirmed to be non-US in the fetched public sources.
+- No included creator was confirmed to be non-US in the fetched public sources.
+- **#5 Card N All Gaming's only public address is `support@`**, a shop inbox. Address it to the owner by name and keep it short.
+- GemTCG was dropped: the only public email is on an eBay UK store (kickznkardzstore), and nothing on the channel ties that store to it.
