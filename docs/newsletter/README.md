@@ -59,3 +59,11 @@ newsletter at tcgspeedshipper.com.
 Unsubscribe in one click: https://tcgspeedshipper.com/api/newsletter/unsubscribe?t=<token>
 TCG Speed Shipper · <OWNER MAILING ADDRESS>
 ```
+
+## Web archive
+
+After each send, run `node scripts/newsletter-pages.js`. It publishes
+every issue dated today or earlier as `/newsletter/YYYY-MM-DD.html`, lists
+it on `/newsletter.html`, and adds it to the sitemap. Future-dated drafts
+stay private. Links in the web copy carry `utm_source=newsletter_web`
+instead of `email`.

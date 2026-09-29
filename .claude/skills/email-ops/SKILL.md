@@ -36,6 +36,10 @@ description: Send or draft TCG Speed Shipper emails correctly - weekly newslette
    - Add UTM to our links: `?utm_source=email&utm_campaign=newsletter-YYYY-MM-DD`.
 4. `update … set last_sent_at=now()` for everyone sent to. Log the count
    (never emails) in `DEVIN_AI.md`.
+5. Run `node scripts/newsletter-pages.js`. It publishes the issue at
+   `/newsletter/YYYY-MM-DD.html`, lists it on `/newsletter.html` and adds
+   it to the sitemap. Ship it with the log PR. This step runs even with
+   0 subscribers.
 
 ## Partner / shop outreach
 1. The queue is `docs/outreach/README.md`: Template A for creators, B for
