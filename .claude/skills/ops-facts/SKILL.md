@@ -49,6 +49,11 @@ description: IDs and facts for TCG Speed Shipper's production stack (Railway, Su
 - Money moves and price changes need the owner (PERMISSIONS.md).
 
 ## Email
+- **Domain addresses** (Porkbun forwarding, all to the owner's Gmail):
+  - support@ (site default), privacy@, billing@, partners@, hello@
+    (Enterprise), newsletter@, samuel@ (owner outreach), abuse@,
+    postmaster@, dmarc@
+  - `npm test` fails if the personal Gmail appears on a public page.
 - Sends go from the owner's Gmail (clujkeebs@gmail.com). Sign off "Sam"
   or "Sam (Clujkeebs)".
 - **Marketing email needs the owner's physical mailing address in the

@@ -95,6 +95,12 @@ for (const p of pages) {
   check(p.url + ': no duplicate top-level function names', dup.length === 0, dup.join(', '));
 }
 
+console.log('\n-- Contact addresses --');
+// Public pages use the domain's role addresses (support@, privacy@, billing@,
+// partners@, hello@), all forwarding to the owner. The owner's personal
+// inbox shouldn't be published (2026-09-30).
+for (const p of pages) check(p.url + ': no personal Gmail address', !/clujkeebs@gmail\.com/i.test(p.html));
+
 console.log('\n-- Leftover merge-conflict markers --');
 // Both agents append to the same log and edit the same blog index/sitemap, so
 // conflicts get resolved by hand often. A leftover `<<<<<<<` / `|||||||` /

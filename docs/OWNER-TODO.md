@@ -21,11 +21,14 @@ done. **Legend:** ⏱ your time · 🔥 do first · 💵 costs money
    change `oeiwafy8.up.railway.app` to **`zpcjr8pk.up.railway.app`**. If
    Railway (service → Settings → Networking → `www` domain) shows a **TXT**
    record, add that at Porkbun too. ⏱ 3 min
-3. [ ] **Porkbun email forwarding** (Email → Forwarding), all pointing to
-   your Gmail: `support@`, `hello@`, `billing@`, `newsletter@`,
-   `partners@`, `privacy@`, `abuse@`, `postmaster@`, `dmarc@`, `sam@`.
-   Then tell us, and we switch the site, Stripe receipts and email
-   footers over. ⏱ 10 min
+3. [x] ~~Porkbun email forwarding~~: done 2026-09-30. The site now shows
+   support@ (footers, support page, terms), privacy@ (privacy policy),
+   billing@ (refunds), partners@ (partner applications) and hello@
+   (Enterprise). All of them forward to your Gmail.
+   - [ ] **Next, 2 min:** Stripe → Settings → Public details → support
+     email `support@tcgspeedshipper.com`, so receipts show it.
+   - [ ] **Next, 2 min:** add the DMARC record at Porkbun (in the Email
+     deliverability section below).
 4. [ ] **Delete the old Stripe secret key** (Stripe → Developers → API keys):
    the one *not* named "Railway". Railway has run clean all day on the new
    one. ⏱ 1 min
