@@ -1,0 +1,21 @@
+These files load the whole Search campaign in a few minutes with Google Ads
+Editor (the free desktop app from Google, on a Mac or PC). On an iPad, skip
+this folder and paste from START-HERE.html instead.
+
+1. Install Google Ads Editor, sign in, and download your account.
+2. Create the campaign "Search - TCG Speed Shipper" first, with the settings
+   from START-HERE.html step 4 (Search only, $5/day, Maximize clicks, $1.50
+   max CPC).
+3. Account > Import > From file. Import in this order:
+     1-keywords.csv                   (creates the 4 ad groups + keywords)
+     3-responsive-search-ads.csv      (one ad per ad group, 15 headlines + 4 descriptions)
+     4-sitelinks.csv
+     5-callouts.csv
+     6-structured-snippets.csv
+     7-price-assets.csv
+     2-negative-keywords.csv          (campaign negatives)
+4. Review the changes Ads Editor shows, fix anything it flags, then
+   Post to upload.
+
+If a column name doesn't match your version of Ads Editor, it lets you map
+it during import. The text is the same as in ALL-AD-COPY.txt.

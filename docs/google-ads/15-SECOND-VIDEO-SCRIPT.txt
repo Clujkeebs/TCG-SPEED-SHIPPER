@@ -1,0 +1,16 @@
+15-second screen-recording ad (YouTube Shorts / Demand Gen / TikTok / Reels)
+Record on a computer at 1080x1920 (vertical) or 1920x1080. No face needed.
+
+0-2s   Text on screen: "Still typing TCGplayer addresses?"
+       Shot: a stack of cards + empty envelopes.
+2-5s   Shot: TCGplayer Orders page, tick all, click "Export Shipping".
+       Text: "Export your orders"
+5-8s   Shot: drag the CSV into tcgspeedshipper.com. Labels appear.
+       Text: "Drop in the CSV"
+8-11s  Shot: click Download. The PDF opens: labels, then packing slips.
+       Text: "Labels + packing slips, in seconds"
+11-13s Shot: the label printer printing, hand sticks one on an envelope.
+13-15s End card: logo + "10 free labels a month. tcgspeedshipper.com"
+
+Voiceover (optional): "Export your TCGplayer orders, drop them in, print.
+Labels and packing slips in seconds. Ten free every month."
