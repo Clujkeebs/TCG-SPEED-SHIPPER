@@ -1,4 +1,5 @@
 User-agent: *
+Disallow: /downloads/
 Allow: /
 Disallow: /viewsitemapsxml
 Disallow: /admin/
