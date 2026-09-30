@@ -404,6 +404,40 @@
     return { good: good, bad: bad };
   }
 
+  /* ── TCGplayer packing-slip PDF → orders ──
+     TCGplayer's Packing Slip button makes a PDF (with the card list) but no
+     CSV. We don't parse its layout: we already know every order number from
+     the shipping export, so each PDF page is matched by searching its text
+     for one. A page with no order number continues the previous order (a
+     long card list spilling onto a second page). Whitespace is ignored on
+     both sides because PDF text extraction splits strings unpredictably. */
+  function matchSlipPages(pageTexts, orderNumbers) {
+    var norm = function (t) { return String(t == null ? '' : t).replace(/\s+/g, '').toUpperCase(); };
+    var nums = [];
+    (orderNumbers || []).forEach(function (n) { var k = norm(n); if (k.length >= 4 && nums.indexOf(k) === -1) nums.push(k); });
+    // Longest first, so "ABC-12" never claims a page that belongs to "ABC-123".
+    var byLen = nums.slice().sort(function (a, b) { return b.length - a.length; });
+    var pages = {}, unmatched = [], current = null;
+    (pageTexts || []).forEach(function (txt, i) {
+      var t = norm(txt), best = null, bestAt = Infinity;
+      byLen.forEach(function (n) {
+        var at = t.indexOf(n);
+        if (at === -1) return;
+        // Skip a hit that is only part of a longer, already-found number.
+        if (best && best.indexOf(n) !== -1 && at >= bestAt && at < bestAt + best.length) return;
+        if (at < bestAt) { best = n; bestAt = at; }
+      });
+      if (best) current = best;
+      // A page with its own "Order Number" heading but no order we know is
+      // some other order's slip (not in this CSV), not a continuation.
+      else if (/ORDER(NUMBER|#|NO\.?|ID):?/.test(t)) current = null;
+      if (current) (pages[current] = pages[current] || []).push(i);
+      else unmatched.push(i);
+    });
+    var missing = nums.filter(function (n) { return !pages[n]; });
+    return { pages: pages, unmatched: unmatched, missing: missing, key: norm };
+  }
+
   /* ── Label text ── */
 
   // US territories and military mail are domestic for USPS: no country line.
@@ -493,6 +527,7 @@
     parseCSV: parseCSV,
     parsePastedAddresses: parsePastedAddresses,
     addrLines: addrLines,
+    matchSlipPages: matchSlipPages,
     fullName: fullName,
     pdfSafe: pdfSafe,
     fitFontSize: fitFontSize,

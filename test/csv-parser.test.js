@@ -311,6 +311,21 @@ section('PDF-safe text');
   check('symbols like ★ are dropped', core.pdfSafe('Card ★ Shop') === 'Card Shop', core.pdfSafe('Card ★ Shop'));
   check('Canada prints as CANADA', core.addrLines({ addr1: '1 Rue', city: 'Montréal', state: 'QC', zip: 'H2X 3K8', country: 'CA' }).pop() === 'CANADA');
   check('unknown country code is uppercased', core.addrLines({ addr1: '1 St', city: 'X', country: 'za' }).pop() === 'ZA');
+    // TCGplayer packing-slip PDF pages → orders (by order number in the text)
+  const m = core.matchSlipPages([
+    'Packing Slip  Order Number: 1A2B3C4D-5E6F7A-8B9C0  Ship to Jo Test  1 x Charizard ex',
+    'continued: 1 x Pikachu',
+    'Order Number: 9F8E7D6C-\n5B4A3F-2E1D0',
+    'Order Number: SHORT-12345',
+  ], ['1A2B3C4D-5E6F7A-8B9C0', '9F8E7D6C-5B4A3F-2E1D0', 'SHORT-1234', 'SHORT-12345', 'NOT-IN-PDF-999']);
+  check('slip page matched to its order', JSON.stringify(m.pages['1A2B3C4D-5E6F7A-8B9C0']) === '[0,1]', JSON.stringify(m.pages));
+  check('number split across lines still matches', JSON.stringify(m.pages['9F8E7D6C-5B4A3F-2E1D0']) === '[2]');
+  check('longer number wins over its prefix', JSON.stringify(m.pages['SHORT-12345']) === '[3]' && !m.pages['SHORT-1234']);
+  check('orders with no slip are reported', m.missing.indexOf('NOT-IN-PDF-999') !== -1 && m.missing.indexOf('SHORT-1234') !== -1);
+  const m2 = core.matchSlipPages(['cover page', 'Order ABC-0001'], ['ABC-0001']);
+  const m3 = core.matchSlipPages(['Order Number: ABC-0001', 'cont.', 'Order Number: ZZZ-9999', 'more of ZZZ'], ['ABC-0001']);
+  check('another order\'s slip is not glued to the previous order', JSON.stringify(m3.pages['ABC-0001']) === '[0,1]' && JSON.stringify(m3.unmatched) === '[2,3]', JSON.stringify(m3));
+  check('a leading page with no order is unmatched', JSON.stringify(m2.unmatched) === '[0]' && JSON.stringify(m2.pages['ABC-0001']) === '[1]');
   check('Puerto Rico gets no country line', core.addrLines({ addr1: '1 Calle', city: 'San Juan', state: 'PR', zip: '00901', country: 'PR' }).pop() === 'San Juan, PR 00901');
 }
 
