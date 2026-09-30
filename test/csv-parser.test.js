@@ -306,7 +306,12 @@ section('PDF-safe text');
   check('Polish ł mapped', core.pdfSafe('Łódź') === 'Lódz', core.pdfSafe('Łódź'));
   check('smart quotes kept (in cp1252)', core.pdfSafe('O’Brien') === 'O’Brien');
   check('unmappable becomes ?', core.pdfSafe('東京') === '??');
-  check('emoji becomes a single ?', core.pdfSafe('A😀B') === 'A?B');
+  check('emoji is dropped, not printed as ?', core.pdfSafe('A😀B') === 'AB', core.pdfSafe('A😀B'));
+  check('emoji between words leaves one space', core.pdfSafe("Zoë 🎴 O'Brien") === "Zoë O'Brien", core.pdfSafe("Zoë 🎴 O'Brien"));
+  check('symbols like ★ are dropped', core.pdfSafe('Card ★ Shop') === 'Card Shop', core.pdfSafe('Card ★ Shop'));
+  check('Canada prints as CANADA', core.addrLines({ addr1: '1 Rue', city: 'Montréal', state: 'QC', zip: 'H2X 3K8', country: 'CA' }).pop() === 'CANADA');
+  check('unknown country code is uppercased', core.addrLines({ addr1: '1 St', city: 'X', country: 'za' }).pop() === 'ZA');
+  check('Puerto Rico gets no country line', core.addrLines({ addr1: '1 Calle', city: 'San Juan', state: 'PR', zip: '00901', country: 'PR' }).pop() === 'San Juan, PR 00901');
 }
 
 section('Font fitting');

@@ -1346,10 +1346,24 @@ async function selfCheck() {
 }
 
 if (require.main === module) {
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log('TCG Speed Shipper listening on port ' + PORT);
     selfCheck().catch(() => {});
   });
+  // Railway sends SIGTERM to the old container on every deploy. Finish the
+  // requests already in flight (a checkout, a Stripe webhook, a PDF someone is
+  // waiting on) before exiting, instead of dropping them mid-response.
+  let closing = false;
+  const shutdown = (sig) => {
+    if (closing) return;
+    closing = true;
+    console.log('received ' + sig + ', finishing in-flight requests');
+    server.close(() => { console.log('shut down cleanly'); process.exit(0); });
+    if (server.closeIdleConnections) server.closeIdleConnections();
+    setTimeout(() => process.exit(0), 10000).unref();
+  };
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
 module.exports = app;

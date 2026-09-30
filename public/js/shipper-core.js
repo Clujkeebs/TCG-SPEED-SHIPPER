@@ -406,7 +406,19 @@
 
   /* ── Label text ── */
 
-  var DOMESTIC = ['us', 'usa', 'united states', 'united states of america', 'u.s.', 'u.s.a.'];
+  // US territories and military mail are domestic for USPS: no country line.
+  var DOMESTIC = ['us', 'usa', 'united states', 'united states of america', 'u.s.', 'u.s.a.', 'pr', 'puerto rico', 'gu', 'guam', 'vi', 'as', 'mp'];
+  // International mail should end with the country name in capitals. "CA"
+  // alone reads as California, so spell out the codes TCGplayer uses.
+  var COUNTRY_NAMES = { ca: 'CANADA', gb: 'UNITED KINGDOM', uk: 'UNITED KINGDOM', au: 'AUSTRALIA', nz: 'NEW ZEALAND', ie: 'IRELAND',
+    de: 'GERMANY', fr: 'FRANCE', it: 'ITALY', es: 'SPAIN', nl: 'NETHERLANDS', be: 'BELGIUM', ch: 'SWITZERLAND', at: 'AUSTRIA',
+    se: 'SWEDEN', no: 'NORWAY', dk: 'DENMARK', fi: 'FINLAND', pl: 'POLAND', pt: 'PORTUGAL', jp: 'JAPAN', kr: 'SOUTH KOREA',
+    sg: 'SINGAPORE', hk: 'HONG KONG', tw: 'TAIWAN', mx: 'MEXICO', br: 'BRAZIL', il: 'ISRAEL', ae: 'UNITED ARAB EMIRATES', ph: 'PHILIPPINES' };
+  function countryLine(c) {
+    c = String(c || '').trim();
+    if (!c || DOMESTIC.indexOf(c.toLowerCase()) !== -1) return '';
+    return COUNTRY_NAMES[c.toLowerCase()] || c.toUpperCase();
+  }
 
   function addrLines(o) {
     var lines = [];
@@ -414,8 +426,8 @@
     if (o.addr2) lines.push(o.addr2);
     var csz = [o.city, o.state].filter(Boolean).join(', ') + (o.zip ? ' ' + o.zip : '');
     if (csz.trim()) lines.push(csz.trim());
-    var c = o.country;
-    if (c && DOMESTIC.indexOf(c.toLowerCase()) === -1) lines.push(c.toUpperCase());
+    var c = countryLine(o.country);
+    if (c) lines.push(c);
     return lines;
   }
 
@@ -448,13 +460,23 @@
     for (i = 0; i < s.length; i++) {
       ch = s[i]; code = ch.charCodeAt(0);
       if (code < 0x100 || CP1252_EXTRA.indexOf(ch) !== -1) { out += ch; continue; }
-      if (code >= 0xD800 && code <= 0xDBFF) { i++; out += '?'; continue; }
+      if (code >= 0xD800 && code <= 0xDBFF) {
+        // Astral plane: almost always an emoji, which is decoration, so drop
+        // it. A real letter out there (rare CJK) still shows as "?".
+        var pair = s.slice(i, i + 2); i++;
+        out += isLetter(pair) ? '?' : '';
+        continue;
+      }
       base = ch.normalize ? ch.normalize('NFD').replace(/[̀-ͯ]/g, '') : ch;
       if (base.length && base.charCodeAt(0) < 0x100) out += base;
-      else out += ({ 'ł': 'l', 'Ł': 'L', 'đ': 'd', 'Đ': 'D', 'ß': 'ss', 'ı': 'i' })[ch] || '?';
+      else out += ({ 'ł': 'l', 'Ł': 'L', 'đ': 'd', 'Đ': 'D', 'ß': 'ss', 'ı': 'i' })[ch] || (isLetter(ch) ? '?' : '');
     }
-    return out;
+    // Dropping symbols can leave doubled or trailing spaces ("Zoë 🎴 O'Brien").
+    return out.replace(/ {2,}/g, ' ').replace(/^ | $/g, '');
   }
+  var LETTER_RE = null;
+  try { LETTER_RE = new RegExp('\\p{L}', 'u'); } catch (e) { /* very old browser: treat all as letters */ }
+  function isLetter(ch) { return LETTER_RE ? LETTER_RE.test(ch) : true; }
 
   // Largest font size (stepping down from `size` to `min`) at which every
   // line fits `maxWidth`, given a measure(text, size) function. Keeps long
