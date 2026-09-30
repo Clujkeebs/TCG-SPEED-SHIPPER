@@ -788,6 +788,9 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
 .share-toast p { font-size: 13px; color: var(--muted); margin: 0 0 12px; line-height: 1.45; }
 .share-toast .row { display: flex; gap: 8px; flex-wrap: wrap; }
 .share-toast .row button, .share-toast .row a { flex: 1 1 auto; min-width: 110px; height: 38px; font-size: 13px; justify-content: center; text-decoration: none; }
+.slip-attach { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border); }
+.slip-attach .tip { margin-top: 6px; }
+.slip-attach .tip.ok { color: var(--accent); }
 .share-toast form.news { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
 .share-toast form.news label { display: block; font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
 .share-toast form.news input[type=email] { flex: 2 1 160px; height: 38px; font-size: 14px; }
@@ -924,6 +927,15 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
       <div class="btn-row" style="margin-top:10px;align-items:center;">
         <button type="button" class="btn-ghost" id="sample-order-btn">No CSV handy? Try a sample order</button>
         <a href="/samples/tcgplayer-sample-shipping-export.csv" download style="font-size:13px;color:var(--accent);">Download the sample CSV</a>
+      </div>
+      <div class="slip-attach" id="slip-attach">
+        <div class="btn-row" style="align-items:center;">
+          <label class="btn-ghost" for="tcg-slip-input" style="cursor:pointer;">+ Add TCGplayer packing slips (PDF)</label>
+          <input type="file" id="tcg-slip-input" accept=".pdf,application/pdf" hidden />
+          <button type="button" class="btn-ghost" id="tcg-slip-dl" hidden>&#11015; Slips in label order</button>
+          <button type="button" class="btn-ghost" id="tcg-slip-remove" hidden>Remove slips</button>
+        </div>
+        <p class="tip" id="tcg-slip-msg">Optional, to get card lists on your slips: in TCGplayer, tick the same orders and click <strong>Packing Slip</strong>, then add that PDF here.</p>
       </div>
       <div id="loaded-msg"></div>
       <div id="error-msg"></div>
@@ -1502,6 +1514,11 @@ Chicago, IL 60601</div>
     <div class="faq-item">
       <button class="faq-q">Does it work offline, or as an app? <span class="faq-arrow">▼</span></button>
       <div class="faq-a">Yes. After you've opened the site once, label generation keeps working with no signal, which is handy at card shows. Free-plan labels work fully offline. Signed-in paid plans need a connection when you download, so your monthly count stays accurate. To install it like an app: in Chrome or Edge, click the install icon in the address bar; on iPhone, tap Share → Add to Home Screen; on Android, open the ⋮ menu → Install app.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q">Can my packing slips list the cards in each order? <span class="faq-arrow">▼</span></button>
+      <div class="faq-a">Yes. TCGplayer's shipping export doesn't include card names, but its <strong>Packing Slip</strong> PDF does. On the Home tab, after uploading your CSV, click <strong>+ Add TCGplayer packing slips (PDF)</strong> and add that PDF (tick the same orders in TCGplayer, then click Packing Slip). Each slip is matched to its order by order number. With <strong>8.5×11 — 1 up</strong> (or Label + slip) and packing slips on, every label is followed by that order's TCGplayer slip in one file. For thermal, Avery or envelope labels, click <strong>Slips in label order</strong> to get the slips sorted to match your labels. The PDF is read in your browser and never uploaded.</div>
     </div>
 
     <div class="faq-item">
@@ -3083,15 +3100,30 @@ function triggerDownload(btn){
   btn.textContent = 'Building PDF...';
   setTimeout(function(){
     var doc;
-    try { doc = buildPDF(format, list); }
+    // With TCGplayer's own slips attached (and slips on), those replace our
+    // generated slips: interleaved behind each label on the one-per-page
+    // letter formats, or downloaded separately ("Slips in label order") for
+    // thermal/sheet/envelope formats, which print on a different printer.
+    var useTcg = !!(tcgSlips && slipsOn);
+    var interleave = useTcg && (format === 'letter1' || format === 'labelslip');
+    var prevSlips = slipsOn;
+    if (useTcg) slipsOn = false;
+    try { doc = buildPDF(interleave ? 'letter1' : format, list); }
     catch (err) { done(); alert('PDF error: ' + err.message); return; }
+    finally { slipsOn = prevSlips; }
 
     var fileName = 'shipping-labels' + (printFilter === 'all' ? '' : '-' + printFilter) + '.pdf';
+    var saveOut = function () {
+      if (useTcg && !interleave) setSlipMsg('Labels downloaded. Now click \u2B07 Slips in label order to print the matching TCGplayer slips (same order as the labels).', true);
+      if (!interleave) { doc.save(fileName); return; }
+      tcgMerge(doc, list).then(function (bytes) { downloadBytes(bytes, fileName); })
+        .catch(function (err) { doc.save(fileName); setSlipMsg('Couldn\'t merge the TCGplayer slips (' + err.message + '), so the labels downloaded on their own. Use \u2B07 Slips in label order for the slips.', false); });
+    };
     var unpaid = unpaidCount(list);
     if (!unpaid) {
       // Every order here was already counted — re-downloading in another
       // format or after a printer jam is free.
-      doc.save(fileName);
+      saveOut();
       trackEvent('pdf_downloaded');
       done();
       return;
@@ -3101,7 +3133,7 @@ function triggerDownload(btn){
     checkAndConsumeCredits(unpaid).then(function(gate){
       if (!gate.allowed) { done(); showBlockedMessage(gate, unpaid); return; }
       list.forEach(function (e) { paidOrderKeys[paidKey(e.o, e.i)] = true; });
-      doc.save(fileName);
+      saveOut();
       trackEvent('pdf_downloaded');
       renderPreviews();
       done();
@@ -3129,6 +3161,7 @@ function setFormat(val){
   var tip=document.getElementById('fmt-tip'); if(tip) tip.textContent=FORMAT_TIPS[val];
   if(orders.length) renderPreviews();
   try { localStorage.setItem(FORMAT_KEY, val); } catch (e) {}
+  updateSlipStatus();
 }
 try { var savedFmt = localStorage.getItem(FORMAT_KEY); if (savedFmt) setFormat(savedFmt); } catch (e) {}
 function setSlips(val){ slipsOn=val; document.getElementById('slip-top').checked=val; document.getElementById('slip-main').checked=val; if(orders.length) renderPreviews(); }
@@ -3149,8 +3182,123 @@ function loadCsvText(text, fileName, eventName, afterLoad, loadedMessage) {
   document.getElementById('loaded-msg').innerHTML='<div class="loaded-state"><span>'+esc(message)+'</span></div>';
   renderPreviews();
   restoreTrackingForBatch();
+  updateSlipStatus();
   return true;
 }
+
+/* ── TCGplayer packing slips (PDF) ──
+   TCGplayer's Packing Slip button makes a PDF with the card list; it has no
+   CSV. Each page is matched to an order by the order numbers we already have
+   (Core.matchSlipPages), then either merged behind each label or re-ordered
+   to match the labels. Both libraries load only when a PDF is added. */
+var tcgSlips = null; // { bytes: ArrayBuffer, pageTexts: [string], name }
+var PDFJS_SRC = '/vendor/pdfjs-4.10.38.min.mjs', PDFJS_WORKER = '/vendor/pdfjs-worker-4.10.38.min.mjs', PDFLIB_SRC = '/vendor/pdf-lib-1.17.1.min.js';
+function setSlipMsg(html, ok) { var m = document.getElementById('tcg-slip-msg'); m.innerHTML = html; m.classList.toggle('ok', !!ok); }
+function loadPdfJs() {
+  if (window.__tcgssPdfjs) return Promise.resolve(window.__tcgssPdfjs);
+  // Function-wrapped so browsers without dynamic import() can still parse this script.
+  return (new Function('u', 'return import(u)'))(PDFJS_SRC).then(function (m) {
+    m.GlobalWorkerOptions.workerSrc = PDFJS_WORKER; window.__tcgssPdfjs = m; return m;
+  });
+}
+function loadPdfLib() {
+  if (window.PDFLib) return Promise.resolve();
+  return new Promise(function (resolve, reject) {
+    var sc = document.createElement('script'); sc.src = PDFLIB_SRC;
+    sc.onload = resolve; sc.onerror = function () { sc.remove(); reject(new Error('could not load the PDF merger')); };
+    document.head.appendChild(sc);
+  });
+}
+function readSlipPdf(file) {
+  setSlipMsg('Reading ' + esc(file.name) + '…');
+  document.getElementById('error-msg').innerHTML = '';
+  file.arrayBuffer().then(function (buf) {
+    return loadPdfJs().then(function (pdfjs) {
+      return pdfjs.getDocument({ data: new Uint8Array(buf.slice(0)), isEvalSupported: false }).promise;
+    }).then(function (pdf) {
+      var jobs = [];
+      for (var i = 1; i <= pdf.numPages; i++) {
+        jobs.push(pdf.getPage(i).then(function (pg) { return pg.getTextContent(); })
+          .then(function (tc) { return tc.items.map(function (it) { return it.str; }).join(' '); }));
+      }
+      return Promise.all(jobs);
+    }).then(function (texts) {
+      tcgSlips = { bytes: buf, pageTexts: texts, name: file.name };
+      if (!slipsOn) setSlips(true);
+      trackEvent('tcg_slips_attached');
+      updateSlipStatus();
+    });
+  }).catch(function (err) {
+    tcgSlips = null; updateSlipButtons();
+    setSlipMsg('Couldn\'t read that PDF (' + esc(err.message || 'unknown error') + '). Download it again from TCGplayer\'s Packing Slip button and retry.', false);
+  });
+}
+function updateSlipButtons() {
+  document.getElementById('tcg-slip-dl').hidden = !(tcgSlips && orders.length);
+  document.getElementById('tcg-slip-remove').hidden = !tcgSlips;
+}
+function updateSlipStatus() {
+  updateSlipButtons();
+  if (!tcgSlips) return;
+  if (!orders.length) { setSlipMsg('✓ Packing slips added (' + tcgSlips.pageTexts.length + ' pages). Now upload the Export Shipping CSV above and they\'ll be matched to your orders.', true); return; }
+  var list = orders.map(function (o, i) { return { o: o, i: i }; });
+  var m = Core.matchSlipPages(tcgSlips.pageTexts, list.map(function (e) { return e.o.orderNumber; }));
+  var found = list.length - list.filter(function (e) { return !m.pages[m.key(e.o.orderNumber)]; }).length;
+  if (!found) { setSlipMsg('None of these slip pages match the orders in your CSV. Make sure the PDF and the CSV are for the same orders.', false); return; }
+  var missing = list.filter(function (e) { return !m.pages[m.key(e.o.orderNumber)]; }).map(function (e) { return '#' + esc(e.o.orderNumber); });
+  var how = (currentFormat() === 'letter1' || currentFormat() === 'labelslip')
+    ? 'With packing slips on, each order\'s TCGplayer slip prints right after its label.'
+    : 'Print your labels as usual, then click <strong>⬇ Slips in label order</strong> to get the slips sorted to match. (Pick 8.5×11 — 1 up to get label and slip together in one file.)';
+  setSlipMsg('✓ TCGplayer slips matched to <strong>' + found + ' of ' + list.length + '</strong> orders. ' + how +
+    (missing.length ? ' No slip found for ' + missing.slice(0, 5).join(', ') + (missing.length > 5 ? ' and ' + (missing.length - 5) + ' more' : '') + '.' : ''), true);
+}
+function currentFormat() { var el = document.getElementById('fmt-top'); return el ? el.value : ''; }
+// Builds one PDF: for each order in `list`, its label page (when labelDoc is
+// given, one page per order) followed by that order's TCGplayer slip pages.
+function tcgMerge(labelDoc, list) {
+  return loadPdfLib().then(function () {
+    var L = window.PDFLib;
+    return Promise.all([
+      L.PDFDocument.load(tcgSlips.bytes.slice(0), { ignoreEncryption: true }),
+      labelDoc ? L.PDFDocument.load(labelDoc.output('arraybuffer')) : Promise.resolve(null),
+      L.PDFDocument.create()
+    ]).then(function (r) {
+      var slips = r[0], labels = r[1], out = r[2];
+      if (labels && labels.getPageCount() !== list.length) throw new Error('label pages didn\'t line up with orders');
+      var m = Core.matchSlipPages(tcgSlips.pageTexts, list.map(function (e) { return e.o.orderNumber; }));
+      var steps = [];
+      list.forEach(function (e, k) {
+        if (labels) steps.push([labels, k]);
+        (m.pages[m.key(e.o.orderNumber)] || []).forEach(function (pi) { steps.push([slips, pi]); });
+      });
+      if (!labels && !steps.length) throw new Error('no slip pages match these orders');
+      return steps.reduce(function (p, st) {
+        return p.then(function () { return out.copyPages(st[0], [st[1]]); }).then(function (pg) { out.addPage(pg[0]); });
+      }, Promise.resolve()).then(function () { return out.save(); });
+    });
+  });
+}
+function downloadBytes(bytes, name) {
+  var url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+  var a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function () { URL.revokeObjectURL(url); }, 30000);
+}
+document.getElementById('tcg-slip-input').addEventListener('change', function (e) {
+  var f = e.target.files && e.target.files[0]; if (f) readSlipPdf(f); e.target.value = '';
+});
+document.getElementById('tcg-slip-remove').addEventListener('click', function () {
+  tcgSlips = null; updateSlipButtons();
+  setSlipMsg('Optional, to get card lists on your slips: in TCGplayer, tick the same orders and click <strong>Packing Slip</strong>, then add that PDF here.');
+});
+document.getElementById('tcg-slip-dl').addEventListener('click', function () {
+  var btn = this, label = btn.innerHTML, list = printList();
+  if (!list.length) { alert('No orders match the "Print" filter — pick a different one.'); return; }
+  btn.disabled = true; btn.textContent = 'Sorting slips…';
+  // The slips are TCGplayer's own file, so re-ordering them costs no labels.
+  tcgMerge(null, list).then(function (bytes) { downloadBytes(bytes, 'tcgplayer-packing-slips-in-label-order.pdf'); trackEvent('tcg_slips_sorted'); })
+    .catch(function (err) { alert('Couldn\'t sort the slips: ' + err.message); })
+    .then(function () { btn.disabled = false; btn.innerHTML = label; });
+});
 
 // The file sellers most often grab by mistake is TCGplayer's Packing Slip
 // PDF (the Orders page has no "Packing List" export anymore), or a CSV that
@@ -3166,6 +3314,7 @@ function wrongFileMessage(name, head) {
 function handleFile(file) {
   var reader=new FileReader();
   reader.onload=function(ev){
+    if (/\.pdf$/i.test(file.name) || /^%PDF/.test(String(ev.target.result).slice(0, 5))) { readSlipPdf(file); return; }
     var bad = wrongFileMessage(file.name, String(ev.target.result).slice(0, 5));
     if (bad) { document.getElementById('loaded-msg').innerHTML=''; document.getElementById('error-msg').innerHTML='<div class="error-box">'+esc(bad)+' <a href="/guide/how-to-print-tcgplayer-shipping-labels.html" style="color:inherit;text-decoration:underline;">Step-by-step</a></div>'; trackEvent('wrong_file'); return; }
     loadCsvText(ev.target.result,file.name,'csv_loaded');
