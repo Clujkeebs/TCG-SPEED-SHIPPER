@@ -326,6 +326,22 @@ section('PDF-safe text');
   const m3 = core.matchSlipPages(['Order Number: ABC-0001', 'cont.', 'Order Number: ZZZ-9999', 'more of ZZZ'], ['ABC-0001']);
   check('another order\'s slip is not glued to the previous order', JSON.stringify(m3.pages['ABC-0001']) === '[0,1]' && JSON.stringify(m3.unmatched) === '[2,3]', JSON.stringify(m3));
   check('a leading page with no order is unmatched', JSON.stringify(m2.unmatched) === '[0]' && JSON.stringify(m2.pages['ABC-0001']) === '[1]');
+  // TCGplayer slip → 4x6 thermal pages
+  const tp = core.thermalSlipPlan([36, 500, 576, 760], 432, 288, 10);
+  check('slip content is scaled to the label width', Math.abs(tp.scale - 412 / 540) < 1e-9, tp.scale);
+  check('a short slip fits on one 4x6', tp.chunks.length === 1);
+  check('its top lands at the top margin', Math.abs(tp.chunks[0].y + 760 * tp.scale - (288 - 10)) < 1e-9);
+  const tall = core.thermalSlipPlan([36, 36, 576, 756], 432, 288, 10);
+  check('a long card list continues on more labels', tall.chunks.length === Math.ceil(720 * (412 / 540) / 268), tall.chunks.length);
+  check('each continuation shifts up by one label height', Math.abs((tall.chunks[1].y - tall.chunks[0].y) - 268) < 1e-9);
+  check('each full chunk fills the label between margins', Math.abs(tall.chunks[0].h - 268) < 1e-9);
+  // A line straddling the first break (at 756 - 268/scale) moves the break above it.
+  const brk = 756 - 268 / tall.scale;
+  const snapped = core.thermalSlipPlan([36, 36, 576, 756], 432, 288, 10, [[brk - 4, brk + 8], [brk + 12, brk + 24]]);
+  check('a break never cuts a text line in half', Math.abs(snapped.chunks[0].h - (756 - (brk + 8)) * snapped.scale) < 1e-9, snapped.chunks[0].h);
+  check('the next label starts at that line', Math.abs(snapped.chunks[1].y + (brk + 8) * snapped.scale - 278) < 1e-9);
+  const tiny = core.thermalSlipPlan([100, 700, 200, 720], 432, 288, 10);
+  check('a tiny slip is not blown up past 1.4x', tiny.scale === 1.4);
   check('Puerto Rico gets no country line', core.addrLines({ addr1: '1 Calle', city: 'San Juan', state: 'PR', zip: '00901', country: 'PR' }).pop() === 'San Juan, PR 00901');
 }
 
