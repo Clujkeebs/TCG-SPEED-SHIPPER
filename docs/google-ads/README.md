@@ -1,5 +1,30 @@
 # Google Ads kit
 
+> **Start with `START-HERE.html`** (open it in a browser). It has every
+> step, 4 ad groups with 15 headlines and 4 descriptions each, the
+> keywords, negatives, sitelinks, callouts, snippets, price assets, the
+> Performance Max and Demand Gen text, and all the images, with Copy
+> buttons.
+>
+> **Also in this folder:**
+> - `ALL-AD-COPY.txt`: the same text, plain.
+> - `google-ads-editor-import/`: CSVs for Google Ads Editor.
+> - `images/`: ads in 3 shapes × 4 messages, product-only images and
+>   logos.
+> - `15-SECOND-VIDEO-SCRIPT.txt`
+>
+> **To rebuild after a price or feature change:** edit `kit/copy.py` (it
+> refuses anything over Google's character limits), then run
+> `python3 kit/copy.py <out>` and `python3 kit/build_page.py <kit dir> <out>`.
+> The images come from `kit/ads2.html` rendered by `kit/render3.js`
+> (Playwright; set the paths at the top first).
+>
+> The notes below are the original 3-ad-group plan (2026-09-28). The kit
+> supersedes their copy: it adds a **Packing slips with card lists** ad
+> group and drops the pull-sheet claims, because the pull sheet needs a
+> per-card CSV, which TCGplayer's standard export isn't.
+
+
 Prepared by Claude on 2026-09-28. The owner creates the account and pays
 (PERMISSIONS.md: money moves are the owner's). Everything else is here,
 ready to paste. All copy is checked against Google's character limits.

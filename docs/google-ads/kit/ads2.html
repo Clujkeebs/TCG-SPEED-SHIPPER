@@ -1,0 +1,79 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face { font-family: 'DMS'; src: url('file:///home/user/TCG-SPEED-SHIPPER/public/fonts/dm-serif-display-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'JB'; font-weight: 500; src: url('file:///home/user/TCG-SPEED-SHIPPER/public/fonts/jetbrains-mono-latin-500-normal.woff2') format('woff2'); }
+@font-face { font-family: 'JB'; font-weight: 700; src: url('file:///home/user/TCG-SPEED-SHIPPER/public/fonts/jetbrains-mono-latin-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'SS'; font-weight: 400; src: url('file:///home/user/TCG-SPEED-SHIPPER/public/fonts/source-serif-4-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'SS'; font-weight: 700; src: url('file:///home/user/TCG-SPEED-SHIPPER/public/fonts/source-serif-4-latin-700-normal.woff2') format('woff2'); }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { overflow: hidden; }
+body { position: relative; font-family: 'SS', serif; color: #f4f1ea;
+  background: radial-gradient(70% 70% at 70% 45%, rgba(116,198,157,.26), transparent 65%), linear-gradient(135deg, #0b2a1f 0%, #10352a 45%, #0a1f18 100%); }
+body::before { content: ''; position: absolute; inset: 0; background-image: radial-gradient(rgba(255,255,255,.07) 1.2px, transparent 1.2px); background-size: 26px 26px; mask-image: linear-gradient(90deg, #000 0%, transparent 80%); }
+.mark { width: 1em; height: 1em; border-radius: .26em; background: #74c69d; display: grid; place-items: center; }
+.mark svg { width: .72em; height: .72em; }
+.brand { position: absolute; font-family: 'JB'; font-weight: 700; letter-spacing: .16em; color: #74c69d; display: flex; align-items: center; gap: .45em; }
+.brand .mark { font-size: 1.7em; }
+/* the product visual */
+.stage { position: absolute; width: 420px; height: 480px; transform-origin: center; }
+.slip { position: absolute; right: 0; top: 18px; width: 330px; height: 430px; background: #fbfaf6; border-radius: 10px; transform: rotate(7deg); box-shadow: 0 30px 60px rgba(0,0,0,.45); padding: 26px 24px; color: #1f1d1a; }
+.slip h5 { font-family: 'SS'; font-weight: 700; color: #2d6a4f; font-size: 17px; text-align: center; border-bottom: 1.5px solid #2d6a4f; padding-bottom: 8px; }
+.slip .k { font-family: 'JB'; font-weight: 700; font-size: 11px; letter-spacing: .08em; color: #8a867c; margin-top: 16px; }
+.slip .v { font-size: 15px; margin-top: 3px; }
+.label { position: absolute; left: 0; top: 96px; width: 390px; height: 262px; background: #fff; border-radius: 10px; transform: rotate(-5deg); box-shadow: 0 34px 70px rgba(0,0,0,.55); padding: 20px 24px; color: #111; border: 2px solid #111; }
+.label .from { font-family: 'JB'; font-weight: 500; font-size: 12px; color: #444; line-height: 1.45; border-bottom: 2px solid #111; padding-bottom: 10px; }
+.label .from b { color: #111; font-weight: 700; }
+.label .to { margin-top: 18px; padding-left: 70px; font-family: 'SS'; font-weight: 700; font-size: 25px; line-height: 1.18; }
+.label .to span { display: block; font-weight: 400; font-size: 19px; color: #222; }
+.label .tag { position: absolute; left: 24px; bottom: 18px; font-family: 'JB'; font-weight: 700; font-size: 12px; color: #1b4332; background: #d8f3dc; border: 1.5px solid #52b788; padding: 4px 9px; border-radius: 6px; }
+.label .qr { position: absolute; right: 22px; bottom: 16px; width: 54px; height: 54px; background: repeating-conic-gradient(#111 0 25%, #fff 0 50%) 0 0/10px 10px; border: 3px solid #111; border-radius: 3px; }
+.csv { position: absolute; left: -26px; top: 18px; font-family: 'JB'; font-weight: 700; font-size: 15px; color: #0b2a1f; background: #ffd166; padding: 9px 14px; border-radius: 9px; transform: rotate(-9deg); box-shadow: 0 12px 26px rgba(0,0,0,.35); }
+.line { position: absolute; font-family: 'DMS'; line-height: 1.05; }
+.line em { font-style: normal; color: #95d5b2; }
+.word { font-family: 'DMS'; color: #f4f1ea; }
+</style></head><body>
+<div class="brand" id="brand"><span class="mark"><svg viewBox="0 0 32 32"><path d="M6 8 H19 L26 16 L19 24 H6 Z" fill="#0b2a1f"/><circle cx="12.5" cy="16" r="2.3" fill="#74c69d"/></svg></span>TCG SPEED SHIPPER</div>
+<div class="line" id="line"></div>
+<div class="stage" id="stage">
+  <div class="slip"><h5>Packing Slip</h5><div style="height:276px"></div><div class="k">ITEMS (2)</div><div class="v">• Charizard ex · SIR</div><div class="v">• Umbreon VMAX</div></div>
+  <div class="label"><div class="from"><b>CARD SHOP CO.</b><br>123 Seller St · Portland, ME 04101</div>
+    <div class="to">Sample Buyer<span>456 Collector Ave, Apt 2</span><span>Austin, TX 78701</span></div>
+    <div class="tag">ENVELOPE OK · ~1 oz · $0.82</div><div class="qr"></div></div>
+  <div class="csv">orders.csv</div>
+</div>
+<div id="logo" style="display:none"></div>
+<script>
+const q = new URLSearchParams(location.search); const v = q.get('v'); const T = q.get('t'); const NOTEXT = q.get('notext') === '1';
+const W = { landscape: [1200, 628], square: [1200, 1200], portrait: [960, 1200], 'logo-square': [1200, 1200], 'logo-wide': [1200, 300] }[v];
+document.documentElement.style.width = document.body.style.width = W[0] + 'px';
+document.documentElement.style.height = document.body.style.height = W[1] + 'px';
+const st = document.getElementById('stage'), br = document.getElementById('brand'), ln = document.getElementById('line');
+function place(el, css) { Object.assign(el.style, css); }
+if (v === 'landscape') {
+  place(st, { left: '660px', top: '70px', transform: 'scale(1.02)' });
+  place(br, { left: '72px', top: '64px', fontSize: '20px' });
+  place(ln, { left: '72px', top: '190px', width: '560px', fontSize: '66px' }); ln.innerHTML = T || 'Orders to <em>labels</em><br>in seconds.';
+} else if (v === 'square') {
+  place(st, { left: '430px', top: '530px', transform: 'scale(1.45)' });
+  place(br, { left: '90px', top: '90px', fontSize: '26px' });
+  place(ln, { left: '90px', top: '190px', width: '1000px', fontSize: '84px' }); ln.innerHTML = T || 'Orders to <em>labels</em> in seconds.';
+} else if (v === 'portrait') {
+  place(st, { left: '270px', top: '548px', transform: 'scale(1.42)' });
+  place(br, { left: '80px', top: '84px', fontSize: '24px' });
+  place(ln, { left: '80px', top: '180px', width: '800px', fontSize: '80px' }); ln.innerHTML = T || 'Orders to <em>labels</em><br>in seconds.';
+}
+if (NOTEXT && st) { ln.style.display='none'; st.style.left=((W[0]-420)/2)+'px'; st.style.top=((W[1]-480)/2+20)+'px'; st.style.transform='scale('+Math.min(W[0]/560,W[1]/620).toFixed(2)+')'; br.style.top='40px'; }
+if (false) {
+} else if (v.indexOf('logo')===0) {
+  st.style.display = 'none'; ln.style.display = 'none'; br.style.display = 'none';
+  const lg = document.getElementById('logo'); lg.style.display = 'flex';
+  const mark = br.querySelector('.mark').cloneNode(true);
+  if (v === 'logo-square') {
+    place(lg, { position: 'absolute', inset: '0', alignItems: 'center', justifyContent: 'center', fontSize: '640px' });
+    lg.appendChild(mark);
+  } else {
+    place(lg, { position: 'absolute', inset: '0', alignItems: 'center', justifyContent: 'center', gap: '36px', fontSize: '150px' });
+    lg.appendChild(mark);
+    const w = document.createElement('div'); w.className = 'word'; w.style.fontSize = '104px'; w.textContent = 'TCG Speed Shipper'; lg.appendChild(w);
+  }
+}
+</script></body></html>
