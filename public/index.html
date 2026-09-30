@@ -374,6 +374,11 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
 .shipped-progress button:hover { color: var(--accent); }
 .label-from { font-size: 11px; color: var(--muted); line-height: 1.6; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 12px; }
 .label-from strong { font-size: 12px; color: var(--text); display: block; margin-bottom: 2px; }
+.label-from.bold { color: var(--text); font-weight: 700; }
+.bold-ret { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 14px; color: var(--text); cursor: pointer; }
+.bold-ret input { width: 18px; height: 18px; accent-color: var(--accent); margin: 0; }
+.bold-ret input { flex: none; }
+.bold-ret-text span { color: var(--muted); font-size: 13px; }
 .label-to { text-align: center; line-height: 1.7; }
 .label-to strong { font-size: 14px; color: var(--text); display: block; margin-bottom: 3px; font-family: 'Source Serif 4', serif; }
 .label-to span { font-size: 12px; color: var(--muted); }
@@ -921,6 +926,7 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
           <input type="text" id="s-zip" placeholder="62701" autocomplete="postal-code" />
         </div>
       </div>
+      <label class="bold-ret" for="s-bold"><input type="checkbox" id="s-bold" /><span class="bold-ret-text">Print the return address in bold <span>(darker on thermal printers)</span></span></label>
     </div>
 
     <!-- CSV upload -->
@@ -2559,6 +2565,7 @@ function saveAddr() {
   try {
     var d = {};
     FIELDS.forEach(function(id){ d[id] = document.getElementById(id).value; });
+    d['s-bold'] = document.getElementById('s-bold').checked;
     localStorage.setItem(LS_KEY, JSON.stringify(d));
     var b = document.getElementById('saved-badge');
     b.classList.add('show');
@@ -2575,6 +2582,7 @@ function loadAddr() {
       var el = document.getElementById(id);
       if (el && d[id] != null) el.value = d[id];
     });
+    document.getElementById('s-bold').checked = !!d['s-bold'];
   } catch(e) {}
 }
 
@@ -2595,7 +2603,8 @@ function getSender() {
     addr2: document.getElementById('s-addr2').value.trim(),
     city:  document.getElementById('s-city').value.trim(),
     state: document.getElementById('s-state').value.trim(),
-    zip:   document.getElementById('s-zip').value.trim()
+    zip:   document.getElementById('s-zip').value.trim(),
+    bold:  document.getElementById('s-bold').checked
   };
 }
 
@@ -2761,7 +2770,7 @@ function renderPreviews() {
     var slip=(slipsOn||format==='labelslip')?'<div class="slip-tag">+ packing slip</div>':'';
     div.innerHTML='<label class="label-shipped"><input type="checkbox" data-key="'+esc(key)+'"'+(isShipped?' checked':'')+'> shipped</label>'+
       '<div class="label-num" title="'+(o.orderNumber?'Order #'+esc(o.orderNumber):'')+'">#'+(i+1)+'</div>'+
-      '<div class="label-from"><strong>'+esc(s.name||'Your Name')+'</strong>'+
+      '<div class="label-from'+(s.bold?' bold':'')+'"><strong>'+esc(s.name||'Your Name')+'</strong>'+
       esc(s.addr1||'')+(s.addr2?', '+esc(s.addr2):'')+'<br>'+esc(sLine2)+'</div>'+
       '<div class="label-to"><strong>'+esc(Core.fullName(o))+'</strong>'+
       '<span>'+al.join('<br>')+'</span>'+slip+(o.shipMethod?'<div class="slip-tag ship-tag">'+esc(o.shipMethod)+'</div>':'')+tierTag+stampTagFor(i)+'</div>';
@@ -2792,7 +2801,7 @@ function fitSize(doc, lines, size, min, maxWidth) {
 }
 function safeSender(s) {
   var out = {};
-  Object.keys(s).forEach(function (k) { out[k] = pdfSafe(s[k]); });
+  Object.keys(s).forEach(function (k) { out[k] = typeof s[k] === 'string' ? pdfSafe(s[k]) : s[k]; });
   return out;
 }
 
@@ -2808,7 +2817,8 @@ function drawLabel(doc,o,s,bx,by,bw,bh,design){
   var rx=bx+padX, ry=by+padY;
 
   var retLines=[sLine1,sLine2].filter(Boolean);
-  doc.setFont(font,'normal');
+  var retWeight=s.bold?'bold':'normal';
+  doc.setFont(font,retWeight);
   var retSize=fitSize(doc, retLines, 9, 6, maxW);
   if(s.name){
     doc.setFont(font,'bold');
@@ -2818,9 +2828,10 @@ function drawLabel(doc,o,s,bx,by,bw,bh,design){
     doc.text(s.name,rx,ry);
     ry+=14;
   }
-  doc.setFont(font,'normal');
+  // Solid black: thermal printers turn gray into sparse dots that print faint.
+  doc.setFont(font,retWeight);
   doc.setFontSize(retSize);
-  doc.setTextColor(100,100,100);
+  doc.setTextColor(0,0,0);
   retLines.forEach(function(l){ doc.text(l,rx,ry); ry+=12; });
 
   ry+=8;
@@ -2890,7 +2901,7 @@ function drawEnvelope(doc,o,s,W,H,font){
   doc.setTextColor(0,0,0);
   var ry=36;
   retLines.forEach(function(l,i){
-    doc.setFont(font,i===0&&s.name?'bold':'normal');
+    doc.setFont(font,(i===0&&s.name)||s.bold?'bold':'normal');
     doc.setFontSize(fitSize(doc,[l],10,7,W*0.42));
     doc.text(l,30,ry); ry+=12.5;
   });
@@ -3557,8 +3568,8 @@ document.getElementById('paste-generate-btn').addEventListener('click', function
   document.getElementById('preview-area').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
-FIELDS.forEach(function(id){
-  document.getElementById(id).addEventListener('input',function(){ saveAddr(); if(orders.length) renderPreviews(); });
+FIELDS.concat('s-bold').forEach(function(id){
+  document.getElementById(id).addEventListener(id==='s-bold'?'change':'input',function(){ saveAddr(); if(orders.length) renderPreviews(); });
 });
 
 document.getElementById('clear-btn').addEventListener('click',function(){
