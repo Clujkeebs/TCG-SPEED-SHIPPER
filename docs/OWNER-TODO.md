@@ -51,6 +51,19 @@ After that, the rest of this list can wait for a free evening.
 
 ---
 
+## 🚀 Road to $10k/mo: postage (see `docs/research/road-to-10k.md`)
+
+- [ ] **Pitney Bowes developer account** (free sandbox):
+  developer.pitneybowes.com. Put the sandbox API key and secret into
+  Railway → web → Variables as `PB_API_KEY` and `PB_API_SECRET`. Never
+  paste them in chat. ⏱ 10 min
+- [ ] **Send the Pitney Bowes partnership email.** It's already drafted in
+  your Gmail ("Platform partnership: USPS letter + Ground Advantage…").
+  Read it, edit, send. ⏱ 3 min
+- [ ] **USPS Mailer ID** (free, slow; see Added by Devin below). Needed
+  for envelope tracking. ⏱ 20 min
+- [ ] **LLC** before we handle anyone's postage money. 💵
+
 ## 📣 Marketing that needs you (see `docs/MARKETING-PLAN.md`)
 
 - [ ] **Record a 60-second screen demo:** export CSV → drop it in → print.

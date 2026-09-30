@@ -1174,7 +1174,7 @@ router.post('/client-error', express.json({ limit: '8kb' }), async (req, res) =>
 // and source names are accepted, so the table can't be filled with junk, and
 // only daily totals are stored — no cookie, IP, or user id, which is why no
 // consent banner is needed for it.
-const FUNNEL_EVENTS = ['visit', 'csv_loaded', 'pdf_downloaded', 'signup', 'checkout_started', 'upgraded', 'pricing_viewed', 'tcg_import', 'share_clicked', 'upgrade_prompt', 'limit_hit', 'sample_loaded', 'newsletter_signup', 'pull_sheet', 'enterprise_clicked', 'wrong_file', 'tcg_slips_attached', 'tcg_slips_sorted'];
+const FUNNEL_EVENTS = ['visit', 'csv_loaded', 'pdf_downloaded', 'signup', 'checkout_started', 'upgraded', 'pricing_viewed', 'tcg_import', 'share_clicked', 'upgrade_prompt', 'limit_hit', 'sample_loaded', 'newsletter_signup', 'pull_sheet', 'enterprise_clicked', 'wrong_file', 'tcg_slips_attached', 'tcg_slips_sorted', 'postage_waitlist'];
 const FUNNEL_SOURCES = ['direct', 'google', 'google_ads', 'bing', 'reddit', 'youtube', 'tiktok', 'facebook', 'instagram', 'discord', 'twitter', 'tcgplayer', 'email', 'referral', 'affiliate', 'slip', 'whatnot', 'ebay', 'other'];
 const tooManyEvents = makeThrottle(120, 10 * 60 * 1000);
 router.post('/e', express.json({ limit: '1kb' }), async (req, res) => {
@@ -1196,7 +1196,7 @@ router.post('/e', express.json({ limit: '1kb' }), async (req, res) => {
 // Subscribing always answers the same way, so the form can't be used to find
 // out who is on the list. The honeypot field `website` is invisible to people
 // and filled in by bots.
-const NEWSLETTER_SOURCES = ['footer', 'blog', 'guide', 'home', 'partners', 'account', 'post_download', 'newsletter_page', 'other'];
+const NEWSLETTER_SOURCES = ['footer', 'blog', 'guide', 'home', 'partners', 'account', 'post_download', 'newsletter_page', 'postage_waitlist', 'other'];
 const tooManyNewsletterSignups = makeThrottle(5, 10 * 60 * 1000);
 router.post('/newsletter/subscribe', express.json({ limit: '2kb' }), async (req, res) => {
   const b = req.body || {};

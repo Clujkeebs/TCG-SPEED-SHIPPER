@@ -410,6 +410,14 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
 .ship-plan-note:empty { display: none; }
 .ship-plan-fine { font-size: 11px; color: var(--hint); margin: 6px 0 0; line-height: 1.5; }
 .ship-plan-fine a { color: inherit; }
+.postage-early { margin-top: 12px; padding: 12px 14px; border: 1px dashed var(--accent); border-radius: 10px; background: var(--surface, #fff); }
+.postage-early .pe-copy { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+.postage-early .pe-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.postage-early input[type=email] { flex: 1 1 200px; min-width: 0; height: 38px; font-size: 14px; }
+.postage-early .pe-msg { margin: 6px 0 0; font-size: 12.5px; color: var(--accent); }
+.postage-early .sf-news-hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
 .tier-tag { display: table; margin: 6px auto 0; font-size: 10px; border-radius: 20px; padding: 3px 9px; font-weight: 600; border: 1px solid; }
 .tier-envelope { color: #2d6a4f; border-color: #b7e4c7; background: #edf7f1; }
 .tier-recommended { color: #8a6d1d; border-color: #ecd9a4; background: #fbf5e4; }
@@ -1000,6 +1008,16 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
           <p style="font-size:12px;color:var(--hint);margin:6px 0 0;line-height:1.5;">Every card in this batch on one checklist, sorted by set, with the orders each goes to. Free, and it doesn't use labels.</p>
         </div>
         <p class="ship-plan-fine">Based on TCGplayer's seller shipping guidelines (tracking over $49.99, signature at $250+, tracking recommended over $20). Always check the order in TCGplayer. <a href="/blog/tcgplayer-shipping-guidelines.html">Read the guidelines →</a></p>
+        <form class="postage-early" id="postage-early" novalidate>
+          <div class="pe-copy"><strong>Coming soon: buy postage right here.</strong> Envelope postage with delivery scans, at a stamp's price or less, and Ground Advantage labels for tracked orders, printed with your labels and slips. Want early access?</div>
+          <div class="pe-row">
+            <label class="sr-only" for="pe-email">Email for early access</label>
+            <input type="email" id="pe-email" name="email" autocomplete="email" placeholder="you@example.com" required />
+            <button type="submit" class="btn-ghost">Get early access</button>
+          </div>
+          <input class="sf-news-hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
+          <p class="pe-msg" id="pe-msg" role="status" aria-live="polite"></p>
+        </form>
       </div>
       <div class="shipped-progress" id="shipped-progress" style="display:none;">
         <span id="shipped-progress-text"></span>
@@ -1743,6 +1761,28 @@ document.documentElement.classList.add('js-ready');
 
 var orders = [];
 document.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('#enterprise-cta')) trackEvent('enterprise_clicked'); });
+// Early-access list for in-app postage (docs/research/road-to-10k.md): proves
+// demand and gives us pilot users before the Pitney Bowes build.
+(function () {
+  var f = document.getElementById('postage-early'); if (!f) return;
+  try { if (localStorage.getItem('tcgss_postage_early') === '1') { f.querySelector('.pe-row').hidden = true; document.getElementById('pe-msg').textContent = '\u2713 You\'re on the early-access list.'; } } catch (e) {}
+  f.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var msg = document.getElementById('pe-msg'), email = f.email.value.trim(), btn = f.querySelector('button');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.textContent = 'Enter a valid email.'; f.email.focus(); return; }
+    btn.disabled = true; msg.textContent = 'Adding you…';
+    fetch('/api/newsletter/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, source: 'postage_waitlist', website: f.website.value }) })
+      .then(function (r) {
+        if (!r.ok) throw new Error();
+        trackEvent('postage_waitlist');
+        try { localStorage.setItem('tcgss_postage_early', '1'); } catch (err) {}
+        f.querySelector('.pe-row').hidden = true;
+        msg.textContent = '\u2713 You\'re on the list. We\'ll email you when postage is ready (plus the Tuesday shipping tips; unsubscribe anytime).';
+      })
+      .catch(function () { msg.textContent = 'Couldn\'t add you right now. Try again in a minute.'; btn.disabled = false; });
+  });
+})();
 function trackEvent(e, once) { try { if (window.TCGSSTrack) window.TCGSSTrack(e, once); } catch (err) {} }
 var trackingNumbers = [];
 var lastCsvText = null; // the seller's original export, kept only in memory for the TCGplayer import file // parallel to orders, by index; matched via the Tracking Numbers panel
