@@ -125,6 +125,9 @@ const HEADER_RULES = [
   { test: (p) => p.startsWith('/admin/') || p === '/admin', headers: { 'Referrer-Policy': 'no-referrer', 'X-Robots-Tag': 'noindex, nofollow', 'Cache-Control': 'no-store' } },
   { test: (p) => p === '/sw.js', headers: { 'Cache-Control': 'no-cache', 'Service-Worker-Allowed': '/' } },
   { test: (p) => p === '/version.json', headers: { 'Cache-Control': 'no-cache' } },
+  // Owner-only files (e.g. the Google Ads kit) at unguessable names: never
+  // indexed, always saved as a download.
+  { test: (p) => p.startsWith('/downloads/'), headers: { 'X-Robots-Tag': 'noindex, nofollow', 'Content-Disposition': 'attachment', 'Cache-Control': 'no-store' } },
 ];
 app.use((req, res, next) => {
   for (const rule of HEADER_RULES) if (rule.test(req.path)) res.set(rule.headers);
