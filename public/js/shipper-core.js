@@ -438,6 +438,41 @@
     return { pages: pages, unmatched: unmatched, missing: missing, key: norm };
   }
 
+  /* Laying a TCGplayer slip (a letter page) onto 4x6 thermal labels.
+     `box` is the slip's content area [x0, y0, x1, y1] in PDF points (from
+     the text positions), so empty page margins don't shrink the text. The
+     content is scaled to the label's width. If it's taller than one label,
+     it continues on the next: each chunk says where to draw the scaled page
+     (x, y) so its slice sits under the label's top margin, and how much of
+     the label (h) that slice fills. `lines` ([bottom, top] of each text
+     line, optional) moves each break up into a gap between lines, so no
+     card line is cut in half. */
+  function thermalSlipPlan(box, pageW, pageH, margin, lines) {
+    pageW = pageW || 432; pageH = pageH || 288; margin = margin == null ? 10 : margin;
+    var w = Math.max(1, box[2] - box[0]), h = Math.max(1, box[3] - box[1]);
+    var usableW = pageW - 2 * margin, usableH = pageH - 2 * margin;
+    var scale = Math.min(usableW / w, 1.4), span = usableH / scale;
+    var chunks = [], top = box[3];
+    function chunk(bottom) {
+      chunks.push({ x: margin - box[0] * scale, y: pageH - margin - top * scale, h: (top - bottom) * scale });
+      top = bottom;
+    }
+    while (chunks.length < 200) {
+      var cut = top - span;
+      if (cut <= box[1] + 1e-6) { chunk(box[1]); break; }
+      for (var moved = true; moved && lines;) {
+        moved = false;
+        for (var i = 0; i < lines.length; i++) {
+          // Never give up more than a quarter of a label to a clean break.
+          if (lines[i][0] < cut && lines[i][1] > cut && lines[i][1] < top - span * 0.75) { cut = lines[i][1]; moved = true; }
+        }
+      }
+      chunk(cut);
+    }
+    return { scale: scale, chunks: chunks, pageW: pageW, pageH: pageH, margin: margin };
+  }
+
+
   /* ── Label text ── */
 
   // US territories and military mail are domestic for USPS: no country line.
@@ -528,6 +563,7 @@
     parsePastedAddresses: parsePastedAddresses,
     addrLines: addrLines,
     matchSlipPages: matchSlipPages,
+    thermalSlipPlan: thermalSlipPlan,
     fullName: fullName,
     pdfSafe: pdfSafe,
     fitFontSize: fitFontSize,

@@ -3142,13 +3142,13 @@ function triggerDownload(btn){
     var doc;
     // With TCGplayer's own slips attached (and slips on), those replace our
     // generated slips: interleaved behind each label on the one-per-page
-    // letter formats, or downloaded separately ("Slips in label order") for
+    // letter formats and on 4x6 thermal (each slip cropped to fit), or downloaded separately ("Slips in label order") for
     // thermal/sheet/envelope formats, which print on a different printer.
     var useTcg = !!(tcgSlips && slipsOn);
-    var interleave = useTcg && (format === 'letter1' || format === 'labelslip');
+    var interleave = useTcg && (format === 'letter1' || format === 'labelslip' || format === '4x6');
     var prevSlips = slipsOn;
     if (useTcg) slipsOn = false;
-    try { doc = buildPDF(interleave ? 'letter1' : format, list); }
+    try { doc = buildPDF(interleave && format !== '4x6' ? 'letter1' : format, list); }
     catch (err) { done(); alert('PDF error: ' + err.message); return; }
     finally { slipsOn = prevSlips; }
 
@@ -3156,7 +3156,7 @@ function triggerDownload(btn){
     var saveOut = function () {
       if (useTcg && !interleave) setSlipMsg('Labels downloaded. Now click \u2B07 Slips in label order to print the matching TCGplayer slips (same order as the labels).', true);
       if (!interleave) { doc.save(fileName); return; }
-      tcgMerge(doc, list).then(function (bytes) { downloadBytes(bytes, fileName); })
+      tcgMerge(doc, list, format === '4x6').then(function (bytes) { downloadBytes(bytes, fileName); })
         .catch(function (err) { doc.save(fileName); setSlipMsg('Couldn\'t merge the TCGplayer slips (' + err.message + '), so the labels downloaded on their own. Use \u2B07 Slips in label order for the slips.', false); });
     };
     var unpaid = unpaidCount(list);
@@ -3258,12 +3258,29 @@ function readSlipPdf(file) {
     }).then(function (pdf) {
       var jobs = [];
       for (var i = 1; i <= pdf.numPages; i++) {
-        jobs.push(pdf.getPage(i).then(function (pg) { return pg.getTextContent(); })
-          .then(function (tc) { return tc.items.map(function (it) { return it.str; }).join(' '); }));
+        jobs.push(pdf.getPage(i).then(function (pg) {
+          return pg.getTextContent().then(function (tc) {
+            // The printed area (text positions, padded for rules and
+            // barcodes) lets the 4x6 output crop away empty page margins.
+            var v = pg.view, box = null, lines = [];
+            tc.items.forEach(function (it) {
+              if (!it.str || !it.str.trim() || !it.transform) return;
+              var x = it.transform[4], y = it.transform[5], w = it.width || 0, h = it.height || Math.abs(it.transform[3]) || 10;
+              var b = [x, y - h * 0.3, x + w, y + h];
+              lines.push([b[1], b[3]]);
+              box = box ? [Math.min(box[0], b[0]), Math.min(box[1], b[1]), Math.max(box[2], b[2]), Math.max(box[3], b[3])] : b;
+            });
+            box = box ? [Math.max(v[0], box[0] - 14), Math.max(v[1], box[1] - 14), Math.min(v[2], box[2] + 14), Math.min(v[3], box[3] + 14)] : v.slice();
+            return { text: tc.items.map(function (it) { return it.str; }).join(' '), box: box, lines: lines };
+          });
+        }));
       }
       return Promise.all(jobs);
-    }).then(function (texts) {
-      tcgSlips = { bytes: buf, pageTexts: texts, name: file.name };
+    }).then(function (pages) {
+      tcgSlips = { bytes: buf, name: file.name,
+        pageTexts: pages.map(function (p) { return p.text; }),
+        pageBoxes: pages.map(function (p) { return p.box; }),
+        pageLines: pages.map(function (p) { return p.lines; }) };
       if (!slipsOn) setSlips(true);
       trackEvent('tcg_slips_attached');
       updateSlipStatus();
@@ -3286,7 +3303,9 @@ function updateSlipStatus() {
   var found = list.length - list.filter(function (e) { return !m.pages[m.key(e.o.orderNumber)]; }).length;
   if (!found) { setSlipMsg('None of these slip pages match the orders in your CSV. Make sure the PDF and the CSV are for the same orders.', false); return; }
   var missing = list.filter(function (e) { return !m.pages[m.key(e.o.orderNumber)]; }).map(function (e) { return '#' + esc(e.o.orderNumber); });
-  var how = (currentFormat() === 'letter1' || currentFormat() === 'labelslip')
+  var how = currentFormat() === '4x6'
+    ? 'With packing slips on, your 4×6 file prints label → slip → next label → next slip on the thermal printer. Slips are trimmed to fit a 4×6 label, and a long card list continues on the next label.'
+    : (currentFormat() === 'letter1' || currentFormat() === 'labelslip')
     ? 'With packing slips on, each order\'s TCGplayer slip prints right after its label.'
     : 'Print your labels as usual, then click <strong>⬇ Slips in label order</strong> to get the slips sorted to match. (Pick 8.5×11 — 1 up to get label and slip together in one file.)';
   setSlipMsg('✓ TCGplayer slips matched to <strong>' + found + ' of ' + list.length + '</strong> orders. ' + how +
@@ -3295,7 +3314,9 @@ function updateSlipStatus() {
 function currentFormat() { var el = document.getElementById('fmt-top'); return el ? el.value : ''; }
 // Builds one PDF: for each order in `list`, its label page (when labelDoc is
 // given, one page per order) followed by that order's TCGplayer slip pages.
-function tcgMerge(labelDoc, list) {
+// With `thermal`, each slip page is cropped to its printed area, scaled to the
+// 4x6 label width and split across as many 4x6 pages as it needs.
+function tcgMerge(labelDoc, list, thermal) {
   return loadPdfLib().then(function () {
     var L = window.PDFLib;
     return Promise.all([
@@ -3312,8 +3333,26 @@ function tcgMerge(labelDoc, list) {
         (m.pages[m.key(e.o.orderNumber)] || []).forEach(function (pi) { steps.push([slips, pi]); });
       });
       if (!labels && !steps.length) throw new Error('no slip pages match these orders');
+      var white = L.rgb(1, 1, 1);
       return steps.reduce(function (p, st) {
-        return p.then(function () { return out.copyPages(st[0], [st[1]]); }).then(function (pg) { out.addPage(pg[0]); });
+        if (!thermal || st[0] !== slips) {
+          return p.then(function () { return out.copyPages(st[0], [st[1]]); }).then(function (pg) { out.addPage(pg[0]); });
+        }
+        return p.then(function () {
+          var src = slips.getPage(st[1]), sz = src.getSize();
+          var box = (tcgSlips.pageBoxes && tcgSlips.pageBoxes[st[1]]) || [0, 0, sz.width, sz.height];
+          return out.embedPage(src, { left: box[0], bottom: box[1], right: box[2], top: box[3] }).then(function (emb) {
+            var plan = Core.thermalSlipPlan(box, 432, 288, 10, tcgSlips.pageLines && tcgSlips.pageLines[st[1]]);
+            plan.chunks.forEach(function (c) {
+              var pg = out.addPage([432, 288]);
+              // The embedded page's origin is the crop box's corner.
+              pg.drawPage(emb, { x: c.x + box[0] * plan.scale, y: c.y + box[1] * plan.scale, xScale: plan.scale, yScale: plan.scale });
+              // Blank the margins so the neighbouring slices don't show.
+              pg.drawRectangle({ x: 0, y: 0, width: 432, height: 288 - plan.margin - c.h, color: white });
+              pg.drawRectangle({ x: 0, y: 288 - plan.margin, width: 432, height: plan.margin, color: white });
+            });
+          });
+        });
       }, Promise.resolve()).then(function () { return out.save(); });
     });
   });
