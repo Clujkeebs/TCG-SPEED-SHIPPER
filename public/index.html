@@ -2799,6 +2799,18 @@ function drawLabel(doc,o,s,bx,by,bw,bh,design){
 function drawSmallLabel(doc,o,x,y,w,h,font){
   var padX=9;
   var lines=[pdfSafe(Core.fullName(o))].concat(addrLines(o).map(pdfSafe));
+  // A street line too long to read at 7.5pt is wrapped onto two lines (at a
+  // comma if there is one) instead of shrunk to fine print that USPS
+  // scanners and carriers struggle with.
+  var maxW=w-2*padX;
+  lines=lines.reduce(function(acc,l,i){
+    if(i===0 || lines.length>=6 || textWidth(doc,l,7.5)<=maxW){ acc.push(l); return acc; }
+    var cut=l.lastIndexOf(', ', Math.floor(l.length*0.75));
+    if(cut<l.length*0.3) cut=l.lastIndexOf(' ', Math.ceil(l.length/2));
+    if(cut<=0){ acc.push(l); return acc; }
+    acc.push(l.slice(0,cut).replace(/,$/,'')); acc.push(l.slice(cut).replace(/^,?\s*/,''));
+    return acc;
+  },[]);
   // Height caps the size for every line (five lines at 10pt don't fit in
   // 72pt); width is then fitted per line, in that line's own weight, so one
   // long street doesn't shrink the whole label.
