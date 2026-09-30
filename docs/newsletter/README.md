@@ -57,6 +57,7 @@ carry `?utm_source=email&utm_campaign=newsletter-YYYY-MM-DD`.
 You're getting this because you signed up for the TCG Speed Shipper weekly
 newsletter at tcgspeedshipper.com.
 Unsubscribe in one click: https://tcgspeedshipper.com/api/newsletter/unsubscribe?t=<token>
+Questions or ideas: newsletter@tcgspeedshipper.com (or just reply)
 TCG Speed Shipper · <OWNER MAILING ADDRESS>
 ```
 
