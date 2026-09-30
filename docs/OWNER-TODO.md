@@ -1,6 +1,6 @@
 # Owner to-do list (things only you can do)
 
-Maintained by Claude and Devin. Refreshed **2026-09-28**. Every item here
+Maintained by Claude and Devin. Refreshed **2026-09-30**. Every item here
 needs **you**: your login, card, identity, DNS, a printer, or a business
 decision. Anything either agent could do in about the same time isn't here;
 we do it instead.
@@ -16,11 +16,11 @@ done. **Legend:** ⏱ your time · 🔥 do first · 💵 costs money
    footers (it lives in a Gmail draft, not on the site). Unblocked: 8
    creator partner emails sent, a welcome email to the newest free user,
    and the newsletter every Tuesday.
-2. [ ] 🔥 **Fix `www` at Porkbun** (it shows a security warning right now):
-   Porkbun → tcgspeedshipper.com → DNS → edit the **CNAME** for `www`:
-   change `oeiwafy8.up.railway.app` to **`zpcjr8pk.up.railway.app`**. If
-   Railway (service → Settings → Networking → `www` domain) shows a **TXT**
-   record, add that at Porkbun too. ⏱ 3 min
+2. [ ] 🔥 **Finish `www` at Porkbun** (the CNAME is fixed; one record
+   left). Porkbun → tcgspeedshipper.com → DNS → add a **TXT** record:
+   host `_railway-verify.www`, answer
+   `railway-verify=2f07e30030ad12a6fcee1329ee23f25808e97b6b21a9f09803683a6ba50dbf54`.
+   Railway then issues the certificate by itself. ⏱ 2 min
 3. [x] ~~Porkbun email forwarding~~: done 2026-09-30. The site now shows
    support@ (footers, support page, terms), privacy@ (privacy policy),
    billing@ (refunds), partners@ (partner applications) and hello@
@@ -72,6 +72,9 @@ After that, the rest of this list can wait for a free evening.
 - [ ] **Bio links:** add `tcgspeedshipper.com/?utm_source=whatnot` to your
   Whatnot profile, and `?utm_source=ebay` / `?utm_source=tcgplayer` to your
   store pages. ⏱ 10 min
+- [ ] **Send Rob's reply** (drafted in your Gmail, in his thread): the
+  thermal label → slip → label feature he asked for is live. Read, edit, send.
+  ⏱ 1 min
 - [ ] **Ask Rob for a one-line testimonial** and permission to use his first
   name on the homepage. ⏱ 2 min
 - [ ] **Apply to TCGplayer "Seller Stories"**
