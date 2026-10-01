@@ -25,8 +25,7 @@ done. **Legend:** ⏱ your time · 🔥 do first · 💵 costs money
    support@ (footers, support page, terms), privacy@ (privacy policy),
    billing@ (refunds), partners@ (partner applications) and hello@
    (Enterprise). All of them forward to your Gmail.
-   - [ ] **Next, 2 min:** Stripe → Settings → Public details → support
-     email `support@tcgspeedshipper.com`, so receipts show it.
+   - [x] ~~Stripe support email~~: done 2026-10-01.
    - [ ] **Next, 2 min:** add the DMARC record at Porkbun (in the Email
      deliverability section below).
 4. [ ] **Delete the old Stripe secret key** (Stripe → Developers → API keys):
