@@ -1,6 +1,6 @@
 # Owner to-do list (things only you can do)
 
-Maintained by Claude and Devin. Refreshed **2026-09-30**. Every item here
+Maintained by Claude and Devin. Refreshed **2026-10-01**. Every item here
 needs **you**: your login, card, identity, DNS, a printer, or a business
 decision. Anything either agent could do in about the same time isn't here;
 we do it instead.
@@ -72,9 +72,8 @@ After that, the rest of this list can wait for a free evening.
 - [ ] **Bio links:** add `tcgspeedshipper.com/?utm_source=whatnot` to your
   Whatnot profile, and `?utm_source=ebay` / `?utm_source=tcgplayer` to your
   store pages. ⏱ 10 min
-- [ ] **Send Rob's reply** (drafted in your Gmail, in his thread): the
-  thermal label → slip → label feature he asked for is live. Read, edit, send.
-  ⏱ 1 min
+- [ ] **Send Rob's reply** (drafted in your Gmail, in his thread): slips
+  now print one label each on his thermal printer. Read, edit, send. ⏱ 1 min
 - [ ] **Ask Rob for a one-line testimonial** and permission to use his first
   name on the homepage. ⏱ 2 min
 - [ ] **Apply to TCGplayer "Seller Stories"**
