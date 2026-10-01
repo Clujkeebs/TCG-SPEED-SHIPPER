@@ -3315,7 +3315,7 @@ function updateSlipStatus() {
   if (!found) { setSlipMsg('None of these slip pages match the orders in your CSV. Make sure the PDF and the CSV are for the same orders.', false); return; }
   var missing = list.filter(function (e) { return !m.pages[m.key(e.o.orderNumber)]; }).map(function (e) { return '#' + esc(e.o.orderNumber); });
   var how = currentFormat() === '4x6'
-    ? 'With packing slips on, your 4×6 file prints label → slip → next label → next slip on the thermal printer. Slips are trimmed to fit a 4×6 label, and a long card list continues on the next label.'
+    ? 'With packing slips on, your 4×6 file prints label → slip → next label → next slip on the thermal printer. A full-page slip is shrunk onto one 4×6 label (only a very long card list takes a second one). Tip: if TCGplayer offers a 4×6 / thermal slip, use that and it prints exactly as is.'
     : (currentFormat() === 'letter1' || currentFormat() === 'labelslip')
     ? 'With packing slips on, each order\'s TCGplayer slip prints right after its label.'
     : 'Print your labels as usual, then click <strong>⬇ Slips in label order</strong> to get the slips sorted to match. (Pick 8.5×11 — 1 up to get label and slip together in one file.)';
@@ -3346,7 +3346,10 @@ function tcgMerge(labelDoc, list, thermal) {
       if (!labels && !steps.length) throw new Error('no slip pages match these orders');
       var white = L.rgb(1, 1, 1);
       return steps.reduce(function (p, st) {
-        if (!thermal || st[0] !== slips) {
+        // A slip that's already label-sized (TCGplayer's thermal version)
+        // prints exactly as TCGplayer made it.
+        var sz0 = st[0] === slips && slips.getPage(st[1]).getSize();
+        if (!thermal || st[0] !== slips || (Math.max(sz0.width, sz0.height) <= 470 && Math.min(sz0.width, sz0.height) <= 330)) {
           return p.then(function () { return out.copyPages(st[0], [st[1]]); }).then(function (pg) { out.addPage(pg[0]); });
         }
         return p.then(function () {
