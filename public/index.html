@@ -3315,7 +3315,7 @@ function updateSlipStatus() {
   if (!found) { setSlipMsg('None of these slip pages match the orders in your CSV. Make sure the PDF and the CSV are for the same orders.', false); return; }
   var missing = list.filter(function (e) { return !m.pages[m.key(e.o.orderNumber)]; }).map(function (e) { return '#' + esc(e.o.orderNumber); });
   var how = currentFormat() === '4x6'
-    ? 'With packing slips on, your 4×6 file prints label → slip → next label → next slip on the thermal printer. A full-page slip is shrunk onto one 4×6 label (only a very long card list takes a second one). Tip: if TCGplayer offers a 4×6 / thermal slip, use that and it prints exactly as is.'
+    ? 'With packing slips on, your 4×6 file prints label → slip → next label → next slip on the thermal printer. Each slip page prints on exactly one 4×6 label, shrunk to fit. Tip: if TCGplayer offers a 4×6 / thermal slip, use that and it prints exactly as is.'
     : (currentFormat() === 'letter1' || currentFormat() === 'labelslip')
     ? 'With packing slips on, each order\'s TCGplayer slip prints right after its label.'
     : 'Print your labels as usual, then click <strong>⬇ Slips in label order</strong> to get the slips sorted to match. (Pick 8.5×11 — 1 up to get label and slip together in one file.)';
@@ -3356,14 +3356,17 @@ function tcgMerge(labelDoc, list, thermal) {
           var src = slips.getPage(st[1]), sz = src.getSize();
           var box = (tcgSlips.pageBoxes && tcgSlips.pageBoxes[st[1]]) || [0, 0, sz.width, sz.height];
           return out.embedPage(src, { left: box[0], bottom: box[1], right: box[2], top: box[3] }).then(function (emb) {
-            var plan = Core.thermalSlipPlan(box, 432, 288, 10, tcgSlips.pageLines && tcgSlips.pageLines[st[1]]);
+            // A tall slip goes on an upright 4x6 (like TCGplayer's own thermal
+            // slips), so it prints bigger; the printer feeds the same label.
+            var tall = box[3] - box[1] > box[2] - box[0], PW = tall ? 288 : 432, PH = tall ? 432 : 288;
+            var plan = Core.thermalSlipPlan(box, PW, PH, 10, tcgSlips.pageLines && tcgSlips.pageLines[st[1]]);
             plan.chunks.forEach(function (c) {
-              var pg = out.addPage([432, 288]);
+              var pg = out.addPage([PW, PH]);
               // The embedded page's origin is the crop box's corner.
               pg.drawPage(emb, { x: c.x + box[0] * plan.scale, y: c.y + box[1] * plan.scale, xScale: plan.scale, yScale: plan.scale });
               // Blank the margins so the neighbouring slices don't show.
-              pg.drawRectangle({ x: 0, y: 0, width: 432, height: 288 - plan.margin - c.h, color: white });
-              pg.drawRectangle({ x: 0, y: 288 - plan.margin, width: 432, height: plan.margin, color: white });
+              pg.drawRectangle({ x: 0, y: 0, width: PW, height: PH - plan.margin - c.h, color: white });
+              pg.drawRectangle({ x: 0, y: PH - plan.margin, width: PW, height: plan.margin, color: white });
             });
           });
         });
