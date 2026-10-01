@@ -441,8 +441,8 @@
   /* Laying a TCGplayer slip (a letter page) onto 4x6 thermal labels.
      `box` is the slip's content area [x0, y0, x1, y1] in PDF points (from
      the text positions), so empty page margins don't shrink the text. The
-     content is scaled to the label's width. If it's taller than one label,
-     it continues on the next: each chunk says where to draw the scaled page
+     whole slip is fitted onto one label, centered, unless that would shrink
+     the text below half size. Then it's set at half size (or the label's width) and continues on the next: each chunk says where to draw the scaled page
      (x, y) so its slice sits under the label's top margin, and how much of
      the label (h) that slice fills. `lines` ([bottom, top] of each text
      line, optional) moves each break up into a gap between lines, so no
@@ -451,10 +451,14 @@
     pageW = pageW || 432; pageH = pageH || 288; margin = margin == null ? 10 : margin;
     var w = Math.max(1, box[2] - box[0]), h = Math.max(1, box[3] - box[1]);
     var usableW = pageW - 2 * margin, usableH = pageH - 2 * margin;
-    var scale = Math.min(usableW / w, 1.4), span = usableH / scale;
+    // Fit the whole slip on one label when the text stays readable (half
+    // size or more); only a long card list continues onto more labels.
+    var fitW = Math.min(usableW / w, 1.4), fitAll = Math.min(fitW, usableH / h);
+    var scale = fitAll >= 0.5 ? fitAll : Math.min(fitW, 0.5), span = usableH / scale;
+    var x = margin + (usableW - w * scale) / 2 - box[0] * scale;
     var chunks = [], top = box[3];
     function chunk(bottom) {
-      chunks.push({ x: margin - box[0] * scale, y: pageH - margin - top * scale, h: (top - bottom) * scale });
+      chunks.push({ x: x, y: pageH - margin - top * scale, h: (top - bottom) * scale });
       top = bottom;
     }
     while (chunks.length < 200) {
