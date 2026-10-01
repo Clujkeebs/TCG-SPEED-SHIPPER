@@ -334,13 +334,15 @@ section('PDF-safe text');
   const mid = core.thermalSlipPlan([36, 300, 576, 756], 432, 288, 10);
   check('a slip that fits at half size or more stays on one label', mid.chunks.length === 1 && Math.abs(mid.scale - 268 / 456) < 1e-9, mid.scale);
   check('a fitted slip is centered across the label', Math.abs(mid.chunks[0].x + 36 * mid.scale - (10 + (412 - 540 * mid.scale) / 2)) < 1e-9);
-  const tall = core.thermalSlipPlan([36, 36, 576, 756], 432, 288, 10);
-  check('a long card list is set at half size and continues on more labels', tall.scale === 0.5 && tall.chunks.length === Math.ceil(720 * 0.5 / 268), tall.chunks.length);
+  const full = core.thermalSlipPlan([36, 36, 576, 756], 432, 288, 10);
+  check('by default even a full page fits on one label', full.chunks.length === 1 && Math.abs(full.scale - 268 / 720) < 1e-9, full.scale);
+  const tall = core.thermalSlipPlan([36, 36, 576, 756], 432, 288, 10, null, { split: true });
+  check('with split, a long card list is set at half size and continues on more labels', tall.scale === 0.5 && tall.chunks.length === Math.ceil(720 * 0.5 / 268), tall.chunks.length);
   check('each continuation shifts up by one label height', Math.abs((tall.chunks[1].y - tall.chunks[0].y) - 268) < 1e-9);
   check('each full chunk fills the label between margins', Math.abs(tall.chunks[0].h - 268) < 1e-9);
   // A line straddling the first break (at 756 - 268/scale) moves the break above it.
   const brk = 756 - 268 / tall.scale;
-  const snapped = core.thermalSlipPlan([36, 36, 576, 756], 432, 288, 10, [[brk - 4, brk + 8], [brk + 12, brk + 24]]);
+  const snapped = core.thermalSlipPlan([36, 36, 576, 756], 432, 288, 10, [[brk - 4, brk + 8], [brk + 12, brk + 24]], { split: true });
   check('a break never cuts a text line in half', Math.abs(snapped.chunks[0].h - (756 - (brk + 8)) * snapped.scale) < 1e-9, snapped.chunks[0].h);
   check('the next label starts at that line', Math.abs(snapped.chunks[1].y + (brk + 8) * snapped.scale - 278) < 1e-9);
   const tiny = core.thermalSlipPlan([100, 700, 200, 720], 432, 288, 10);

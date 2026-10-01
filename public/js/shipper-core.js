@@ -447,14 +447,16 @@
      the label (h) that slice fills. `lines` ([bottom, top] of each text
      line, optional) moves each break up into a gap between lines, so no
      card line is cut in half. */
-  function thermalSlipPlan(box, pageW, pageH, margin, lines) {
+  function thermalSlipPlan(box, pageW, pageH, margin, lines, opts) {
     pageW = pageW || 432; pageH = pageH || 288; margin = margin == null ? 10 : margin;
     var w = Math.max(1, box[2] - box[0]), h = Math.max(1, box[3] - box[1]);
     var usableW = pageW - 2 * margin, usableH = pageH - 2 * margin;
-    // Fit the whole slip on one label when the text stays readable (half
-    // size or more); only a long card list continues onto more labels.
+    // Fit the whole slip on one label, centered. ({split: true} instead
+    // keeps text at half size or more and continues onto more labels.)
     var fitW = Math.min(usableW / w, 1.4), fitAll = Math.min(fitW, usableH / h);
-    var scale = fitAll >= 0.5 ? fitAll : Math.min(fitW, 0.5), span = usableH / scale;
+    // One slip page always prints on exactly one label (customer request:
+    // no thermal paper wasted on continuations), however long its card list.
+    var scale = opts && opts.split ? (fitAll >= 0.5 ? fitAll : Math.min(fitW, 0.5)) : fitAll, span = usableH / scale;
     var x = margin + (usableW - w * scale) / 2 - box[0] * scale;
     var chunks = [], top = box[3];
     function chunk(bottom) {
