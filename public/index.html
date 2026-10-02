@@ -378,6 +378,7 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
 .bold-ret { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 14px; color: var(--text); cursor: pointer; }
 .bold-ret input { width: 18px; height: 18px; accent-color: var(--accent); margin: 0; }
 .bold-ret input { flex: none; }
+.partial-row { margin-top: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
 .bold-ret-text span { color: var(--muted); font-size: 13px; }
 .label-to { text-align: center; line-height: 1.7; }
 .label-to strong { font-size: 14px; color: var(--text); display: block; margin-bottom: 3px; font-family: 'Source Serif 4', serif; }
@@ -2278,6 +2279,16 @@ document.addEventListener('click', function (e) {
   if (b) { e.preventDefault(); startUpgrade(b.getAttribute('data-up'), b.getAttribute('data-interval')); }
 });
 
+// Set by the "Download the N you have left" button for the next download.
+var partialCap = null;
+document.addEventListener('click', function (e) {
+  var b = e.target.closest && e.target.closest('[data-partial]');
+  if (!b) return;
+  e.preventDefault();
+  partialCap = Number(b.getAttribute('data-partial')) || 0;
+  trackEvent('partial_download');
+  triggerDownload(document.getElementById('dl-btn'));
+});
 function showBlockedMessage(gate, count) {
   var box = document.getElementById('error-msg');
   if (!box) return;
@@ -2292,7 +2303,9 @@ function showBlockedMessage(gate, count) {
     var body = gate.plan === 'free'
       ? 'Your labels are built and ready. Upgrade to download all ' + count + ' now — Base covers 500 a month, Premium is unlimited.'
       : 'Premium removes the limit entirely, and Stripe credits the unused part of your Base plan. Your labels are ready to download the moment you switch.';
-    box.innerHTML = upsellHTML(title, body);
+    box.innerHTML = upsellHTML(title, body) +
+      // Never leave a seller empty-handed: the labels they still have are theirs.
+      (left > 0 ? '<div class="partial-row"><button type="button" class="btn-ghost" data-partial="' + left + '">Download the first ' + left + ' label' + (left === 1 ? '' : 's') + ' now</button> <span>and upgrade for the other ' + (count - left) + ' when you\'re ready</span></div>' : '');
   }
   // Shown on the Home tab, where the Download button lives, so the user
   // actually sees it instead of it being buried on another tab.
@@ -3132,6 +3145,11 @@ function triggerDownload(btn){
   }
   var list = printList();
   if(!list.length){ alert('No orders match the "Print" filter — pick a different one.'); return; }
+  // "Download the N you have left": keep orders until N new labels are used.
+  if (partialCap != null) {
+    var cap = partialCap; partialCap = null;
+    list = list.filter(function (e) { if (paidOrderKeys[paidKey(e.o, e.i)]) return true; if (cap > 0) { cap--; return true; } return false; });
+  }
 
   var orig = btn.dataset.label || btn.textContent;
   btn.dataset.label = orig;
