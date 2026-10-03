@@ -136,6 +136,10 @@ section('Pasted addresses');
   check('one-line address with no commas', nc.good.length === 1 && nc.good[0].addr1 === '456 Oak Ave Apt 2' && nc.good[0].city === 'Chicago', JSON.stringify(nc));
   check('name and street on one line', P('Ann Lee 77 Pine Ct\nReno, NV 89501').good[0].addr1 === '77 Pine Ct');
   check('a name like "Price Walker" is not mistaken for a price label', P('Price Walker\n5 Main St\nWaco, TX 76701').good[0].firstName === 'Price');
+  // The owner's real paste: city on its own line, "ST ZIP" below it, a stray note, trailing spaces.
+  const own = P('Wyatt Klier\n1857 Armacost Avenue\nLos Angeles\nCA 90025\n\nAugie Tyau\n2910 Wellington Road\nLos Angeles\nCA 90016\n\nthis does not work\n\nDashiell Cahan\n1435 Lindacrest Drive\nBeverly Hills\nCA 90210-2519 \n\nMaddox Weiss\n2307 S Canfield Avenue\nLos Angeles\nCA 90034 ');
+  check('city line + "ST ZIP" line, with a stray note in between', own.good.length === 4 && own.bad.length === 0 && own.good[2].city === 'Beverly Hills' && own.good[2].zip === '90210-2519' && own.good[3].addr1 === '2307 S Canfield Avenue', JSON.stringify(own));
+  check('city, state and ZIP each on their own line', P('Ann Lee\n5 Main St\nReno\nNV\n89501').good[0].city === 'Reno');
   check('card names above an address are not the name', P('Charizard ex - Obsidian Flames\nBen Fox\n12 Rose Ln\nMesa, AZ 85201').good[0].firstName === 'Ben');
 }
 
