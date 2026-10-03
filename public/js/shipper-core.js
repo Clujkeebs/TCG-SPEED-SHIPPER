@@ -419,10 +419,13 @@
     var m = line.match(US_END_RE);
     if (m) {
       var st = stateCode(m[2]), zip = cleanZip(m[3], st);
-      var city = m[1].replace(/[,\s]+$/, '').trim();
-      if (st && zip && city && !/^\d+$/.test(city)) {
-        return { city: city, state: st, zip: zip, country: '', before: line.slice(0, m.index).replace(/[,\s]+$/, '') };
+      var city = m[1].replace(/[,\s]+$/, '').trim(), before = line.slice(0, m.index).replace(/[,\s]+$/, '');
+      // No commas at all: "Jane Doe 456 Oak Ave Apt 2 Chicago IL 60601".
+      if (/\d/.test(city)) {
+        var nc = city.match(NO_COMMA_RE);
+        if (nc) { before = [before, nc[1], nc[2]].filter(Boolean).join(', '); city = nc[3].trim(); }
       }
+      if (st && zip && city && !/\d/.test(city)) return { city: city, state: st, zip: zip, country: '', before: before };
     }
     m = line.match(CA_END_RE);
     if (m && CA_CODES.indexOf(m[2].toUpperCase()) !== -1) {
@@ -435,9 +438,12 @@
   var BARE_LABEL_RE = /^(?:ship(?:ping)?\s*(?:to|address|info(?:rmation)?)|deliver(?:y)?\s*(?:to|address)|recipient|buyer|customer|address(?:es)?|mailing\s*address|sold\s*to)\s*:?$/i;
   var COUNTRY_ONLY_RE = /^(?:us|usa|u\.s\.a?\.?|united\s+states(?:\s+of\s+america)?|america|canada|ca)$/i;
   var PHONE_RE = /^(?:(?:phone|tel|ph|cell|mobile)\.?\s*[:#]?\s*)?\+?1?[\s.\-()]*\d{3}[\s.\-)]*\d{3}[\s.\-]*\d{4}(?:\s*(?:x|ext\.?)\s*\d+)?$/i;
-  var JUNK_RE = /^(?:order|sale|item|items|qty|quantity|tracking|ship\s*by|shipping\s*(?:method|service|speed|type)|sku|price|total|subtotal|paid|date|sold|buyer\s*note|note|email|e-mail)\b/i;
+  var JUNK_RE = /^(?:order|sale|item|items|qty|quantity|tracking|ship\s*by|ship(?:ping)?\s*(?:method|service|speed|type|date|cost|paid)|sku|price|total|subtotal|tax|paid|date|sold|buyer\s*(?:note|message|username|email)|note|message|email|e-mail|username|condition|set|rarity|product)(?:\s*(?:number|no\.?|id|date|#))?\s*(?:[:#]|$)/i;
+  var BUSINESS_RE = /\b(?:llc|l\.l\.c|inc|corp|co\.|company|ltd|cards|games|gaming|shop|store|collectibles|hobbies|hobby|tcg|comics|trading|enterprises|attn|c\/o)\b/i;
+  var STREET_WORDS = 'st|street|ave|avenue|rd|road|blvd|boulevard|dr|drive|ln|lane|ct|court|way|pl|place|ter|terrace|cir|circle|hwy|highway|pkwy|parkway|trl|trail|sq|square|loop|row|run|pike|xing|crossing';
+  var NO_COMMA_RE = new RegExp('^(.*?)\\s*(\\d+[A-Za-z]?(?:-\\d+)?\\s+.*?\\b(?:' + STREET_WORDS + ')\\.?(?:\\s+(?:n|s|e|w|ne|nw|se|sw)\\.?)?(?:\\s+(?:apt|unit|ste|suite|#|fl|bldg|lot|rm)\\.?\\s*#?\\s*[\\w-]+)?)\\s+([A-Za-z][A-Za-z .\'-]*)$', 'i');
   function isJunk(l) {
-    return BARE_LABEL_RE.test(l) || /^\d+\s*[x×]\s|^[x×]\s*\d+\b/i.test(l) ||
+    return BARE_LABEL_RE.test(l) || /^\d+\s*[x×]\s|^[x×]\s*\d+\b/i.test(l) || /^\d{1,3}$/.test(l) ||
       /^(?:first\s*)?name\b.*\b(?:address|city|zip|state)\b/i.test(l) || COUNTRY_ONLY_RE.test(l) || PHONE_RE.test(l) || /^\S+@\S+\.\S+$/.test(l) || JUNK_RE.test(l) || /\$\s?\d/.test(l) || /^[-=_*#.\s]+$/.test(l);
   }
   function isStreet(l) {
@@ -452,6 +458,15 @@
     return t && t === t.toLowerCase() ? t.replace(/\b([a-z])/g, function (c) { return c.toUpperCase(); }) : t;
   }
 
+  // "Ann Lee 77 Pine Ct" → ["Ann Lee", "77 Pine Ct"].
+  var NAME_STREET_RE = new RegExp('^([A-Za-z][A-Za-z .\'-]*?)\\s+(\\d+[A-Za-z]?\\s+.*\\b(?:' + STREET_WORDS + ')\\b.*)$', 'i');
+  function splitNameStreet(l) {
+    var m = !isStreet(l) && l.match(NAME_STREET_RE);
+    return m ? [m[1], m[2]] : [l];
+  }
+  // Leftover lines only count as a failed address if one looks like a street.
+  function looksLikeAddress(ls) { return ls.some(function (x) { return isStreet(x) || /\b\d{5}\b/.test(x); }); }
+
   function parsePastedAddresses(text) {
     var raw = String(text || '').replace(/\r\n?/g, '\n').replace(/[   ]/g, ' ').replace(/[​-‍﻿]/g, '');
     var lines = [];
@@ -459,7 +474,10 @@
       // Spreadsheet rows: tabs become commas, so the row reads as one line.
       l = l.replace(/\t+/g, ', ').replace(/\s{2,}/g, ' ').trim().replace(/^[,\s]+|[,\s]+$/g, '');
       l = l.replace(/^(?:\d{1,3}[.)]|[-*•·▪]|\(\d{1,3}\))\s+(?=\D)/, '');   // list numbering / bullets
-      l = l.replace(LABEL_RE, '').trim();
+      if (JUNK_RE.test(l)) { lines.push(''); return; }
+      l = l.replace(LABEL_RE, '').replace(/^(?:buyer|recipient|customer|ship(?:ping)?\s*to|full|contact)?\s*name\s*[:\-–]\s*/i, '').trim();
+      // A country at the end of a one-line address: "..., IL 62701, US".
+      l = l.replace(/(\d{5}(?:-\d{4})?|[A-Za-z]\d[A-Za-z]\s?\d[A-Za-z]\d)\s*,?\s*(?:us|usa|u\.s\.a?\.?|united\s+states(?:\s+of\s+america)?|canada)\.?$/i, '$1');
       lines.push(l);
     });
     // "City, ST" with the ZIP alone on the next line → one line.
@@ -484,8 +502,9 @@
       var start = 0;
       for (var k = pre.length - 1; k >= 0; k--) if (pre[k] === null) { var after = pre.slice(k + 1).filter(Boolean); if (after.length) { start = k + 1; break; } }
       var dropped = pre.slice(0, start).filter(Boolean);
-      if (dropped.length) bad.push({ raw: dropped.join('\n'), error: 'Couldn\'t find a "City, ST ZIP" for this one.' });
-      var cand = pre.slice(start).filter(Boolean);
+      if (dropped.length && looksLikeAddress(dropped)) bad.push({ raw: dropped.join('\n'), error: 'Couldn\'t find a "City, ST ZIP" for this one.' });
+      var cand = [];
+      pre.slice(start).filter(Boolean).forEach(function (x) { cand.push.apply(cand, splitNameStreet(x)); });
       // Name a line with no street at all ("Jane Doe Chicago, IL 60601")? Not guessable.
       var si = -1;
       for (var j = 0; j < cand.length; j++) if (isStreet(cand[j])) { si = j; break; }
@@ -493,8 +512,11 @@
       if (si === -1) { nameLine = cand[0] || ''; streets = cand.slice(1); }
       else {
         var before = cand.slice(0, si).filter(function (x) { return !isUnit(x); });
-        if (before.length === 1) nameLine = before[0];
-        else if (before.length >= 2) { nameLine = before[before.length - 2]; company = before[before.length - 1]; }
+        nameLine = before[before.length - 1] || '';
+        // "Jane Doe / Card Shop LLC / 1 Main St": the name is above the business.
+        if (before.length >= 2 && BUSINESS_RE.test(nameLine) && !BUSINESS_RE.test(before[before.length - 2])) {
+          company = nameLine; nameLine = before[before.length - 2];
+        }
         streets = cand.slice(si);
       }
       var shown = cand.concat([l]).join('\n');
@@ -510,7 +532,7 @@
       });
     });
     var left = group.filter(Boolean);
-    if (left.length) bad.push({ raw: left.join('\n'), error: 'Couldn\'t find a "City, ST ZIP" for this one.' });
+    if (left.length && looksLikeAddress(left)) bad.push({ raw: left.join('\n'), error: 'Couldn\'t find a "City, ST ZIP" for this one.' });
     return { good: good, bad: bad };
   }
 
