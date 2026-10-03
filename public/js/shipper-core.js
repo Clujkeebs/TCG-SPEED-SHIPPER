@@ -480,6 +480,26 @@
       l = l.replace(/(\d{5}(?:-\d{4})?|[A-Za-z]\d[A-Za-z]\s?\d[A-Za-z]\d)\s*,?\s*(?:us|usa|u\.s\.a?\.?|united\s+states(?:\s+of\s+america)?|canada)\.?$/i, '$1');
       lines.push(l);
     });
+    // City on one line, "ST ZIP" on the next (or city / ST / ZIP on three
+    // lines) → one "City, ST ZIP" line. Blank lines in between don't count.
+    var STATE_ZIP_ONLY_RE = new RegExp('^(' + STATE_ALT + '|[A-Za-z]{2})\\.?\\s*,?\\s*(\\d{4,5}(?:\\s*-?\\s*\\d{4})?|[A-Za-z]\\d[A-Za-z]\\s?\\d[A-Za-z]\\d)$', 'i');
+    var STATE_ONLY_RE = new RegExp('^(' + STATE_ALT + '|[A-Za-z]{2})\\.?$', 'i');
+    var prevIdx = function (i) { for (var k = i - 1; k >= 0; k--) if (lines[k]) return k; return -1; };
+    for (var q = 0; q < lines.length; q++) {
+      var cur = lines[q];
+      if (!cur) continue;
+      var pk = prevIdx(q);
+      if (pk === -1) continue;
+      var sz = cur.match(STATE_ZIP_ONLY_RE);
+      if (sz && stateCode(sz[1]) || (sz && CA_CODES.indexOf(sz[1].toUpperCase()) !== -1)) {
+        if (/^[A-Za-z][A-Za-z .'-]*$/.test(lines[pk]) && !matchCityLine(lines[pk])) { lines[pk] = lines[pk] + ', ' + cur; lines[q] = ''; }
+        continue;
+      }
+      if (ZIP_ONLY_RE.test(cur) && STATE_ONLY_RE.test(lines[pk]) && stateCode(lines[pk])) {
+        var ck = prevIdx(pk);
+        if (ck !== -1 && /^[A-Za-z][A-Za-z .'-]*$/.test(lines[ck])) { lines[ck] = lines[ck] + ', ' + lines[pk] + ' ' + cur; lines[pk] = ''; lines[q] = ''; }
+      }
+    }
     // "City, ST" with the ZIP alone on the next line → one line.
     for (var i = 0; i < lines.length - 1; i++) {
       if (lines[i] && CITY_STATE_ONLY_RE.test(lines[i]) && stateCode(lines[i].match(CITY_STATE_ONLY_RE)[2]) && ZIP_ONLY_RE.test(lines[i + 1])) {
