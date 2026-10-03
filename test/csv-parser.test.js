@@ -112,6 +112,22 @@ section('Pasted addresses');
   check('apt line kept as addr2', r.good[0].addr2 === 'Apt 2B');
   check('trailing USA line tolerated', r.good[1].zip === '62701-1234' && r.good[1].state === 'IL');
   check('CRLF input handled', core.parsePastedAddresses('A B\r\n1 St\r\nX, NY 10001').good.length === 1);
+  const P = (t) => core.parsePastedAddresses(t);
+  check('addresses without blank lines between them', P('Jane Doe\n456 Oak Ave\nChicago, IL 60601\nBob Roe\n1 Main St\nSpringfield IL 62701').good.length === 2);
+  const eb = P('Ship to\nJohn Smith\n123 Elm Street\nUnit 4\nAustin, TX 78701-1234\nUnited States\n(512) 555-1234\njohn@example.com');
+  check('eBay copy: labels, country, phone and email ignored', eb.good.length === 1 && eb.bad.length === 0 && eb.good[0].firstName === 'John' && eb.good[0].addr2 === 'Unit 4', JSON.stringify(eb));
+  const one = P('Jane Doe, 456 Oak Ave, Apt 2B, Chicago, IL 60601');
+  check('one-line address', one.good.length === 1 && one.good[0].addr1 === '456 Oak Ave' && one.good[0].addr2 === 'Apt 2B' && one.good[0].city === 'Chicago');
+  check('full state name', P('Maria Lopez\n77 Sunset Blvd\nLos Angeles, California, 90028').good[0].state === 'CA');
+  check('ZIP on its own line', P('Sam Lee\n9 Pine Rd\nPortland, OR\n97201').good[0].zip === '97201');
+  const tab = P('Name\tAddress\tCity\tState\tZip\nAmy Wu\t12 Bay St\tBoston\tMA\t2108');
+  check('spreadsheet row, header skipped, lost leading zero restored', tab.good.length === 1 && tab.bad.length === 0 && tab.good[0].zip === '02108', JSON.stringify(tab));
+  const junk = P('Order #12345\n1x Charizard ex\n$12.50\nLiam Gray\n5 Oak Ct\nReno, NV 89501');
+  check('order lines and card lines are not names', junk.good.length === 1 && junk.good[0].firstName === 'Liam', JSON.stringify(junk));
+  check('all-lowercase is capitalized', P('emma stone\n10 main st\ndallas, tx 75201').good[0].lastName === 'Stone');
+  check('Canadian address', P('Leo Chen\n100 King St W\nToronto, ON M5H 1A1\nCanada').good[0].country === 'CA');
+  const left = P('Jane Doe\n456 Oak Ave\nChicago IL\n\nGood Guy\n1 St\nNew York, NY 10001');
+  check('an incomplete address is reported, not dropped', left.good.length === 1 && left.bad.length === 1);
 }
 
 section('Product weight parsing edge cases');
