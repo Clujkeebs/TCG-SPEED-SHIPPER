@@ -375,6 +375,8 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
 .label-from { font-size: 11px; color: var(--muted); line-height: 1.6; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 12px; }
 .label-from strong { font-size: 12px; color: var(--text); display: block; margin-bottom: 2px; }
 .label-from.bold { color: var(--text); font-weight: 700; }
+.label-from.noline { border-bottom-color: transparent; }
+.bold-ret + .bold-ret { margin-top: 8px; }
 .bold-ret { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 14px; color: var(--text); cursor: pointer; }
 .bold-ret input { width: 18px; height: 18px; accent-color: var(--accent); margin: 0; }
 .bold-ret input { flex: none; }
@@ -928,6 +930,7 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
         </div>
       </div>
       <label class="bold-ret" for="s-bold"><input type="checkbox" id="s-bold" /><span class="bold-ret-text">Print the return address in bold <span>(darker on thermal printers)</span></span></label>
+      <label class="bold-ret" for="s-noline"><input type="checkbox" id="s-noline" /><span class="bold-ret-text">No divider line under the return address <span>(keeps the top-right clear for a postage meter)</span></span></label>
     </div>
 
     <!-- CSV upload -->
@@ -2579,6 +2582,7 @@ function saveAddr() {
     var d = {};
     FIELDS.forEach(function(id){ d[id] = document.getElementById(id).value; });
     d['s-bold'] = document.getElementById('s-bold').checked;
+    d['s-noline'] = document.getElementById('s-noline').checked;
     localStorage.setItem(LS_KEY, JSON.stringify(d));
     var b = document.getElementById('saved-badge');
     b.classList.add('show');
@@ -2596,6 +2600,7 @@ function loadAddr() {
       if (el && d[id] != null) el.value = d[id];
     });
     document.getElementById('s-bold').checked = !!d['s-bold'];
+    document.getElementById('s-noline').checked = !!d['s-noline'];
   } catch(e) {}
 }
 
@@ -2617,7 +2622,8 @@ function getSender() {
     city:  document.getElementById('s-city').value.trim(),
     state: document.getElementById('s-state').value.trim(),
     zip:   document.getElementById('s-zip').value.trim(),
-    bold:  document.getElementById('s-bold').checked
+    bold:  document.getElementById('s-bold').checked,
+    noLine: document.getElementById('s-noline').checked
   };
 }
 
@@ -2783,7 +2789,7 @@ function renderPreviews() {
     var slip=(slipsOn||format==='labelslip')?'<div class="slip-tag">+ packing slip</div>':'';
     div.innerHTML='<label class="label-shipped"><input type="checkbox" data-key="'+esc(key)+'"'+(isShipped?' checked':'')+'> shipped</label>'+
       '<div class="label-num" title="'+(o.orderNumber?'Order #'+esc(o.orderNumber):'')+'">#'+(i+1)+'</div>'+
-      '<div class="label-from'+(s.bold?' bold':'')+'"><strong>'+esc(s.name||'Your Name')+'</strong>'+
+      '<div class="label-from'+(s.bold?' bold':'')+(s.noLine?' noline':'')+'"><strong>'+esc(s.name||'Your Name')+'</strong>'+
       esc(s.addr1||'')+(s.addr2?', '+esc(s.addr2):'')+'<br>'+esc(sLine2)+'</div>'+
       '<div class="label-to"><strong>'+esc(Core.fullName(o))+'</strong>'+
       '<span>'+al.join('<br>')+'</span>'+slip+(o.shipMethod?'<div class="slip-tag ship-tag">'+esc(o.shipMethod)+'</div>':'')+tierTag+stampTagFor(i)+'</div>';
@@ -2848,9 +2854,12 @@ function drawLabel(doc,o,s,bx,by,bw,bh,design){
   retLines.forEach(function(l){ doc.text(l,rx,ry); ry+=12; });
 
   ry+=8;
-  doc.setDrawColor(accent[0],accent[1],accent[2]);
-  doc.setLineWidth(0.75);
-  doc.line(bx+padX, ry, bx+bw-padX, ry);
+  // Postage meters print their indicia top-right, where this line would run.
+  if(!s.noLine){
+    doc.setDrawColor(accent[0],accent[1],accent[2]);
+    doc.setLineWidth(0.75);
+    doc.line(bx+padX, ry, bx+bw-padX, ry);
+  }
   ry+=8;
 
   // Long names/streets shrink to fit instead of running off the label edge.
@@ -3592,8 +3601,8 @@ document.getElementById('paste-generate-btn').addEventListener('click', function
   document.getElementById('preview-area').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
-FIELDS.concat('s-bold').forEach(function(id){
-  document.getElementById(id).addEventListener(id==='s-bold'?'change':'input',function(){ saveAddr(); if(orders.length) renderPreviews(); });
+FIELDS.concat('s-bold', 's-noline').forEach(function(id){
+  document.getElementById(id).addEventListener(/^s-(bold|noline)$/.test(id)?'change':'input',function(){ saveAddr(); if(orders.length) renderPreviews(); });
 });
 
 document.getElementById('clear-btn').addEventListener('click',function(){
