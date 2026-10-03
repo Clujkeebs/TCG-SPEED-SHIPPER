@@ -1,6 +1,6 @@
 # Owner to-do list (things only you can do)
 
-Maintained by Claude and Devin. Refreshed **2026-10-01**. Every item here
+Maintained by Claude and Devin. Refreshed **2026-10-03**. Every item here
 needs **you**: your login, card, identity, DNS, a printer, or a business
 decision. Anything either agent could do in about the same time isn't here;
 we do it instead.
@@ -26,8 +26,7 @@ done. **Legend:** ⏱ your time · 🔥 do first · 💵 costs money
    billing@ (refunds), partners@ (partner applications) and hello@
    (Enterprise). All of them forward to your Gmail.
    - [x] ~~Stripe support email~~: done 2026-10-01.
-   - [ ] **Next, 2 min:** add the DMARC record at Porkbun (in the Email
-     deliverability section below).
+   - [x] ~~DMARC record~~: done 2026-10-02.
 4. [ ] **Delete the old Stripe secret key** (Stripe → Developers → API keys):
    the one *not* named "Railway". Railway has run clean all day on the new
    one. ⏱ 1 min
@@ -122,8 +121,7 @@ Ranked by payoff. Each one is a 2-minute sign-in.
 
 ## 📧 Email deliverability (after the forwarding above)
 
-- [ ] **DMARC record at Porkbun:** TXT, host `_dmarc`, value
-  `v=DMARC1; p=none; rua=mailto:dmarc@tcgspeedshipper.com`. ⏱ 2 min
+- [x] ~~DMARC record at Porkbun~~: done 2026-10-02.
 - [ ] **Custom SMTP for Supabase Auth** (Resend free tier, sending from
   `support@tcgspeedshipper.com`). Password-reset emails currently use
   Supabase's shared sender, which is unreliable. Resend shows the DNS
