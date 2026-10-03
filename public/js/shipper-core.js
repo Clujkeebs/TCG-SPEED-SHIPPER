@@ -376,31 +376,141 @@
 
   /* ── Pasted addresses ── */
 
-  var CITY_STATE_ZIP_RE = /^(.+?),?\s+([A-Za-z]{2})\.?\s+(\d{5}(?:[-\s]?\d{4})?)$/;
+  /* ── Pasted addresses → orders ──
+     Forgiving on purpose: sellers paste from eBay, Whatnot, PayPal, emails,
+     spreadsheets and notes. We find each address by its "City, ST ZIP" line
+     (anywhere, with or without commas, full state names, ZIP+4, Canada too),
+     so blank lines between addresses are optional, one-line addresses work,
+     and phone numbers, emails, "Ship to:" labels, order numbers and country
+     lines are ignored. */
+  var STATE_NAMES = { alabama: 'AL', alaska: 'AK', arizona: 'AZ', arkansas: 'AR', california: 'CA', colorado: 'CO', connecticut: 'CT',
+    delaware: 'DE', 'district of columbia': 'DC', florida: 'FL', georgia: 'GA', hawaii: 'HI', idaho: 'ID', illinois: 'IL', indiana: 'IN',
+    iowa: 'IA', kansas: 'KS', kentucky: 'KY', louisiana: 'LA', maine: 'ME', maryland: 'MD', massachusetts: 'MA', michigan: 'MI',
+    minnesota: 'MN', mississippi: 'MS', missouri: 'MO', montana: 'MT', nebraska: 'NE', nevada: 'NV', 'new hampshire': 'NH',
+    'new jersey': 'NJ', 'new mexico': 'NM', 'new york': 'NY', 'north carolina': 'NC', 'north dakota': 'ND', ohio: 'OH', oklahoma: 'OK',
+    oregon: 'OR', pennsylvania: 'PA', 'rhode island': 'RI', 'south carolina': 'SC', 'south dakota': 'SD', tennessee: 'TN', texas: 'TX',
+    utah: 'UT', vermont: 'VT', virginia: 'VA', washington: 'WA', 'west virginia': 'WV', wisconsin: 'WI', wyoming: 'WY',
+    'puerto rico': 'PR', guam: 'GU', 'virgin islands': 'VI', 'us virgin islands': 'VI', 'american samoa': 'AS', 'northern mariana islands': 'MP' };
+  var US_CODES = 'AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY PR GU VI AS MP AA AE AP FM MH PW'.split(' ');
+  var CA_CODES = 'AB BC MB NB NL NS NT NU ON PE QC SK YT'.split(' ');
+  var STATE_ALT = Object.keys(STATE_NAMES).sort(function (x, y) { return y.length - x.length; }).join('|');
+  // ...city[,] STATE[.][,] ZIP at the end of a line. City is the last comma part.
+  var US_END_RE = new RegExp('(?:^|,)\\s*([^,]*?[A-Za-z][^,]*?)\\s*,?\\s+(' + STATE_ALT + '|[A-Za-z]{2})\\.?\\s*,?\\s*(\\d{4,5}(?:\\s*[-–]?\\s*\\d{4})?)$', 'i');
+  var CA_END_RE = /(?:^|,)\s*([^,]*?[A-Za-z][^,]*?)\s*,?\s+([A-Za-z]{2})\.?\s*,?\s*([A-Za-z]\d[A-Za-z])\s?(\d[A-Za-z]\d)$/;
+  // Kept for "City, ST" on one line with the ZIP alone on the next.
+  var CITY_STATE_ONLY_RE = new RegExp('^([^,]*?[A-Za-z][^,]*?)\\s*,?\\s+(' + STATE_ALT + '|[A-Za-z]{2})\\.?$', 'i');
+  var ZIP_ONLY_RE = /^(\d{5}(?:-?\d{4})?)$/;
+
+  function stateCode(raw) {
+    var t = String(raw || '').trim().toLowerCase().replace(/\.$/, '');
+    if (STATE_NAMES[t]) return STATE_NAMES[t];
+    t = t.toUpperCase();
+    return US_CODES.indexOf(t) !== -1 ? t : '';
+  }
+  function cleanZip(zip, st) {
+    var d = String(zip).replace(/[^\d]/g, '');
+    // Spreadsheets drop the leading zero of New England / NJ / PR ZIPs.
+    if (d.length === 4 || d.length === 8) d = '0' + d;
+    if (d.length !== 5 && d.length !== 9) return '';
+    return d.length === 9 ? d.slice(0, 5) + '-' + d.slice(5) : d;
+  }
+  // Matches the end of a line; returns the address tail and what came before it.
+  function matchCityLine(line) {
+    var m = line.match(US_END_RE);
+    if (m) {
+      var st = stateCode(m[2]), zip = cleanZip(m[3], st);
+      var city = m[1].replace(/[,\s]+$/, '').trim();
+      if (st && zip && city && !/^\d+$/.test(city)) {
+        return { city: city, state: st, zip: zip, country: '', before: line.slice(0, m.index).replace(/[,\s]+$/, '') };
+      }
+    }
+    m = line.match(CA_END_RE);
+    if (m && CA_CODES.indexOf(m[2].toUpperCase()) !== -1) {
+      return { city: m[1].trim(), state: m[2].toUpperCase(), zip: (m[3] + ' ' + m[4]).toUpperCase(), country: 'CA', before: line.slice(0, m.index).replace(/[,\s]+$/, '') };
+    }
+    return null;
+  }
+
+  var LABEL_RE = /^(?:ship(?:ping)?\s*(?:to|address)|deliver(?:y)?\s*(?:to|address)|recipient|buyer|customer|name|full\s*name|address(?:\s*line)?\s*\d?|addr\s*\d?|street(?:\s*address)?|mailing\s*address|city(?:\s*\/\s*state(?:\s*\/\s*zip)?)?|state|zip(?:\s*code)?|postal\s*code|to)\s*[:\-–]\s*/i;
+  var BARE_LABEL_RE = /^(?:ship(?:ping)?\s*(?:to|address|info(?:rmation)?)|deliver(?:y)?\s*(?:to|address)|recipient|buyer|customer|address(?:es)?|mailing\s*address|sold\s*to)\s*:?$/i;
+  var COUNTRY_ONLY_RE = /^(?:us|usa|u\.s\.a?\.?|united\s+states(?:\s+of\s+america)?|america|canada|ca)$/i;
+  var PHONE_RE = /^(?:(?:phone|tel|ph|cell|mobile)\.?\s*[:#]?\s*)?\+?1?[\s.\-()]*\d{3}[\s.\-)]*\d{3}[\s.\-]*\d{4}(?:\s*(?:x|ext\.?)\s*\d+)?$/i;
+  var JUNK_RE = /^(?:order|sale|item|items|qty|quantity|tracking|ship\s*by|shipping\s*(?:method|service|speed|type)|sku|price|total|subtotal|paid|date|sold|buyer\s*note|note|email|e-mail)\b/i;
+  function isJunk(l) {
+    return BARE_LABEL_RE.test(l) || /^\d+\s*[x×]\s|^[x×]\s*\d+\b/i.test(l) ||
+      /^(?:first\s*)?name\b.*\b(?:address|city|zip|state)\b/i.test(l) || COUNTRY_ONLY_RE.test(l) || PHONE_RE.test(l) || /^\S+@\S+\.\S+$/.test(l) || JUNK_RE.test(l) || /\$\s?\d/.test(l) || /^[-=_*#.\s]+$/.test(l);
+  }
+  function isStreet(l) {
+    return /^\d+[a-z]?(?:-\d+)?\s+\S/i.test(l) || /^(?:p\.?\s*o\.?\s*box|post\s+office\s+box|box\s+\d|rr\s*\d|rural\s+route|hc\s*\d|psc\s*\d|unit\s+\d+\s+box|one|two|three)\b/i.test(l);
+  }
+  function isUnit(l) {
+    return /^(?:apt|apartment|unit|ste|suite|#|fl|floor|bldg|building|rm|room|lot|spc|space|dept)\b\.?/i.test(l);
+  }
+
+  function tidy(t) {
+    t = String(t || '').trim();
+    return t && t === t.toLowerCase() ? t.replace(/\b([a-z])/g, function (c) { return c.toUpperCase(); }) : t;
+  }
 
   function parsePastedAddresses(text) {
-    var blocks = String(text || '').replace(/\r\n?/g, '\n').split(/\n\s*\n/)
-      .map(function (b) { return b.trim(); }).filter(Boolean);
-    var good = [], bad = [];
-    blocks.forEach(function (block) {
-      var lines = block.split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
-      // A trailing "USA"/"United States" line is common when copying from
-      // TCGplayer or eBay; drop it rather than rejecting the whole block.
-      if (lines.length > 2 && /^(us|usa|u\.s\.a?\.?|united states( of america)?)$/i.test(lines[lines.length - 1])) lines.pop();
-      if (lines.length < 2) { bad.push({ raw: block, error: 'Needs a name line and a "City, ST ZIP" line.' }); return; }
-      var last = lines[lines.length - 1];
-      var m = last.match(CITY_STATE_ZIP_RE);
-      if (!m) { bad.push({ raw: block, error: 'Last line "' + last + '" doesn\'t look like "City, ST ZIP".' }); return; }
-      var name = splitName(lines[0]);
-      var streetLines = lines.slice(1, lines.length - 1);
+    var raw = String(text || '').replace(/\r\n?/g, '\n').replace(/[   ]/g, ' ').replace(/[​-‍﻿]/g, '');
+    var lines = [];
+    raw.split('\n').forEach(function (l) {
+      // Spreadsheet rows: tabs become commas, so the row reads as one line.
+      l = l.replace(/\t+/g, ', ').replace(/\s{2,}/g, ' ').trim().replace(/^[,\s]+|[,\s]+$/g, '');
+      l = l.replace(/^(?:\d{1,3}[.)]|[-*•·▪]|\(\d{1,3}\))\s+(?=\D)/, '');   // list numbering / bullets
+      l = l.replace(LABEL_RE, '').trim();
+      lines.push(l);
+    });
+    // "City, ST" with the ZIP alone on the next line → one line.
+    for (var i = 0; i < lines.length - 1; i++) {
+      if (lines[i] && CITY_STATE_ONLY_RE.test(lines[i]) && stateCode(lines[i].match(CITY_STATE_ONLY_RE)[2]) && ZIP_ONLY_RE.test(lines[i + 1])) {
+        lines[i] = lines[i] + ' ' + lines[i + 1]; lines[i + 1] = '';
+      }
+    }
+
+    var good = [], bad = [], group = [];
+    // group holds the non-junk lines since the last address (or blank line
+    // that came after a complete address).
+    lines.forEach(function (l) {
+      if (!l) { group.push(null); return; }
+      var m = matchCityLine(l);
+      if (!m) { if (!isJunk(l)) group.push(l); return; }
+      var pre = group;
+      group = [];
+      // One-line addresses: "Jane Doe, 456 Oak Ave, Apt 2, Chicago, IL 60601".
+      if (m.before) m.before.split(/\s*,\s*/).filter(Boolean).forEach(function (part) { if (!isJunk(part)) pre.push(part); });
+      // Only look back to the last blank line if there are lines after it.
+      var start = 0;
+      for (var k = pre.length - 1; k >= 0; k--) if (pre[k] === null) { var after = pre.slice(k + 1).filter(Boolean); if (after.length) { start = k + 1; break; } }
+      var dropped = pre.slice(0, start).filter(Boolean);
+      if (dropped.length) bad.push({ raw: dropped.join('\n'), error: 'Couldn\'t find a "City, ST ZIP" for this one.' });
+      var cand = pre.slice(start).filter(Boolean);
+      // Name a line with no street at all ("Jane Doe Chicago, IL 60601")? Not guessable.
+      var si = -1;
+      for (var j = 0; j < cand.length; j++) if (isStreet(cand[j])) { si = j; break; }
+      var nameLine = '', company = '', streets;
+      if (si === -1) { nameLine = cand[0] || ''; streets = cand.slice(1); }
+      else {
+        var before = cand.slice(0, si).filter(function (x) { return !isUnit(x); });
+        if (before.length === 1) nameLine = before[0];
+        else if (before.length >= 2) { nameLine = before[before.length - 2]; company = before[before.length - 1]; }
+        streets = cand.slice(si);
+      }
+      var shown = cand.concat([l]).join('\n');
+      if (!nameLine) { bad.push({ raw: shown, error: 'No name above the street address.' }); return; }
+      if (!streets.length) { bad.push({ raw: shown, error: 'No street address between the name and "' + m.city + ', ' + m.state + '".' }); return; }
+      var name = splitName(tidy(nameLine));
+      var addr = (company ? [company].concat(streets) : streets).map(tidy);
       good.push({
         firstName: name.first, lastName: name.last,
-        addr1: streetLines[0] || '',
-        addr2: streetLines.slice(1).join(', '),
-        city: m[1].replace(/,\s*$/, ''), state: m[2].toUpperCase(), zip: m[3].replace(/\s/, '-'),
-        country: '', orderNumber: '', shipMethod: '', itemCount: 0, items: [], orderValue: null
+        addr1: addr[0], addr2: addr.slice(1).join(', '),
+        city: tidy(m.city), state: m.state, zip: m.zip,
+        country: m.country, orderNumber: '', shipMethod: '', itemCount: 0, items: [], orderValue: null
       });
     });
+    var left = group.filter(Boolean);
+    if (left.length) bad.push({ raw: left.join('\n'), error: 'Couldn\'t find a "City, ST ZIP" for this one.' });
     return { good: good, bad: bad };
   }
 

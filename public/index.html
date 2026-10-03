@@ -1135,13 +1135,14 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
       <div class="section fade-in-up">
         <div class="section-label">Paste Address(es)</div>
         <p style="font-size:13px;color:var(--text-secondary);margin-bottom:10px;line-height:1.6;">
-          One address per block. Separate multiple addresses with a blank line, like this:
+          Paste addresses any way you have them: copied from eBay, Whatnot, PayPal or an email, one per line, or straight from a spreadsheet. Blank lines between them are optional, and phone numbers, emails and "Ship to" lines are ignored. For example:
         </p>
         <div class="paste-example">Jane Doe
 456 Oak Ave
 Apt 2B
 Chicago, IL 60601</div>
-        <textarea id="paste-input" class="paste-textarea" rows="10" placeholder="Paste one or more addresses here, separated by a blank line between each..."></textarea>
+        <textarea id="paste-input" class="paste-textarea" rows="10" placeholder="Paste your addresses here..."></textarea>
+        <p class="tip" id="paste-count" aria-live="polite"></p>
         <div id="paste-issues"></div>
         <div class="btn-row">
           <button class="btn-dl" id="paste-generate-btn">Generate Labels</button>
@@ -3581,6 +3582,14 @@ document.getElementById('sample-order-btn').addEventListener('click',function(){
   }).then(function(){ btn.disabled=false; });
 });
 
+// Live count while typing, so problems show up before clicking Generate.
+document.getElementById('paste-input').addEventListener('input', function () {
+  var el = document.getElementById('paste-count'), v = this.value;
+  if (!v.trim()) { el.textContent = ''; return; }
+  var r = parsePastedAddresses(v);
+  el.textContent = 'Found ' + r.good.length + ' address' + (r.good.length === 1 ? '' : 'es') +
+    (r.bad.length ? ' · ' + r.bad.length + ' need a look (shown when you click Generate)' : '');
+});
 document.getElementById('paste-generate-btn').addEventListener('click', function () {
   if (!isPremium()) { switchTab('pricing'); return; }
   var result = parsePastedAddresses(document.getElementById('paste-input').value);
@@ -3591,7 +3600,8 @@ document.getElementById('paste-generate-btn').addEventListener('click', function
     var div = document.createElement('div');
     div.className = 'error-box';
     div.style.marginBottom = '8px';
-    div.textContent = 'Skipped a block — ' + b.error + ' (starts with "' + b.raw.split('\n')[0] + '")';
+    div.innerHTML = '<strong>Couldn\'t read this one:</strong> ' + esc(b.error) + ' Fix it in the box above and click Generate again.' +
+      '<pre style="white-space:pre-wrap;margin:6px 0 0;font:12px/1.5 inherit;">' + esc(b.raw) + '</pre>';
     issues.appendChild(div);
   });
 
@@ -3612,6 +3622,12 @@ document.getElementById('paste-generate-btn').addEventListener('click', function
   document.getElementById('error-msg').innerHTML = '';
   document.getElementById('loaded-msg').innerHTML = '<div class="loaded-state"><span>✓ ' + orders.length + ' address' + (orders.length !== 1 ? 'es' : '') + ' parsed</span></div>';
   renderPreviews();
+  // If some couldn't be read, stay here so the seller sees which ones.
+  if (result.bad.length) {
+    issues.insertAdjacentHTML('afterbegin', '<div class="loaded-state" style="margin-bottom:8px;"><span>✓ ' + orders.length + ' label' + (orders.length !== 1 ? 's' : '') + ' ready.</span> <button type="button" class="btn-ghost" id="paste-go-home">Print them now</button></div>');
+    document.getElementById('paste-go-home').addEventListener('click', function () { switchTab('home'); document.getElementById('preview-area').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+    return;
+  }
   switchTab('home');
   document.getElementById('preview-area').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
