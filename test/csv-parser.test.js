@@ -106,7 +106,7 @@ section('Messy files');
 
 section('Pasted addresses');
 {
-  const r = core.parsePastedAddresses('Jane Doe\n456 Oak Ave\nApt 2B\nChicago, IL 60601\n\nBob Roe\n1 Main\nSpringfield IL 62701-1234\nUSA\n\nbad block');
+  const r = core.parsePastedAddresses('Jane Doe\n456 Oak Ave\nApt 2B\nChicago, IL 60601\n\nBob Roe\n1 Main\nSpringfield IL 62701-1234\nUSA\n\nLost Person\n9 Nowhere Rd');
   check('two good blocks', r.good.length === 2, JSON.stringify(r));
   check('one bad block reported', r.bad.length === 1);
   check('apt line kept as addr2', r.good[0].addr2 === 'Apt 2B');
@@ -128,6 +128,15 @@ section('Pasted addresses');
   check('Canadian address', P('Leo Chen\n100 King St W\nToronto, ON M5H 1A1\nCanada').good[0].country === 'CA');
   const left = P('Jane Doe\n456 Oak Ave\nChicago IL\n\nGood Guy\n1 St\nNew York, NY 10001');
   check('an incomplete address is reported, not dropped', left.good.length === 1 && left.bad.length === 1);
+  const tcg = P('Order Number: 2D7A1B3C-4E5F6A-7B8C9\nOrder Date: 10/02/2026\nBuyer Name: John Smith\nShipping Address\nJohn Smith\n123 Main St\nSpringfield, IL 62701\nUnited States\nPikachu - Base Set - Near Mint\n1\n$1.23');
+  check('TCGplayer order page: only the address is used, card lines ignored', tcg.good.length === 1 && tcg.bad.length === 0 && tcg.good[0].firstName === 'John' && tcg.good[0].addr1 === '123 Main St', JSON.stringify(tcg));
+  const us = P('John Smith, 123 Main St, Springfield, IL 62701, US');
+  check('one-line address ending in a country', us.good.length === 1 && us.good[0].zip === '62701');
+  const nc = P('Jane Doe 456 Oak Ave Apt 2 Chicago IL 60601');
+  check('one-line address with no commas', nc.good.length === 1 && nc.good[0].addr1 === '456 Oak Ave Apt 2' && nc.good[0].city === 'Chicago', JSON.stringify(nc));
+  check('name and street on one line', P('Ann Lee 77 Pine Ct\nReno, NV 89501').good[0].addr1 === '77 Pine Ct');
+  check('a name like "Price Walker" is not mistaken for a price label', P('Price Walker\n5 Main St\nWaco, TX 76701').good[0].firstName === 'Price');
+  check('card names above an address are not the name', P('Charizard ex - Obsidian Flames\nBen Fox\n12 Rose Ln\nMesa, AZ 85201').good[0].firstName === 'Ben');
 }
 
 section('Product weight parsing edge cases');
