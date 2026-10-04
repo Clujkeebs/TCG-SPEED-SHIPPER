@@ -109,7 +109,7 @@ server.listen(0, async () => {
 
     console.log('\n-- Rates and labels --');
     r = await req('POST', '/api/postage/rates', { from: FROM, to: TO, service: 'letter', weightOz: 1 }, 'owner-token');
-    check('rate quote comes back', r.status === 200 && r.body.amount === 0.78, JSON.stringify(r.body));
+    check('rate quote shows postage, our fee and the price', r.status === 200 && r.body.postage === 0.78 && r.body.fee === 0.21 && r.body.price === 0.99, JSON.stringify(r.body));
     r = await req('POST', '/api/postage/rates', { from: FROM, to: TO, service: 'letter', weightOz: 5 }, 'owner-token');
     check('letters over 3.5 oz are refused', r.status === 400);
     pbCalls.length = 0;
@@ -122,7 +122,8 @@ server.listen(0, async () => {
     check('a batch returns one result per label, in order', r.status === 200 && res3.map((x) => x.ref).join() === 'A1,A2,A3', JSON.stringify(r.body));
     check('a bad address fails alone; the others still print', res3[0].ok && !res3[1].ok && res3[2].ok && /Invalid address/.test(res3[1].error));
     check('labels come back with tracking and a PDF', res3[0].trackingNumber && res3[0].labelPdfBase64 === 'JVBERi0x');
-    check('total adds up the purchased labels only', r.body.total === 5.28, r.body.total);
+    check('total = postage + fees, purchased labels only', r.body.postage === 5.28 && r.body.fees === 0.51 && r.body.total === 5.79, JSON.stringify([r.body.postage, r.body.fees, r.body.total]));
+    check('each label carries its price', res3[0].price === 0.99 && res3[2].price === 4.8);
     const ships = pbCalls.filter((c) => c.url.endsWith('/v1/shipments')).map((c) => JSON.parse(c.init.body));
     check('letter → USPS FCM LETTER on a 6x4 label', ships[0].rates[0].serviceId === 'FCM' && ships[0].rates[0].parcelType === 'LETTER' && ships[0].documents[0].size === 'DOC_6X4');
     check('ground → USPS GA package on a 4x6 label', ships[2].rates[0].serviceId === 'GA' && ships[2].documents[0].size === 'DOC_4X6');
@@ -131,6 +132,9 @@ server.listen(0, async () => {
     check('each label call has a transaction id', pbCalls.filter((c) => c.url.endsWith('/v1/shipments')).every((c) => /^[0-9a-f]{24}$/.test(c.init.headers['X-PB-TransactionId'])));
     check('the token is fetched once and reused', pbCalls.filter((c) => c.url.endsWith('/oauth/token')).length === 0);
     check('purchased labels are in the ledger with the buyer', ledger.length === 2 && ledger.every((x) => x.user_id === 'u_pilot' && x.mode === 'sandbox' && x.status === 'purchased'));
+    check('the ledger records postage, fee and price separately', ledger[0].amount === 0.78 && ledger[0].fee === 0.21 && ledger[0].price === 0.99);
+    const { feeFor } = require(path.join(__dirname, '..', 'postage.js'));
+    check('fees can be changed with env vars', feeFor('ground', { PB_FEE_GROUND: '0.4' }) === 0.4 && feeFor('letter', { PB_FEE_LETTER: 'junk' }) === 0.21 && feeFor('letter', { PB_FEE_LETTER: '99' }) === 0.21);
     r = await req('POST', '/api/postage/labels', { from: FROM, labels: new Array(51).fill({ to: TO, service: 'letter' }) }, 'owner-token');
     check('more than 50 labels at once is refused', r.status === 400);
 

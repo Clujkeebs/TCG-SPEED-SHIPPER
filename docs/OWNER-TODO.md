@@ -61,6 +61,12 @@ After that, the rest of this list can wait for a free evening.
      (comma-separated, e.g. Rob's). You always have access.
   4. Open the app, load a CSV: a **Buy postage** panel shows **TEST MODE**.
      Buy a test label to see it work.
+  - **Our fee per label:** $0.21 per letter (a tracked letter totals about
+    $0.99) and $0.30 per Ground Advantage label, on top of postage at
+    cost. To change it: Railway variables `PB_FEE_LETTER` / `PB_FEE_GROUND`.
+  - **Still to build before going live:** collecting the money (a prepaid
+    balance sellers top up with Stripe). Until then, labels would be paid
+    from your Pitney Bowes account with no way to bill sellers.
   - Real postage stays off until you also set `PB_ENV=production` and
     `PB_LIVE_OK=yes`. Do that only after deciding how sellers pay us
     (see Road to $10k) and with the LLC in place. Production labels are

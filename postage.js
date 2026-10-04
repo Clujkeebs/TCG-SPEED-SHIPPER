@@ -19,6 +19,20 @@ const { makePbClient, PbError } = require('./pb-client');
 
 const MAX_LABELS_PER_REQUEST = 50;
 
+// Our fee per label, on top of postage passed through at cost. A tracked
+// letter at $0.78 postage + $0.21 lands at $0.99, under a dollar and close
+// to a plain $0.82 stamp. Ground Advantage stays cheap enough that sellers
+// don't leave for free tools. Override with PB_FEE_LETTER / PB_FEE_GROUND.
+const DEFAULT_FEES = { letter: 0.21, ground: 0.30 };
+function feeFor(service, env = process.env) {
+  const v = Number(env['PB_FEE_' + String(service).toUpperCase()]);
+  return Number.isFinite(v) && v >= 0 && v <= 5 ? Math.round(v * 100) / 100 : DEFAULT_FEES[service];
+}
+function priced(service, postage, env) {
+  const fee = feeFor(service, env);
+  return { postage, fee, price: postage == null ? null : Math.round((postage + fee) * 100) / 100 };
+}
+
 const SERVICES = {
   letter: {
     label: 'First-Class letter + IMb scans',
@@ -124,7 +138,7 @@ module.exports = function mountPostageRoutes(router, d) {
   // What the app needs to decide whether to show the postage panel.
   router.get('/postage/status', requireSupabase, requireUser, (req, res) => {
     const cfg = pbConfig(env);
-    res.json({ allowed: allowed(req.user), configured: cfg.configured, mode: cfg.mode, services: Object.keys(SERVICES).map((k) => ({ id: k, label: SERVICES[k].label, maxOz: SERVICES[k].maxOz })) });
+    res.json({ allowed: allowed(req.user), configured: cfg.configured, mode: cfg.mode, services: Object.keys(SERVICES).map((k) => ({ id: k, label: SERVICES[k].label, maxOz: SERVICES[k].maxOz, fee: feeFor(k, env) })) });
   });
 
   // Quote one shipment: { from, to, service, weightOz } → { amount }.
@@ -141,7 +155,7 @@ module.exports = function mountPostageRoutes(router, d) {
       const shipment = buildShipment({ from: from.address, to: to.address, service: b.service, weightOz: oz, shipperId: env.PB_SHIPPER_ID });
       delete shipment.documents;
       const r = await pb().rate(shipment);
-      res.json({ service: b.service, amount: money(r && r.rates && r.rates[0]), mode: pbConfig(env).mode });
+      res.json(Object.assign({ service: b.service, mode: pbConfig(env).mode }, priced(b.service, money(r && r.rates && r.rates[0]), env)));
     } catch (err) { pbFail(res, err, 'Rate quote'); }
   });
 
@@ -172,12 +186,13 @@ module.exports = function mountPostageRoutes(router, d) {
         const out = {
           ref, ok: true, service: item.service,
           shipmentId: r.shipmentId, trackingNumber: r.parcelTrackingNumber || null,
-          amount: money(r.rates && r.rates[0]), labelPdfBase64: page ? page.contents : null,
+          labelPdfBase64: page ? page.contents : null,
         };
+        Object.assign(out, priced(item.service, money(r.rates && r.rates[0]), env));
         results.push(out);
         const { error } = await supabaseAdmin().from('tcgss_postage_labels').insert({
           user_id: req.user.id, shipment_id: out.shipmentId, tracking_number: out.trackingNumber,
-          service: item.service, amount: out.amount, mode, order_ref: ref || null, status: 'purchased',
+          service: item.service, amount: out.postage, fee: out.fee, price: out.price, mode, order_ref: ref || null, status: 'purchased',
         });
         if (error && logError) logError('postage', 'ledger insert failed:', error);
       } catch (err) {
@@ -185,7 +200,8 @@ module.exports = function mountPostageRoutes(router, d) {
         if (!(err instanceof PbError) && logError) logError('postage', 'label failed:', err);
       }
     }
-    res.json({ mode, results, total: Math.round(results.reduce((t, r) => t + (r.ok && r.amount ? r.amount : 0), 0) * 100) / 100 });
+    const sum = (k) => Math.round(results.reduce((t, r) => t + (r.ok && r[k] ? r[k] : 0), 0) * 100) / 100;
+    res.json({ mode, results, total: sum('price'), postage: sum('postage'), fees: sum('fee') });
   });
 
   // Refund an unused label (only the buyer's own).
@@ -219,3 +235,4 @@ module.exports.pbConfig = pbConfig;
 module.exports.pbAddress = pbAddress;
 module.exports.buildShipment = buildShipment;
 module.exports.SERVICES = SERVICES;
+module.exports.feeFor = feeFor;
