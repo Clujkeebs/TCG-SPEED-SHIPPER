@@ -3789,7 +3789,11 @@ function updatePostageSummary() {
   var total = n.letter + n.ground;
   document.getElementById('pg-buy').textContent = total ? 'Buy ' + total + ' label' + (total === 1 ? '' : 's') + (postageStatus && postageStatus.mode !== 'production' ? ' (test)' : '') : 'Buy labels';
   document.getElementById('pg-buy').disabled = !total;
-  document.getElementById('pg-summary').textContent = [n.letter ? n.letter + ' letter' : '', n.ground ? n.ground + ' Ground Advantage' : ''].filter(Boolean).join(' · ');
+  var fee = function (id) { var sv = (postageStatus && postageStatus.services || []).filter(function (x) { return x.id === id; })[0]; return sv && sv.fee != null ? sv.fee : 0; };
+  document.getElementById('pg-summary').textContent = [
+    n.letter ? n.letter + ' letter (about $' + (0.78 + fee('letter')).toFixed(2) + ' each)' : '',
+    n.ground ? n.ground + ' Ground Advantage (postage + $' + fee('ground').toFixed(2) + ' each)' : ''
+  ].filter(Boolean).join(' · ');
 }
 document.addEventListener('change', function (e) {
   var t = e.target;
@@ -3824,7 +3828,8 @@ document.getElementById('pg-buy').addEventListener('click', function () {
       ok.forEach(function (x) { if (x.trackingNumber) lines.push(x.ref + ' ' + x.trackingNumber); });
       input.value = lines.join('\n');
       matchTrackingNumbers();
-      msg.innerHTML = '<div class="pg-result">✓ ' + ok.length + ' label' + (ok.length === 1 ? '' : 's') + ' bought' + (j.total ? ' · $' + j.total.toFixed(2) : '') +
+      msg.innerHTML = '<div class="pg-result">✓ ' + ok.length + ' label' + (ok.length === 1 ? '' : 's') + ' bought' +
+        (j.total ? ' · $' + j.total.toFixed(2) + ' ($' + (j.postage || 0).toFixed(2) + ' postage + $' + (j.fees || 0).toFixed(2) + ' label fees)' : '') +
         (j.mode !== 'production' ? ' · test labels' : '') + '. Downloading the PDF…' +
         bad.map(function (x) { return '<div class="bad">' + esc(x.ref) + ': ' + esc(x.error) + '</div>'; }).join('') + '</div>';
       if (!ok.length) return;
