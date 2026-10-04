@@ -55,6 +55,9 @@ function pbConfig(env = process.env) {
   return {
     configured: !!(env.PB_API_KEY && env.PB_API_SECRET && env.PB_SHIPPER_ID),
     mode: live ? 'production' : 'sandbox',
+    // Real labels are paid from the seller's prepaid balance. Test labels are
+    // free, unless PB_BALANCE=on (to rehearse the balance flow in sandbox).
+    balance: live || env.PB_BALANCE === 'on',
     pilot: String(env.PB_PILOT_EMAILS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean),
   };
 }
@@ -99,6 +102,24 @@ function buildShipment({ from, to, service, weightOz, shipperId }) {
   };
 }
 
+const TOPUP_AMOUNTS = [20, 50, 100];
+const cents = (dollars) => Math.round(Number(dollars) * 100);
+
+// Credits a paid postage top-up from a Stripe Checkout session. Returns true
+// if the session was a top-up (handled or not), so the webhook can stop there.
+// Idempotent: the ledger allows one top-up row per Stripe session id.
+async function handleTopupSession(db, session, logError) {
+  const md = (session && session.metadata) || {};
+  if (md.kind !== 'postage_topup') return false;
+  if (session.payment_status !== 'paid') return true; // ACH still pending; async_payment_succeeded comes later
+  const userId = md.user_id || session.client_reference_id;
+  const amount = Number(session.amount_total);
+  if (!userId || !(amount > 0)) { if (logError) await logError('postage.topup', 'Top-up session missing user or amount', session.id); return true; }
+  const { data, error } = await db.rpc('tcgss_postage_credit', { p_user: userId, p_cents: amount, p_kind: 'topup', p_ref: session.id });
+  if (error || !data || !data.ok) { if (logError) await logError('postage.topup', 'Could not credit top-up', session.id, error || data); }
+  return true;
+}
+
 function money(r) {
   const n = Number(r && (r.totalCarrierCharge != null ? r.totalCarrierCharge : r.baseCharge));
   return Number.isFinite(n) ? Math.round(n * 100) / 100 : null;
@@ -106,6 +127,13 @@ function money(r) {
 
 module.exports = function mountPostageRoutes(router, d) {
   const { supabaseAdmin, requireUser, requireSupabase, OWNER_EMAIL, logError } = d;
+  const stripe = d.stripe || (() => null);
+  const SITE_URL = d.SITE_URL || 'https://tcgspeedshipper.com';
+  async function balanceOf(userId) {
+    const { data, error } = await supabaseAdmin().rpc('tcgss_postage_balance', { p_user: userId });
+    if (error) throw error;
+    return Number(data) || 0;
+  }
   const env = d.env || process.env;
   const fetchImpl = d.fetchImpl || fetch;
   let client = null, clientKey = '';
@@ -138,7 +166,7 @@ module.exports = function mountPostageRoutes(router, d) {
   // What the app needs to decide whether to show the postage panel.
   router.get('/postage/status', requireSupabase, requireUser, (req, res) => {
     const cfg = pbConfig(env);
-    res.json({ allowed: allowed(req.user), configured: cfg.configured, mode: cfg.mode, services: Object.keys(SERVICES).map((k) => ({ id: k, label: SERVICES[k].label, maxOz: SERVICES[k].maxOz, fee: feeFor(k, env) })) });
+    res.json({ allowed: allowed(req.user), configured: cfg.configured, mode: cfg.mode, balance: cfg.balance, topupAmounts: TOPUP_AMOUNTS, services: Object.keys(SERVICES).map((k) => ({ id: k, label: SERVICES[k].label, maxOz: SERVICES[k].maxOz, fee: feeFor(k, env) })) });
   });
 
   // Quote one shipment: { from, to, service, weightOz } → { amount }.
@@ -170,8 +198,16 @@ module.exports = function mountPostageRoutes(router, d) {
     const from = pbAddress(b.from);
     if (from.missing.length) return res.status(400).json({ error: 'Return address needs: ' + from.missing.join(', ') });
     const mode = pbConfig(env).mode;
+    const useBalance = pbConfig(env).balance;
+    if (useBalance) {
+      let bal;
+      try { bal = await balanceOf(req.user.id); } catch (e) { return res.status(500).json({ error: 'Could not read your postage balance' }); }
+      if (bal <= 0) return res.status(402).json({ error: 'Add funds to your postage balance first.', balanceCents: bal });
+    }
     const results = [];
+    let outOfFunds = false;
     for (const item of list) {
+      if (outOfFunds) { results.push({ ref: clean(item && item.ref, 40), ok: false, error: 'Not bought: balance ran out' }); continue; }
       const ref = clean(item && item.ref, 40);
       const s = SERVICES[item && item.service];
       const to = pbAddress(item && item.to);
@@ -189,6 +225,19 @@ module.exports = function mountPostageRoutes(router, d) {
           labelPdfBase64: page ? page.contents : null,
         };
         Object.assign(out, priced(item.service, money(r.rates && r.rates[0]), env));
+        if (useBalance) {
+          // Pay for it from the balance; if that fails, void the label at once
+          // so we never hand out postage nobody paid for.
+          const debit = out.price == null ? { data: { ok: false } }
+            : await supabaseAdmin().rpc('tcgss_postage_debit', { p_user: req.user.id, p_cents: cents(out.price), p_ref: out.shipmentId });
+          if (debit.error || !debit.data || !debit.data.ok) {
+            try { await pb().cancelShipment(out.shipmentId); } catch (e) { if (logError) logError('postage', 'void after failed debit failed:', out.shipmentId, e); }
+            outOfFunds = true;
+            results.push({ ref, ok: false, error: out.price == null ? 'No price came back for this label' : 'Not bought: balance too low' });
+            continue;
+          }
+          out.balanceCents = debit.data.balance;
+        }
         results.push(out);
         const { error } = await supabaseAdmin().from('tcgss_postage_labels').insert({
           user_id: req.user.id, shipment_id: out.shipmentId, tracking_number: out.trackingNumber,
@@ -201,21 +250,65 @@ module.exports = function mountPostageRoutes(router, d) {
       }
     }
     const sum = (k) => Math.round(results.reduce((t, r) => t + (r.ok && r[k] ? r[k] : 0), 0) * 100) / 100;
-    res.json({ mode, results, total: sum('price'), postage: sum('postage'), fees: sum('fee') });
+    const body = { mode, results, total: sum('price'), postage: sum('postage'), fees: sum('fee') };
+    if (useBalance) { try { body.balanceCents = await balanceOf(req.user.id); } catch (e) { /* shown on next load */ } }
+    res.json(body);
   });
 
   // Refund an unused label (only the buyer's own).
   router.post('/postage/labels/:shipmentId/refund', guard, async (req, res) => {
     const id = clean(req.params.shipmentId, 60);
-    const { data: row, error } = await supabaseAdmin().from('tcgss_postage_labels').select('user_id, status').eq('shipment_id', id).maybeSingle();
+    const { data: row, error } = await supabaseAdmin().from('tcgss_postage_labels').select('user_id, status, price, mode').eq('shipment_id', id).maybeSingle();
     if (error) return res.status(500).json({ error: 'Could not look up that label' });
     if (!row || row.user_id !== req.user.id) return res.status(404).json({ error: 'Label not found' });
     if (row.status !== 'purchased') return res.status(409).json({ error: 'That label was already ' + row.status });
     try {
       const r = await pb().cancelShipment(id);
       await supabaseAdmin().from('tcgss_postage_labels').update({ status: 'refund_requested', refunded_at: new Date().toISOString() }).eq('shipment_id', id);
-      res.json({ ok: true, status: (r && r.status) || 'INITIATED' });
+      // Pilot policy: the label price goes straight back to the balance (one
+      // refund row per shipment). Reconcile against PB's refund report; PB
+      // can still deny a refund for a label that was actually mailed.
+      let balanceCents;
+      if (pbConfig(env).balance && row.price > 0) {
+        const c = await supabaseAdmin().rpc('tcgss_postage_credit', { p_user: req.user.id, p_cents: cents(row.price), p_kind: 'refund', p_ref: id });
+        if (c.error && logError) logError('postage', 'refund credit failed:', id, c.error);
+        balanceCents = c.data && c.data.balance;
+      }
+      res.json({ ok: true, status: (r && r.status) || 'INITIATED', balanceCents });
     } catch (err) { pbFail(res, err, 'Refund'); }
+  });
+
+  // Prepaid balance and recent activity.
+  router.get('/postage/balance', requireSupabase, requireUser, gate, async (req, res) => {
+    try {
+      const { data, error } = await supabaseAdmin().from('tcgss_postage_ledger').select('cents, kind, ref, created_at')
+        .eq('user_id', req.user.id).order('created_at', { ascending: false }).limit(20);
+      if (error) throw error;
+      res.json({ balanceCents: await balanceOf(req.user.id), activity: data || [] });
+    } catch (err) { if (logError) logError('postage', 'balance read failed:', err); res.status(500).json({ error: 'Could not read your balance' }); }
+  });
+
+  // Add funds: one Stripe Checkout payment, then labels just draw down the
+  // balance (no checkout per label). Credited by the Stripe webhook.
+  router.post('/postage/topup', guard, async (req, res) => {
+    const amount = Number(req.body && req.body.amount);
+    if (!TOPUP_AMOUNTS.includes(amount)) return res.status(400).json({ error: 'Pick $' + TOPUP_AMOUNTS.join(', $') });
+    if (!pbConfig(env).balance) return res.status(409).json({ error: 'Test mode labels are free, so there\'s nothing to top up yet.' });
+    const s = stripe();
+    if (!s) return res.status(503).json({ error: 'Payments aren\'t available right now' });
+    try {
+      const session = await s.checkout.sessions.create({
+        mode: 'payment',
+        client_reference_id: req.user.id,
+        customer_email: req.user.email,
+        line_items: [{ quantity: 1, price_data: { currency: 'usd', unit_amount: cents(amount), product_data: { name: 'Postage balance ($' + amount + ')', description: 'Prepaid USPS postage and label fees in TCG Speed Shipper' } } }],
+        metadata: { kind: 'postage_topup', user_id: req.user.id },
+        payment_intent_data: { metadata: { kind: 'postage_topup', user_id: req.user.id } },
+        success_url: SITE_URL + '/?postage=added',
+        cancel_url: SITE_URL + '/?postage=cancelled',
+      });
+      res.json({ url: session.url });
+    } catch (err) { if (logError) logError('postage', 'top-up checkout failed:', err); res.status(502).json({ error: 'Could not start the payment. Please try again.' }); }
   });
 
   router.get('/postage/track/:trackingNumber', express.json(), requireSupabase, requireUser, gate, async (req, res) => {
@@ -236,3 +329,5 @@ module.exports.pbAddress = pbAddress;
 module.exports.buildShipment = buildShipment;
 module.exports.SERVICES = SERVICES;
 module.exports.feeFor = feeFor;
+module.exports.handleTopupSession = handleTopupSession;
+module.exports.TOPUP_AMOUNTS = TOPUP_AMOUNTS;
