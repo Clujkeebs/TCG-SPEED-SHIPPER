@@ -64,9 +64,14 @@ After that, the rest of this list can wait for a free evening.
   - **Our fee per label:** $0.21 per letter (a tracked letter totals about
     $0.99) and $0.30 per Ground Advantage label, on top of postage at
     cost. To change it: Railway variables `PB_FEE_LETTER` / `PB_FEE_GROUND`.
-  - **Still to build before going live:** collecting the money (a prepaid
-    balance sellers top up with Stripe). Until then, labels would be paid
-    from your Pitney Bowes account with no way to bill sellers.
+  - **Prepaid balance is built:** sellers add $20 / $50 / $100 once through
+    Stripe, and labels come out of the balance with no checkout per label.
+    Before going live, 2 clicks in Stripe (⏱ 5 min):
+    - Settings → Payment methods → turn on **ACH Direct Debit / US bank
+      account** (0.8% instead of ~3% for cards; keeps more of each fee).
+    - Developers → Webhooks → your endpoint → add the event
+      `checkout.session.async_payment_succeeded` (bank payments settle a
+      few days later; this credits them).
   - Real postage stays off until you also set `PB_ENV=production` and
     `PB_LIVE_OK=yes`. Do that only after deciding how sellers pay us
     (see Road to $10k) and with the LLC in place. Production labels are

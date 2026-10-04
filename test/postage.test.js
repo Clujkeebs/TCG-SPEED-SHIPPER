@@ -19,6 +19,7 @@ process.env.PB_SHIPPER_ID = '9015544760';
 process.env.PB_PILOT_EMAILS = 'Pilot@Example.com, other@example.com';
 
 const ledger = [];
+const stripeCreated = [];
 const pbCalls = [];
 function builder(table) {
   const q = { filters: {}, op: 'select', payload: null };
@@ -33,9 +34,25 @@ function builder(table) {
   return q;
 }
 const users = { 'owner-token': { id: 'u_owner', email: 'clujkeebs@aol.com' }, 'pilot-token': { id: 'u_pilot', email: 'pilot@example.com' }, 'stranger-token': { id: 'u_x', email: 'x@example.com' } };
+// Prepaid balance ledger (cents), keyed by user.
+const money = [];
+const bal = (u) => money.filter((m) => m.user_id === u).reduce((t, m) => t + m.cents, 0);
 const supabaseStub = {
   from: (t) => builder(t),
-  rpc: async () => ({ data: null, error: null }),
+  rpc: async (name, a) => {
+    if (name === 'tcgss_postage_balance') return { data: bal(a.p_user), error: null };
+    if (name === 'tcgss_postage_debit') {
+      if (bal(a.p_user) < a.p_cents) return { data: { ok: false, balance: bal(a.p_user) }, error: null };
+      money.push({ user_id: a.p_user, cents: -a.p_cents, kind: 'label', ref: a.p_ref });
+      return { data: { ok: true, balance: bal(a.p_user) }, error: null };
+    }
+    if (name === 'tcgss_postage_credit') {
+      if (money.some((m) => m.kind === a.p_kind && m.ref === a.p_ref && a.p_kind !== 'adjust')) return { data: { ok: true, duplicate: true, balance: bal(a.p_user) }, error: null };
+      money.push({ user_id: a.p_user, cents: a.p_cents, kind: a.p_kind, ref: a.p_ref });
+      return { data: { ok: true, balance: bal(a.p_user) }, error: null };
+    }
+    return { data: null, error: null };
+  },
   auth: { getUser: async (t) => (users[t] ? { data: { user: users[t] }, error: null } : { data: { user: null }, error: new Error('bad') }) },
 };
 
@@ -59,7 +76,7 @@ global.fetch = async (url, init) => {
 
 const origLoad = Module._load;
 Module._load = function (request) {
-  if (request === 'stripe') return function StripeStub() { return {}; };
+  if (request === 'stripe') return function StripeStub() { return { checkout: { sessions: { create: async (p) => { stripeCreated.push(p); return { url: 'https://checkout.stripe.test/s1' }; } } } }; };
   if (request === '@supabase/supabase-js') return { createClient: () => supabaseStub };
   return origLoad.apply(this, arguments);
 };
@@ -148,6 +165,41 @@ server.listen(0, async () => {
     check('a label can only be refunded once', r.status === 409);
     r = await req('GET', '/api/postage/track/94001', undefined, 'pilot-token');
     check('tracking returns status and scans', r.status === 200 && r.body.status === 'In Transit' && r.body.events[0].where === 'Los Angeles, CA');
+    console.log('\n-- Prepaid balance --');
+    const { handleTopupSession } = require(path.join(__dirname, '..', 'postage.js'));
+    r = await req('POST', '/api/postage/topup', { amount: 50 }, 'pilot-token');
+    check('no top-ups while labels are free test labels', r.status === 409);
+    process.env.PB_BALANCE = 'on';
+    r = await req('POST', '/api/postage/labels', { from: FROM, labels: [{ ref: 'B1', to: TO, service: 'letter' }] }, 'pilot-token');
+    check('an empty balance blocks buying, before PB is called', r.status === 402);
+    r = await req('POST', '/api/postage/topup', { amount: 37 }, 'pilot-token');
+    check('only the offered top-up amounts are allowed', r.status === 400);
+    r = await req('POST', '/api/postage/topup', { amount: 50 }, 'pilot-token');
+    const cs = stripeCreated[0] || {};
+    check('top-up opens one Stripe payment for $50', r.status === 200 && /checkout/.test(r.body.url) && cs.mode === 'payment' && cs.line_items[0].price_data.unit_amount === 5000 && cs.metadata.kind === 'postage_topup' && cs.client_reference_id === 'u_pilot');
+    const sess = { id: 'cs_1', amount_total: 600, payment_status: 'paid', client_reference_id: 'u_pilot', metadata: { kind: 'postage_topup', user_id: 'u_pilot' } };
+    check('a paid top-up is credited', (await handleTopupSession(supabaseStub, sess)) === true && bal('u_pilot') === 600);
+    await handleTopupSession(supabaseStub, sess);
+    check('a repeated webhook credits only once', bal('u_pilot') === 600);
+    await handleTopupSession(supabaseStub, Object.assign({}, sess, { id: 'cs_2', payment_status: 'unpaid' }));
+    check('an unsettled bank payment is not credited yet', bal('u_pilot') === 600);
+    check('a subscription checkout is not treated as a top-up', (await handleTopupSession(supabaseStub, { id: 'cs_sub', metadata: {} })) === false);
+    pbCalls.length = 0;
+    r = await req('POST', '/api/postage/labels', { from: FROM, labels: [
+      { ref: 'C1', to: TO, service: 'ground', weightOz: 3 },
+      { ref: 'C2', to: TO, service: 'letter' },
+      { ref: 'C3', to: TO, service: 'letter' },
+    ] }, 'pilot-token');
+    const rb = r.body.results || [];
+    check('labels draw down the balance with no checkout', rb[0].ok && rb[1].ok && r.body.balanceCents === 600 - 480 - 99, JSON.stringify(r.body));
+    check('when the balance runs out, the unpaid label is voided at PB', !rb[2].ok && /balance/.test(rb[2].error) && pbCalls.some((c) => c.init.method === 'DELETE'));
+    check('balance never goes negative', bal('u_pilot') >= 0);
+    r = await req('POST', '/api/postage/labels/' + rb[1].shipmentId + '/refund', {}, 'pilot-token');
+    check('a refund puts the label price back', r.status === 200 && bal('u_pilot') === 600 - 480);
+    r = await req('GET', '/api/postage/balance', undefined, 'stranger-token');
+    check('balance is pilot-only', r.status === 403);
+    delete process.env.PB_BALANCE;
+
     r = await req('GET', '/api/health');
     check('health shows PB keys present without values', r.body.config.pb_keys === true && r.body.config.pb_mode === 'sandbox' && !JSON.stringify(r.body).includes('pbsecret'));
   } catch (e) { failed++; console.log('  FAIL  threw: ' + e.stack); }
