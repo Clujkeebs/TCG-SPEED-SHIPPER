@@ -380,6 +380,17 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
 .bold-ret { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 14px; color: var(--text); cursor: pointer; }
 .bold-ret input { width: 18px; height: 18px; accent-color: var(--accent); margin: 0; }
 .bold-ret input { flex: none; }
+.pg-mode { font-weight: 600; font-size: 11px; padding: 2px 8px; border-radius: 99px; margin-left: 6px; letter-spacing: .04em; }
+.pg-mode.sandbox { background: #fff3cd; color: #6b4e00; }
+.pg-mode.production { background: #e6f4ea; color: #1e6b3a; }
+.pg-rows { display: grid; gap: 6px; }
+.pg-row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; font-size: 13px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; }
+.pg-row .pg-who { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pg-row .pg-who small { color: var(--muted); }
+.pg-row select, .pg-row input { font: inherit; font-size: 13px; padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface, #fff); color: inherit; }
+.pg-row input { width: 64px; }
+.pg-result { font-size: 13px; margin-top: 8px; }
+.pg-result .bad { color: #b42318; }
 .partial-row { margin-top: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
 .bold-ret-text span { color: var(--muted); font-size: 13px; }
 .label-to { text-align: center; line-height: 1.7; }
@@ -1040,6 +1051,20 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
         <button class="btn-ghost" id="clear-btn">Clear</button>
       </div>
       <p class="tip" id="fmt-tip">4×6: print on thermal, margins none  ·  8.5×11: any printer, cut on lines</p>
+    </div>
+
+    <!-- Postage pilot (Pitney Bowes): only for allowed accounts -->
+    <div id="postage-area" style="display:none;">
+      <div class="section">
+        <div class="section-label">Buy postage <span class="pg-mode" id="pg-mode"></span></div>
+        <p class="tip" style="margin-top:0;">USPS labels with tracking, bought right here, like on eBay or Whatnot. <b>Letter</b> = First-Class envelope with delivery scans (under-$50 orders). <b>Ground</b> = Ground Advantage with full tracking (TCGplayer requires it from $49.99). Tracking numbers fill in below automatically.</p>
+        <div id="pg-rows" class="pg-rows"></div>
+        <div class="btn-row" style="margin-top:10px;align-items:center;">
+          <button class="btn-dl" id="pg-buy" type="button">Buy labels</button>
+          <span id="pg-summary" class="tip-inline"></span>
+        </div>
+        <div id="pg-msg"></div>
+      </div>
     </div>
 
     <!-- Tracking number reference (shown after CSV loaded) -->
@@ -2780,6 +2805,7 @@ function renderPreviews() {
   document.getElementById('sticky-bar').classList.add('visible');
   var trackingArea = document.getElementById('tracking-area');
   if (trackingArea) trackingArea.style.display = orders.length ? 'block' : 'none';
+  renderPostage();
 
   var list=document.getElementById('preview-list');
   var animateCards = lastAnimatedBatch !== batchKey();
@@ -3713,6 +3739,110 @@ function restoreTrackingForBatch() {
   if (input) input.value = saved;
   matchTrackingNumbers();
 }
+
+/* ── Postage pilot (Pitney Bowes) ──
+   Server: postage.js. Shown only when /api/postage/status says this account
+   is in the pilot. Sandbox labels say they're tests and can't be mailed. */
+var postageStatus = null, postageFor = null, postageChoice = {};
+function postageDefault(o) {
+  var ground = (typeof o.orderValue === 'number' && o.orderValue >= 49.99) || /expedit|priority|ground|tracked/i.test(o.shipMethod || '');
+  return ground ? { service: 'ground', oz: 3 } : { service: 'letter', oz: 1 };
+}
+function orderRef(o, i) { return o.orderNumber || ('row' + (i + 1)); }
+function renderPostage() {
+  var area = document.getElementById('postage-area');
+  if (!area) return;
+  var key = session ? session.user.id : null;
+  if (!key) { area.style.display = 'none'; return; }
+  if (postageFor !== key) {
+    postageFor = key; postageStatus = null;
+    fetch('/api/postage/status', { headers: { Authorization: 'Bearer ' + session.access_token } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (st) { postageStatus = st; renderPostage(); })
+      .catch(function () {});
+    return;
+  }
+  if (!postageStatus || !postageStatus.allowed || !orders.length) { area.style.display = 'none'; return; }
+  area.style.display = 'block';
+  var badge = document.getElementById('pg-mode');
+  badge.className = 'pg-mode ' + postageStatus.mode;
+  badge.textContent = postageStatus.mode === 'production' ? 'LIVE' : 'TEST MODE (labels can\'t be mailed)';
+  var rows = document.getElementById('pg-rows');
+  rows.innerHTML = '';
+  orders.forEach(function (o, i) {
+    var ref = orderRef(o, i);
+    var c = postageChoice[ref] || (postageChoice[ref] = postageDefault(o));
+    var div = document.createElement('div');
+    div.className = 'pg-row';
+    div.innerHTML = '<span class="pg-who">' + esc(Core.fullName(o) || '—') + ' <small>' + esc((o.city || '') + (o.state ? ', ' + o.state : '')) +
+      (typeof o.orderValue === 'number' ? ' · $' + o.orderValue.toFixed(2) : '') + '</small></span>' +
+      '<select data-ref="' + esc(ref) + '" aria-label="Service"><option value="letter">Letter</option><option value="ground">Ground</option><option value="skip">Skip</option></select>' +
+      '<label style="white-space:nowrap;"><input type="number" min="0.1" max="15.9" step="0.1" data-oz="' + esc(ref) + '" value="' + c.oz + '" aria-label="Weight in ounces"> oz</label>';
+    div.querySelector('select').value = c.service;
+    rows.appendChild(div);
+  });
+  updatePostageSummary();
+}
+function updatePostageSummary() {
+  var n = { letter: 0, ground: 0 };
+  Object.keys(postageChoice).forEach(function (k) { var c = postageChoice[k]; if (n[c.service] != null) n[c.service]++; });
+  var total = n.letter + n.ground;
+  document.getElementById('pg-buy').textContent = total ? 'Buy ' + total + ' label' + (total === 1 ? '' : 's') + (postageStatus && postageStatus.mode !== 'production' ? ' (test)' : '') : 'Buy labels';
+  document.getElementById('pg-buy').disabled = !total;
+  document.getElementById('pg-summary').textContent = [n.letter ? n.letter + ' letter' : '', n.ground ? n.ground + ' Ground Advantage' : ''].filter(Boolean).join(' · ');
+}
+document.addEventListener('change', function (e) {
+  var t = e.target;
+  if (t.matches && t.matches('#pg-rows select')) { postageChoice[t.getAttribute('data-ref')].service = t.value; updatePostageSummary(); }
+  if (t.matches && t.matches('#pg-rows input[data-oz]')) { postageChoice[t.getAttribute('data-oz')].oz = Math.max(0.1, Number(t.value) || 1); }
+});
+document.getElementById('pg-buy').addEventListener('click', function () {
+  var btn = this, msg = document.getElementById('pg-msg');
+  var s = getSender();
+  if (!s.addr1 || !s.city || !s.state || !s.zip) { msg.innerHTML = '<div class="error-box">Fill in your full return address above first. USPS needs it on postage.</div>'; return; }
+  var labels = [];
+  orders.forEach(function (o, i) {
+    var ref = orderRef(o, i), c = postageChoice[ref];
+    if (!c || c.service === 'skip') return;
+    labels.push({ ref: ref, service: c.service, weightOz: c.oz, to: { firstName: o.firstName, lastName: o.lastName, addr1: o.addr1, addr2: o.addr2, city: o.city, state: o.state, zip: o.zip, country: o.country } });
+  });
+  if (!labels.length) return;
+  if (postageStatus.mode === 'production' && !confirm('Buy ' + labels.length + ' real USPS label' + (labels.length === 1 ? '' : 's') + '? Postage will be charged.')) return;
+  btn.disabled = true; btn.textContent = 'Buying labels…'; msg.innerHTML = '';
+  fetch('/api/postage/labels', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
+    body: JSON.stringify({ from: { name: s.name, addr1: s.addr1, addr2: s.addr2, city: s.city, state: s.state, zip: s.zip, phone: s.phone }, labels: labels })
+  }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'Request failed'); return j; }); })
+    .then(function (j) {
+      var ok = j.results.filter(function (x) { return x.ok; });
+      var bad = j.results.filter(function (x) { return !x.ok; });
+      trackEvent('postage_bought');
+      // Tracking numbers go straight into the tracking box, matched by order number.
+      var input = document.getElementById('tracking-input');
+      var lines = (input.value || '').split(/\r?\n/).filter(function (l) { return l.trim(); });
+      ok.forEach(function (x) { if (x.trackingNumber) lines.push(x.ref + ' ' + x.trackingNumber); });
+      input.value = lines.join('\n');
+      matchTrackingNumbers();
+      msg.innerHTML = '<div class="pg-result">✓ ' + ok.length + ' label' + (ok.length === 1 ? '' : 's') + ' bought' + (j.total ? ' · $' + j.total.toFixed(2) : '') +
+        (j.mode !== 'production' ? ' · test labels' : '') + '. Downloading the PDF…' +
+        bad.map(function (x) { return '<div class="bad">' + esc(x.ref) + ': ' + esc(x.error) + '</div>'; }).join('') + '</div>';
+      if (!ok.length) return;
+      return loadPdfLib().then(function () {
+        var L = window.PDFLib;
+        return L.PDFDocument.create().then(function (out) {
+          return ok.reduce(function (p, x) {
+            if (!x.labelPdfBase64) return p;
+            return p.then(function () { return L.PDFDocument.load(x.labelPdfBase64); })
+              .then(function (src) { return out.copyPages(src, src.getPageIndices()); })
+              .then(function (pages) { pages.forEach(function (pg) { out.addPage(pg); }); });
+          }, Promise.resolve()).then(function () { return out.save(); });
+        });
+      }).then(function (bytes) { downloadBytes(bytes, 'postage-labels' + (j.mode !== 'production' ? '-TEST' : '') + '.pdf'); });
+    })
+    .catch(function (err) { msg.innerHTML = '<div class="error-box">' + esc(err.message) + '</div>'; })
+    .then(function () { btn.disabled = false; updatePostageSummary(); });
+});
 
 function matchTrackingNumbers() {
   var input = document.getElementById('tracking-input');

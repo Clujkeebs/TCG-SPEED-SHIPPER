@@ -51,10 +51,20 @@ After that, the rest of this list can wait for a free evening.
 
 ## 🚀 Road to $10k/mo: postage (see `docs/research/road-to-10k.md`)
 
-- [ ] **Pitney Bowes developer account** (free sandbox):
-  developer.pitneybowes.com. Put the sandbox API key and secret into
-  Railway → web → Variables as `PB_API_KEY` and `PB_API_SECRET`. Never
-  paste them in chat. ⏱ 10 min
+- [ ] 🔥 **Switch on in-app postage (test mode first).** The code is live
+  and waiting for keys. ⏱ 15 min
+  1. developer.pitneybowes.com → sign up (free) → open the **Sandbox**
+     tab. Copy the **API Key**, **API Secret** and **Shipper ID**.
+  2. Railway → web → Variables → add `PB_API_KEY`, `PB_API_SECRET` and
+     `PB_SHIPPER_ID` (paste the values there; never in chat).
+  3. Optional: add `PB_PILOT_EMAILS` with the emails of pilot sellers
+     (comma-separated, e.g. Rob's). You always have access.
+  4. Open the app, load a CSV: a **Buy postage** panel shows **TEST MODE**.
+     Buy a test label to see it work.
+  - Real postage stays off until you also set `PB_ENV=production` and
+    `PB_LIVE_OK=yes`. Do that only after deciding how sellers pay us
+    (see Road to $10k) and with the LLC in place. Production labels are
+    charged to *your* Pitney Bowes account.
 - [ ] **Send the Pitney Bowes partnership email.** It's already drafted in
   your Gmail ("Platform partnership: USPS letter + Ground Advantage…").
   Read it, edit, send. ⏱ 3 min

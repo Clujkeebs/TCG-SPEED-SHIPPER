@@ -516,9 +516,13 @@ router.get('/health', (req, res) => {
     supabase_url: !!process.env.SUPABASE_URL,
     supabase_service_key: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
     site_url: SITE_URL,
+    // Postage pilot (optional): Pitney Bowes keys and which mode it runs in.
+    pb_keys: !!(process.env.PB_API_KEY && process.env.PB_API_SECRET),
+    pb_shipper_id: !!process.env.PB_SHIPPER_ID,
+    pb_mode: require('./postage').pbConfig().mode,
   };
-  // Yearly prices are optional, so their absence doesn't mark the deploy unhealthy.
-  const missing = Object.keys(config).filter((k) => config[k] === false && !/_annual$/.test(k));
+  // Yearly prices and postage are optional, so their absence doesn't mark the deploy unhealthy.
+  const missing = Object.keys(config).filter((k) => config[k] === false && !/_annual$|^pb_/.test(k));
   res.json({
     ok: missing.length === 0,
     clients: { stripe: !!stripe, supabase_admin: !!supabaseAdmin },
@@ -1174,7 +1178,7 @@ router.post('/client-error', express.json({ limit: '8kb' }), async (req, res) =>
 // and source names are accepted, so the table can't be filled with junk, and
 // only daily totals are stored — no cookie, IP, or user id, which is why no
 // consent banner is needed for it.
-const FUNNEL_EVENTS = ['visit', 'csv_loaded', 'pdf_downloaded', 'signup', 'checkout_started', 'upgraded', 'pricing_viewed', 'tcg_import', 'share_clicked', 'upgrade_prompt', 'limit_hit', 'sample_loaded', 'newsletter_signup', 'pull_sheet', 'enterprise_clicked', 'wrong_file', 'tcg_slips_attached', 'tcg_slips_sorted', 'postage_waitlist', 'partial_download'];
+const FUNNEL_EVENTS = ['visit', 'csv_loaded', 'pdf_downloaded', 'signup', 'checkout_started', 'upgraded', 'pricing_viewed', 'tcg_import', 'share_clicked', 'upgrade_prompt', 'limit_hit', 'sample_loaded', 'newsletter_signup', 'pull_sheet', 'enterprise_clicked', 'wrong_file', 'tcg_slips_attached', 'tcg_slips_sorted', 'postage_waitlist', 'partial_download', 'postage_bought'];
 const FUNNEL_SOURCES = ['direct', 'google', 'google_ads', 'bing', 'reddit', 'youtube', 'tiktok', 'facebook', 'instagram', 'discord', 'twitter', 'tcgplayer', 'email', 'referral', 'affiliate', 'slip', 'whatnot', 'ebay', 'other'];
 const tooManyEvents = makeThrottle(120, 10 * 60 * 1000);
 router.post('/e', express.json({ limit: '1kb' }), async (req, res) => {
@@ -1255,6 +1259,10 @@ router.post('/newsletter/unsubscribe', express.urlencoded({ extended: false, lim
     await logError('newsletter', 'unsubscribe failed:', err);
     res.status(500).send(newsletterPage('Something went wrong', '<p>Please try again, or reply to the email with “unsubscribe”.</p>'));
   }
+});
+
+require('./postage')(router, {
+  supabaseAdmin: () => supabaseAdmin, requireUser, requireSupabase, OWNER_EMAIL, logError,
 });
 
 require('./admin')(router, {
