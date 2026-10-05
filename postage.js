@@ -103,6 +103,10 @@ function buildShipment({ from, to, service, weightOz, shipperId }) {
 }
 
 const TOPUP_AMOUNTS = [20, 50, 100];
+// Custom top-ups: any whole-dollar amount in this range (the cap limits the
+// damage a stolen card could do).
+const TOPUP_MIN = 20, TOPUP_MAX = 2000;
+const validTopup = (a) => Number.isInteger(a) && a >= TOPUP_MIN && a <= TOPUP_MAX;
 const cents = (dollars) => Math.round(Number(dollars) * 100);
 
 // Credits a paid postage top-up from a Stripe Checkout session. Returns true
@@ -166,7 +170,7 @@ module.exports = function mountPostageRoutes(router, d) {
   // What the app needs to decide whether to show the postage panel.
   router.get('/postage/status', requireSupabase, requireUser, (req, res) => {
     const cfg = pbConfig(env);
-    res.json({ allowed: allowed(req.user), configured: cfg.configured, mode: cfg.mode, balance: cfg.balance, topupAmounts: TOPUP_AMOUNTS, services: Object.keys(SERVICES).map((k) => ({ id: k, label: SERVICES[k].label, maxOz: SERVICES[k].maxOz, fee: feeFor(k, env) })) });
+    res.json({ allowed: allowed(req.user), configured: cfg.configured, mode: cfg.mode, balance: cfg.balance, topupAmounts: TOPUP_AMOUNTS, topupMin: TOPUP_MIN, topupMax: TOPUP_MAX, services: Object.keys(SERVICES).map((k) => ({ id: k, label: SERVICES[k].label, maxOz: SERVICES[k].maxOz, fee: feeFor(k, env) })) });
   });
 
   // Quote one shipment: { from, to, service, weightOz } → { amount }.
@@ -292,7 +296,7 @@ module.exports = function mountPostageRoutes(router, d) {
   // balance (no checkout per label). Credited by the Stripe webhook.
   router.post('/postage/topup', guard, async (req, res) => {
     const amount = Number(req.body && req.body.amount);
-    if (!TOPUP_AMOUNTS.includes(amount)) return res.status(400).json({ error: 'Pick $' + TOPUP_AMOUNTS.join(', $') });
+    if (!validTopup(amount)) return res.status(400).json({ error: 'Enter a whole-dollar amount from $' + TOPUP_MIN + ' to $' + TOPUP_MAX.toLocaleString('en-US') + '.' });
     if (!pbConfig(env).balance) return res.status(409).json({ error: 'Test mode labels are free, so there\'s nothing to top up yet.' });
     const s = stripe();
     if (!s) return res.status(503).json({ error: 'Payments aren\'t available right now' });

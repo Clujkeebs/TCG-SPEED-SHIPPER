@@ -172,8 +172,14 @@ server.listen(0, async () => {
     process.env.PB_BALANCE = 'on';
     r = await req('POST', '/api/postage/labels', { from: FROM, labels: [{ ref: 'B1', to: TO, service: 'letter' }] }, 'pilot-token');
     check('an empty balance blocks buying, before PB is called', r.status === 402);
-    r = await req('POST', '/api/postage/topup', { amount: 37 }, 'pilot-token');
-    check('only the offered top-up amounts are allowed', r.status === 400);
+    r = await req('POST', '/api/postage/topup', { amount: 10 }, 'pilot-token');
+    check('top-ups under $20 are refused', r.status === 400);
+    r = await req('POST', '/api/postage/topup', { amount: 2500 }, 'pilot-token');
+    check('top-ups over $2,000 are refused', r.status === 400);
+    r = await req('POST', '/api/postage/topup', { amount: 12.5 }, 'pilot-token');
+    check('custom top-ups must be whole dollars', r.status === 400);
+    r = await req('POST', '/api/postage/topup', { amount: 250 }, 'pilot-token');
+    check('a custom $250 top-up is allowed', r.status === 200 && stripeCreated.pop().line_items[0].price_data.unit_amount === 25000);
     r = await req('POST', '/api/postage/topup', { amount: 50 }, 'pilot-token');
     const cs = stripeCreated[0] || {};
     check('top-up opens one Stripe payment for $50', r.status === 200 && /checkout/.test(r.body.url) && cs.mode === 'payment' && cs.line_items[0].price_data.unit_amount === 5000 && cs.metadata.kind === 'postage_topup' && cs.client_reference_id === 'u_pilot');
