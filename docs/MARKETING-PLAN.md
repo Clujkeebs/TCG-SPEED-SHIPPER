@@ -129,3 +129,4 @@ and the SEO posts have the most room to grow.
 | Week of | Visits | CSV loads | New accts | Paying | Newsletter | Partners |
 |---|---|---|---|---|---|---|
 | Sep 21 | 259 | 39 | 1 | 8 | 0 | 0 |
+| Sep 28 – Oct 4 | 227 | 121 | 4 | 9 | 3 | 0 |

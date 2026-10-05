@@ -28,6 +28,34 @@ keep the subscription as the cheap entry ticket.
 | 4 | **Supplies affiliate** (envelopes, toploaders, thermal printers, labels) | 3–8% on referred purchases | $1–8 per buyer | Affiliate accounts (Amazon, supplier programs) |
 | 5 | **Shops / Enterprise** (#56) | $49–199/mo custom plans | Per shop | Sales conversations |
 
+## Update 2026-10-05: postage is built (pilot), with a fee per label
+
+- Shipped: a Buy postage panel, a prepaid balance (add $20/$50/$100 or a
+  custom amount up to $2,000), labels with tracking, reprints and refunds.
+  It runs in sandbox until the owner adds Pitney Bowes keys and
+  switches production on.
+- Pricing model (owner's call): postage passes through at cost, plus our
+  fee per label. Defaults: **$0.21 per letter** (a tracked letter totals
+  $0.99) and **$0.30 per Ground Advantage label**. Change them with
+  `PB_FEE_LETTER` / `PB_FEE_GROUND`.
+- **Validation:** Rob pays **$30/mo to rent a postage meter** and said he'd
+  drop it, and accept a higher subscription, for postage in the app.
+
+**What we keep per label** (after PB's $0.05 once past 3,000/mo, and
+payment fees on top-ups: card about 3.5% on $50, bank/ACH 0.8%):
+
+| | Fee | Seller pays | Keep (card) | Keep (bank) |
+|---|---|---|---|---|
+| Letter | $0.21 | $0.99 | $0.13 | $0.15 |
+| Letter | $0.30 | $1.08 | $0.21 | $0.24 |
+| Ground (≈$4.50 postage) | $0.30 | $4.80 | $0.08 | $0.21 |
+| Ground | $0.50 | $5.00 | $0.28 | $0.41 |
+| Ground | $1.00 | $5.50 | $0.76 | $0.91 |
+
+Recommendation: keep letters under $1 ($0.21), raise ground to $0.50, and
+push bank top-ups. About 44k labels/mo (70% letters, 30% ground) reaches
+$10k/mo from fees alone, roughly 90 sellers like Rob.
+
 ## What $10k/month actually takes
 
 These are illustrative scenarios, not forecasts. They assume a heavy
