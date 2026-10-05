@@ -390,6 +390,12 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
 .pg-topup .btn-ghost { padding: 6px 12px; min-height: 0; }
 .pg-custom { display: inline-flex; align-items: center; gap: 4px; }
 .pg-custom input { width: 76px; font: inherit; font-size: 14px; padding: 5px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface, #fff); color: inherit; }
+.pg-history { margin-top: 12px; font-size: 13px; }
+.pg-history summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
+.pg-hrow { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--border); }
+.pg-hrow .pg-hmeta { color: var(--muted); font-size: 12px; }
+.pg-hrow .pg-hbtns { display: inline-flex; gap: 6px; }
+.pg-hrow .btn-ghost { padding: 4px 10px; min-height: 0; font-size: 12px; }
 .pg-balance small { flex-basis: 100%; color: var(--muted); font-size: 12px; }
 .pg-row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; font-size: 13px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; }
 .pg-row .pg-who { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1077,6 +1083,11 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
           <span id="pg-summary" class="tip-inline"></span>
         </div>
         <div id="pg-msg"></div>
+        <details id="pg-history" class="pg-history" hidden>
+          <summary>Recent labels</summary>
+          <div id="pg-history-list"></div>
+          <p class="tip">Refund a label you didn't use and its price goes back to your balance. Don't mail a refunded label.</p>
+        </details>
       </div>
     </div>
 
@@ -3757,6 +3768,47 @@ function restoreTrackingForBatch() {
    Server: postage.js. Shown only when /api/postage/status says this account
    is in the pilot. Sandbox labels say they're tests and can't be mailed. */
 var postageStatus = null, postageFor = null, postageChoice = {}, postageBalance = null;
+function loadPostageHistory() {
+  if (!session || !postageStatus || !postageStatus.allowed) return;
+  fetch('/api/postage/labels', { headers: { Authorization: 'Bearer ' + session.access_token } })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (j) {
+      var box = document.getElementById('pg-history'), list = document.getElementById('pg-history-list');
+      var labels = (j && j.labels) || [];
+      box.hidden = !labels.length;
+      list.innerHTML = labels.map(function (l) {
+        var live = l.status === 'purchased';
+        return '<div class="pg-hrow"><div><b>' + esc(l.order_ref || 'Label') + '</b> · ' + (l.service === 'ground' ? 'Ground Advantage' : 'Letter') +
+          (l.price != null ? ' · $' + Number(l.price).toFixed(2) : '') + (l.mode === 'sandbox' ? ' · test' : '') +
+          '<div class="pg-hmeta">' + esc(l.tracking_number || '') + ' · ' + esc(new Date(l.created_at).toLocaleDateString()) + (live ? '' : ' · ' + esc(l.status.replace('_', ' '))) + '</div></div>' +
+          (live ? '<span class="pg-hbtns"><button type="button" class="btn-ghost" data-reprint="' + esc(l.shipment_id) + '">Reprint</button><button type="button" class="btn-ghost" data-refund="' + esc(l.shipment_id) + '">Refund</button></span>' : '<span></span>') + '</div>';
+      }).join('');
+    }).catch(function () {});
+}
+document.addEventListener('click', function (e) {
+  var rp = e.target.closest && e.target.closest('[data-reprint]');
+  var rf = e.target.closest && e.target.closest('[data-refund]');
+  if (!(rp || rf) || !session) return;
+  var id = (rp || rf).getAttribute(rp ? 'data-reprint' : 'data-refund');
+  var msg = document.getElementById('pg-msg');
+  if (rp) {
+    fetch('/api/postage/labels/' + encodeURIComponent(id) + '/pdf', { headers: { Authorization: 'Bearer ' + session.access_token } })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'Could not reprint'); return j; }); })
+      .then(function (j) { downloadBytes(Uint8Array.from(atob(j.labelPdfBase64), function (c) { return c.charCodeAt(0); }), 'label-' + id + '.pdf'); })
+      .catch(function (err) { msg.innerHTML = '<div class="error-box">' + esc(err.message) + '</div>'; });
+    return;
+  }
+  if (!confirm('Refund this label? Only do this if you haven\'t mailed it.')) return;
+  rf.disabled = true;
+  fetch('/api/postage/labels/' + encodeURIComponent(id) + '/refund', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token }, body: '{}' })
+    .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'Refund failed'); return j; }); })
+    .then(function (j) {
+      if (j.balanceCents != null) { postageBalance = j.balanceCents; showPostageBalance(); }
+      msg.innerHTML = '<div class="pg-result">✓ Refund requested' + (j.balanceCents != null ? '. The price is back in your balance.' : '.') + '</div>';
+      loadPostageHistory();
+    })
+    .catch(function (err) { rf.disabled = false; msg.innerHTML = '<div class="error-box">' + esc(err.message) + '</div>'; });
+});
 function refreshPostageBalance() {
   if (!session || !postageStatus || !postageStatus.balance) return Promise.resolve();
   return fetch('/api/postage/balance', { headers: { Authorization: 'Bearer ' + session.access_token } })
@@ -3816,7 +3868,7 @@ function renderPostage() {
     postageFor = key; postageStatus = null;
     fetch('/api/postage/status', { headers: { Authorization: 'Bearer ' + session.access_token } })
       .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (st) { postageStatus = st; renderPostage(); refreshPostageBalance(); })
+      .then(function (st) { postageStatus = st; renderPostage(); refreshPostageBalance(); loadPostageHistory(); })
       .catch(function () {});
     return;
   }
@@ -3894,6 +3946,7 @@ document.getElementById('pg-buy').addEventListener('click', function () {
         (j.mode !== 'production' ? ' · test labels' : '') + '. Downloading the PDF…' +
         bad.map(function (x) { return '<div class="bad">' + esc(x.ref) + ': ' + esc(x.error) + '</div>'; }).join('') + '</div>';
       if (j.balanceCents != null) { postageBalance = j.balanceCents; showPostageBalance(); }
+      loadPostageHistory();
       if (!ok.length) return;
       return loadPdfLib().then(function () {
         var L = window.PDFLib;

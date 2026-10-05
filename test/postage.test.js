@@ -155,6 +155,15 @@ server.listen(0, async () => {
     r = await req('POST', '/api/postage/labels', { from: FROM, labels: new Array(51).fill({ to: TO, service: 'letter' }) }, 'owner-token');
     check('more than 50 labels at once is refused', r.status === 400);
 
+    console.log('\n-- Label history and reprint --');
+    check('the label PDF is saved for reprints', ledger.every((x) => x.label_pdf === 'JVBERi0x'));
+    r = await req('GET', '/api/postage/labels/' + res3[0].shipmentId + '/pdf', undefined, 'pilot-token');
+    check('the buyer can reprint a label', r.status === 200 && r.body.labelPdfBase64 === 'JVBERi0x');
+    r = await req('GET', '/api/postage/labels/' + res3[0].shipmentId + '/pdf', undefined, 'owner-token');
+    check('nobody else can reprint it', r.status === 404);
+    r = await req('GET', '/api/postage/labels', undefined, 'stranger-token');
+    check('label history is pilot-only', r.status === 403);
+
     console.log('\n-- Refunds and tracking --');
     const sid = res3[0].shipmentId;
     r = await req('POST', '/api/postage/labels/' + sid + '/refund', {}, 'owner-token');
@@ -163,6 +172,8 @@ server.listen(0, async () => {
     check('the buyer can refund an unused label', r.status === 200 && ledger.find((x) => x.shipment_id === sid).status === 'refund_requested');
     r = await req('POST', '/api/postage/labels/' + sid + '/refund', {}, 'pilot-token');
     check('a label can only be refunded once', r.status === 409);
+    r = await req('GET', '/api/postage/labels/' + sid + '/pdf', undefined, 'pilot-token');
+    check('a refunded label can\'t be reprinted', r.status === 409);
     r = await req('GET', '/api/postage/track/94001', undefined, 'pilot-token');
     check('tracking returns status and scans', r.status === 200 && r.body.status === 'In Transit' && r.body.events[0].where === 'Los Angeles, CA');
     console.log('\n-- Prepaid balance --');

@@ -246,6 +246,7 @@ module.exports = function mountPostageRoutes(router, d) {
         const { error } = await supabaseAdmin().from('tcgss_postage_labels').insert({
           user_id: req.user.id, shipment_id: out.shipmentId, tracking_number: out.trackingNumber,
           service: item.service, amount: out.postage, fee: out.fee, price: out.price, mode, order_ref: ref || null, status: 'purchased',
+          label_pdf: out.labelPdfBase64,
         });
         if (error && logError) logError('postage', 'ledger insert failed:', error);
       } catch (err) {
@@ -280,6 +281,26 @@ module.exports = function mountPostageRoutes(router, d) {
       }
       res.json({ ok: true, status: (r && r.status) || 'INITIATED', balanceCents });
     } catch (err) { pbFail(res, err, 'Refund'); }
+  });
+
+  // Recent labels (for reprint and refund), newest first.
+  router.get('/postage/labels', requireSupabase, requireUser, gate, async (req, res) => {
+    const { data, error } = await supabaseAdmin().from('tcgss_postage_labels')
+      .select('shipment_id, tracking_number, service, price, mode, order_ref, status, created_at')
+      .eq('user_id', req.user.id).order('created_at', { ascending: false }).limit(50);
+    if (error) { if (logError) logError('postage', 'label list failed:', error); return res.status(500).json({ error: 'Could not load your labels' }); }
+    res.json({ labels: data || [] });
+  });
+
+  // Reprint: the PDF saved when the label was bought (only the buyer's own).
+  router.get('/postage/labels/:shipmentId/pdf', requireSupabase, requireUser, gate, async (req, res) => {
+    const id = clean(req.params.shipmentId, 60);
+    const { data: row, error } = await supabaseAdmin().from('tcgss_postage_labels').select('user_id, label_pdf, status').eq('shipment_id', id).maybeSingle();
+    if (error) return res.status(500).json({ error: 'Could not look up that label' });
+    if (!row || row.user_id !== req.user.id) return res.status(404).json({ error: 'Label not found' });
+    if (row.status !== 'purchased') return res.status(409).json({ error: 'That label was refunded, so it can\'t be printed' });
+    if (!row.label_pdf) return res.status(404).json({ error: 'No saved PDF for this label' });
+    res.json({ labelPdfBase64: row.label_pdf });
   });
 
   // Prepaid balance and recent activity.
