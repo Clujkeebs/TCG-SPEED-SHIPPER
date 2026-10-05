@@ -110,16 +110,16 @@ The hooks are Devin's, from the source pages. Rows point at
 
 | # | Who | Row | Template | Hook (first line) | Status |
 |---|---|---|---|---|---|
-| 1 | Philosopher Cards | B1 #2 | A | "Your 'How to Ship on TCGplayer: The Hardest Part of Selling Cards' video nails the pain: shipping is where the hours go." | sent 2026-09-28 |
-| 2 | Hound Dog Gaming (Pat) | B1 #6 | A | "Your 'TCGplayer Survival Guide for 2026' already links the envelopes and thermal printer sellers need. This is the software half of that kit." | sent 2026-09-28 |
+| 1 | Philosopher Cards | B1 #2 | A | "Your 'How to Ship on TCGplayer: The Hardest Part of Selling Cards' video nails the pain: shipping is where the hours go." | sent 2026-09-28; followed up 2026-10-05 |
+| 2 | Hound Dog Gaming (Pat) | B1 #6 | A | "Your 'TCGplayer Survival Guide for 2026' already links the envelopes and thermal printer sellers need. This is the software half of that kit." | sent 2026-09-28; followed up 2026-10-05 |
 | 3 | PokeNE (Brian) | B3 #1 | A | "Your 'Build a Pokémon Card Business' video is the mindset part; shipping fast is the unglamorous part that keeps the reviews 5-star." | skip: emailed 2026-09-14 (old campaign), no reply |
 | 4 | Card N All Gaming | B3 #5 | A (short) | "Your 'What I've Learned Running Game Stores for 10 Years' video is a great watch for anyone moving singles online." | skip: emailed 2026-09-13 (old campaign), no reply |
-| 5 | Mattcaster Mage MTG | B3 #2 | A | "Your MTG Market Movers videos send people to buy and sell singles. The ones selling on TCGplayer all hit the same shipping grind." | sent 2026-09-28 |
-| 6 | Monsters & Mana Marketplace | B3 #4 | A | "Your short on pricing Magic cards fairly with TCGplayer + ManaBox shows you think about the seller workflow end to end." | sent 2026-09-28 |
-| 7 | Brainstorm Brewery | B3 #3 | A | "'We Are All Vendors Now' (#714) was spot on. Once you're a vendor, printing 40 labels on a Sunday night is part of the job." | sent 2026-09-28 |
-| 8 | ItsPhantomCards | B2 #1 | A | "Your eBay-vs-TCGplayer store experiment is exactly the comparison sellers ask about." | sent 2026-09-28 |
-| 9 | Swans Emporium (Derek) | B2 #2 | A | "Going full-time on Pokémon and video-game reselling means shipping volume; this takes the typing out of it." | sent 2026-09-28 |
-| 10 | Heart Of The Pack | B2 #3 | A | "Congrats on the final run of the Yu-Gi-Oh mystery bundles. That's a lot of envelopes." | sent 2026-09-28 |
+| 5 | Mattcaster Mage MTG | B3 #2 | A | "Your MTG Market Movers videos send people to buy and sell singles. The ones selling on TCGplayer all hit the same shipping grind." | sent 2026-09-28; followed up 2026-10-05 |
+| 6 | Monsters & Mana Marketplace | B3 #4 | A | "Your short on pricing Magic cards fairly with TCGplayer + ManaBox shows you think about the seller workflow end to end." | sent 2026-09-28; followed up 2026-10-05 |
+| 7 | Brainstorm Brewery | B3 #3 | A | "'We Are All Vendors Now' (#714) was spot on. Once you're a vendor, printing 40 labels on a Sunday night is part of the job." | sent 2026-09-28; followed up 2026-10-05 |
+| 8 | ItsPhantomCards | B2 #1 | A | "Your eBay-vs-TCGplayer store experiment is exactly the comparison sellers ask about." | sent 2026-09-28; followed up 2026-10-05 |
+| 9 | Swans Emporium (Derek) | B2 #2 | A | "Going full-time on Pokémon and video-game reselling means shipping volume; this takes the typing out of it." | sent 2026-09-28; followed up 2026-10-05 |
+| 10 | Heart Of The Pack | B2 #3 | A | "Congrats on the final run of the Yu-Gi-Oh mystery bundles. That's a lot of envelopes." | sent 2026-09-28; followed up 2026-10-05 |
 | 11 | Full Grip Games | B2 #12 | B | "Ten years and 50,000+ TCGplayer sales at 100% positive is serious fulfillment." | hold (shop email paused) |
 | 12 | Card Shop Live | B2 #15 | B | "13 years and 50,000+ TCGplayer sales, plus daily breaks shipped after stream, is a lot of labels." | skip: emailed 2026-09-13 |
 | 13 | Geekery Games | B2 #4 | B | "50,000+ TCGplayer sales at 99.9% over 7 years. You've clearly got shipping down; this makes it faster." | skip: emailed 2026-09-13 |
