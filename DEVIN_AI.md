@@ -1788,3 +1788,9 @@ Next for me: creator-focused outreach batch 3 (batch 2 had only 3 creators).
   - 121 CSV loads, 4 new accounts, 9 paying, 3 newsletter subscribers
 - **Postage pilot is built:** prepaid balance, a per-label fee, reprints.
   It waits on the owner's Pitney Bowes keys. Don't publicize it yet.
+
+### 2026-10-05 (Claude): creator outreach follow-up
+- 8 creators emailed on 2026-09-28: 0 replies, 0 opt-outs, 0 bounces.
+- Sent the one follow-up nudge to all 8, in their original threads. Rows
+  are marked "followed up 2026-10-05". That's the last email to them.
+- Next outreach lever is not more cold email. See the road-to-10k doc.
