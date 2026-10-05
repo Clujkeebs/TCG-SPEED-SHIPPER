@@ -301,6 +301,13 @@ async function loadOverview() {
   g.appendChild(stat('Labels this month', o.labels.this_month, o.labels.active_users_this_month + ' active users · ' + o.labels.last_month + ' last month'));
   g.appendChild(stat('Errors, 7 days', o.errors_7d, o.errors_7d ? 'See Errors & Activity' : 'All quiet'));
   g.appendChild(stat('Newsletter', o.newsletter, 'subscribers'));
+  // Postage pilot: fees are ours, postage passes through to Pitney Bowes,
+  // and prepaid balances are money sellers can still spend on labels.
+  api('/postage').then(function (pg) {
+    var m = pg.live_30d, a = pg.live_all;
+    g.appendChild(stat('Label fees, 30 days', money(Math.round(m.fees * 100)), m.labels + ' live labels (' + m.letter + ' letter · ' + m.ground + ' ground) · ' + money(Math.round(a.fees * 100)) + ' all time'));
+    g.appendChild(stat('Postage balances held', money(pg.balances.outstanding_cents), money(pg.balances.topped_up_cents) + ' topped up · ' + pg.test_labels + ' test labels'));
+  }).catch(function () {});
 }
 
 /* ── Setup checks: config + which Stripe webhook events actually arrive ── */

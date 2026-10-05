@@ -127,7 +127,7 @@ server.listen(0, async () => {
   try {
     console.log('\n-- Access control --');
     const routes = [
-      ['GET', '/api/admin/overview'], ['GET', '/api/admin/users'], ['GET', '/api/admin/funnel'], ['GET', '/api/admin/events'], ['GET', '/api/admin/newsletter'],
+      ['GET', '/api/admin/overview'], ['GET', '/api/admin/postage'], ['GET', '/api/admin/users'], ['GET', '/api/admin/funnel'], ['GET', '/api/admin/events'], ['GET', '/api/admin/newsletter'],
       ['POST', '/api/admin/events/clear'], ['POST', '/api/admin/users/u_paid/grant-premium'], ['POST', '/api/admin/users/u_paid/revoke-free'],
       ['POST', '/api/admin/users/u_paid/reset-usage'], ['POST', '/api/admin/users/u_paid/sync'], ['POST', '/api/admin/users/u_paid/recovery-link'],
       ['POST', '/api/admin/users/u_paid/delete'],
@@ -212,6 +212,11 @@ server.listen(0, async () => {
     let last;
     for (let i = 0; i < 31; i++) last = await req('POST', '/api/client-error', { message: 'boom' }, { 'X-Forwarded-For': '203.0.113.51' });
     check('throttled after 30 reports per IP', last.status === 429);
+
+    console.log('\n-- Postage money --');
+    reset();
+    r = await req('GET', '/api/admin/postage', undefined, OWNER);
+    check('owner sees postage totals', r.status === 200 && r.body.live_30d.fees === 0 && r.body.balances.outstanding_cents === 0, JSON.stringify(r.body));
   } catch (e) { failed++; console.error(e); }
   console.log('\n' + passed + ' passed, ' + failed + ' failed');
   server.close();

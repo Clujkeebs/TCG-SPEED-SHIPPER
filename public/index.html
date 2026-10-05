@@ -277,6 +277,8 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
 .upload-zone p { font-size: 15px; color: var(--text-secondary); margin-bottom: 4px; font-weight: 600; position: relative; }
 .upload-zone small { font-size: 11px; color: var(--hint); font-family: 'JetBrains Mono', monospace; position: relative; }
 #csv-input { display: none; }
+.update-bar { position: fixed; left: 16px; right: 16px; top: 16px; z-index: 1001; max-width: 520px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px 10px 16px; border-radius: 12px; background: #1c1b18; color: #fff; font-size: 14px; box-shadow: 0 8px 30px rgba(0,0,0,.25); }
+.update-bar .btn-dl { padding: 8px 14px; min-height: 0; white-space: nowrap; }
 .loaded-state {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 14px; background: var(--success-bg);
@@ -4485,6 +4487,35 @@ refreshSession().then(function(){
     window.history.replaceState({}, '', window.location.pathname + (qs ? '?' + qs : ''));
   }
 });
+
+/* ── New version available ──
+   A tab left open keeps running the code it loaded, even after a fix goes
+   live (a seller once kept hitting an already-fixed paste bug). When the tab
+   comes back into view, or every 10 minutes, compare the live commit with the
+   one this page loaded; if it changed, offer a one-tap reload. Never reload
+   by itself: that would drop the orders loaded in this tab. */
+(function () {
+  var loaded = null, shown = false;
+  function check() {
+    if (shown) return;
+    fetch('/version.json', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
+      var c = v && v.commit;
+      if (!c) return;
+      if (!loaded) { loaded = c; return; }
+      if (c === loaded) return;
+      shown = true;
+      var bar = document.createElement('div');
+      bar.className = 'update-bar';
+      bar.setAttribute('role', 'status');
+      bar.innerHTML = '<span>A new version of TCG Speed Shipper is ready.</span><button type="button" class="btn-dl">Reload</button>';
+      bar.querySelector('button').addEventListener('click', function () { location.reload(); });
+      document.body.appendChild(bar);
+    }).catch(function () {});
+  }
+  check();
+  setInterval(check, 10 * 60 * 1000);
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') check(); });
+})();
 
 })();
 </script>

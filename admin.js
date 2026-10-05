@@ -101,6 +101,48 @@ module.exports = function mountAdminRoutes(router, d) {
     }
   });
 
+  // Postage pilot money: what we earned (fees), what passed through to
+  // Pitney Bowes (postage), and prepaid balances we still owe in labels.
+  router.get('/admin/postage', ...guard, async (req, res) => {
+    try {
+      const [labelsRes, ledgerRes] = await Promise.all([
+        db().from('tcgss_postage_labels').select('service, amount, fee, price, mode, status, created_at'),
+        db().from('tcgss_postage_ledger').select('cents, kind'),
+      ]);
+      if (labelsRes.error) throw labelsRes.error;
+      if (ledgerRes.error) throw ledgerRes.error;
+      const since30 = Date.now() - 30 * 864e5;
+      const round = (n) => Math.round(n * 100) / 100;
+      function tally(rows) {
+        const t = { labels: 0, letter: 0, ground: 0, postage: 0, fees: 0, refunded: 0 };
+        for (const r of rows) {
+          if (r.status !== 'purchased') { t.refunded++; continue; }
+          t.labels++; t[r.service] = (t[r.service] || 0) + 1;
+          t.postage += Number(r.amount) || 0; t.fees += Number(r.fee) || 0;
+        }
+        t.postage = round(t.postage); t.fees = round(t.fees);
+        return t;
+      }
+      const all = labelsRes.data || [];
+      const live = all.filter((r) => r.mode === 'production');
+      const ledger = ledgerRes.data || [];
+      const sumKind = (k) => ledger.filter((l) => l.kind === k).reduce((a, l) => a + l.cents, 0);
+      res.json({
+        live_30d: tally(live.filter((r) => new Date(r.created_at).getTime() >= since30)),
+        live_all: tally(live),
+        test_labels: all.length - live.length,
+        balances: {
+          outstanding_cents: ledger.reduce((a, l) => a + l.cents, 0),
+          topped_up_cents: sumKind('topup'),
+          refunded_cents: sumKind('refund'),
+        },
+      });
+    } catch (err) {
+      await logError('admin.postage', err);
+      res.status(500).json({ error: 'Could not load postage: ' + err.message });
+    }
+  });
+
   router.get('/admin/users', ...guard, async (req, res) => {
     try {
       const [authUsers, profilesRes, usageRes] = await Promise.all([
