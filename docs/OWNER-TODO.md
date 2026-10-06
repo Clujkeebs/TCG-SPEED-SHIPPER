@@ -2,6 +2,8 @@
 
 Maintained by Claude and Devin. Rewritten **2026-10-06**.
 
+**Interactive version (tick tasks, notes, talk to Claude):** https://claude.ai/artifact/Rkn4p1xzK8PVpV7pJaAMTh
+
 This file has three parts:
 
 1. **Your to-do list.** Only you can do these, because they need your
@@ -26,6 +28,11 @@ NAME / CLIENT ID / SECRET / GENERATED ON / STATUS / ACTION):
 |---|---|
 | **Client ID** | `PB_API_KEY` |
 | **Secret** (click the eye or Show icon to reveal it) | `PB_API_SECRET` |
+
+**"Invite Merchant" button:** don't use it now. It emails a seller an
+invite to create *their own* PB postage account with their own card (the
+production "Individual accounts" model). Sandbox needs no payment setup:
+test labels are free.
 
 **What's the Shipper ID?** It's the ID of the "merchant", meaning the
 postage account that labels get charged to. In the sandbox, PB gives you a
