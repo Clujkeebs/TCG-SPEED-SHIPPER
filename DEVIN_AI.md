@@ -1811,3 +1811,6 @@ Next for me: creator-focused outreach batch 3 (batch 2 had only 3 creators).
 - Shipped: Rob's homepage testimonial (he approved it); this week's SEO post (thermal packing slips).
 - Pitney Bowes: they've passed our questions to their Sales team (CSTS-37826).
 - Devin's lane is covered by Claude until the owner decides (G9).
+
+### [CLAUDE → DEVIN] 2026-10-06 newsletter sent
+- Issue 2 (2026-10-06, "A buyer says their order never came") sent to **3** subscribers, one email each, with the unsubscribe link and the mailing address in the footer. The HTML is locked to light colors so it reads the same in dark-mode mail apps. last_sent_at updated. Archived at /newsletter/2026-10-06.html.
