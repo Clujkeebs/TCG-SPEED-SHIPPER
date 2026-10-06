@@ -14,7 +14,7 @@ with **no price** ✅.
 | Price | $0 | $2.99/mo · $29/yr | **$6.99/mo · $69/yr** (new customers) | **$14.99/mo · $149/yr** |
 | Labels a month | 10 | 500 | **1,000** ✅ | Unlimited |
 | Postage labels | **10 a month to try it** ✅ | Unlimited | Unlimited | Unlimited |
-| Our fee per letter | $0.25 | $0.25 | $0.21 | $0.18 |
+| Our fee per letter | $0.15 | $0.15 | $0.12 | $0.10 |
 | Our fee per package | $0.60 | $0.60 | $0.45 | $0.30 |
 | Paste addresses, Design Studio | – | – | ✓ | ✓ |
 | Pro extras (below) | – | – | – | ✓ |
@@ -25,7 +25,8 @@ Fees are on top of postage at cost. ✅ The owner approved these amounts.
 Our costs per label are Pitney Bowes' $0.05 (only after 3,000 labels a
 month) plus the payment fee on the top-up (cards ≈3%, bank 0.8%). Working
 backwards from "keep $0.10 after a card top-up":
-- A letter (≈$0.78 postage) needs a fee of at least **$0.18**.
+- A letter (≈$0.78 postage) needs a fee of at least **$0.18** (superseded:
+  the owner chose a 5–10¢ minimum on letters, see below).
 - A package (≈$4.50 postage) needs a fee of at least **$0.30**.
 
 Pro sits exactly on that floor, and every other plan keeps more. Bank
@@ -43,9 +44,14 @@ services that offer $0.78. A tracked letter today would be $0.78 + $0.21 fee
   instead. That breaks the $0.10/label floor on letters.
 - **C. Letters at cost for Premium and Pro only** (the plan is the reason
   to pay), with the $0.21 fee on Free and Base.
-Claude leans **C**: it makes the subscription the obvious buy for heavy
-envelope shippers like Rob, and keeps a per-label margin on lighter users.
-Asked Rob what total would make it an easy switch (reply drafted).
+**✅ Decided Oct 6 (owner): keep 5–10¢ on every label.** Letter fees are
+now Free/Base $0.15, Premium $0.12, Pro $0.10, so a 1 oz letter costs about
+$0.88–0.93. After card fees (about 4¢), that keeps 6–11¢ per letter.
+Past 3,000 labels a month, Pitney Bowes' 5¢ cuts that to 1–6¢: steer
+heavy users to bank top-ups (0.8%), and revisit the fee then.
+Letters get USPS in-transit scans but **no delivery scan**. Sell them as
+"stamp price + tracking scans", never as "delivery confirmation". Packages
+(Ground Advantage) include full tracking and delivery confirmation.
 
 ## Existing customers
 - **Current Premium subscribers keep $5.99 and unlimited labels.** Their
