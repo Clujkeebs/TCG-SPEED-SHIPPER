@@ -552,6 +552,13 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
 }
 .step-body h3 { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 5px; }
 .step-body p { font-size: 14px; color: var(--muted); line-height: 1.7; margin: 0; }
+.seller-quote {
+  margin: 2rem 0 0; padding: 1.4rem 1.5rem; background: var(--surface);
+  border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: var(--radius);
+}
+.seller-quote blockquote { margin: 0; font-family: 'DM Serif Display', serif; font-size: 19px; line-height: 1.45; color: var(--text); }
+.seller-quote figcaption { margin-top: 12px; font-size: 13px; color: var(--muted); }
+.seller-quote figcaption b { color: var(--text); }
 .why-grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px; margin-top: 1.25rem;
@@ -1528,6 +1535,11 @@ Chicago, IL 60601</div>
         <div class="why-desc">Paste tracking numbers and get one TCGplayer import file for the whole batch.</div>
       </div>
     </div>
+
+    <figure class="seller-quote">
+      <blockquote>“TCG Speed Shipper allows me to organize and batch my TCGplayer orders into shipping labels with different options that work for me and my business. It saves time typically needed to manually print shipping labels and packing slips, and does it all in one easy interface.”</blockquote>
+      <figcaption><b>Rob</b> · The Arcane Reserve, TCGplayer store</figcaption>
+    </figure>
 
     <!-- Compatibility section — more publisher content -->
     <div class="compat-section">

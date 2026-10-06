@@ -31,7 +31,23 @@ backwards from "keep $0.10 after a card top-up":
 Pro sits exactly on that floor, and every other plan keeps more. Bank
 top-ups keep about $0.02–0.12 more per label.
 
-### Existing customers
+#### ⚠️ Rob's feedback (Oct 6): the letter price
+Rob asked whether we sell at the $0.78 metered rate or the $0.82 stamp
+price, and said sellers won't switch if the total isn't competitive with
+services that offer $0.78. A tracked letter today would be $0.78 + $0.21 fee
+= $0.99. Options for the owner:
+- **A. Keep $0.21** (total $0.99). That's still below the stamp + tracking
+  combos, but it reads as "more than a stamp".
+- **B. Letters at cost + $0.04–0.08** (total $0.82–0.86, "stamp price, with
+  tracking"). We make our money on the subscription and package fees
+  instead. That breaks the $0.10/label floor on letters.
+- **C. Letters at cost for Premium and Pro only** (the plan is the reason
+  to pay), with the $0.21 fee on Free and Base.
+Claude leans **C**: it makes the subscription the obvious buy for heavy
+envelope shippers like Rob, and keeps a per-label margin on lighter users.
+Asked Rob what total would make it an easy switch (reply drafted).
+
+## Existing customers
 - **Current Premium subscribers keep $5.99 and unlimited labels.** Their
   price and limit don't change. They get their own short email saying so.
 - Current Base subscribers keep $2.99 and 500 labels.

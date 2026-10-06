@@ -84,6 +84,7 @@ deploy.
 10. Homepage testimonial from Rob, once he replies (E2).
 
 ## Changelog
+- 2026-10-06 (5am run): customer replies can change the plan. Rob's note on the $0.78 letter rate opened a pricing decision (C6). Keep checking customer replies before shipping pricing work.
 - 2026-10-06: owner lifted the mmuszak34 no-contact rule; Devin's subscription
   ended, so Claude covers Devin's lane (SEO post, newsletter draft) until the
   owner decides (board task G9).
