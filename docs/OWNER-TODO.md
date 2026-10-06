@@ -84,16 +84,7 @@ more than all subscriptions combined today.
   - **Unlocks:** Claude can test everything end to end with real PB
     responses and fix anything PB rejects, before any real money moves.
 
-- [ ] 🔥 **A2. Decide the Ground Advantage fee** ⏱ 10 sec
-  - This is what we charge on top of postage for a $49.99+ order label.
-    The current default is $0.30, which only keeps about $0.08–0.21 after
-    payment fees.
-  - **My recommendation is $0.50.** The seller still pays about $5.00
-    total (Pirate Ship charges postage only, but has no slips and no
-    TCGplayer integration), and we keep $0.28–0.41.
-  - Letters stay at $0.21 (seller pays $0.99, under the $0.82 stamp plus
-    the tracking they can't get from a stamp).
-  - Just tell Claude "ground 50 cents" and it gets changed.
+- [x] **A2. Ground Advantage fee: $0.50** (decided 2026-10-06; live as the default).
 
 - [ ] **A3. Add Rob as a pilot and send his invite** ⏱ 3 min
   - In Railway Variables, add `PB_PILOT_EMAILS` = Rob's login email.

@@ -613,7 +613,8 @@ async function send(){
   $("#composer").value = "";
   if (dockMode==="inbox"){
     if (!db){ bubble($("#inboxMsgs"),"sys","Inbox needs sync, which isn't available in this view. Use Ask now, or write a task note."); return; }
-    try { await db.collection("inbox").add({from:"owner", text, at:new Date().toISOString()}); }
+    try { await db.collection("inbox").add({from:"owner", text, at:new Date().toISOString()});
+      bubble($("#inboxMsgs"),"sys","Sent ✓ Claude reads the inbox at its next check-in and replies here. For an answer right now, tell Claude in the Claude app, or use Quick questions."); }
     catch(e){ bubble($("#inboxMsgs"),"sys","Couldn't send. Check your connection and try again."); $("#composer").value=text; }
     return;
   }
@@ -622,7 +623,7 @@ async function send(){
   if (sample===null || sample===undefined){
     try { sample = await window.claude?.use?.("sample"); } catch(e){ sample = null; }
   }
-  if (!sample){ bubble(h,"sys","Live answers aren't available in this view. Send it to the Inbox instead and Claude will reply there."); return; }
+  if (!sample){ bubble(h,"sys","Quick answers aren't turned on in this view. Open this page in a browser at claude.ai (signed in), and tap Allow when it asks. Or send it to Claude's inbox."); return; }
   askHistory.push({role:"user", content:text});
   const out = bubble(h,"ai","Thinking…");
   busy = true; $("#sendBtn").disabled = true;
@@ -634,7 +635,7 @@ async function send(){
     askHistory.push({role:"assistant", content:res.text});
   }catch(e){
     const msg = {not_granted:"Live answers weren't allowed. You can turn them on from this page's Permissions menu, or use the Inbox.", rate_limited:"Too many questions at once. Wait a minute and try again.", prompt_too_large:"That conversation got long. Close and reopen the chat to start fresh."}[e&&e.code];
-    out.textContent = (e&&e.text) || msg || "Couldn't get an answer. Try again, or send it to the Inbox.";
+    out.textContent = (e&&e.text) || msg || "Couldn't get an answer ("+((e&&e.code)||"unknown")+"). Try again, or send it to Claude's inbox.";
     askHistory.pop();
   }finally{ busy=false; $("#sendBtn").disabled=false; }
 }
