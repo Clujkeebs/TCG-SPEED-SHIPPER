@@ -64,7 +64,7 @@ With postage, we earn on **every label** a seller prints. Rob alone ships
 500+ orders a month. At our fee that's about $100/mo from one seller,
 more than all subscriptions combined today.
 
-- [ ] 🔥 **A1. Put the sandbox keys into Railway** ⏱ 10 min
+- [ ] 🔥 **A1. Put the Shipping 360 sandbox keys into Railway** ⏱ 5 min (only `PB_API_KEY` = Client ID and `PB_API_SECRET` = Secret; no Shipper ID needed. Fill in the Phone in your return address: Shipping 360 needs one on every label.)
   1. Go to railway.app and log in. Open the **tcg-speed-shipper**
      project, then click the **web** service box.
   2. Open the **Variables** tab and click **+ New Variable**. Add these

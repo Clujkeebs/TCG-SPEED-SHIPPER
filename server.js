@@ -518,7 +518,6 @@ router.get('/health', (req, res) => {
     site_url: SITE_URL,
     // Postage pilot (optional): Pitney Bowes keys and which mode it runs in.
     pb_keys: !!(process.env.PB_API_KEY && process.env.PB_API_SECRET),
-    pb_shipper_id: !!process.env.PB_SHIPPER_ID,
     pb_mode: require('./postage').pbConfig().mode,
   };
   // Yearly prices and postage are optional, so their absence doesn't mark the deploy unhealthy.
