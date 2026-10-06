@@ -826,6 +826,14 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
 /* ── Auth messages ── */
 .auth-note { margin: 10px 0 0; font-size: 13px; line-height: 1.5; border-radius: var(--radius-sm); padding: 10px 12px; }
 .auth-note.err { background: var(--danger-bg); border: 1px solid #f5c0bb; color: var(--danger); }
+.pw-wrap { position: relative; }
+.pw-wrap input { padding-right: 64px; }
+.pw-toggle { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: 0; padding: 6px 8px; font: 600 12px/1 inherit; color: var(--accent); cursor: pointer; border-radius: 6px; }
+.pw-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.promo-details > summary { cursor: pointer; list-style: none; margin-bottom: 0; }
+.promo-details > summary::-webkit-details-marker { display: none; }
+.promo-details > summary::after { content: ' +'; }
+.promo-details[open] > summary::after { content: ' −'; }
 .auth-note.ok { background: var(--success-bg); border: 1px solid #b6e8cc; color: var(--success); }
 
 /* ── Post-download share card + upgrade prompt ── */
@@ -1297,24 +1305,29 @@ Chicago, IL 60601</div>
 
     <div class="section fade-in-up" id="account-panel">
       <div id="account-signed-out">
-        <div class="section-label">Account</div>
+        <div class="section-label">Log in or create a free account</div>
         <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;line-height:1.6;">
-          The Free plan works with no account at all. Sign in only when you want to upgrade to Base or Premium, or to check your usage from any device.
+          The Free plan works with no account at all. You only need an account to upgrade, or to see your plan and usage on any device. New here? Type an email and a password, then tap <strong>Create Account</strong>.
         </p>
+        <form id="auth-form" novalidate>
         <div class="grid-2 mb">
           <div class="field">
             <label for="auth-email">Email</label>
-            <input type="text" id="auth-email" placeholder="you@email.com" autocomplete="email" />
+            <input type="email" id="auth-email" name="email" placeholder="you@email.com" autocomplete="username" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" />
           </div>
           <div class="field">
             <label for="auth-password">Password</label>
-            <input type="password" id="auth-password" placeholder="At least 8 characters" autocomplete="current-password" />
+            <div class="pw-wrap">
+              <input type="password" id="auth-password" name="password" placeholder="At least 8 characters" autocomplete="current-password" />
+              <button type="button" class="pw-toggle" id="auth-pw-toggle" aria-label="Show password" aria-pressed="false">Show</button>
+            </div>
           </div>
         </div>
         <div class="btn-row" style="margin-top:0;">
-          <button class="btn-dl" id="auth-login-btn">Log In</button>
-          <button class="btn-ghost" id="auth-signup-btn">Create Account</button>
+          <button class="btn-dl" id="auth-login-btn" type="submit">Log In</button>
+          <button class="btn-ghost" id="auth-signup-btn" type="button">Create Account</button>
         </div>
+        </form>
         <div id="auth-captcha" style="margin-top:10px;" hidden></div>
         <div id="auth-msg"></div>
         <p class="tip" style="margin-top:8px;">By creating an account you agree to the <a href="/terms.html" style="color:inherit;">Terms of Service</a> and <a href="/privacy.html" style="color:inherit;">Privacy Policy</a>.</p>
@@ -1359,9 +1372,9 @@ Chicago, IL 60601</div>
       </div>
     </div>
 
-    <div class="section fade-in-up" id="promo-section">
-      <div class="section-label">Promo Code</div>
-      <div class="grid-2 mb" style="align-items:end;">
+    <details class="section fade-in-up promo-details" id="promo-section">
+      <summary class="section-label">Have a promo code?</summary>
+      <div class="grid-2 mb" style="align-items:end;margin-top:12px;">
         <div class="field">
           <label for="promo-input">Code</label>
           <input type="text" id="promo-input" placeholder="e.g. LAUNCH20" autocapitalize="characters" />
@@ -1371,7 +1384,7 @@ Chicago, IL 60601</div>
         </div>
       </div>
       <p class="tip" id="promo-msg"></p>
-    </div>
+    </details>
 
     <div class="invite-banner" id="invite-banner" hidden>🎁 <strong>You were invited by another seller.</strong> Create a free account and your first month of Base or Premium is on us — cancel before it ends and you pay nothing.</div>
 
@@ -1392,7 +1405,7 @@ Chicago, IL 60601</div>
           <li>Packing slips</li>
           <li>No account required</li>
         </ul>
-        <button class="btn-ghost" disabled>Default plan</button>
+        <button class="btn-ghost" type="button" data-hiw-go="upload">Start free, no account</button>
       </div>
       <div class="price-card">
         <h3>Base</h3>
@@ -2174,6 +2187,26 @@ async function refreshSession() {
   updateAccountUI();
 }
 
+// A plan picked while signed out. After sign-in we continue straight to
+// checkout instead of making the seller find the button again.
+var pendingPlan = null;
+function askToSignIn(plan, text) {
+  pendingPlan = plan || null;
+  switchTab('pricing');
+  var am = document.getElementById('auth-msg');
+  if (am) { am.className = 'auth-note ok'; am.textContent = text; }
+  var panel = document.getElementById('account-panel');
+  if (panel && panel.scrollIntoView) panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  var em = document.getElementById('auth-email');
+  if (em) em.focus({ preventScroll: true });
+}
+function continuePendingPlan() {
+  var plan = pendingPlan; pendingPlan = null;
+  if (!plan || !session) return;
+  var btn = document.querySelector('.pricing-grid [data-plan="' + plan + '"]');
+  if (btn && !btn.disabled) btn.click();
+}
+
 if (sb) {
   sb.auth.onAuthStateChange(function (event, s) {
     session = s;
@@ -2182,6 +2215,7 @@ if (sb) {
     setTimeout(function () {
       Promise.all([refreshServerStatus(), refreshReferralStats()]).then(function () {
         updateAccountUI();
+        if (event === 'SIGNED_IN') continuePendingPlan();
         // The reset link in a "Forgot password" email signs the user in with a
         // recovery session. Without this they were logged in once and never
         // actually got to choose a new password.
@@ -2338,11 +2372,8 @@ function startUpgrade(plan, interval) {
   if (interval) setBillingInterval(interval);
   var btn = document.querySelector('.pricing-grid [data-plan="' + plan + '"]');
   if (session && btn && !btn.disabled) { btn.click(); return; }
-  switchTab('pricing');
-  if (!session) {
-    var em = document.getElementById('auth-email'); if (em) em.focus();
-    var am = document.getElementById('auth-msg'); if (am) am.textContent = 'Create a free account (or sign in), then pick ' + capitalize(plan) + '.';
-  }
+  if (!session) askToSignIn(plan, 'Log in or create a free account. We\'ll take you straight to ' + capitalize(plan) + ' checkout after.');
+  else switchTab('pricing');
 }
 function upsellHTML(title, body) {
   var onBase = currentPlan() === 'base';
@@ -4271,9 +4302,25 @@ document.getElementById('tracking-copy-all-btn').addEventListener('click', funct
     return json;
   }
 
-  passwordField.addEventListener('keydown', function (e) { if (e.key === 'Enter') loginBtn.click(); });
+  document.getElementById('auth-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!passwordField.value) { passwordField.focus(); return; }
+    loginBtn.click();
+  });
+  emailField.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !passwordField.value) { e.preventDefault(); passwordField.focus(); }
+  });
+  var pwToggle = document.getElementById('auth-pw-toggle');
+  pwToggle.addEventListener('click', function () {
+    var show = passwordField.type === 'password';
+    passwordField.type = show ? 'text' : 'password';
+    pwToggle.textContent = show ? 'Hide' : 'Show';
+    pwToggle.setAttribute('aria-pressed', String(show));
+    pwToggle.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+  });
 
-  loginBtn.addEventListener('click', async function () {
+  loginBtn.addEventListener('click', async function (e) {
+    if (e) e.preventDefault();
     var c = readCredentials();
     if (!c.email || !c.password) { setMsg('Enter your email and password.', 'err'); return; }
     if (!sb) { setMsg('Accounts are unavailable right now — try again later.', 'err'); return; }
@@ -4443,6 +4490,7 @@ document.getElementById('tracking-copy-all-btn').addEventListener('click', funct
   // overwrite the account plan line, which refreshSession() has already set to
   // the real, newly-updated plan and usage.
   function setPlanSwitchMsg(text) {
+    if (text) document.getElementById('promo-section').open = true;
     setPromoMsg(text || '', 'ok');
   }
 
@@ -4450,9 +4498,7 @@ document.getElementById('tracking-copy-all-btn').addEventListener('click', funct
     btn.addEventListener('click', async function(){
       var plan = this.dataset.plan;
       if (!session) {
-        switchTab('pricing');
-        document.getElementById('auth-email').focus();
-        document.getElementById('auth-msg').textContent = 'Sign in first, then click Upgrade again.';
+        askToSignIn(plan, 'Log in or create a free account. We\'ll take you straight to ' + capitalize(plan) + ' checkout after.');
         return;
       }
       this.disabled = true; var orig = this.textContent; this.textContent = 'Redirecting...';
