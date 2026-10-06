@@ -23,7 +23,7 @@ const MAX_LABELS_PER_REQUEST = 50;
 // letter at $0.78 postage + $0.21 lands at $0.99, under a dollar and close
 // to a plain $0.82 stamp. Ground Advantage stays cheap enough that sellers
 // don't leave for free tools. Override with PB_FEE_LETTER / PB_FEE_GROUND.
-const DEFAULT_FEES = { letter: 0.21, ground: 0.30 };
+const DEFAULT_FEES = { letter: 0.21, ground: 0.50 };
 function feeFor(service, env = process.env) {
   const v = Number(env['PB_FEE_' + String(service).toUpperCase()]);
   return Number.isFinite(v) && v >= 0 && v <= 5 ? Math.round(v * 100) / 100 : DEFAULT_FEES[service];

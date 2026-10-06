@@ -139,8 +139,8 @@ server.listen(0, async () => {
     check('a batch returns one result per label, in order', r.status === 200 && res3.map((x) => x.ref).join() === 'A1,A2,A3', JSON.stringify(r.body));
     check('a bad address fails alone; the others still print', res3[0].ok && !res3[1].ok && res3[2].ok && /Invalid address/.test(res3[1].error));
     check('labels come back with tracking and a PDF', res3[0].trackingNumber && res3[0].labelPdfBase64 === 'JVBERi0x');
-    check('total = postage + fees, purchased labels only', r.body.postage === 5.28 && r.body.fees === 0.51 && r.body.total === 5.79, JSON.stringify([r.body.postage, r.body.fees, r.body.total]));
-    check('each label carries its price', res3[0].price === 0.99 && res3[2].price === 4.8);
+    check('total = postage + fees, purchased labels only', r.body.postage === 5.28 && r.body.fees === 0.71 && r.body.total === 5.99, JSON.stringify([r.body.postage, r.body.fees, r.body.total]));
+    check('each label carries its price', res3[0].price === 0.99 && res3[2].price === 5);
     const ships = pbCalls.filter((c) => c.url.endsWith('/v1/shipments')).map((c) => JSON.parse(c.init.body));
     check('letter → USPS FCM LETTER on a 6x4 label', ships[0].rates[0].serviceId === 'FCM' && ships[0].rates[0].parcelType === 'LETTER' && ships[0].documents[0].size === 'DOC_6X4');
     check('ground → USPS GA package on a 4x6 label', ships[2].rates[0].serviceId === 'GA' && ships[2].documents[0].size === 'DOC_4X6');
@@ -208,11 +208,11 @@ server.listen(0, async () => {
       { ref: 'C3', to: TO, service: 'letter' },
     ] }, 'pilot-token');
     const rb = r.body.results || [];
-    check('labels draw down the balance with no checkout', rb[0].ok && rb[1].ok && r.body.balanceCents === 600 - 480 - 99, JSON.stringify(r.body));
+    check('labels draw down the balance with no checkout', rb[0].ok && rb[1].ok && r.body.balanceCents === 600 - 500 - 99, JSON.stringify(r.body));
     check('when the balance runs out, the unpaid label is voided at PB', !rb[2].ok && /balance/.test(rb[2].error) && pbCalls.some((c) => c.init.method === 'DELETE'));
     check('balance never goes negative', bal('u_pilot') >= 0);
     r = await req('POST', '/api/postage/labels/' + rb[1].shipmentId + '/refund', {}, 'pilot-token');
-    check('a refund puts the label price back', r.status === 200 && bal('u_pilot') === 600 - 480);
+    check('a refund puts the label price back', r.status === 200 && bal('u_pilot') === 600 - 500);
     r = await req('GET', '/api/postage/balance', undefined, 'stranger-token');
     check('balance is pilot-only', r.status === 403);
     delete process.env.PB_BALANCE;
