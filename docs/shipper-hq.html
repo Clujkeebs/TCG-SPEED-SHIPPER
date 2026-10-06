@@ -204,7 +204,7 @@ td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:now
 <script>
 /* ---------- Content ---------- */
 const TXT_VALUE = "railway-verify=2f07e30030ad12a6fcee1329ee23f25808e97b6b21a9f09803683a6ba50dbf54";
-const STAGES = [
+const OLD_STAGES = [
  {id:"A", name:"Switch on postage", sub:"This is the money. Today we earn once a month per seller. With postage we earn on every label every seller prints. Rob alone ships 500+ orders a month.", tasks:[
   {id:"A1", hot:1, min:15, title:"Put the Pitney Bowes sandbox keys into Railway",
    why:"Turns on the Buy postage panel in TEST MODE. Test labels are free and fake, so nothing is charged and no payment setup is needed. Claude can then test against real Pitney Bowes responses and fix anything before real money moves.",
@@ -214,7 +214,8 @@ const STAGES = [
     "Go to <b>railway.app</b> → project <b>tcg-speed-shipper</b> → click the <b>web</b> box → <b>Variables</b> tab → <b>+ New Variable</b>.",
     "Add two variables, name on the left, value on the right: <span class='mono'>PB_API_KEY</span> = Client ID, <span class='mono'>PB_API_SECRET</span> = Secret.",
     "Click the purple <b>Deploy</b> button at the top. The site restarts in about 2 minutes with no downtime.",
-    "Claude is switching our code to the Shipping 360 API (it needs one network setting from you, see the note in the Inbox). After that: log into tcgspeedshipper.com, click <b>Try a sample</b>, and a <b>Buy postage</b> panel with a TEST MODE badge appears.",
+    "On tcgspeedshipper.com, fill in the <b>Phone</b> in your return address. Shipping 360 needs a phone on every label, and yours stands in for the buyer's.",
+    "Test it: log in, click <b>Try a sample</b>. A <b>Buy postage</b> panel with a TEST MODE badge appears. Buy one test label. If you get an error, copy the exact message into this task's note.",
     "Never paste these keys in chat, email or this page. Railway is the only place they go."],
    copy:["PB_API_KEY","PB_API_SECRET"],
    unlock:"Postage works end to end in test mode. Claude starts fixing anything Pitney Bowes rejects."},
@@ -344,24 +345,81 @@ const STAGES = [
  ]}
 ];
 
+
+/* Priority order (Oct 6): security, then postage money, then free growth, then paid growth, then the rest. */
+const T = {}; OLD_STAGES.forEach(st => st.tasks.forEach(t => { T[t.id] = t; }));
+T.B4 = {id:"B4", hot:1, min:10, title:"Supabase: make a new secret key and put it in Railway",
+  why:"The old server key was exposed. Supabase won't let you roll the old-style key without breaking the site, so we switch to Supabase's new-style keys instead. Claude already switched the website's public key (done Oct 6). This step swaps the server key.",
+  steps:["supabase.com → project → <b>Project Settings</b> → <b>API Keys</b>. Open the tab that shows <b>Publishable and secret API keys</b> (not \"Legacy\").",
+   "Under <b>Secret keys</b>, click <b>+ New secret key</b>, name it <b>railway</b>, create it, and copy it (starts with <span class='mono'>sb_secret_</span>).",
+   "Railway → <b>web</b> → <b>Variables</b> → click the <span class='mono'>SUPABASE_SERVICE_ROLE_KEY</span> row → <b>Edit</b> → paste the new key → save → <b>Deploy</b>.",
+   "Write “done” in this note. Claude checks the server log says <b>supabase_key=OK</b> before step B8."],
+  copy:["SUPABASE_SERVICE_ROLE_KEY"], unlock:"The server stops depending on the exposed key."};
+T.B8 = {id:"B8", hot:1, min:2, title:"Turn off the old (legacy) Supabase keys — after Claude says go",
+  why:"This is what actually kills the exposed key. Only do it after B4 and after Claude confirms in the Inbox that the site works on the new keys, or logins break.",
+  steps:["Wait for Claude's “go for B8” message in the Inbox.","Supabase → Project Settings → API Keys → <b>Legacy API keys</b> tab → <b>Disable legacy API keys</b> → confirm.","Open tcgspeedshipper.com and log in once to check it still works. If not, re-enable them (same button) and tell Claude."],
+  unlock:"The leaked key is dead."};
+T.B5 = Object.assign({}, T.B5, {title:"Leaked-password protection (skipped: paid Supabase plan only)", min:0});
+T.A8 = {id:"A8", hot:1, min:5, title:"Buy one free test label",
+  why:"Proves the whole postage path works with your Shipping 360 keys before Rob or anyone else tries it.",
+  steps:["On tcgspeedshipper.com, open your return address and fill in <b>Phone</b> (Shipping 360 needs one on every label).","Log in, click <b>Try a sample</b>. A <b>Buy postage</b> panel with a TEST MODE badge appears.","Buy one Ground Advantage label and one letter. Free in test mode.","Error? Copy the exact message into this note. Claude fixes it."],
+  unlock:"Rob can start his pilot."};
+T.D1 = Object.assign({}, T.D1, {hot:1, title:"Google Search Console: finish verifying + submit sitemap",
+  steps:["Your Porkbun DNS already has a <b>google-site-verification</b> TXT record, so the hard part is done.","Open <b>search.google.com/search-console</b>. If tcgspeedshipper.com is listed, open it. If it says “Verify”, click <b>Verify</b>.","Left menu → <b>Sitemaps</b> → enter <span class='mono'>sitemap.xml</span> → <b>Submit</b>.","<b>bing.com/webmasters</b> → sign in → <b>Import from Google Search Console</b>.","Tick this, and Claude starts reading which searches find us every Monday."]});
+T.H1 = {id:"H1", min:20, money:1, title:"Google Ads: create the account (Expert mode, no campaign yet)",
+  why:"Paid search puts us in front of sellers searching “TCGplayer shipping labels” today. Do it after D1 so Google already knows the site.",
+  steps:["<b>ads.google.com</b> → sign in → when it pushes a “Smart campaign”, click <b>Switch to Expert Mode</b> → <b>Create an account without a campaign</b>.","Country United States, time zone Pacific, currency USD (can't be changed later).","Billing → add your card. Use a promo code if Google offers “spend $X, get $X”.","Tools → Shared library → <b>Negative keyword lists</b> → new list “Not our customer” → paste the negatives from the kit."]};
+T.H2 = {id:"H2", min:20, money:1, title:"Google Ads: one Search campaign, $5/day, $150 cap",
+  why:"A small, controlled test. We judge it by paying customers, not clicks.",
+  steps:["New campaign → goal <b>Website traffic</b> → type <b>Search</b>.","Networks: <b>untick</b> Search Partners and Display.","Location United States; language English.","Bidding <b>Maximize clicks</b>, max CPC <b>$1.50</b>. Budget <b>$5/day</b>.","Final URL suffix: paste the value below (it tells our admin page which ad brought each visitor).","Turn <b>off</b> auto-apply recommendations and AI Max (they raise budgets on their own).","Paste the 4 ad groups (keywords, 15 headlines, 4 descriptions each) from the Google Ads kit file Claude sent you (START-HERE.html, Copy buttons)."],
+  copy:["utm_source=google_ads&utm_medium=cpc&utm_campaign={campaignid}&utm_content={adgroupid}"]};
+T.H3 = {id:"H3", min:2, title:"Google Ads: the keep-or-kill rule",
+  why:"A paying seller is worth about $36, so we can pay up to ~$15 to get one.",
+  steps:["After $150 (about 30 days): <b>3+ paying customers</b> → keep going and raise to $10/day.","Fewer than 3 → stop, and put the money into partner payouts instead.","Claude posts the numbers (visits, signups, paying, cost each) in the Inbox every Monday. Write your daily budget in this note so the math is right."]};
+
+const STAGES = [
+ {id:"P1", name:"Security first", sub:"Do these before anything else. They protect your accounts, your customers' data and your money.", tasks:["B4","B8","B3","B6","B7","B1","B2","B5"].map(k=>T[k])},
+ {id:"P2", name:"Switch on postage (the money)", sub:"Every label any seller prints earns a fee. Rob alone ships 500+ a month.", tasks:["A8","A3","A1","A2","A5","A4","A6","A7"].map(k=>T[k])},
+ {id:"P3", name:"Get found for free", sub:"Organic search and seller communities cost nothing and compound.", tasks:["D1","D3","D2","D4","D5"].map(k=>T[k])},
+ {id:"P4", name:"Paid growth: Google Ads test", sub:"After P3's Search Console. Small, measured, with a clear keep-or-kill rule.", tasks:["H1","H2","H3"].map(k=>T[k])},
+ {id:"P5", name:"Content and decisions that raise revenue", sub:"A demo video, a real quote, and pricing calls only you can make.", tasks:["C4","E1","E2","C1","E3","C2","C3"].map(k=>T[k])},
+ {id:"P6", name:"Tests and housekeeping", sub:"When you have a spare 10 minutes.", tasks:["F1","G1","G2","F2","G3","G4","G5"].map(k=>T[k])}
+];
+
 const BUILD = [
- {name:"Phase 1 · October: postage goes live", rows:[
-  ["Postage end to end in test mode","Real Pitney Bowes responses, clear errors, label + slip in the same PDF","Every label earns a fee","A1"],
+ {name:"Done this week", rows:[
+  ["Postage on Shipping 360","Labels, prepaid balance, reprints, refunds (packages), tracking","A fee on every label",""],
+  ["$0.50 package label fee","Letters stay $0.21","More kept per label",""],
+  ["Site on Supabase's new public key","Lets you turn off the exposed old keys","Security","B4 B8"],
+  ["Shipper HQ board","This page: tasks, notes, inbox, quick questions","You and Claude in one place",""]]},
+ {name:"Next · October: postage goes live", rows:[
+  ["Fix anything the first test label shows","Real Pitney Bowes answers instead of test stubs","Postage works for Rob","A8"],
+  ["Tracking straight into TCGplayer","After buying postage, one click makes TCGplayer's mark-shipped file","Saves sellers 20+ min a day",""],
   ["Pro plan, $14.99/mo","Premium + cheaper label fees + priority support","20 Pro sellers = $300/mo","C4"],
-  ["Tracking straight into TCGplayer","After buying postage, one click downloads TCGplayer's mark-shipped file","Saves sellers 20+ min a day",""],
-  ["Production switch-on","For the PB account model they approve, plus auto-reload (“add $50 when under $10”)","Real revenue","A4 A5 A6"],
-  ["Per-seller Pitney Bowes accounts","If PB approves Individual accounts: sellers accept an invite and get their own Shipper ID","No postage risk for you","A4"]]},
- {name:"Phase 2 · November: sellers stay and spend more", rows:[
-  ["eBay + Whatnot import","Same app for every marketplace","About 3× the market","F2"],
-  ["Shipping insurance toggle","Per order, priced inline","$0.03–0.10 per insured order",""],
+  ["Auto-reload balance","“Add $50 when under $10”","Fewer failed batches, more volume",""],
+  ["Production switch-on","For the account model Pitney Bowes approves","Real revenue","A4 A6"]]},
+ {name:"November: sellers stay and spend more", rows:[
   ["Welcome emails","Day 0 how-to, day 2 first batch, day 7 try postage","More signups become payers","G3"],
   ["Refer a seller","Both get a free month","Cheapest growth there is",""],
+  ["eBay + Whatnot import","Same app for every marketplace","About 3× the market","F2"],
+  ["Shipping insurance toggle","Per order, priced inline","$0.03–0.10 per insured order",""],
   ["Supplies page","Envelopes, toploaders, printers via affiliate links","3–8% of every purchase",""]]},
- {name:"Phase 3 · December+: the default tool", rows:[
+ {name:"December+: the default tool", rows:[
   ["Chrome extension","Reads your TCGplayer orders page, no CSV, pastes tracking back","Nobody else has it",""],
+  ["Envelope tracking on stamps","USPS barcode on the free #10 envelope","Pulls new sellers in","A7"],
   ["Shop plans $49–199/mo","Multiple users and stores","A few stores = hundreds a month",""],
-  ["Negotiated envelope rate","With PB/USPS once we have volume","10¢ off on 100k letters = $10k/mo","A4"],
-  ["Envelope tracking on stamps","USPS barcode on free envelopes","Pulls new sellers in","A7"]]}
+  ["Negotiated envelope rate","With PB/USPS once we have volume","10¢ off on 100k letters = $10k/mo","A4"]]}
+];
+
+const LEVERS = [
+ ["1","Postage fees (Rob + pilot sellers)","$100–500/mo per 10 active shippers","P2"],
+ ["2","Search Console + SEO articles (Devin writes)","Free traffic that compounds; Google already sends ~60 visits/wk","P3"],
+ ["3","Pro plan at $14.99","$15 per heavy seller instead of $3–6","C4"],
+ ["4","Google Ads test ($150)","Keep only if 3+ paying customers","P4"],
+ ["5","Demo video on TikTok/Shorts/Reels","One asset for every channel and the homepage","E1"],
+ ["6","Partners (creators earn 40%)","Pays only when it works; needs payouts set up","C2"],
+ ["7","Referral: give a month, get a month","Sellers know sellers; costs nothing upfront",""],
+ ["8","eBay + Whatnot sellers","About 3× the market","F2"]
 ];
 
 const LADDER = [
@@ -495,12 +553,16 @@ function renderBuild(){
 function renderMoney(){
   $("#tab-money").innerHTML = `<p class="stage-sub" style="margin-top:16px">The biggest lever is postage volume: a fee on every label every seller prints, every month. Stage A turns it on.</p>
   <div class="ladder">${LADDER.map(l=>`<div class="rung ${l.here?"here":""}"><div><div class="amt">${l.amt}</div><div class="eyebrow" style="margin-top:6px">${l.label||"per month"}</div></div><div>${esc(l.body)}</div></div>`).join("")}</div>
+  <h3 style="margin-top:24px">Growth levers, ranked</h3>
+  <div class="tbl" style="margin-top:8px"><table>
+    <tr><th>#</th><th>Lever</th><th>What it's worth</th><th>Your task</th></tr>
+    ${LEVERS.map(l=>`<tr><td class="num">${l[0]}</td><td><b>${esc(l[1])}</b></td><td>${esc(l[2])}</td><td class="num">${l[3]||"—"}</td></tr>`).join("")}
+  </table></div>
   <h3 style="margin-top:24px">What we keep per label</h3>
   <div class="tbl" style="margin-top:8px"><table>
     <tr><th>Label</th><th>Our fee</th><th>Seller pays</th><th>We keep (card)</th><th>We keep (bank)</th></tr>
     <tr><td>Tracked letter</td><td class="num">$0.21</td><td class="num">$0.99</td><td class="num">$0.13</td><td class="num">$0.15</td></tr>
-    <tr><td>Ground Advantage</td><td class="num">$0.30</td><td class="num">≈$4.80</td><td class="num">$0.08</td><td class="num">$0.21</td></tr>
-    <tr><td>Ground Advantage</td><td class="num">$0.50</td><td class="num">≈$5.00</td><td class="num">$0.28</td><td class="num">$0.41</td></tr>
+        <tr><td>Ground Advantage</td><td class="num">$0.50</td><td class="num">≈$5.00</td><td class="num">$0.28</td><td class="num">$0.41</td></tr>
   </table></div>`;
 }
 
@@ -601,7 +663,7 @@ function context(){
   }).join("\n")).join("\n\n");
   return `You are the helper inside "Shipper HQ", the owner's to-do board for TCG Speed Shipper (tcgspeedshipper.com), a web app that turns TCGplayer order CSVs into shipping labels, envelopes and packing slips, now adding Pitney Bowes postage with a per-label fee and a prepaid balance (Stripe). Hosting: Railway (auto-deploys on merge). Database/auth: Supabase. DNS: Porkbun. The owner (Sam) is not technical and uses an iPad. Answer in 1-4 short sentences, plainly, with exact click paths and the task id (like A1) when relevant. Never ask for or repeat secret values (keys, secrets, passwords); tell him to paste secrets only into Railway Variables. If something needs code changes or a decision recorded, tell him to send it via the Inbox tab, which goes to the Claude that builds the app.
 
-Pitney Bowes facts: Sam's account is Pitney Bowes Shipping 360 (360.pitneybowes.com), tabs Dashboard / API Keys / Merchants / Settings. Client ID = PB_API_KEY, Secret = PB_API_SECRET (Railway Variables). The Merchants page being empty is normal; no Shipper ID is needed; never click Invite Merchant (it invites other businesses to ship under his platform). "Set up Postage Payment Method" is only for real postage after production approval. Sandbox needs no payment; test labels are free. Claude is switching the app's code to the Shipping 360 API and needs Sam to allow network domains in the Claude Code environment settings. PB_PILOT_EMAILS = comma-separated login emails of sellers allowed to see the postage panel.
+Pitney Bowes facts: Sam's account is Pitney Bowes Shipping 360 (360.pitneybowes.com), tabs Dashboard / API Keys / Merchants / Settings. Client ID = PB_API_KEY, Secret = PB_API_SECRET (Railway Variables). The Merchants page being empty is normal; no Shipper ID is needed; never click Invite Merchant (it invites other businesses to ship under his platform). "Set up Postage Payment Method" is only for real postage after production approval. Sandbox needs no payment; test labels are free. The app's code now uses the Shipping 360 API (done Oct 5). Sam's return address needs a phone number. Letter (IMb) postage can't be refunded per USPS; package labels can. Supabase: the website now uses the new publishable key; next Sam creates a new sb_secret key in Supabase (API Keys → Publishable and secret API keys → Secret keys → New secret key), pastes it into Railway SUPABASE_SERVICE_ROLE_KEY and deploys (task B4); only after Claude confirms does he disable legacy keys (B8). Leaked-password protection needs the paid Supabase plan, so it's skipped. The www TXT record at Porkbun is correct; Railway is re-checking it. PB_PILOT_EMAILS = comma-separated login emails of sellers allowed to see the postage panel.
 
 Current tasks and progress:
 ${lines}`;
