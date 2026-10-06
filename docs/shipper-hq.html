@@ -214,7 +214,8 @@ const STAGES = [
     "Go to <b>railway.app</b> → project <b>tcg-speed-shipper</b> → click the <b>web</b> box → <b>Variables</b> tab → <b>+ New Variable</b>.",
     "Add two variables, name on the left, value on the right: <span class='mono'>PB_API_KEY</span> = Client ID, <span class='mono'>PB_API_SECRET</span> = Secret.",
     "Click the purple <b>Deploy</b> button at the top. The site restarts in about 2 minutes with no downtime.",
-    "Claude is switching our code to the Shipping 360 API (it needs one network setting from you, see the note in the Inbox). After that: log into tcgspeedshipper.com, click <b>Try a sample</b>, and a <b>Buy postage</b> panel with a TEST MODE badge appears.",
+    "On tcgspeedshipper.com, fill in the <b>Phone</b> in your return address. Shipping 360 needs a phone on every label, and yours stands in for the buyer's.",
+    "Test it: log in, click <b>Try a sample</b>. A <b>Buy postage</b> panel with a TEST MODE badge appears. Buy one test label. If you get an error, copy the exact message into this task's note.",
     "Never paste these keys in chat, email or this page. Railway is the only place they go."],
    copy:["PB_API_KEY","PB_API_SECRET"],
    unlock:"Postage works end to end in test mode. Claude starts fixing anything Pitney Bowes rejects."},
@@ -601,7 +602,7 @@ function context(){
   }).join("\n")).join("\n\n");
   return `You are the helper inside "Shipper HQ", the owner's to-do board for TCG Speed Shipper (tcgspeedshipper.com), a web app that turns TCGplayer order CSVs into shipping labels, envelopes and packing slips, now adding Pitney Bowes postage with a per-label fee and a prepaid balance (Stripe). Hosting: Railway (auto-deploys on merge). Database/auth: Supabase. DNS: Porkbun. The owner (Sam) is not technical and uses an iPad. Answer in 1-4 short sentences, plainly, with exact click paths and the task id (like A1) when relevant. Never ask for or repeat secret values (keys, secrets, passwords); tell him to paste secrets only into Railway Variables. If something needs code changes or a decision recorded, tell him to send it via the Inbox tab, which goes to the Claude that builds the app.
 
-Pitney Bowes facts: Sam's account is Pitney Bowes Shipping 360 (360.pitneybowes.com), tabs Dashboard / API Keys / Merchants / Settings. Client ID = PB_API_KEY, Secret = PB_API_SECRET (Railway Variables). The Merchants page being empty is normal; no Shipper ID is needed; never click Invite Merchant (it invites other businesses to ship under his platform). "Set up Postage Payment Method" is only for real postage after production approval. Sandbox needs no payment; test labels are free. Claude is switching the app's code to the Shipping 360 API and needs Sam to allow network domains in the Claude Code environment settings. PB_PILOT_EMAILS = comma-separated login emails of sellers allowed to see the postage panel.
+Pitney Bowes facts: Sam's account is Pitney Bowes Shipping 360 (360.pitneybowes.com), tabs Dashboard / API Keys / Merchants / Settings. Client ID = PB_API_KEY, Secret = PB_API_SECRET (Railway Variables). The Merchants page being empty is normal; no Shipper ID is needed; never click Invite Merchant (it invites other businesses to ship under his platform). "Set up Postage Payment Method" is only for real postage after production approval. Sandbox needs no payment; test labels are free. The app's code now uses the Shipping 360 API (done Oct 5). Sam's return address needs a phone number. Letter (IMb) postage can't be refunded per USPS; package labels can. PB_PILOT_EMAILS = comma-separated login emails of sellers allowed to see the postage panel.
 
 Current tasks and progress:
 ${lines}`;
