@@ -1,6 +1,6 @@
 # Owner to-do list (things only you can do)
 
-Maintained by Claude and Devin. Refreshed **2026-10-03**. Every item here
+Maintained by Claude and Devin. Refreshed **2026-10-06**. Every item here
 needs **you**: your login, card, identity, DNS, a printer, or a business
 decision. Anything either agent could do in about the same time isn't here;
 we do it instead.
@@ -76,6 +76,12 @@ After that, the rest of this list can wait for a free evening.
     `PB_LIVE_OK=yes`. Do that only after deciding how sellers pay us
     (see Road to $10k) and with the LLC in place. Production labels are
     charged to *your* Pitney Bowes account.
+- [ ] **Decide the Ground Advantage fee:** keep $0.30 or raise to $0.50
+  (recommended; letters stay $0.21). Tell Claude, or set `PB_FEE_GROUND`
+  in Railway. ⏱ 10 sec
+- [ ] **Send Rob's pilot invite** (drafted in his Gmail thread). He pays
+  $30/mo for a postage meter and wants postage in the app. Send it after
+  the PB keys are in. ⏱ 2 min
 - [ ] **Send the Pitney Bowes partnership email.** It's already drafted in
   your Gmail ("Platform partnership: USPS letter + Ground Advantage…").
   Read it, edit, send. ⏱ 3 min
@@ -101,7 +107,7 @@ After that, the rest of this list can wait for a free evening.
 - [ ] **Community posts from your own account** (one a week, rules first):
   the ranked list is `docs/community-channels.md`. Agents never post as you.
   ⏱ 20 min per post
-- [ ] **Google Ads test ($150 cap):** everything is ready in
+- [ ] **Google Ads test ($150 cap), you're running this yourself:** everything is ready in
   `docs/google-ads/README.md`: settings, 3 ad groups, keywords, negatives,
   15 headlines, 4 descriptions, sitelinks, images and logos. You create
   the account and add the card (~20 min), then paste it all in. Do it
@@ -138,6 +144,8 @@ Ranked by payoff. Each one is a 2-minute sign-in.
   `SUPABASE_SERVICE_ROLE_KEY`. Railway redeploys by itself. ⏱ 5 min
 - [ ] **Leaked-password protection:** Supabase → Authentication → Attack
   Protection → on. ⏱ 1 min
+- [ ] **Delete the Steel API key** you pasted in chat: app.steel.dev →
+  Settings → API keys → delete it. We no longer use Steel. ⏱ 1 min
 - [ ] **2FA** on GitHub, Railway, Porkbun, Stripe, Supabase and Gmail. ⏱ 10 min
 
 ## 📧 Email deliverability (after the forwarding above)
@@ -189,6 +197,9 @@ Ranked by payoff. Each one is a 2-minute sign-in.
 - [ ] *(optional)* **Devin Review credits** (the automatic PR reviewer). 💵
 
 ## ✅ Done recently
+
+- ~~Creator outreach~~: 8 creators emailed Sep 28 and followed up Oct 5,
+  0 replies so far. No more cold email to them.
 
 - ~~Hosting~~: moved to Railway 2026-09-28 (unlimited deploys, faster:
   Lighthouse mobile 98).
