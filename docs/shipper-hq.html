@@ -127,6 +127,16 @@ td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:now
 .composer .row{display:flex;gap:6px;justify-content:space-between;align-items:center;flex-wrap:wrap}
 .hint{font-size:12px;color:var(--muted)}
 .empty{color:var(--muted);font-size:13px;text-align:center;padding:20px}
+@media (min-width:1100px){
+  body{padding-right:380px}
+  .dock{position:fixed;top:0;right:0;bottom:0;width:364px;height:auto;border-radius:0;border-width:0 0 0 1px;box-shadow:none;padding-top:env(safe-area-inset-top,0px)}
+  .dock[hidden]{display:flex!important}
+  .dock-btn,#dockClose{display:none}
+}
+.dock h3{font-size:16px}
+.quick{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 10px}
+.quick button{border:1px solid var(--line);background:var(--bg);border-radius:99px;padding:4px 10px;font-size:12px}
+.inbox-link{background:none;border:0;padding:0;color:var(--accent);font-size:12px;text-decoration:underline}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -135,7 +145,7 @@ td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:now
     <div>
       <div class="eyebrow">TCG Speed Shipper · owner desk</div>
       <h1>Shipper HQ</h1>
-      <div style="color:var(--muted);max-width:60ch;margin-top:6px">Everything only you can do, in order, with the exact clicks. Tick a task and Claude sees it. Leave a note on any task, or open <b>Talk to Claude</b> in the corner.</div>
+      <div style="color:var(--muted);max-width:60ch;margin-top:6px">Everything only you can do, in order, with the exact clicks. Tick a task and Claude sees it. Leave a note on any task, or use the <b>Quick questions</b> chat.</div>
     </div>
     <div class="sync"><span class="dot" id="syncDot"></span><span id="syncText">Connecting…</span></div>
   </header>
@@ -169,21 +179,23 @@ td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:now
   </main>
 </div>
 
-<button class="dock-btn" id="dockBtn">Talk to Claude</button>
+<button class="dock-btn" id="dockBtn">Ask a question</button>
 <div class="dock" id="dock" hidden>
   <header>
-    <div class="dock-tabs">
-      <button class="tab" data-dock="ask" aria-selected="true">Ask now</button>
-      <button class="tab" data-dock="inbox" aria-selected="false">Inbox</button>
-    </div>
+    <h3 id="dockTitle">Quick questions</h3>
     <button class="btn" id="dockClose">Close</button>
   </header>
   <div class="msgs" id="askMsgs"></div>
+  <div class="quick" id="quickAsk">
+    <button>Where's the Shipper ID?</button>
+    <button>What do I do first?</button>
+    <button>Do I need to pay for sandbox?</button>
+  </div>
   <div class="msgs" id="inboxMsgs" hidden></div>
   <div class="composer">
     <textarea id="composer" placeholder="Ask anything: “where is the Shipper ID?”, “what do I do after Railway?”"></textarea>
     <div class="row">
-      <span class="hint" id="composerHint">Ask now answers instantly. Inbox goes to the Claude that builds the app.</span>
+      <button class="inbox-link" id="modeLink">Send to Claude's inbox instead</button>
       <button class="btn primary" id="sendBtn">Send</button>
     </div>
   </div>
@@ -470,7 +482,7 @@ function renderPB(){
       <div class="lane"><div class="eyebrow">Recommended</div><h3>Individual accounts</h3><div>Each seller accepts an <b>Invite Merchant</b> email and adds their own card at Pitney Bowes. PB charges them for postage directly. We charge our fee from our prepaid balance. You never front postage.</div></div>
       <div class="lane"><div class="eyebrow">Already built</div><h3>Bulk account</h3><div>All postage is charged to your PB account. Sellers prepay us (the balance we built) and we pay PB. More control and margin, but you carry the risk.</div></div>
     </div>
-    <p style="margin:0;color:var(--muted)">Stuck on a screen? Open <b>Talk to Claude</b> and describe exactly what you see.</p>
+    <p style="margin:0;color:var(--muted)">Stuck on a screen? Use <b>Quick questions</b> and describe exactly what you see.</p>
   </div>`;
 }
 function renderBuild(){
@@ -551,14 +563,16 @@ let dockMode = "ask", askHistory = [], inbox = [], busy = false;
 function openDock(mode){ $("#dock").hidden=false; setDock(mode||dockMode); }
 function setDock(mode){
   dockMode = mode;
-  document.querySelectorAll("[data-dock]").forEach(b=>b.setAttribute("aria-selected", b.dataset.dock===mode));
   $("#askMsgs").hidden = mode!=="ask"; $("#inboxMsgs").hidden = mode!=="inbox";
-  $("#composerHint").textContent = mode==="ask" ? "Answers right away. For code changes, use Inbox." : (db ? "Claude reads the Inbox at its next check-in and replies here." : "Inbox needs sync. Ask now still works.");
-  $("#composer").placeholder = mode==="ask" ? "Ask anything: “where is the Shipper ID?”" : "Tell Claude what to build or fix, e.g. “ground 50”, “drop the footer”.";
+  $("#quickAsk").hidden = mode!=="ask";
+  $("#dockTitle").textContent = mode==="ask" ? "Quick questions" : "Claude's inbox";
+  $("#modeLink").textContent = mode==="ask" ? "Send to Claude's inbox instead" : "Back to quick questions";
+  $("#composer").placeholder = mode==="ask" ? "Ask a small question…" : "Decisions or things to build, e.g. “ground 50”. Claude replies here at the next check-in.";
 }
 $("#dockBtn").onclick = ()=> $("#dock").hidden ? openDock() : ($("#dock").hidden=true);
 $("#dockClose").onclick = ()=> $("#dock").hidden = true;
-document.querySelectorAll("[data-dock]").forEach(b=>b.onclick=()=>setDock(b.dataset.dock));
+$("#modeLink").onclick = ()=>setDock(dockMode==="ask"?"inbox":"ask");
+document.querySelectorAll("#quickAsk button").forEach(b=>b.onclick=()=>{ setDock("ask"); $("#composer").value=b.textContent; send(); });
 $("#composer").addEventListener("keydown", e=>{ if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); send(); }});
 $("#sendBtn").onclick = send;
 
@@ -569,7 +583,7 @@ function bubble(host, cls, text, small){
 }
 function renderAskIntro(){
   const h=$("#askMsgs"); h.innerHTML="";
-  bubble(h,"sys","Ask about any task, Pitney Bowes, Railway, Stripe or the plan. It knows this whole page and what you've ticked.");
+  bubble(h,"sys","Ask anything small. Answers are short and know this whole board.");
 }
 renderAskIntro();
 function renderInbox(){
@@ -585,7 +599,7 @@ function context(){
     const strip = x=>x.replace(/<[^>]+>/g,"");
     return `- ${t.id} [${p.done?"DONE":"todo"}] ${t.title}. Why: ${strip(t.why)} Steps: ${t.steps.map(strip).join(" | ")}${t.copy?" Values: "+t.copy.join(", "):""}${p.note?" Owner note: "+p.note:""}`;
   }).join("\n")).join("\n\n");
-  return `You are the helper inside "Shipper HQ", the owner's to-do board for TCG Speed Shipper (tcgspeedshipper.com), a web app that turns TCGplayer order CSVs into shipping labels, envelopes and packing slips, now adding Pitney Bowes postage with a per-label fee and a prepaid balance (Stripe). Hosting: Railway (auto-deploys on merge). Database/auth: Supabase. DNS: Porkbun. The owner (Sam) is not technical and uses an iPad. Answer plainly and briefly, with exact click paths and the task id (like A1) when relevant. Never ask for or repeat secret values (keys, secrets, passwords); tell him to paste secrets only into Railway Variables. If something needs code changes or a decision recorded, tell him to send it via the Inbox tab, which goes to the Claude that builds the app.
+  return `You are the helper inside "Shipper HQ", the owner's to-do board for TCG Speed Shipper (tcgspeedshipper.com), a web app that turns TCGplayer order CSVs into shipping labels, envelopes and packing slips, now adding Pitney Bowes postage with a per-label fee and a prepaid balance (Stripe). Hosting: Railway (auto-deploys on merge). Database/auth: Supabase. DNS: Porkbun. The owner (Sam) is not technical and uses an iPad. Answer in 1-4 short sentences, plainly, with exact click paths and the task id (like A1) when relevant. Never ask for or repeat secret values (keys, secrets, passwords); tell him to paste secrets only into Railway Variables. If something needs code changes or a decision recorded, tell him to send it via the Inbox tab, which goes to the Claude that builds the app.
 
 Pitney Bowes facts: Client ID = PB_API_KEY, Secret = PB_API_SECRET, Shipper ID (Merchants / Onboarding Merchants page, the default test merchant that comes with the developer account) = PB_SHIPPER_ID. Sandbox needs no payment setup; test labels are free and fake. "Invite Merchant" emails a seller to create their own PB postage account (individual-account model, production) and should not be used now. Production needs PB approval, a payment method, and the app setting PB_ENV=production plus PB_LIVE_OK=yes (Claude handles that after the LLC). PB_PILOT_EMAILS = comma-separated login emails of sellers allowed to see the postage panel during the pilot.
 
