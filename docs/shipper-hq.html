@@ -210,14 +210,13 @@ const STAGES = [
    why:"Turns on the Buy postage panel in TEST MODE. Test labels are free and fake, so nothing is charged and no payment setup is needed. Claude can then test against real Pitney Bowes responses and fix anything before real money moves.",
    steps:[
     "In the Pitney Bowes Developer Hub, open <b>API Keys</b> (Sandbox). In the row with STATUS = Active, copy the <b>Client ID</b>. Click the eye/Show icon under <b>SECRET</b> and copy that too. No row? Click <b>Generate Key</b>.",
-    "Open the <b>Merchants</b> page (may say <b>Onboarding Merchants</b>). Your account comes with one free test merchant already listed, often marked Default. Copy the value in its <b>Shipper ID</b> column. <b>Do not click Invite Merchant</b> (see the Pitney Bowes guide tab for what it's for).",
-    "If the Merchants page is empty except for the Invite Merchant button, write that in this task's note. Claude will find another way to get the Shipper ID.",
+    "Your account is <b>Shipping 360</b> (360.pitneybowes.com). An empty <b>Merchants</b> page is normal: that list is only for other businesses you invite. You are the shipper. Skip the Shipper ID. Do not click Invite Merchant.",
     "Go to <b>railway.app</b> → project <b>tcg-speed-shipper</b> → click the <b>web</b> box → <b>Variables</b> tab → <b>+ New Variable</b>.",
-    "Add three variables, name on the left, value on the right: <span class='mono'>PB_API_KEY</span> = Client ID, <span class='mono'>PB_API_SECRET</span> = Secret, <span class='mono'>PB_SHIPPER_ID</span> = Shipper ID.",
+    "Add two variables, name on the left, value on the right: <span class='mono'>PB_API_KEY</span> = Client ID, <span class='mono'>PB_API_SECRET</span> = Secret.",
     "Click the purple <b>Deploy</b> button at the top. The site restarts in about 2 minutes with no downtime.",
-    "Check it: log into tcgspeedshipper.com, click <b>Try a sample</b>. A <b>Buy postage</b> panel with a yellow TEST MODE badge appears. Buy one test label.",
+    "Claude is switching our code to the Shipping 360 API (it needs one network setting from you, see the note in the Inbox). After that: log into tcgspeedshipper.com, click <b>Try a sample</b>, and a <b>Buy postage</b> panel with a TEST MODE badge appears.",
     "Never paste these keys in chat, email or this page. Railway is the only place they go."],
-   copy:["PB_API_KEY","PB_API_SECRET","PB_SHIPPER_ID"],
+   copy:["PB_API_KEY","PB_API_SECRET"],
    unlock:"Postage works end to end in test mode. Claude starts fixing anything Pitney Bowes rejects."},
   {id:"A2", hot:1, min:1, title:"Decide the Ground Advantage fee ($0.30 or $0.50)",
    why:"This is what we add on top of postage for $49.99+ orders that need a tracked package label. At $0.30 we keep only $0.08–0.21 after payment fees. At $0.50 we keep $0.28–0.41 and the seller still pays about $5 total.",
@@ -464,7 +463,7 @@ function renderPB(){
     <p style="margin:0;max-width:65ch">Pitney Bowes is the company that sells us real USPS postage through their API. Our app asks them for a label, they return the label PDF with a tracking number, and we put it in the same file as the seller's packing slip. There are two worlds:</p>
     <div class="lanes">
       <div class="lane now"><div class="eyebrow">Sandbox · now</div><h3>Free test labels</h3>
-        <div>Fake postage, no money, <b>no payment setup needed</b>. Your developer account comes with one test merchant already made for you. Its Shipper ID goes into Railway with your Client ID and Secret.</div></div>
+        <div>Fake postage, no money, <b>no payment setup needed</b>. Your developer account comes with one test merchant already made for you. Only the Client ID and Secret go into Railway.</div></div>
       <div class="lane"><div class="eyebrow">Production · after PB approves</div><h3>Real postage</h3>
         <div>PB gives you production keys. A payment method goes on your PB account (or each seller's, see below). Labels are real and charged. We switch it on with two extra Railway settings once the LLC is done.</div></div>
     </div>
@@ -473,7 +472,8 @@ function renderPB(){
       <tr><th>What you see</th><th>What it is</th><th>What to do</th></tr>
       <tr><td><b>Client ID</b></td><td>The username for our app</td><td>Railway <span class="mono">PB_API_KEY</span></td></tr>
       <tr><td><b>Secret</b></td><td>The password for our app</td><td>Railway <span class="mono">PB_API_SECRET</span>. Never share it.</td></tr>
-      <tr><td><b>Shipper ID</b> (Merchants page)</td><td>The postage account labels are charged to. In sandbox, the free test one.</td><td>Railway <span class="mono">PB_SHIPPER_ID</span></td></tr>
+      <tr><td><b>Merchants</b> page (empty)</td><td>Other businesses you invite to ship under your platform. Empty is normal: you are the shipper.</td><td>Nothing. Not needed.</td></tr>
+      <tr><td><b>Set up Postage Payment Method</b> (top bar)</td><td>The card or bank account PB charges for real postage</td><td>Not needed for sandbox. Do it when production is approved.</td></tr>
       <tr><td><b>Invite Merchant</b> button</td><td>Sends a seller an email to create <i>their own</i> PB postage account with their own card (link expires in 7 days). Then their labels charge them, not you.</td><td><b>Don't use it yet.</b> It's for production if PB approves Individual accounts. Claude builds the per-seller part first.</td></tr>
       <tr><td><b>Generated on / Status</b></td><td>When the key was made, and whether it works</td><td>Use the Active row</td></tr>
     </table></div>
@@ -601,7 +601,7 @@ function context(){
   }).join("\n")).join("\n\n");
   return `You are the helper inside "Shipper HQ", the owner's to-do board for TCG Speed Shipper (tcgspeedshipper.com), a web app that turns TCGplayer order CSVs into shipping labels, envelopes and packing slips, now adding Pitney Bowes postage with a per-label fee and a prepaid balance (Stripe). Hosting: Railway (auto-deploys on merge). Database/auth: Supabase. DNS: Porkbun. The owner (Sam) is not technical and uses an iPad. Answer in 1-4 short sentences, plainly, with exact click paths and the task id (like A1) when relevant. Never ask for or repeat secret values (keys, secrets, passwords); tell him to paste secrets only into Railway Variables. If something needs code changes or a decision recorded, tell him to send it via the Inbox tab, which goes to the Claude that builds the app.
 
-Pitney Bowes facts: Client ID = PB_API_KEY, Secret = PB_API_SECRET, Shipper ID (Merchants / Onboarding Merchants page, the default test merchant that comes with the developer account) = PB_SHIPPER_ID. Sandbox needs no payment setup; test labels are free and fake. "Invite Merchant" emails a seller to create their own PB postage account (individual-account model, production) and should not be used now. Production needs PB approval, a payment method, and the app setting PB_ENV=production plus PB_LIVE_OK=yes (Claude handles that after the LLC). PB_PILOT_EMAILS = comma-separated login emails of sellers allowed to see the postage panel during the pilot.
+Pitney Bowes facts: Sam's account is Pitney Bowes Shipping 360 (360.pitneybowes.com), tabs Dashboard / API Keys / Merchants / Settings. Client ID = PB_API_KEY, Secret = PB_API_SECRET (Railway Variables). The Merchants page being empty is normal; no Shipper ID is needed; never click Invite Merchant (it invites other businesses to ship under his platform). "Set up Postage Payment Method" is only for real postage after production approval. Sandbox needs no payment; test labels are free. Claude is switching the app's code to the Shipping 360 API and needs Sam to allow network domains in the Claude Code environment settings. PB_PILOT_EMAILS = comma-separated login emails of sellers allowed to see the postage panel.
 
 Current tasks and progress:
 ${lines}`;
