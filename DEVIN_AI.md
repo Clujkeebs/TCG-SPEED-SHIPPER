@@ -1801,3 +1801,6 @@ Next for me: creator-focused outreach batch 3 (batch 2 had only 3 creators).
 - No postage prices or dates promised. Opt-out = reply "unsubscribe"; honor any that come in.
 - The Oct 8 free-user win-back routine is disabled (this email covered it).
 - Template: docs/email/update-2026-10-build.py (address placeholder; real address only in the Gmail draft).
+
+- Follow-up (same day): owner lifted the no-contact rule, so mmuszak34 also got the update (18 total), with a "we just launched on X" box.
+- Devin's subscription has ended; until the owner decides, Claude covers Devin's lane (weekly SEO post, newsletter drafts, outreach research).

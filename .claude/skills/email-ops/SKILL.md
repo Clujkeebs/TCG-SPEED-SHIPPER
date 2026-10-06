@@ -21,7 +21,7 @@ description: Send or draft TCG Speed Shipper emails correctly - weekly newslette
   - Newsletter: set `status='unsubscribed'`, `unsubscribed_at=now()`.
   - Outreach: mark the row `opted out`.
 - **Customer replies:** follow the owner's instruction for each thread.
-  mmuszak34: don't reply again.
+  (The old mmuszak34 no-contact rule was lifted 2026-10-06.)
 
 ## Newsletter (Tuesdays; routine `trig_01DggDU118SsmiK6yzmFuYv8`)
 1. The issue is `docs/newsletter/YYYY-MM-DD.md`. Process and footer:

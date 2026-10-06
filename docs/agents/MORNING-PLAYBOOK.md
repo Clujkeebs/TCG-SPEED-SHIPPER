@@ -7,8 +7,7 @@ bottom. The owner can change anything here too.
 
 Rules that never change: CLAUDE.md, AGENTS.md, docs/agents/PERMISSIONS.md.
 No money moves or public posts without the owner. Never put secrets, PII,
-model identifiers or the mailing address in the repo. Never reply to
-mmuszak34. Drafts only for customer emails, unless the owner said
+model identifiers or the mailing address in the repo. Drafts only for customer emails, unless the owner said
 "send".
 
 ## 1. Catch up (10 min)
@@ -85,5 +84,8 @@ deploy.
 10. Homepage testimonial from Rob, once he replies (E2).
 
 ## Changelog
+- 2026-10-06: owner lifted the mmuszak34 no-contact rule; Devin's subscription
+  ended, so Claude covers Devin's lane (SEO post, newsletter draft) until the
+  owner decides (board task G9).
 - 2026-10-06: created at the owner's request. Morning routine now runs this
   file. Added the board as the source of truth for the owner's to-do list.
