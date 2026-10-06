@@ -8,7 +8,9 @@
      this (or better) for orders of $49.99 and up.
 
    Safety:
-   - Only the owner and emails in PB_PILOT_EMAILS can use it.
+   - Rollout stage PB_ACCESS: 'owner' (default: only OWNER_EMAIL), 'pilot'
+     (owner + PB_PILOT_EMAILS), 'all' (every signed-in user). Everyone else
+     only learns that postage is coming soon.
    - Sandbox (free test labels) unless PB_ENV=production AND PB_LIVE_OK=yes,
      so real postage can't be bought by accident.
    - Every label is written to tcgss_postage_labels (service-role only) so it
@@ -62,6 +64,7 @@ function pbConfig(env = process.env) {
     // free, unless PB_BALANCE=on (to rehearse the balance flow in sandbox).
     balance: live || env.PB_BALANCE === 'on',
     pilot: String(env.PB_PILOT_EMAILS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean),
+    access: ['owner', 'pilot', 'all'].includes(env.PB_ACCESS) ? env.PB_ACCESS : 'owner',
   };
 }
 
@@ -173,10 +176,14 @@ module.exports = function mountPostageRoutes(router, d) {
 
   function allowed(user) {
     const email = String((user && user.email) || '').toLowerCase();
-    return !!email && (email === OWNER_EMAIL || pbConfig(env).pilot.includes(email));
+    if (!email) return false;
+    if (email === String(OWNER_EMAIL || '').toLowerCase()) return true;
+    const cfg = pbConfig(env);
+    if (cfg.access === 'all') return true;
+    return cfg.access === 'pilot' && cfg.pilot.includes(email);
   }
   function gate(req, res, next) {
-    if (!allowed(req.user)) return res.status(403).json({ error: 'Postage is in a private pilot. Email support@tcgspeedshipper.com to join.' });
+    if (!allowed(req.user)) return res.status(403).json({ error: 'Postage labels with tracking are coming soon.' });
     if (!pbConfig(env).configured) return res.status(503).json({ error: 'Postage isn\'t set up yet (Pitney Bowes keys missing).' });
     next();
   }
@@ -193,7 +200,9 @@ module.exports = function mountPostageRoutes(router, d) {
   // What the app needs to decide whether to show the postage panel.
   router.get('/postage/status', requireSupabase, requireUser, (req, res) => {
     const cfg = pbConfig(env);
-    res.json({ allowed: allowed(req.user), configured: cfg.configured, mode: cfg.mode, balance: cfg.balance, topupAmounts: TOPUP_AMOUNTS, topupMin: TOPUP_MIN, topupMax: TOPUP_MAX, services: Object.keys(SERVICES).map((k) => ({ id: k, label: SERVICES[k].label, maxOz: SERVICES[k].maxOz, fee: feeFor(k, env) })) });
+    // Not in the rollout yet: say it's coming, nothing more.
+    if (!allowed(req.user)) return res.json({ allowed: false, comingSoon: true });
+    res.json({ allowed: true, configured: cfg.configured, mode: cfg.mode, balance: cfg.balance, topupAmounts: TOPUP_AMOUNTS, topupMin: TOPUP_MIN, topupMax: TOPUP_MAX, services: Object.keys(SERVICES).map((k) => ({ id: k, label: SERVICES[k].label, maxOz: SERVICES[k].maxOz, fee: feeFor(k, env) })) });
   });
 
   // Quote one shipment: { from, to, service, weightOz } → { amount }.
