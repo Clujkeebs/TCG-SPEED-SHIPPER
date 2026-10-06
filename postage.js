@@ -18,6 +18,8 @@ const express = require('express');
 const { makePbClient, PbError } = require('./pb-client');
 
 const MAX_LABELS_PER_REQUEST = 50;
+// Below this balance, each label is quoted before it's bought (see below).
+const LOW_BALANCE_CENTS = 1500;
 
 // Our fee per label, on top of postage passed through at cost. A tracked
 // letter at $0.78 postage + $0.21 lands at $0.99, under a dollar and close
@@ -33,19 +35,20 @@ function priced(service, postage, env) {
   return { postage, fee, price: postage == null ? null : Math.round((postage + fee) * 100) / 100 };
 }
 
+// Shipping 360 v2 ids: byCarrier.service + parcels[].parcelType.
 const SERVICES = {
   letter: {
     label: 'First-Class letter + IMb scans',
-    rate: { carrier: 'USPS', serviceId: 'FCM', parcelType: 'LETTER' },
+    service: 'FCM', parcelType: 'LETTER',
     dimension: { length: 6, width: 4, height: 0.25 },
-    docSize: 'DOC_6X4',
+    labelSize: 'DOC_4X6',
     minOz: 0.1, maxOz: 3.5,
   },
   ground: {
     label: 'Ground Advantage (full tracking)',
-    rate: { carrier: 'USPS', serviceId: 'GA', parcelType: 'PKG' },
+    service: 'UGA', parcelType: 'PKG',
     dimension: { length: 6, width: 4, height: 1 },
-    docSize: 'DOC_4X6',
+    labelSize: 'DOC_4X6',
     minOz: 0.1, maxOz: 15.99,
   },
 };
@@ -53,7 +56,7 @@ const SERVICES = {
 function pbConfig(env = process.env) {
   const live = env.PB_ENV === 'production' && env.PB_LIVE_OK === 'yes';
   return {
-    configured: !!(env.PB_API_KEY && env.PB_API_SECRET && env.PB_SHIPPER_ID),
+    configured: !!(env.PB_API_KEY && env.PB_API_SECRET),
     mode: live ? 'production' : 'sandbox',
     // Real labels are paid from the seller's prepaid balance. Test labels are
     // free, unless PB_BALANCE=on (to rehearse the balance flow in sandbox).
@@ -69,17 +72,18 @@ function pbAddress(a, { requireName = true } = {}) {
   const name = clean(a.name || [a.firstName, a.lastName].filter(Boolean).join(' '), 50);
   const out = {
     name,
-    addressLines: [clean(a.addr1, 50), clean(a.addr2, 50)].filter(Boolean),
-    cityTown: clean(a.city, 40),
+    addressLine1: clean(a.addr1, 35),
+    cityTown: clean(a.city, 30),
     stateProvince: clean(a.state, 2).toUpperCase(),
     postalCode: clean(a.zip, 10),
     countryCode: 'US',
   };
+  if (a.addr2) out.addressLine2 = clean(a.addr2, 35);
   if (a.company) out.company = clean(a.company, 50);
-  if (a.phone) out.phone = clean(a.phone, 20);
+  if (a.phone) out.phone = clean(a.phone, 15);
   const missing = [];
   if (requireName && !out.name) missing.push('name');
-  if (!out.addressLines.length) missing.push('street');
+  if (!out.addressLine1) missing.push('street');
   if (!out.cityTown) missing.push('city');
   if (!/^[A-Z]{2}$/.test(out.stateProvince)) missing.push('state');
   if (!/^\d{5}(-\d{4})?$/.test(out.postalCode)) missing.push('ZIP');
@@ -87,18 +91,37 @@ function pbAddress(a, { requireName = true } = {}) {
   return { address: out, missing };
 }
 
-function buildShipment({ from, to, service, weightOz, shipperId }) {
+// Shipping 360 asks for a recipient phone; TCGplayer exports don't have one,
+// so the sender's phone (or PB_DEFAULT_PHONE) stands in, as other label
+// tools do.
+function buildShipment({ from, to, service, weightOz, phone }) {
   const s = SERVICES[service];
+  const ph = phone || from.phone || '';
   return {
-    fromAddress: from,
-    toAddress: to,
-    parcel: {
-      weight: { unitOfMeasurement: 'OZ', weight: weightOz },
-      dimension: Object.assign({ unitOfMeasurement: 'IN' }, s.dimension),
-    },
-    rates: [Object.assign({}, s.rate)],
-    documents: [{ type: 'SHIPPING_LABEL', contentType: 'BASE64', size: s.docSize, fileFormat: 'PDF', printDialogOption: 'NO_PRINT_DIALOG' }],
-    shipmentOptions: [{ name: 'SHIPPER_ID', value: shipperId }],
+    fromAddress: ph && !from.phone ? Object.assign({}, from, { phone: ph }) : from,
+    toAddress: to.phone || !ph ? to : Object.assign({}, to, { phone: ph }),
+    parcels: [{
+      parcelType: s.parcelType,
+      parcel: Object.assign({ dimUnit: 'IN', weightUnit: 'OZ', weight: weightOz }, s.dimension),
+    }],
+    rateShopBy: 'carrier',
+    byCarrier: { carrier: 'USPS', service: s.service },
+    labelSize: s.labelSize,
+    labelType: 'SHIPPING_LABEL',
+    labelFormat: 'PDF',
+  };
+}
+
+// Pulls what we need out of a Shipping 360 create-shipment response.
+function readLabel(r) {
+  r = r || {};
+  const doc = (Array.isArray(r.labelLayout) && r.labelLayout.find((l) => l && l.contents)) || null;
+  const parcel = Array.isArray(r.parcels) && r.parcels[0];
+  return {
+    shipmentId: r.shipmentId,
+    trackingNumber: r.parcelTrackingNumber || (parcel && parcel.parcelTrackingNumber) || null,
+    labelPdfBase64: doc && doc.contentType !== 'URL' ? doc.contents : null,
+    rate: Array.isArray(r.rate) ? r.rate[0] : r.rate,
   };
 }
 
@@ -144,7 +167,7 @@ module.exports = function mountPostageRoutes(router, d) {
   function pb() {
     const cfg = pbConfig(env);
     const k = cfg.mode + ':' + env.PB_API_KEY;
-    if (!client || clientKey !== k) { client = makePbClient({ key: env.PB_API_KEY, secret: env.PB_API_SECRET, env: cfg.mode, fetchImpl }); clientKey = k; }
+    if (!client || clientKey !== k) { client = makePbClient({ key: env.PB_API_KEY, secret: env.PB_API_SECRET, env: cfg.mode, partnerId: env.PB_PARTNER_ID, carrierAccountId: env.PB_CARRIER_ACCOUNT_ID, fetchImpl }); clientKey = k; }
     return client;
   }
 
@@ -184,10 +207,10 @@ module.exports = function mountPostageRoutes(router, d) {
     const oz = Number(b.weightOz) || 1;
     if (oz < s.minOz || oz > s.maxOz) return res.status(400).json({ error: s.label + ' allows up to ' + s.maxOz + ' oz' });
     try {
-      const shipment = buildShipment({ from: from.address, to: to.address, service: b.service, weightOz: oz, shipperId: env.PB_SHIPPER_ID });
-      delete shipment.documents;
+      const shipment = buildShipment({ from: from.address, to: to.address, service: b.service, weightOz: oz, phone: env.PB_DEFAULT_PHONE });
       const r = await pb().rate(shipment);
-      res.json(Object.assign({ service: b.service, mode: pbConfig(env).mode }, priced(b.service, money(r && r.rates && r.rates[0]), env)));
+      const rate = r && (Array.isArray(r.rate) ? r.rate[0] : r.rate || (r.rates && r.rates[0]));
+      res.json(Object.assign({ service: b.service, mode: pbConfig(env).mode }, priced(b.service, money(rate), env)));
     } catch (err) { pbFail(res, err, 'Rate quote'); }
   });
 
@@ -210,6 +233,8 @@ module.exports = function mountPostageRoutes(router, d) {
     }
     const results = [];
     let outOfFunds = false;
+    let known = null; // running balance in cents, when the balance applies
+    if (useBalance) { try { known = await balanceOf(req.user.id); } catch (e) { known = null; } }
     for (const item of list) {
       if (outOfFunds) { results.push({ ref: clean(item && item.ref, 40), ok: false, error: 'Not bought: balance ran out' }); continue; }
       const ref = clean(item && item.ref, 40);
@@ -220,15 +245,25 @@ module.exports = function mountPostageRoutes(router, d) {
       if (to.missing.length) { results.push({ ref, ok: false, error: 'Address needs: ' + to.missing.join(', ') }); continue; }
       if (oz < s.minOz || oz > s.maxOz) { results.push({ ref, ok: false, error: s.label + ' allows up to ' + s.maxOz + ' oz' }); continue; }
       try {
-        const shipment = buildShipment({ from: from.address, to: to.address, service: item.service, weightOz: oz, shipperId: env.PB_SHIPPER_ID });
-        const r = await pb().createShipment(shipment);
-        const page = r && r.documents && r.documents[0] && r.documents[0].pages && r.documents[0].pages[0];
+        const shipment = buildShipment({ from: from.address, to: to.address, service: item.service, weightOz: oz, phone: env.PB_DEFAULT_PHONE });
+        // Letter postage can't be voided, so when the balance is getting low,
+        // quote first and stop before buying a label nobody can pay for.
+        if (useBalance && known != null && known < LOW_BALANCE_CENTS) {
+          const q = await pb().rate(shipment);
+          const est = priced(item.service, money(q && (Array.isArray(q.rate) ? q.rate[0] : q.rate)), env).price;
+          if (est == null || cents(est) > known) {
+            outOfFunds = true;
+            results.push({ ref, ok: false, error: 'Not bought: balance too low' });
+            continue;
+          }
+        }
+        const l = readLabel(await pb().createShipment(shipment));
         const out = {
           ref, ok: true, service: item.service,
-          shipmentId: r.shipmentId, trackingNumber: r.parcelTrackingNumber || null,
-          labelPdfBase64: page ? page.contents : null,
+          shipmentId: l.shipmentId, trackingNumber: l.trackingNumber,
+          labelPdfBase64: l.labelPdfBase64,
         };
-        Object.assign(out, priced(item.service, money(r.rates && r.rates[0]), env));
+        Object.assign(out, priced(item.service, money(l.rate), env));
         if (useBalance) {
           // Pay for it from the balance; if that fails, void the label at once
           // so we never hand out postage nobody paid for.
@@ -241,6 +276,7 @@ module.exports = function mountPostageRoutes(router, d) {
             continue;
           }
           out.balanceCents = debit.data.balance;
+          known = Number(debit.data.balance);
         }
         results.push(out);
         const { error } = await supabaseAdmin().from('tcgss_postage_labels').insert({
@@ -263,10 +299,12 @@ module.exports = function mountPostageRoutes(router, d) {
   // Refund an unused label (only the buyer's own).
   router.post('/postage/labels/:shipmentId/refund', guard, async (req, res) => {
     const id = clean(req.params.shipmentId, 60);
-    const { data: row, error } = await supabaseAdmin().from('tcgss_postage_labels').select('user_id, status, price, mode').eq('shipment_id', id).maybeSingle();
+    const { data: row, error } = await supabaseAdmin().from('tcgss_postage_labels').select('user_id, status, price, mode, service').eq('shipment_id', id).maybeSingle();
     if (error) return res.status(500).json({ error: 'Could not look up that label' });
     if (!row || row.user_id !== req.user.id) return res.status(404).json({ error: 'Label not found' });
     if (row.status !== 'purchased') return res.status(409).json({ error: 'That label was already ' + row.status });
+    // USPS doesn't refund First-Class letter (IMb) postage, so neither can we.
+    if (row.service === 'letter') return res.status(409).json({ error: 'Letter postage can\'t be refunded (USPS rule). Only package labels can.' });
     try {
       const r = await pb().cancelShipment(id);
       await supabaseAdmin().from('tcgss_postage_labels').update({ status: 'refund_requested', refunded_at: new Date().toISOString() }).eq('shipment_id', id);
@@ -339,10 +377,13 @@ module.exports = function mountPostageRoutes(router, d) {
   router.get('/postage/track/:trackingNumber', express.json(), requireSupabase, requireUser, gate, async (req, res) => {
     try {
       const r = await pb().tracking(clean(req.params.trackingNumber, 40));
+      const cur = (r && r.currentStatus) || {};
+      const where = (l) => [l && l.city, l && l.stateOrProvince].filter(Boolean).join(', ');
       res.json({
-        status: r && (r.status || r.currentStatus),
-        events: ((r && r.scanDetailsList) || []).slice(0, 20).map((e) => ({
-          at: [e.eventDate, e.eventTime].filter(Boolean).join(' '), what: e.scanDescription || e.packageStatus, where: [e.eventCity, e.eventStateOrProvince].filter(Boolean).join(', '),
+        status: cur.status || cur.eventDescription || (r && typeof r.status === 'string' ? r.status : null),
+        estimatedDelivery: (r && r.estimatedDeliveryDate) || null,
+        events: ((r && r.trackingHistory) || []).slice(0, 20).map((e) => ({
+          at: e.eventDate || '', what: e.eventDescription || e.carrierEventDescription || e.status, where: where(e.eventLocation),
         })),
       });
     } catch (err) { pbFail(res, err, 'Tracking'); }

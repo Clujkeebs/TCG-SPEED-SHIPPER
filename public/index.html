@@ -3783,7 +3783,7 @@ function loadPostageHistory() {
         return '<div class="pg-hrow"><div><b>' + esc(l.order_ref || 'Label') + '</b> · ' + (l.service === 'ground' ? 'Ground Advantage' : 'Letter') +
           (l.price != null ? ' · $' + Number(l.price).toFixed(2) : '') + (l.mode === 'sandbox' ? ' · test' : '') +
           '<div class="pg-hmeta">' + esc(l.tracking_number || '') + ' · ' + esc(new Date(l.created_at).toLocaleDateString()) + (live ? '' : ' · ' + esc(l.status.replace('_', ' '))) + '</div></div>' +
-          (live ? '<span class="pg-hbtns"><button type="button" class="btn-ghost" data-reprint="' + esc(l.shipment_id) + '">Reprint</button><button type="button" class="btn-ghost" data-refund="' + esc(l.shipment_id) + '">Refund</button></span>' : '<span></span>') + '</div>';
+          (live ? '<span class="pg-hbtns"><button type="button" class="btn-ghost" data-reprint="' + esc(l.shipment_id) + '">Reprint</button>' + (l.service === 'letter' ? '' : '<button type="button" class="btn-ghost" data-refund="' + esc(l.shipment_id) + '">Refund</button>') + '</span>' : '<span></span>') + '</div>';
       }).join('');
     }).catch(function () {});
 }

@@ -1,7 +1,7 @@
 /* Postage pilot (Pitney Bowes). Pins: only the owner and pilot emails can
    use it; it stays in sandbox unless production is explicitly switched on;
-   label requests send PB the right shipment (service, label size, shipper
-   id); one bad address doesn't sink a batch; every label lands in the
+   label requests send PB the right shipment (service, label size, USPS
+   carrier account); one bad address doesn't sink a batch; every label lands in the
    ledger; and a user can only refund their own unused labels. PB and
    Supabase are stubbed, nothing touches the network. */
 const Module = require('module');
@@ -15,7 +15,6 @@ process.env.SUPABASE_URL = 'https://stub.supabase.co';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'stub-key';
 process.env.PB_API_KEY = 'pbkey';
 process.env.PB_API_SECRET = 'pbsecret';
-process.env.PB_SHIPPER_ID = '9015544760';
 process.env.PB_PILOT_EMAILS = 'Pilot@Example.com, other@example.com';
 
 const ledger = [];
@@ -61,16 +60,17 @@ let shipSeq = 0;
 global.fetch = async (url, init) => {
   pbCalls.push({ url, init });
   const json = (status, body) => ({ ok: status < 300, status, text: async () => JSON.stringify(body) });
-  if (url.endsWith('/oauth/token')) return json(200, { access_token: 'tok', expiresIn: 28800 });
-  if (url.endsWith('/v1/rates')) return json(200, { rates: [{ totalCarrierCharge: 0.78 }] });
-  if (url.endsWith('/v1/shipments') && init.method === 'POST') {
+  if (url.endsWith('/auth/api/v1/token')) return json(200, { access_token: 'tok', expires_in: 14400, token_type: 'Bearer' });
+  if (url.endsWith('/shipping/api/v1/carrierAccounts')) return json(200, { data: { carrierAccounts: [{ carrierAccountId: 'acct_ups', carrierName: 'UPS' }, { carrierAccountId: 'acct_usps', carrierName: 'USPS' }] } });
+  if (url.endsWith('/shipping/api/v2/rates')) return json(200, { rate: [{ serviceId: 'FCM', totalCarrierCharge: 0.78 }] });
+  if (url.endsWith('/shipping/api/v2/shipments') && init.method === 'POST') {
     const b = JSON.parse(init.body);
-    if (b.toAddress.postalCode === '00000') return json(400, [{ errorCode: '1001', errorDescription: 'Invalid address' }]);
+    if (b.toAddress.postalCode === '00000') return json(400, { errors: [{ errorCode: '1001', message: 'Invalid address' }] });
     shipSeq++;
-    return json(201, { shipmentId: 'USPS' + shipSeq, parcelTrackingNumber: '9400' + shipSeq, rates: [{ totalCarrierCharge: b.rates[0].serviceId === 'GA' ? 4.5 : 0.78 }], documents: [{ pages: [{ contents: 'JVBERi0x' }] }] });
+    return json(200, { shipmentId: 'USPS' + shipSeq, parcelTrackingNumber: '9400' + shipSeq, rate: { serviceId: b.byCarrier.service, totalCarrierCharge: b.byCarrier.service === 'UGA' ? 4.5 : 0.78 }, labelLayout: [{ contentType: 'BASE64', contents: 'JVBERi0x', fileFormat: 'PDF', size: b.labelSize, type: 'SHIPPING_LABEL' }] });
   }
-  if (/\/v1\/shipments\/[^/?]+$/.test(url) && init.method === 'DELETE') return json(200, { status: 'INITIATED' });
-  if (url.includes('/v1/tracking/')) return json(200, { status: 'In Transit', scanDetailsList: [{ eventDate: '2026-10-04', eventTime: '10:00', scanDescription: 'Accepted', eventCity: 'Los Angeles', eventStateOrProvince: 'CA' }] });
+  if (url.endsWith('/shipping/api/v2/shipments/cancel') && init.method === 'POST') return json(200, { status: 'INITIATED', totalCarrierCharge: 4.5 });
+  if (url.includes('/shippingtracking/api/v1/tracking/')) return json(200, { currentStatus: { status: 'In Transit', eventDescription: 'In Transit' }, trackingHistory: [{ eventDate: '2026-10-04T10:00:00', eventDescription: 'Accepted', eventLocation: { city: 'Los Angeles', stateOrProvince: 'CA' } }] });
   return json(404, { message: 'no' });
 };
 
@@ -106,7 +106,7 @@ const TO = { firstName: 'Jane', lastName: 'Doe', addr1: '456 Oak Ave', addr2: 'A
 server.listen(0, async () => {
   try {
     console.log('\n-- Mode and access --');
-    check('sandbox by default', pbConfig({ PB_API_KEY: 'k', PB_API_SECRET: 's', PB_SHIPPER_ID: '1' }).mode === 'sandbox');
+    check('sandbox by default', pbConfig({ PB_API_KEY: 'k', PB_API_SECRET: 's' }).mode === 'sandbox');
     check('PB_ENV=production alone stays sandbox', pbConfig({ PB_ENV: 'production' }).mode === 'sandbox');
     check('production needs PB_LIVE_OK=yes too', pbConfig({ PB_ENV: 'production', PB_LIVE_OK: 'yes' }).mode === 'production');
     let r = await req('GET', '/api/postage/status');
@@ -141,13 +141,19 @@ server.listen(0, async () => {
     check('labels come back with tracking and a PDF', res3[0].trackingNumber && res3[0].labelPdfBase64 === 'JVBERi0x');
     check('total = postage + fees, purchased labels only', r.body.postage === 5.28 && r.body.fees === 0.71 && r.body.total === 5.99, JSON.stringify([r.body.postage, r.body.fees, r.body.total]));
     check('each label carries its price', res3[0].price === 0.99 && res3[2].price === 5);
-    const ships = pbCalls.filter((c) => c.url.endsWith('/v1/shipments')).map((c) => JSON.parse(c.init.body));
-    check('letter → USPS FCM LETTER on a 6x4 label', ships[0].rates[0].serviceId === 'FCM' && ships[0].rates[0].parcelType === 'LETTER' && ships[0].documents[0].size === 'DOC_6X4');
-    check('ground → USPS GA package on a 4x6 label', ships[2].rates[0].serviceId === 'GA' && ships[2].documents[0].size === 'DOC_4X6');
-    check('shipper id is sent', ships[0].shipmentOptions.some((o) => o.name === 'SHIPPER_ID' && o.value === '9015544760'));
-    check('requests go to the sandbox', pbCalls.every((c) => c.url.startsWith('https://shipping-api-sandbox.pitneybowes.com/')));
-    check('each label call has a transaction id', pbCalls.filter((c) => c.url.endsWith('/v1/shipments')).every((c) => /^[0-9a-f]{24}$/.test(c.init.headers['X-PB-TransactionId'])));
-    check('the token is fetched once and reused', pbCalls.filter((c) => c.url.endsWith('/oauth/token')).length === 0);
+    const ships = pbCalls.filter((c) => c.url.endsWith('/shipping/api/v2/shipments')).map((c) => JSON.parse(c.init.body));
+    check('letter → USPS FCM LETTER on a 4x6 PDF label', ships[0].byCarrier.carrier === 'USPS' && ships[0].byCarrier.service === 'FCM' && ships[0].parcels[0].parcelType === 'LETTER' && ships[0].labelSize === 'DOC_4X6' && ships[0].labelFormat === 'PDF');
+    check('ground → USPS Ground Advantage package', ships[2].byCarrier.service === 'UGA' && ships[2].parcels[0].parcelType === 'PKG');
+    check('weight goes in ounces', ships[0].parcels[0].parcel.weight === 1 && ships[0].parcels[0].parcel.weightUnit === 'OZ');
+    check('the USPS carrier account is looked up and sent', ships.every((x) => x.byCarrier.carrierAccountId === 'acct_usps'));
+    check('the carrier account is looked up only once', pbCalls.filter((c) => c.url.endsWith('/carrierAccounts')).length <= 1);
+    check('requests go to the Shipping 360 sandbox', pbCalls.every((c) => c.url.startsWith('https://api-sandbox.sendpro360.pitneybowes.com/')));
+    check('each label call has a transaction id', pbCalls.filter((c) => c.url.endsWith('/shipping/api/v2/shipments')).every((c) => /^[0-9a-f]{24}$/.test(c.init.headers['X-PB-TransactionId'])));
+    check('the token is fetched once and reused', pbCalls.filter((c) => c.url.endsWith('/auth/api/v1/token')).length === 0);
+    const { buildShipment } = require(path.join(__dirname, '..', 'postage.js'));
+    const bs = buildShipment({ from: pbAddress(Object.assign({}, FROM, { phone: '555-123-4567' })).address, to: pbAddress(TO).address, service: 'letter', weightOz: 1 });
+    check('the sender phone stands in for the buyer\'s missing phone', bs.toAddress.phone === '555-123-4567');
+    check('street lines map to addressLine1/2', bs.toAddress.addressLine1 === '456 Oak Ave' && bs.toAddress.addressLine2 === 'Apt 2');
     check('purchased labels are in the ledger with the buyer', ledger.length === 2 && ledger.every((x) => x.user_id === 'u_pilot' && x.mode === 'sandbox' && x.status === 'purchased'));
     check('the ledger records postage, fee and price separately', ledger[0].amount === 0.78 && ledger[0].fee === 0.21 && ledger[0].price === 0.99);
     const { feeFor } = require(path.join(__dirname, '..', 'postage.js'));
@@ -165,7 +171,9 @@ server.listen(0, async () => {
     check('label history is pilot-only', r.status === 403);
 
     console.log('\n-- Refunds and tracking --');
-    const sid = res3[0].shipmentId;
+    r = await req('POST', '/api/postage/labels/' + res3[0].shipmentId + '/refund', {}, 'pilot-token');
+    check('letter postage can\'t be refunded (USPS rule)', r.status === 409 && /letter/i.test(r.body.error));
+    const sid = res3[2].shipmentId;
     r = await req('POST', '/api/postage/labels/' + sid + '/refund', {}, 'owner-token');
     check('someone else cannot refund your label', r.status === 404);
     r = await req('POST', '/api/postage/labels/' + sid + '/refund', {}, 'pilot-token');
@@ -209,10 +217,10 @@ server.listen(0, async () => {
     ] }, 'pilot-token');
     const rb = r.body.results || [];
     check('labels draw down the balance with no checkout', rb[0].ok && rb[1].ok && r.body.balanceCents === 600 - 500 - 99, JSON.stringify(r.body));
-    check('when the balance runs out, the unpaid label is voided at PB', !rb[2].ok && /balance/.test(rb[2].error) && pbCalls.some((c) => c.init.method === 'DELETE'));
+    check('when the balance runs out, the next label is quoted and never bought', !rb[2].ok && /balance/.test(rb[2].error) && pbCalls.filter((c) => c.url.endsWith('/shipping/api/v2/shipments')).length === 2);
     check('balance never goes negative', bal('u_pilot') >= 0);
-    r = await req('POST', '/api/postage/labels/' + rb[1].shipmentId + '/refund', {}, 'pilot-token');
-    check('a refund puts the label price back', r.status === 200 && bal('u_pilot') === 600 - 500);
+    r = await req('POST', '/api/postage/labels/' + rb[0].shipmentId + '/refund', {}, 'pilot-token');
+    check('a refund puts the label price back', r.status === 200 && bal('u_pilot') === 600 - 99, String(bal('u_pilot')));
     r = await req('GET', '/api/postage/balance', undefined, 'stranger-token');
     check('balance is pilot-only', r.status === 403);
     delete process.env.PB_BALANCE;
