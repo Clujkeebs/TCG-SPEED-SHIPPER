@@ -83,6 +83,8 @@
 .sf-brand p { font-size: 14px; line-height: 1.65; margin: 0 0 12px; color: var(--sf-text); max-width: 34ch; }
 .sf-brand a.sf-mail { color: #fff; text-decoration: none; border-bottom: 1px solid rgba(255,255,255,.3); font-size: 14px; }
 .sf-brand a.sf-mail:hover { border-bottom-color: #fff; }
+.sf-brand a.sf-social { display: block; margin-top: 8px; color: #fff; text-decoration: none; font-size: 14px; opacity: .85; }
+.sf-brand a.sf-social:hover { opacity: 1; text-decoration: underline; }
 .sf-news { margin-top: 20px; max-width: 360px; }
 .sf-news label { display: block; color: var(--sf-head); font-size: 14px; font-weight: 600; margin-bottom: 4px; }
 .sf-news p { font-size: 13px; margin: 0 0 8px; }
