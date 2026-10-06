@@ -59,8 +59,8 @@ description: IDs and facts for TCG Speed Shipper's production stack (Railway, Su
 - **Marketing email needs the owner's physical mailing address in the
   footer.** It's on file in the Gmail draft "TCGSS mailing address (email
   footer)". Never commit it.
-- Customer mmuszak34 (label + slip request) has been answered twice. The
-  owner says don't reply again.
+- Customer mmuszak34 (label + slip request): the old "don't reply again"
+  rule was lifted by the owner on 2026-10-06. Treat him like any customer.
 
 ## Routines (claude-code-remote triggers)
 - `trig_01SGNpeD3mDQKvZHvLWHX7vd`: 5am PT daily DAS morning start.
