@@ -1303,6 +1303,7 @@ Chicago, IL 60601</div>
           <button class="btn-dl" id="auth-login-btn">Log In</button>
           <button class="btn-ghost" id="auth-signup-btn">Create Account</button>
         </div>
+        <div id="auth-captcha" style="margin-top:10px;" hidden></div>
         <div id="auth-msg"></div>
         <p class="tip" style="margin-top:8px;">By creating an account you agree to the <a href="/terms.html" style="color:inherit;">Terms of Service</a> and <a href="/privacy.html" style="color:inherit;">Privacy Policy</a>.</p>
         <p class="tip"><a href="#" id="auth-forgot-link" style="color:inherit;">Forgot your password?</a></p>
@@ -4180,14 +4181,53 @@ document.getElementById('tracking-copy-all-btn').addEventListener('click', funct
   // and "Forgot Password" hit the same unreliable sender. Going straight to
   // the server path removes that whole failure class: it always creates an
   // already-confirmed account with no email round-trip at all.
+  // Optional "I'm human" check on sign-up (Cloudflare Turnstile). The server
+  // says whether it's on; the script loads only then, and only for sign-up.
+  var captcha = { siteKey: null, token: null, widget: null, loading: null };
+  function loadCaptcha() {
+    if (captcha.loading) return captcha.loading;
+    captcha.loading = fetch('/api/captcha').then(function (r) { return r.json(); }).then(function (j) {
+      if (!j || !j.siteKey) return false;
+      captcha.siteKey = j.siteKey;
+      return new Promise(function (resolve) {
+        window.tcgssCaptchaReady = function () {
+          var box = document.getElementById('auth-captcha');
+          box.hidden = false;
+          captcha.widget = window.turnstile.render(box, {
+            sitekey: captcha.siteKey,
+            callback: function (t) { captcha.token = t; },
+            'expired-callback': function () { captcha.token = null; },
+            'error-callback': function () { captcha.token = null; }
+          });
+          resolve(true);
+        };
+        var sc = document.createElement('script');
+        sc.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=tcgssCaptchaReady';
+        sc.async = true; sc.onerror = function () { resolve(false); };
+        document.head.appendChild(sc);
+      });
+    }).catch(function () { return false; });
+    return captcha.loading;
+  }
+  emailField.addEventListener('focus', loadCaptcha);
+  passwordField.addEventListener('focus', loadCaptcha);
+  function resetCaptcha() {
+    captcha.token = null;
+    try { if (captcha.widget != null && window.turnstile) window.turnstile.reset(captcha.widget); } catch (e) {}
+  }
+
   async function serverSignup(email, password) {
     var res;
+    if (await loadCaptcha() && !captcha.token) {
+      throw new Error('Tick the “I\'m human” box below, then click Create Account again.');
+    }
     try {
       res = await fetch('/api/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email, password: password })
+        body: JSON.stringify({ email: email, password: password, captchaToken: captcha.token || undefined })
       });
+      resetCaptcha();
     } catch (netErr) {
       throw new Error('Could not reach the server. Check your connection and try again.');
     }

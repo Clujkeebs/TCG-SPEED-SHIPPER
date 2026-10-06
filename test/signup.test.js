@@ -132,6 +132,36 @@ function reset(existing) { state.existing = existing || null; state.created.leng
   for (let i = 0; i < 12; i++) last = await post('/api/signup', { email: 'flood' + i + '@example.com', password: 'longenough1' }, '203.0.113.9');
   check('a burst from one address is throttled', last.status === 429, JSON.stringify(last.body));
 
+  console.log('\n-- Bot check (Cloudflare Turnstile) --');
+  const get = (u) => new Promise((resolve) => require('http').get('http://127.0.0.1:' + server.address().port + u, (r) => { let d = ''; r.on('data', (c) => { d += c; }); r.on('end', () => resolve(JSON.parse(d))); }));
+  check('off by default: no site key is published', (await get('/api/captcha')).siteKey === null);
+  process.env.TURNSTILE_SITE_KEY = '0x4AAA-site';
+  process.env.TURNSTILE_SECRET_KEY = '0x4AAA-secret';
+  check('on: the public site key is published', (await get('/api/captcha')).siteKey === '0x4AAA-site');
+  const realFetch = global.fetch;
+  const verifyCalls = [];
+  global.fetch = async (url, init) => {
+    if (String(url).includes('challenges.cloudflare.com')) {
+      verifyCalls.push(String(init.body));
+      return { json: async () => ({ success: /response=good/.test(String(init.body)) }) };
+    }
+    return realFetch(url, init);
+  };
+  reset(null);
+  res = await post('/api/signup', { email: 'bot@example.com', password: 'longenough1' }, '198.51.100.1');
+  check('on: sign-up without a token is refused', res.status === 400 && /human/i.test(res.body.error || ''), JSON.stringify(res.body));
+  res = await post('/api/signup', { email: 'bot@example.com', password: 'longenough1', captchaToken: 'bad' }, '198.51.100.2');
+  check('on: a failed check is refused', res.status === 400 && state.created.length === 0);
+  res = await post('/api/signup', { email: 'human@example.com', password: 'longenough1', captchaToken: 'good' }, '198.51.100.3');
+  check('on: a passed check creates the account', res.status === 200 && state.created.length === 1, JSON.stringify(res.body));
+  check('the secret goes only to Cloudflare, with the token', verifyCalls.length === 2 && verifyCalls.every((b) => /secret=0x4AAA-secret/.test(b)));
+  global.fetch = async (url, init) => { if (String(url).includes('challenges.cloudflare.com')) throw new Error('down'); return realFetch(url, init); };
+  reset(null);
+  res = await post('/api/signup', { email: 'outage@example.com', password: 'longenough1', captchaToken: 'x' }, '198.51.100.4');
+  check('if Cloudflare is down, real people can still sign up', res.status === 200);
+  global.fetch = realFetch;
+  delete process.env.TURNSTILE_SITE_KEY; delete process.env.TURNSTILE_SECRET_KEY;
+
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   server.close();
   process.exit(fail ? 1 : 0);
