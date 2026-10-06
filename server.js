@@ -681,12 +681,45 @@ router.post('/stripe-webhook', express.raw({ type: '*/*' }), requireStripe, requ
   res.json({ received: true });
 });
 
+// Optional bot check on sign-up: Cloudflare Turnstile (free, no tracking
+// cookies). Off until TURNSTILE_SITE_KEY + TURNSTILE_SECRET_KEY are set in
+// Railway. Sign-up goes through /api/signup (admin API), not Supabase's own
+// signup endpoint, so this is where the check has to live; Supabase's CAPTCHA
+// setting would not protect it and must stay off.
+router.get('/captcha', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({ siteKey: (process.env.TURNSTILE_SECRET_KEY && process.env.TURNSTILE_SITE_KEY) || null });
+});
+async function captchaOk(token, ip) {
+  const secret = process.env.TURNSTILE_SECRET_KEY;
+  if (!secret || !process.env.TURNSTILE_SITE_KEY) return true;
+  if (!token || typeof token !== 'string' || token.length > 4096) return false;
+  try {
+    const r = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ secret, response: token, remoteip: ip || '' }).toString(),
+      signal: AbortSignal.timeout(8000),
+    });
+    const j = await r.json();
+    return !!(j && j.success);
+  } catch (e) {
+    // Cloudflare unreachable: let real people in (the per-IP sign-up
+    // throttle still applies) rather than block every sign-up.
+    await logError('captcha', 'Turnstile verify unreachable:', e && e.message);
+    return true;
+  }
+}
+
 router.post('/signup', express.json(), requireSupabase, async (req, res) => {
   try {
     if (tooManySignupAttempts(getClientIp(req))) {
       return res.status(429).json({ error: 'Too many attempts — try again in a few minutes.' });
     }
 
+    if (!(await captchaOk(req.body && req.body.captchaToken, getClientIp(req)))) {
+      return res.status(400).json({ error: 'Please complete the “I\'m human” check, then try again.' });
+    }
     const email = ((req.body && req.body.email) || '').trim().toLowerCase();
     const password = (req.body && req.body.password) || '';
     if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'Enter a valid email.' });
