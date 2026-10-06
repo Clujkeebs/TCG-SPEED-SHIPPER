@@ -1,0 +1,48 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face{font-family:'DM Serif Display';src:url('../../public/fonts/dm-serif-display-latin-400-normal.woff2')}
+@font-face{font-family:'JetBrains Mono';font-weight:500;src:url('../../public/fonts/jetbrains-mono-latin-500-normal.woff2')}
+@font-face{font-family:'JetBrains Mono';font-weight:700;src:url('../../public/fonts/jetbrains-mono-latin-700-normal.woff2')}
+@font-face{font-family:'Source Serif 4';src:url('../../public/fonts/source-serif-4-latin-400-normal.woff2')}
+*{box-sizing:border-box;margin:0}
+body{width:1500px;height:500px;overflow:hidden;background:radial-gradient(1200px 600px at 75% 30%,#1f4d3a 0%,#163a2c 45%,#0f2a20 100%);font-family:'Source Serif 4',serif;color:#f4f1ea;position:relative}
+.dots{position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.07) 1px,transparent 1px);background-size:22px 22px}
+.left{position:absolute;left:400px;top:92px;width:600px}
+.kicker{font:700 17px 'JetBrains Mono',monospace;letter-spacing:.22em;color:#74c69d;display:flex;align-items:center;gap:12px}
+.kicker i{width:30px;height:30px;border-radius:8px;background:#74c69d;display:inline-block;position:relative}
+.kicker i:after{content:"";position:absolute;inset:8px;border:2.5px solid #163a2c;border-radius:3px}
+h1{font:400 52px/1.04 'DM Serif Display',serif;margin-top:18px;letter-spacing:-.01em}
+h1 em{font-style:normal;color:#95d5b2}
+.sub{margin-top:14px;font-size:21px;color:rgba(244,241,234,.78)}
+.chips{display:flex;gap:8px;margin-top:18px;flex-wrap:nowrap}
+  .chips span{white-space:nowrap;font:500 14px 'JetBrains Mono',monospace;border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:7px 14px;color:rgba(244,241,234,.88)}
+.chips .hot{background:#f2c66d;color:#1c1b18;border-color:#f2c66d}
+.url{position:absolute;left:400px;bottom:58px;font:700 19px 'JetBrains Mono',monospace;color:#f4f1ea}
+.url b{color:#74c69d;font-weight:700}
+.stack{position:absolute;right:36px;top:62px;width:390px;height:380px}
+.card{position:absolute;background:#fbfaf6;border-radius:14px;box-shadow:0 30px 60px rgba(0,0,0,.45);color:#1c1b18}
+.slip{width:300px;height:330px;right:0;top:0;transform:rotate(6deg);padding:26px 24px}
+.slip h3{font:400 21px 'DM Serif Display',serif;color:#2d6a4f;text-align:center;border-bottom:1.5px solid #2d6a4f;padding-bottom:8px}
+.slip p{font-size:15px;margin-top:10px;line-height:1.55}
+.label{width:330px;height:225px;left:0;top:95px;transform:rotate(-4deg);padding:20px 22px;border:2px solid #1c1b18}
+.label .from{font:500 12px 'JetBrains Mono',monospace;border-bottom:2px solid #1c1b18;padding-bottom:9px}
+.label .to{margin:14px 0 0 54px;font-size:18px;line-height:1.3}
+.label .to b{font:400 23px 'DM Serif Display',serif}
+.label .badge{position:absolute;left:20px;bottom:18px;font:700 11.5px 'JetBrains Mono',monospace;background:#d8f3dc;color:#1b4332;border:1px solid #74c69d;border-radius:6px;padding:5px 8px}
+.label .trk{position:absolute;right:20px;bottom:16px;width:46px;height:46px;background:repeating-linear-gradient(90deg,#1c1b18 0 3px,transparent 3px 5px),repeating-linear-gradient(0deg,#1c1b18 0 3px,transparent 3px 6px);background-blend-mode:multiply}
+.csv{position:absolute;left:-30px;top:40px;transform:rotate(-8deg);background:#f2c66d;color:#1c1b18;font:700 16px 'JetBrains Mono',monospace;padding:9px 16px;border-radius:10px;box-shadow:0 10px 24px rgba(0,0,0,.35)}
+</style></head><body><div class="dots"></div>
+<div class="left">
+ <div class="kicker"><i></i>TCG SPEED SHIPPER</div>
+ <h1>TCGplayer orders to <em>printed labels</em> in seconds.</h1>
+ <div class="sub">Labels, packing slips and envelopes from one CSV.</div>
+ <div class="chips"><span>4×6 thermal</span><span>#10 envelopes</span><span>Label + slip</span><span class="hot">Postage soon</span></div>
+</div>
+<div class="url"><b>→</b> tcgspeedshipper.com · 10 free labels / month</div>
+<div class="stack">
+ <div class="card slip"><h3>Packing Slip</h3><p>Order 4F2A-91C3<br>• Charizard ex · SIR<br>• Umbreon VMAX<br>• Pikachu ex · IR<br>Thanks for your order!</p></div>
+ <div class="card label"><div class="from">CARD SHOP CO.<br>123 Seller St · Portland, ME 04101</div>
+  <div class="to"><b>Sample Buyer</b><br>456 Collector Ave, Apt 2<br>Austin, TX 78701</div>
+  <div class="badge">ENVELOPE OK · ~1 oz · $0.82</div><div class="trk"></div></div>
+ <div class="csv">orders.csv</div>
+</div>
+</body></html>
