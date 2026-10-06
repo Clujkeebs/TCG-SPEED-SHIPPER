@@ -415,13 +415,19 @@ T.E4 = {id:"E4", hot:1, min:5, title:"Review the “what's new + postage coming�
 T.E5 = {id:"E5", min:10, title:"Talk over the Chrome extension idea",
   why:"A free browser add-on: “Print shipping” on TCGplayer's Orders page (no CSV export) and “Paste tracking” back into TCGplayer after printing. Nobody else has it. Draft only; nothing is built.",
   steps:["Read <span class='mono'>docs/research/chrome-extension.md</span> (workflow, risks, smallest first version).","Answer the 3 questions at the bottom in this note (do you ship from a computer or iPad? read TCGplayer's seller rules together first? free or Pro?)."]};
+T.B10 = {id:"B10", min:15, title:"Email verification for new accounts: set up Resend first (free)",
+  why:"You asked for users to verify their email when they sign up. Right now sign-up skips verification on purpose: Supabase's built-in email sender is slow and often lands in spam, and real sellers got stuck. Resend (free up to 3,000 emails/mo) fixes delivery, then Claude turns verification on. It also fixes password-reset emails.",
+  steps:["<b>resend.com</b> → sign up (free) → <b>Domains</b> → <b>Add domain</b> → <span class='mono'>tcgspeedshipper.com</span>.","Resend shows 3 DNS records (TXT/MX). Add them at Porkbun → tcgspeedshipper.com → DNS, exactly as shown. Then click <b>Verify</b> in Resend.","Resend → <b>API Keys</b> → create one (“Sending access”). Railway → web → Variables → <span class='mono'>RESEND_API_KEY</span> = that key → Deploy.","Write “resend ready” here. Claude then builds: a 6-digit code emailed at sign-up, entered on the site before the account is created, plus reliable password resets."],
+  copy:["RESEND_API_KEY"], unlock:"Every new account has a real, working email."};
+T.H1 = Object.assign({}, T.H1, {why:T.H1.why+" Your Google Ads account exists (Google is emailing you about Performance Max). <b>Ignore Performance Max</b>: it spends on Google's choice of placements. Follow H2's Search-only setup instead."});
+T.D5 = Object.assign({}, T.D5, {steps:["You said Claude can send it. Claude couldn't find Mana Pool's contact email (their site is blocked from Claude's sandbox and it isn't published in search results).","Paste their support or partnerships email in this note (from manapool.com → Contact or the footer). Claude sends the draft that day, from your Gmail, one email, human tone."]});
 const STAGES = [
- {id:"P1", name:"Security first", sub:"Do these before anything else. They protect your accounts, your customers' data and your money.", tasks:["B4","B8","B3","B6","B9","B7","B1","B2","B5"].map(k=>T[k])},
+ {id:"P1", name:"Security first", sub:"Do these before anything else. They protect your accounts, your customers' data and your money.", tasks:["B4","B8","B9","B10","B3","B6","B7","B1","B2","B5"].map(k=>T[k])},
  {id:"P2", name:"Switch on postage (the money)", sub:"Every label any seller prints earns a fee. Rob alone ships 500+ a month.", tasks:["A8","A1","A2","A5","A4","A6","A9","A3","A10","A11","A7"].map(k=>T[k])},
  {id:"P3", name:"Get found for free", sub:"Organic search and seller communities cost nothing and compound.", tasks:["D1","D3","D2","D4","D5"].map(k=>T[k])},
  {id:"P4", name:"Paid growth: Google Ads test", sub:"After P3's Search Console. Small, measured, with a clear keep-or-kill rule.", tasks:["H1","H2","H3"].map(k=>T[k])},
  {id:"P5", name:"Content and decisions that raise revenue", sub:"A demo video, a real quote, and pricing calls only you can make.", tasks:["C4","E4","C5","E5","E1","E2","C1","E3","C2","C3"].map(k=>T[k])},
- {id:"P6", name:"Tests and housekeeping", sub:"When you have a spare 10 minutes.", tasks:["F1","G1","G2","F2","G3","G4","G8","G5"].map(k=>T[k])}
+ {id:"P6", name:"Tests and housekeeping", sub:"When you have a spare 10 minutes.", tasks:["F1","G1","G2","F2","G4","G8","G5"].map(k=>T[k])}
 ];
 
 const BUILD = [
