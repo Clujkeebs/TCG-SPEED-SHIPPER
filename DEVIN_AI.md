@@ -1794,3 +1794,10 @@ Next for me: creator-focused outreach batch 3 (batch 2 had only 3 creators).
 - Sent the one follow-up nudge to all 8, in their original threads. Rows
   are marked "followed up 2026-10-05". That's the last email to them.
 - Next outreach lever is not more cold email. See the road-to-10k doc.
+
+### 2026-10-06 (Claude): October product update email sent
+- Owner-approved one-time update ("What's new in TCG Speed Shipper (and what's coming)"), branded HTML + plain text, sent one-per-recipient to 17 accounts: 5 Base, 10 Free, 2 Premium. Excluded: the owner, Rob (got a personal note instead) and mmuszak34 (standing no-contact rule).
+- Plan-specific line: paid plans told their price and limits don't change; free told 10 labels/mo stays.
+- No postage prices or dates promised. Opt-out = reply "unsubscribe"; honor any that come in.
+- The Oct 8 free-user win-back routine is disabled (this email covered it).
+- Template: docs/email/update-2026-10-build.py (address placeholder; real address only in the Gmail draft).
