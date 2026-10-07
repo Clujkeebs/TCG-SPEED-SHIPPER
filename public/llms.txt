@@ -1,0 +1,56 @@
+# TCG Speed Shipper
+
+> Free web app that turns a TCGplayer shipping export (CSV) into print-ready address labels, #10 envelopes and packing slips. Built by a TCGplayer seller. Order data stays in the browser.
+
+- Formats: 4x6 thermal labels (label + packing slip pairs), 8.5x11 sheets, Avery 5160, #10 envelopes, label + slip on one page.
+- Plans: Free (10 labels/month, no account), Base $2.99/month (500 labels), Premium $5.99/month (unlimited, paste addresses, Design Studio). Yearly plans give 2 months free.
+- Labels are address labels, not postage. Postage with tracking is in testing.
+- Independent; not affiliated with TCGplayer, eBay or any card game publisher.
+
+## Main pages
+
+- [App and pricing](https://tcgspeedshipper.com/): upload the TCGplayer CSV, print labels and slips
+- [Seller guides](https://tcgspeedshipper.com/guide/)
+- [Blog](https://tcgspeedshipper.com/blog/)
+- [Weekly seller newsletter](https://tcgspeedshipper.com/newsletter.html)
+- [Support](https://tcgspeedshipper.com/support.html)
+- [Privacy](https://tcgspeedshipper.com/privacy.html)
+
+## Guides
+
+- [Free vs. Paid TCGPlayer Shipping Tools: What's Worth Paying For](https://tcgspeedshipper.com/guide/free-vs-paid-tcgplayer-shipping-tools.html)
+- [How to Print TCGPlayer Shipping Labels Fast (Free, No Signup)](https://tcgspeedshipper.com/guide/how-to-print-tcgplayer-shipping-labels.html)
+- [TCGPlayer Packing List CSV Format Explained](https://tcgspeedshipper.com/guide/tcgplayer-packing-list-csv-format.html)
+- [TCGPlayer Seller's Shipping Guide (Tiers to Reputation)](https://tcgspeedshipper.com/guide/tcgplayer-shipping-guide.html)
+- [Rollo vs. Dymo vs. MUNBYN: Best Thermal Printer for TCGPlayer Sellers](https://tcgspeedshipper.com/guide/thermal-printer-comparison.html)
+
+## Blog posts
+
+- [Best Packaging Supplies for Shipping Pokémon Cards](https://tcgspeedshipper.com/blog/best-packaging-supplies-for-shipping-pokemon-cards.html)
+- [Can You Ship Trading Cards Media Mail? (No — Here's What to Use)](https://tcgspeedshipper.com/blog/can-you-ship-trading-cards-media-mail.html)
+- [Does TCGplayer Provide Shipping Labels? (What Sellers Use Instead)](https://tcgspeedshipper.com/blog/does-tcgplayer-provide-shipping-labels.html)
+- [Does TCGplayer Require a Packing Slip? (What to Put in the Envelope)](https://tcgspeedshipper.com/blog/does-tcgplayer-require-a-packing-slip.html)
+- [How Long Does TCGplayer Take to Pay Sellers? Payout Schedule Explained](https://tcgspeedshipper.com/blog/how-long-does-tcgplayer-take-to-pay-sellers.html)
+- [How Long Does TCGplayer Take to Ship? Delivery Times Explained](https://tcgspeedshipper.com/blog/how-long-does-tcgplayer-take-to-ship.html)
+- [How Many Stamps Do You Need to Mail a Trading Card? (2026 USPS Prices)](https://tcgspeedshipper.com/blog/how-many-stamps-to-mail-a-trading-card.html)
+- [How Much Does It Cost to Ship Trading Cards in 2026?](https://tcgspeedshipper.com/blog/how-much-does-it-cost-to-ship-trading-cards.html)
+- [How to Avoid Getting Suspended as a TCGplayer Seller](https://tcgspeedshipper.com/blog/how-to-avoid-tcgplayer-seller-suspension.html)
+- [How to Price Cards to Sell Fast on TCGplayer](https://tcgspeedshipper.com/blog/how-to-price-cards-to-sell-fast-on-tcgplayer.html)
+- [How to Ship Baseball Cards: Raw, Graded & Lots (Step by Step)](https://tcgspeedshipper.com/blog/how-to-ship-baseball-cards.html)
+- [How to Ship Graded Cards Safely (PSA, BGS & CGC Slabs)](https://tcgspeedshipper.com/blog/how-to-ship-graded-cards.html)
+- [How to Ship MTG Cards (Singles, Bulk & Expensive Cards)](https://tcgspeedshipper.com/blog/how-to-ship-mtg-cards.html)
+- [How to Ship Pokémon Cards: Singles, Bulk & High-Value (2026)](https://tcgspeedshipper.com/blog/how-to-ship-pokemon-cards.html)
+- [How to Ship Trading Cards in a Plain White Envelope (PWE Guide)](https://tcgspeedshipper.com/blog/how-to-ship-trading-cards-in-a-plain-white-envelope.html)
+- [How to Start Selling on TCGplayer: A Beginner's Guide (2026)](https://tcgspeedshipper.com/blog/how-to-start-selling-on-tcgplayer.html)
+- [Surviving the Holiday Shipping Rush: Tips for TCGplayer Sellers](https://tcgspeedshipper.com/blog/surviving-the-holiday-shipping-rush-tcgplayer.html)
+- [TCGplayer Direct Explained: Is It Worth It for Small Sellers?](https://tcgspeedshipper.com/blog/tcgplayer-direct-explained.html)
+- [TCGplayer Fees Explained (2026): Calculator and Real Examples](https://tcgspeedshipper.com/blog/tcgplayer-fees-explained.html)
+- [TCGplayer Free Shipping for Sellers: The $5 Rule & Level 4](https://tcgspeedshipper.com/blog/tcgplayer-free-shipping-for-sellers.html)
+- [TCGplayer Lost Package: Refunds & Seller Protection](https://tcgspeedshipper.com/blog/tcgplayer-lost-package.html)
+- [TCGplayer Order Tracking Explained: PWE, Direct & Tracking Numbers](https://tcgspeedshipper.com/blog/tcgplayer-order-tracking-explained.html)
+- [TCGplayer Packing Slips on a Thermal Printer (4x6 Label + Slip)](https://tcgspeedshipper.com/blog/tcgplayer-packing-slips-thermal-printer.html)
+- [TCGplayer Return Policy for Sellers: Wrong Cards, Swaps & Damage](https://tcgspeedshipper.com/blog/tcgplayer-return-policy-for-sellers.html)
+- [TCGplayer Seller Levels Explained: How to Reach Level 4 Faster](https://tcgspeedshipper.com/blog/tcgplayer-seller-levels-explained.html)
+- [TCGplayer Shipping Guidelines (2026): Tracking & Signature Rules](https://tcgspeedshipper.com/blog/tcgplayer-shipping-guidelines.html)
+- ["Shipping Not Confirmed" on TCGplayer: What It Means](https://tcgspeedshipper.com/blog/tcgplayer-shipping-not-confirmed.html)
+- [TCGplayer vs. eBay vs. Whatnot: Where Should You Sell Your Cards?](https://tcgspeedshipper.com/blog/tcgplayer-vs-ebay-vs-whatnot.html)

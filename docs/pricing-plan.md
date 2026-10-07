@@ -53,6 +53,25 @@ Letters get USPS in-transit scans but **no delivery scan**. Sell them as
 "stamp price + tracking scans", never as "delivery confirmation". Packages
 (Ground Advantage) include full tracking and delivery confirmation.
 
+#### ⚠️ Rob's second reply (Oct 6, evening): flat fee beats per-label
+Rob's math against his $30/month Pitney Bowes meter: at 10¢ a label we
+stop being cheaper at about 300 labels a month, and at 15¢ at about 150. His
+suggestion is to put postage in its own slightly higher tier with **no
+per-label fee** (Stamps.com-style), or to lower the fee after the first 100
+(he thinks that one is confusing).
+
+**Option D (Claude's pick, owner to decide): Pro includes fee-free postage.**
+- Pro is $14.99/mo. It includes **300 postage labels a month with no
+  per-label fee**, then 5¢ each after that.
+- At 300 labels, $14.99 works out to 5¢ a label, which matches the owner's
+  5–10¢ floor. At 150 labels it's 10¢. Light users stay on Free, Base or
+  Premium with the 10–15¢ fees.
+- The pitch: "Half the price of a postage meter, $0.78 letters, no
+  per-label fees."
+- Card fees: Pro top-ups default to bank (0.8%). A card top-up adds 3%, so
+  heavy shippers don't eat our margin.
+- Waiting on Rob: his normal and peak monthly volume (reply drafted).
+
 ## Existing customers
 - **Current Premium subscribers keep $5.99 and unlimited labels.** Their
   price and limit don't change. They get their own short email saying so.

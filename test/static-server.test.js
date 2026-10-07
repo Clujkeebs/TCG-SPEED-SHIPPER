@@ -86,6 +86,10 @@ server.listen(0, async () => {
     check('ambiguous or short partial slug stays a 404', r.status === 404);
     r = await get('/favicon.png');
     check('/favicon.png → the PNG icon', r.status === 301 && r.headers.location === '/icon-192.png');
+    r = await get('/privacy-policy');
+    check('/privacy-policy → /privacy.html', r.status === 301 && r.headers.location === '/privacy.html');
+    r = await get('/llms.txt');
+    check('/llms.txt is served as text', r.status === 200 && /text\/plain/.test(r.headers['content-type'] || ''));
 
     r = await get('/../server.js');
     check('no path traversal out of public/', r.status === 404 && !/require\(/.test(r.body));
