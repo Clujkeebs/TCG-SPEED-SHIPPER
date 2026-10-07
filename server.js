@@ -1352,6 +1352,10 @@ const BLOG_SLUGS = (() => {
   catch (e) { return []; }
 })();
 app.get('/favicon.png', (req, res) => res.redirect(301, '/icon-192.png'));
+// Common guesses at our legal pages (bots and people type these).
+for (const [from, to] of [['/privacy-policy', '/privacy.html'], ['/terms-of-service', '/terms.html']]) {
+  app.get(from, (req, res) => res.redirect(301, to));
+}
 app.get(/^\/blog\/[a-z0-9-]{8,}$/, (req, res, next) => {
   const part = req.path.slice(6);
   const hits = BLOG_SLUGS.filter((s) => s.startsWith(part));
