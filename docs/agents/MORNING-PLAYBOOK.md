@@ -68,8 +68,8 @@ deploy.
 - Use docs/OWNER-TODO.md only as a backup. The board is the to-do list.
 
 ## Ideas (Claude keeps this list ranked; add freely)
-1. Pricing v2 + Pro plan, once the owner says "go pricing"
-   (docs/pricing-plan.md).
+1. Pricing v2 + Pro plan, once the owner decides C6/C4. Rob's feedback points
+   to option D: Pro with 300 fee-free postage labels (docs/pricing-plan.md).
 2. Pro extras: auto-reload, one-click mark-shipped file, monthly postage
    report, duplicate-order guard.
 3. Fix whatever the first real/test postage label shows (task A8).
@@ -81,9 +81,11 @@ deploy.
 8. Chrome extension, "Paste tracking" first (draft:
    docs/research/chrome-extension.md; owner discussion E5).
 9. SEO pages with Devin: TCGplayer shipping how-tos, comparisons.
-10. Homepage testimonial from Rob, once he replies (E2).
+10. Keep evergreen posts fresh: when a USPS or TCGplayer fact changes, update
+    the post and its dateModified/sitemap lastmod the same day.
 
 ## Changelog
+- 2026-10-07 (5am run): quiet night, no owner input. Updated the holiday-rush post with USPS's peak package prices (a freshness win). Dropped the done testimonial idea and added 'keep posts fresh'. Funnel 7d: 211 visits, 117 CSV loads, 4 signups, 2 upgrades.
 - 2026-10-06 (5am run): customer replies can change the plan. Rob's note on the $0.78 letter rate opened a pricing decision (C6). Keep checking customer replies before shipping pricing work.
 - 2026-10-06: owner lifted the mmuszak34 no-contact rule; Devin's subscription
   ended, so Claude covers Devin's lane (SEO post, newsletter draft) until the
