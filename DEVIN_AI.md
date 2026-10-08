@@ -1820,3 +1820,7 @@ Next for me: creator-focused outreach batch 3 (batch 2 had only 3 creators).
 - Shipped #112: `/llms.txt` for AI search, plus `/privacy-policy` and `/terms-of-service` redirects.
 - Rob's second pricing reply (a flat fee beats per-label against his $30 meter) is in docs/pricing-plan.md as option D. Reply asking his volume is drafted for the owner.
 - Wrote newsletter issue 3 (docs/newsletter/2026-10-13.md): holiday package price increase, Dec 17 cutoff, Naruto on TCGplayer, thermal label+slip.
+
+### [CLAUDE] 2026-10-08 morning check-in
+- Pitney Bowes Sales (CSTS-37826) replied: open to production access and a partnership, and asked about the business. Answers are drafted for the owner to send (needs call times).
+- Site: 0 5xx in 24h. 11 paying. 13 CSV loads yesterday. No new signups.
