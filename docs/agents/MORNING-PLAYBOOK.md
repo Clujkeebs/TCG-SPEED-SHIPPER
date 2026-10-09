@@ -85,6 +85,7 @@ deploy.
     the post and its dateModified/sitemap lastmod the same day.
 
 ## Changelog
+- 2026-10-09 (5am run): the owner sent the Pitney Bowes answers and Rob's volume question overnight; check Sent mail (in:sent to:<address>) to tick tasks, since the owner often acts on drafts without ticking. Fixed postage_bought counting failed buys.
 - 2026-10-08 (5am run): Pitney Bowes Sales asked six business questions. Drafted the answers for the owner, using real numbers from tcgss_label_usage (about 900 signed-in labels in September). Tip: for any partner or vendor question about volume, pull tcgss_label_usage, not just events.
 - 2026-10-07 (5am run): quiet night, no owner input. Updated the holiday-rush post with USPS's peak package prices (a freshness win). Dropped the done testimonial idea and added 'keep posts fresh'. Funnel 7d: 211 visits, 117 CSV loads, 4 signups, 2 upgrades.
 - 2026-10-06 (5am run): customer replies can change the plan. Rob's note on the $0.78 letter rate opened a pricing decision (C6). Keep checking customer replies before shipping pricing work.
