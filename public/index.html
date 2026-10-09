@@ -385,9 +385,33 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
 .pg-mode { font-weight: 600; font-size: 11px; padding: 2px 8px; border-radius: 99px; margin-left: 6px; letter-spacing: .04em; }
 .pg-mode.sandbox { background: #fff3cd; color: #6b4e00; }
 .pg-mode.production { background: #e6f4ea; color: #1e6b3a; }
+.pg-card { border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin: 14px 0; background: var(--surface, #fff); }
+.pg-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+.pg-bal-chip { font-size: 13px; padding: 4px 10px; border-radius: 99px; background: var(--bg, #f7f5f0); border: 1px solid var(--border); }
+.pg-steps { margin: 0 0 12px; padding-left: 20px; font-size: 13px; line-height: 1.55; color: var(--text-secondary, #4a473e); }
+.pg-from { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 13px; padding: 10px 12px; border-radius: 10px; background: var(--bg, #f7f5f0); margin-bottom: 10px; }
+.pg-from.need { background: #fff3cd; border: 1px solid #f0d58a; }
+.pg-from input { font: inherit; font-size: 14px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; width: 160px; background: #fff; color: inherit; }
+.pg-from .pg-from-note { flex-basis: 100%; font-size: 12px; color: var(--muted); }
+.pg-bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+.pg-bulk .btn-ghost { padding: 4px 10px; min-height: 0; font-size: 12px; }
 .pg-rows { display: grid; gap: 6px; }
-.pg-balance { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 12px; margin-bottom: 10px; border: 1px solid var(--border); border-radius: 10px; font-size: 14px; }
-.pg-balance b { font-size: 16px; }
+.pg-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto 64px; gap: 8px; align-items: center; font-size: 13px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; }
+.pg-row.skip { opacity: .55; }
+.pg-row.err { border-color: #f5c0bb; background: #fff5f4; }
+.pg-row .pg-who { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pg-row .pg-who small { color: var(--muted); }
+.pg-row select, .pg-row input { font: inherit; font-size: 13px; padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface, #fff); color: inherit; }
+.pg-row input { width: 56px; }
+.pg-row .pg-price { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.pg-row .pg-rowerr { grid-column: 1 / -1; color: #b42318; font-size: 12px; }
+.pg-total { margin-top: 12px; padding: 12px; border-radius: 10px; background: var(--bg, #f7f5f0); font-size: 14px; line-height: 1.5; }
+.pg-total b.big { font-size: 18px; }
+.pg-total .short, .pg-from .short { color: #8a4b00; font-weight: 600; }
+.pg-row .pg-price.done { color: #1e6b3a; }
+.pg-topup-box { margin-top: 10px; padding: 12px; border: 1px dashed var(--border); border-radius: 10px; font-size: 13px; }
+.pg-topup-title { font-weight: 600; margin-bottom: 6px; }
+.pg-topup-box small { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; }
 .pg-topup { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; max-width: 100%; }
 .pg-topup .btn-ghost { padding: 6px 12px; min-height: 0; }
 .pg-custom { display: inline-flex; align-items: center; gap: 4px; }
@@ -398,12 +422,7 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
 .pg-hrow .pg-hmeta { color: var(--muted); font-size: 12px; }
 .pg-hrow .pg-hbtns { display: inline-flex; gap: 6px; }
 .pg-hrow .btn-ghost { padding: 4px 10px; min-height: 0; font-size: 12px; }
-.pg-balance small { flex-basis: 100%; color: var(--muted); font-size: 12px; }
-.pg-row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; font-size: 13px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; }
-.pg-row .pg-who { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pg-row .pg-who small { color: var(--muted); }
-.pg-row select, .pg-row input { font: inherit; font-size: 13px; padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface, #fff); color: inherit; }
-.pg-row input { width: 64px; }
+@media (max-width: 480px) { .pg-row { grid-template-columns: auto auto 1fr; } .pg-row .pg-who { grid-column: 1 / -1; } }
 .pg-result { font-size: 13px; margin-top: 8px; }
 .pg-result .bad { color: #b42318; }
 .partial-row { margin-top: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
@@ -733,7 +752,7 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
 .price-sub { font-size: 11.5px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-bottom: 1rem; min-height: 1.2em; }
 .billing-toggle { display: flex; width: max-content; margin: 0 auto 1.25rem; padding: 4px; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; }
 .billing-toggle[hidden] { display: none; }
-#pg-soon[hidden], #pg-main[hidden] { display: none; }
+#pg-soon[hidden], #pg-main[hidden], #pg-topup[hidden], #pg-show-topup[hidden], #pg-bal-chip[hidden] { display: none !important; }
 .billing-toggle button { border: 0; background: none; padding: 8px 16px; border-radius: 999px; font: 500 12.5px 'JetBrains Mono', monospace; color: var(--muted); cursor: pointer; transition: background .15s, color .15s; }
 .billing-toggle button.active { background: var(--text); color: #fff; }
 .billing-toggle .save { font-size: 10.5px; color: var(--accent); margin-left: 4px; }
@@ -1071,6 +1090,50 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
           <p class="pe-msg" id="pe-msg" role="status" aria-live="polite"></p>
         </form>
       </div>
+      <!-- Postage pilot (Pitney Bowes): only for allowed accounts -->
+      <div id="postage-area" style="display:none;">
+        <div class="pg-card" id="pg-soon" hidden>
+          <div class="section-label">Postage with tracking <span class="pg-mode sandbox">COMING SOON</span></div>
+          <p class="tip" style="margin:0;">Soon you'll buy USPS postage with tracking right here, like on eBay or Whatnot, and it lands in the same PDF as your labels and slips.</p>
+        </div>
+        <div class="pg-card" id="pg-main">
+          <div class="pg-head">
+            <div class="section-label" style="margin:0;">Buy postage <span class="pg-mode" id="pg-mode"></span></div>
+            <span class="pg-bal-chip" id="pg-bal-chip" hidden>Balance <b id="pg-bal">$0.00</b></span>
+          </div>
+          <ol class="pg-steps">
+            <li>Pick <b>Letter</b> (envelopes, under $50) or <b>Ground</b> (tracked packages) for each order.</li>
+            <li>Check the total.</li>
+            <li>Buy. The labels download as one PDF and the tracking numbers fill in for your TCGplayer upload.</li>
+          </ol>
+          <div class="pg-from" id="pg-from"></div>
+          <div class="pg-bulk">Set all to:
+            <button type="button" class="btn-ghost" data-pg-all="letter">Letter</button>
+            <button type="button" class="btn-ghost" data-pg-all="ground">Ground</button>
+            <button type="button" class="btn-ghost" data-pg-all="auto">Suggested</button>
+          </div>
+          <div id="pg-rows" class="pg-rows"></div>
+          <div class="pg-total" id="pg-total" aria-live="polite"></div>
+          <div id="pg-topup" class="pg-topup-box" hidden>
+            <div class="pg-topup-title" id="pg-topup-title">Add funds</div>
+            <div class="pg-topup">
+              <button type="button" class="btn-ghost" data-topup="20">$20</button><button type="button" class="btn-ghost" data-topup="50">$50</button><button type="button" class="btn-ghost" data-topup="100">$100</button>
+              <span class="pg-custom">$<input type="number" id="pg-custom" min="20" max="2000" step="1" placeholder="250" inputmode="numeric" aria-label="Custom amount in dollars"><button type="button" class="btn-ghost" data-topup="custom">Add</button></span>
+            </div>
+            <small>Pay once by card, then each label comes out of your balance. Refunded labels go back in.</small>
+          </div>
+          <div class="btn-row" style="margin-top:12px;align-items:center;">
+            <button class="btn-dl" id="pg-buy" type="button">Buy labels</button>
+            <button class="btn-ghost" id="pg-show-topup" type="button" hidden>Add funds</button>
+          </div>
+          <div id="pg-msg"></div>
+          <details id="pg-history" class="pg-history" hidden>
+            <summary>Recent labels</summary>
+            <div id="pg-history-list"></div>
+            <p class="tip">Refund a Ground label you didn't use and its price goes back to your balance. Don't mail a refunded label. Letter postage can't be refunded.</p>
+          </details>
+        </div>
+      </div>
       <div class="shipped-progress" id="shipped-progress" style="display:none;">
         <span id="shipped-progress-text"></span>
         <button type="button" id="shipped-mark-all-btn">Mark all shipped</button>
@@ -1082,35 +1145,6 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
         <button class="btn-ghost" id="clear-btn">Clear</button>
       </div>
       <p class="tip" id="fmt-tip">4×6: print on thermal, margins none  ·  8.5×11: any printer, cut on lines</p>
-    </div>
-
-    <!-- Postage pilot (Pitney Bowes): only for allowed accounts -->
-    <div id="postage-area" style="display:none;">
-      <div class="section" id="pg-soon" hidden>
-        <div class="section-label">Postage with tracking <span class="pg-mode sandbox">COMING SOON</span></div>
-        <p class="tip" style="margin:0;">Soon you'll buy USPS postage with tracking right here, like on eBay or Whatnot, and it lands in the same PDF as your labels and slips.</p>
-      </div>
-      <div class="section" id="pg-main">
-        <div class="section-label">Buy postage <span class="pg-mode" id="pg-mode"></span></div>
-        <p class="tip" style="margin-top:0;">USPS labels with tracking, bought right here, like on eBay or Whatnot. <b>Letter</b> = First-Class envelope with delivery scans (under-$50 orders). <b>Ground</b> = Ground Advantage with full tracking (TCGplayer requires it from $49.99). Tracking numbers fill in below automatically.</p>
-        <div id="pg-balance" class="pg-balance" hidden>
-          <span>Postage balance: <b id="pg-bal">$0.00</b></span>
-          <span class="pg-topup">Add <button type="button" class="btn-ghost" data-topup="20">$20</button><button type="button" class="btn-ghost" data-topup="50">$50</button><button type="button" class="btn-ghost" data-topup="100">$100</button>
-            <span class="pg-custom">$<input type="number" id="pg-custom" min="20" max="2000" step="1" placeholder="250" inputmode="numeric" aria-label="Custom amount in dollars"><button type="button" class="btn-ghost" data-topup="custom">Add</button></span></span>
-          <small>Pay once, then every label just comes out of your balance. Unused labels you refund go back in.</small>
-        </div>
-        <div id="pg-rows" class="pg-rows"></div>
-        <div class="btn-row" style="margin-top:10px;align-items:center;">
-          <button class="btn-dl" id="pg-buy" type="button">Buy labels</button>
-          <span id="pg-summary" class="tip-inline"></span>
-        </div>
-        <div id="pg-msg"></div>
-        <details id="pg-history" class="pg-history" hidden>
-          <summary>Recent labels</summary>
-          <div id="pg-history-list"></div>
-          <p class="tip">Refund a label you didn't use and its price goes back to your balance. Don't mail a refunded label.</p>
-        </details>
-      </div>
     </div>
 
     <!-- Tracking number reference (shown after CSV loaded) -->
@@ -3869,43 +3903,46 @@ function refreshPostageBalance() {
     .catch(function () {});
 }
 function showPostageBalance() {
-  var box = document.getElementById('pg-balance');
-  box.hidden = !(postageStatus && postageStatus.balance);
+  var chip = document.getElementById('pg-bal-chip');
+  chip.hidden = !(postageStatus && postageStatus.balance) || postageBalance == null;
   if (postageBalance != null) document.getElementById('pg-bal').textContent = '$' + (postageBalance / 100).toFixed(2);
   updatePostageSummary();
 }
-document.addEventListener('click', function (e) {
-  var b = e.target.closest && e.target.closest('[data-topup]');
-  if (!b || !session) return;
-  var amount = b.getAttribute('data-topup') === 'custom' ? Number(document.getElementById('pg-custom').value) : Number(b.getAttribute('data-topup'));
-  var lo = (postageStatus && postageStatus.topupMin) || 20, hi = (postageStatus && postageStatus.topupMax) || 2000;
-  if (!(Number.isInteger(amount) && amount >= lo && amount <= hi)) {
-    document.getElementById('pg-msg').innerHTML = '<div class="error-box">Enter a whole-dollar amount from $' + lo + ' to $' + hi.toLocaleString('en-US') + '.</div>';
-    return;
+// The phone USPS needs on postage. Kept apart from the return address so it
+// isn't printed on the address labels; prefilled from it when there is one.
+var PG_PHONE_KEY = 'tcgss_pg_phone';
+function postagePhone() {
+  var v = '';
+  try { v = localStorage.getItem(PG_PHONE_KEY) || ''; } catch (e) {}
+  return v || getSender().phone || '';
+}
+function phoneOk(p) { return String(p || '').replace(/\D/g, '').length >= 10; }
+function friendlyPostageError(m) {
+  m = String(m || '');
+  if (/phone/i.test(m)) return 'Add a phone number in the "Ships from" box above.';
+  if (/postal|zip|address|city|state/i.test(m) && !/^Address needs|^Return address/i.test(m)) return 'USPS couldn\'t use this address. Check it in TCGplayer. (' + m + ')';
+  if (/balance/i.test(m)) return 'Not bought: your balance ran out. Add funds and buy the rest.';
+  return m;
+}
+function renderPostageFrom() {
+  var box = document.getElementById('pg-from');
+  var s = getSender(), ph = postagePhone();
+  var addrOk = s.addr1 && s.city && s.state && s.zip;
+  box.className = 'pg-from' + (!addrOk || !phoneOk(ph) ? ' need' : '');
+  box.innerHTML = '<span><b>Ships from:</b> ' + (addrOk ? esc((s.name ? s.name + ', ' : '') + s.city + ', ' + s.state + ' ' + s.zip) : '<span class="short">fill in your return address at the top of the page</span>') + '</span>' +
+    '<label>Phone <input type="tel" id="pg-phone" autocomplete="tel" placeholder="(555) 123-4567" value="' + esc(ph) + '"></label>' +
+    '<span class="pg-from-note">USPS requires a phone number on postage. It\'s only sent with the label purchase, not printed on your address labels.</span>';
+}
+document.addEventListener('input', function (e) {
+  if (e.target && FIELDS.indexOf(e.target.id) !== -1 && document.getElementById('postage-area').style.display !== 'none' && !document.getElementById('pg-main').hidden) {
+    renderPostageFrom(); queuePostageQuote(); return;
   }
-  b.disabled = true;
-  fetch('/api/postage/topup', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token }, body: JSON.stringify({ amount: amount }) })
-    .then(function (r) { return r.json().then(function (j) { if (!r.ok || !j.url) throw new Error(j.error || 'Could not start the payment'); return j; }); })
-    .then(function (j) { trackEvent('postage_topup_started'); location.href = j.url; })
-    .catch(function (err) { b.disabled = false; document.getElementById('pg-msg').innerHTML = '<div class="error-box">' + esc(err.message) + '</div>'; });
+  if (e.target && e.target.id === 'pg-phone') {
+    try { localStorage.setItem(PG_PHONE_KEY, e.target.value.trim()); } catch (err) {}
+    document.getElementById('pg-from').className = 'pg-from' + (phoneOk(e.target.value) ? '' : ' need');
+    queuePostageQuote();
+  }
 });
-// Back from Stripe: the webhook credits the balance a moment later, so check a few times.
-(function () {
-  var q = new URLSearchParams(location.search).get('postage');
-  if (!q) return;
-  history.replaceState(null, '', location.pathname + location.hash);
-  if (q !== 'added') return;
-  var tries = 0;
-  var t = setInterval(function () {
-    tries++;
-    var before = postageBalance;
-    refreshPostageBalance().then(function () {
-      var msg = document.getElementById('pg-msg');
-      if (msg && postageBalance != null && postageBalance !== before && before != null) { msg.innerHTML = '<div class="pg-result">✓ Funds added. Your balance is $' + (postageBalance / 100).toFixed(2) + '.</div>'; clearInterval(t); }
-    });
-    if (tries > 10) clearInterval(t);
-  }, 2000);
-})();
 function postageDefault(o) {
   var ground = (typeof o.orderValue === 'number' && o.orderValue >= 49.99) || /expedit|priority|ground|tracked/i.test(o.shipMethod || '');
   return ground ? { service: 'ground', oz: 3 } : { service: 'letter', oz: 1 };
@@ -3938,10 +3975,10 @@ function renderPostage() {
   document.getElementById('pg-main').hidden = false;
   if (!postageStatus || !postageStatus.allowed || !orders.length) { area.style.display = 'none'; return; }
   area.style.display = 'block';
-  showPostageBalance();
   var badge = document.getElementById('pg-mode');
   badge.className = 'pg-mode ' + postageStatus.mode;
   badge.textContent = postageStatus.mode === 'production' ? 'LIVE' : 'TEST MODE (labels can\'t be mailed)';
+  renderPostageFrom();
   var rows = document.getElementById('pg-rows');
   rows.innerHTML = '';
   orders.forEach(function (o, i) {
@@ -3949,51 +3986,139 @@ function renderPostage() {
     var c = postageChoice[ref] || (postageChoice[ref] = postageDefault(o));
     var div = document.createElement('div');
     div.className = 'pg-row';
+    div.setAttribute('data-row', ref);
     div.innerHTML = '<span class="pg-who">' + esc(Core.fullName(o) || '—') + ' <small>' + esc((o.city || '') + (o.state ? ', ' + o.state : '')) +
       (typeof o.orderValue === 'number' ? ' · $' + o.orderValue.toFixed(2) : '') + '</small></span>' +
-      '<select data-ref="' + esc(ref) + '" aria-label="Service"><option value="letter">Letter</option><option value="ground">Ground</option><option value="skip">Skip</option></select>' +
-      '<label style="white-space:nowrap;"><input type="number" min="0.1" max="15.9" step="0.1" data-oz="' + esc(ref) + '" value="' + c.oz + '" aria-label="Weight in ounces"> oz</label>';
+      '<select data-ref="' + esc(ref) + '" aria-label="Service for ' + esc(Core.fullName(o) || ref) + '"><option value="letter">Letter</option><option value="ground">Ground</option><option value="skip">Don\'t buy</option></select>' +
+      '<label style="white-space:nowrap;"><input type="number" min="0.1" max="15.9" step="0.1" data-oz="' + esc(ref) + '" value="' + c.oz + '" aria-label="Weight in ounces"> oz</label>' +
+      '<span class="pg-price" data-price="' + esc(ref) + '">…</span>';
     div.querySelector('select').value = c.service;
+    if (pgBought[ref]) { div.querySelector('select').disabled = true; div.querySelector('input').disabled = true; }
     rows.appendChild(div);
   });
-  updatePostageSummary();
+  showPostageBalance();
+  queuePostageQuote();
 }
-function updatePostageSummary() {
-  var n = { letter: 0, ground: 0 };
-  Object.keys(postageChoice).forEach(function (k) { var c = postageChoice[k]; if (n[c.service] != null) n[c.service]++; });
-  var total = n.letter + n.ground;
-  document.getElementById('pg-buy').textContent = total ? 'Buy ' + total + ' label' + (total === 1 ? '' : 's') + (postageStatus && postageStatus.mode !== 'production' ? ' (test)' : '') : 'Buy labels';
-  var lowFunds = postageStatus && postageStatus.balance && postageBalance != null && postageBalance <= 0;
-  document.getElementById('pg-buy').disabled = !total || lowFunds;
-  if (lowFunds && total) document.getElementById('pg-buy').textContent = 'Add funds to buy labels';
-  var fee = function (id) { var sv = (postageStatus && postageStatus.services || []).filter(function (x) { return x.id === id; })[0]; return sv && sv.fee != null ? sv.fee : 0; };
-  document.getElementById('pg-summary').textContent = [
-    n.letter ? n.letter + ' letter (about $' + (0.78 + fee('letter')).toFixed(2) + ' each)' : '',
-    n.ground ? n.ground + ' Ground Advantage (postage + $' + fee('ground').toFixed(2) + ' each)' : ''
-  ].filter(Boolean).join(' · ');
-}
-document.addEventListener('change', function (e) {
-  var t = e.target;
-  if (t.matches && t.matches('#pg-rows select')) { postageChoice[t.getAttribute('data-ref')].service = t.value; updatePostageSummary(); }
-  if (t.matches && t.matches('#pg-rows input[data-oz]')) { postageChoice[t.getAttribute('data-oz')].oz = Math.max(0.1, Number(t.value) || 1); }
-});
-document.getElementById('pg-buy').addEventListener('click', function () {
-  var btn = this, msg = document.getElementById('pg-msg');
-  var s = getSender();
-  if (!s.addr1 || !s.city || !s.state || !s.zip) { msg.innerHTML = '<div class="error-box">Fill in your full return address above first. USPS needs it on postage.</div>'; return; }
+// Price the batch on the server (nothing is bought) so the total and the
+// balance are on screen before the Buy click.
+var pgQuote = null, pgQuoteTimer = null, pgQuoteSeq = 0, pgBought = {};
+function postageLabelsToBuy() {
   var labels = [];
   orders.forEach(function (o, i) {
     var ref = orderRef(o, i), c = postageChoice[ref];
     if (!c || c.service === 'skip') return;
     labels.push({ ref: ref, service: c.service, weightOz: c.oz, to: { firstName: o.firstName, lastName: o.lastName, addr1: o.addr1, addr2: o.addr2, city: o.city, state: o.state, zip: o.zip, country: o.country } });
   });
+  return labels;
+}
+function postageFrom() {
+  var s = getSender();
+  return { name: s.name, addr1: s.addr1, addr2: s.addr2, city: s.city, state: s.state, zip: s.zip, phone: postagePhone() };
+}
+function queuePostageQuote() {
+  clearTimeout(pgQuoteTimer);
+  pgQuote = null;
+  document.querySelectorAll('#pg-rows .pg-price').forEach(function (el) { el.textContent = '…'; });
+  updatePostageSummary();
+  pgQuoteTimer = setTimeout(runPostageQuote, 450);
+}
+function runPostageQuote() {
+  if (!session || !postageStatus || !postageStatus.allowed) return;
+  var labels = postageLabelsToBuy(), from = postageFrom();
+  if (!labels.length || !from.addr1 || !phoneOk(from.phone)) { updatePostageSummary(); return; }
+  var seq = ++pgQuoteSeq;
+  fetch('/api/postage/quote', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
+    body: JSON.stringify({ from: from, labels: labels })
+  }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'Could not price these labels'); return j; }); })
+    .then(function (j) {
+      if (seq !== pgQuoteSeq) return;
+      pgQuote = j;
+      if (j.balanceCents != null) postageBalance = j.balanceCents;
+      showPostageBalance();
+    })
+    .catch(function (err) { if (seq === pgQuoteSeq) { pgQuote = { error: err.message }; updatePostageSummary(); } });
+}
+function updatePostageSummary() {
+  var labels = postageLabelsToBuy();
+  var total = labels.length, from = postageFrom();
+  var buy = document.getElementById('pg-buy'), box = document.getElementById('pg-total');
+  var topup = document.getElementById('pg-topup'), showTop = document.getElementById('pg-show-topup');
+  var test = postageStatus && postageStatus.mode !== 'production';
+  var byRef = {};
+  if (pgQuote && pgQuote.items) pgQuote.items.forEach(function (x) { byRef[x.ref] = x; });
+  document.querySelectorAll('#pg-rows .pg-row').forEach(function (row) {
+    var ref = row.getAttribute('data-row'), c = postageChoice[ref], q = byRef[ref];
+    var price = row.querySelector('.pg-price'), old = row.querySelector('.pg-rowerr');
+    if (old) old.remove();
+    row.className = 'pg-row' + (c && c.service === 'skip' ? ' skip' : '') + (q && !q.ok ? ' err' : '');
+    if (pgBought[ref]) { price.textContent = '✓ bought'; price.className = 'pg-price done'; return; }
+    if (c && c.service === 'skip') price.textContent = '—';
+    else if (q) {
+      price.textContent = q.ok ? '$' + q.price.toFixed(2) : '!';
+      if (!q.ok) { var e = document.createElement('div'); e.className = 'pg-rowerr'; e.textContent = friendlyPostageError(q.error); row.appendChild(e); }
+    }
+  });
+  var needPhone = !phoneOk(from.phone), needAddr = !(from.addr1 && from.city && from.state && from.zip);
+  var bal = postageStatus && postageStatus.balance ? postageBalance : null;
+  var html = '', shortBy = 0, ready = false;
+  if (!total) html = 'Nothing selected. Pick Letter or Ground for at least one order.';
+  else if (needAddr) html = '<span class="short">Fill in your return address at the top of the page to see the total.</span>';
+  else if (needPhone) html = '<span class="short">Add your phone number in the "Ships from" box to see the total.</span>';
+  else if (pgQuote && pgQuote.error) html = '<span class="short">' + esc(friendlyPostageError(pgQuote.error)) + '</span>';
+  else if (!pgQuote) html = 'Getting prices for ' + total + ' label' + (total === 1 ? '' : 's') + '…';
+  else {
+    var okItems = pgQuote.items.filter(function (x) { return x.ok; });
+    var post = okItems.reduce(function (t, x) { return t + x.postage; }, 0), fees = okItems.reduce(function (t, x) { return t + x.fee; }, 0);
+    html = 'Total for ' + okItems.length + ' label' + (okItems.length === 1 ? '' : 's') + ': <b class="big">$' + pgQuote.total.toFixed(2) + '</b>' +
+      ' <small>($' + post.toFixed(2) + ' USPS postage + $' + fees.toFixed(2) + ' label fees)</small>';
+    if (okItems.length < pgQuote.items.length) html += '<br><span class="short">' + (pgQuote.items.length - okItems.length) + ' order' + (pgQuote.items.length - okItems.length === 1 ? ' needs' : 's need') + ' a fix (marked in red above) and won\'t be bought.</span>';
+    if (bal != null) {
+      shortBy = Math.max(0, Math.round(pgQuote.total * 100) - bal);
+      html += '<br>Balance: $' + (bal / 100).toFixed(2) + (shortBy ? ' · <span class="short">add at least $' + Math.max(20, Math.ceil(shortBy / 100)) + ' to buy them all</span>' : ' · enough for this batch');
+    }
+    ready = okItems.length > 0 && !shortBy;
+  }
+  box.innerHTML = html;
+  var needFunds = bal != null && (bal <= 0 || shortBy > 0);
+  if (needFunds) { topup.hidden = false; document.getElementById('pg-topup-title').textContent = bal <= 0 ? 'Add funds to buy postage' : 'Add funds to cover this batch'; }
+  showTop.hidden = needFunds || bal == null;
+  buy.disabled = !ready;
+  buy.textContent = ready ? 'Buy ' + pgQuote.items.filter(function (x) { return x.ok; }).length + ' label' + (pgQuote.items.filter(function (x) { return x.ok; }).length === 1 ? '' : 's') + ' · $' + pgQuote.total.toFixed(2) + (test ? ' (test)' : '') : (needFunds ? 'Add funds to buy' : 'Buy labels');
+}
+document.getElementById('pg-show-topup').addEventListener('click', function () { document.getElementById('pg-topup').hidden = false; this.hidden = true; });
+document.addEventListener('click', function (e) {
+  var b = e.target.closest && e.target.closest('[data-pg-all]');
+  if (!b) return;
+  var v = b.getAttribute('data-pg-all');
+  orders.forEach(function (o, i) {
+    var ref = orderRef(o, i), d = postageDefault(o);
+    postageChoice[ref] = v === 'auto' ? d : { service: v, oz: v === 'ground' ? Math.max(3, (postageChoice[ref] || d).oz) : Math.min(3.5, (postageChoice[ref] || d).oz) };
+  });
+  renderPostage();
+});
+document.addEventListener('change', function (e) {
+  var t = e.target;
+  if (t.matches && t.matches('#pg-rows select')) { postageChoice[t.getAttribute('data-ref')].service = t.value; queuePostageQuote(); }
+  if (t.matches && t.matches('#pg-rows input[data-oz]')) { postageChoice[t.getAttribute('data-oz')].oz = Math.max(0.1, Number(t.value) || 1); queuePostageQuote(); }
+});
+document.getElementById('pg-buy').addEventListener('click', function () {
+  var btn = this, msg = document.getElementById('pg-msg');
+  var from = postageFrom();
+  if (!from.addr1 || !from.city || !from.state || !from.zip) { msg.innerHTML = '<div class="error-box">Fill in your full return address at the top of the page first. USPS needs it on postage.</div>'; return; }
+  if (!phoneOk(from.phone)) { msg.innerHTML = '<div class="error-box">Add a phone number in the "Ships from" box. USPS needs one on postage.</div>'; return; }
+  // Only buy what priced cleanly, so one bad address doesn't waste a click.
+  var okRefs = {};
+  (pgQuote && pgQuote.items || []).forEach(function (x) { if (x.ok) okRefs[x.ref] = true; });
+  var labels = postageLabelsToBuy().filter(function (l) { return okRefs[l.ref]; });
   if (!labels.length) return;
-  if (postageStatus.mode === 'production' && !confirm('Buy ' + labels.length + ' real USPS label' + (labels.length === 1 ? '' : 's') + '? Postage will be charged.')) return;
+  if (postageStatus.mode === 'production' && !confirm('Buy ' + labels.length + ' USPS label' + (labels.length === 1 ? '' : 's') + ' for $' + pgQuote.total.toFixed(2) + '? It comes out of your postage balance.')) return;
   btn.disabled = true; btn.textContent = 'Buying labels…'; msg.innerHTML = '';
   fetch('/api/postage/labels', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
-    body: JSON.stringify({ from: { name: s.name, addr1: s.addr1, addr2: s.addr2, city: s.city, state: s.state, zip: s.zip, phone: s.phone }, labels: labels })
+    body: JSON.stringify({ from: from, labels: labels })
   }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'Request failed'); return j; }); })
     .then(function (j) {
       var ok = j.results.filter(function (x) { return x.ok; });
@@ -4005,11 +4130,14 @@ document.getElementById('pg-buy').addEventListener('click', function () {
       ok.forEach(function (x) { if (x.trackingNumber) lines.push(x.ref + ' ' + x.trackingNumber); });
       input.value = lines.join('\n');
       matchTrackingNumbers();
+      // Bought orders don't get bought twice on the next click.
+      ok.forEach(function (x) { pgBought[x.ref] = true; if (postageChoice[x.ref]) postageChoice[x.ref].service = 'skip'; });
       msg.innerHTML = '<div class="pg-result">✓ ' + ok.length + ' label' + (ok.length === 1 ? '' : 's') + ' bought' +
-        (j.total ? ' · $' + j.total.toFixed(2) + ' ($' + (j.postage || 0).toFixed(2) + ' postage + $' + (j.fees || 0).toFixed(2) + ' label fees)' : '') +
-        (j.mode !== 'production' ? ' · test labels' : '') + '. Downloading the PDF…' +
-        bad.map(function (x) { return '<div class="bad">' + esc(x.ref) + ': ' + esc(x.error) + '</div>'; }).join('') + '</div>';
-      if (j.balanceCents != null) { postageBalance = j.balanceCents; showPostageBalance(); }
+        (j.total ? ' · $' + j.total.toFixed(2) : '') + (j.mode !== 'production' ? ' · test labels' : '') +
+        (ok.length ? '. Your postage PDF is downloading, and the tracking numbers are filled in below.' : '.') +
+        bad.map(function (x) { return '<div class="bad">' + esc(x.ref) + ': ' + esc(friendlyPostageError(x.error)) + '</div>'; }).join('') + '</div>';
+      if (j.balanceCents != null) postageBalance = j.balanceCents;
+      renderPostage();
       loadPostageHistory();
       if (!ok.length) return;
       return loadPdfLib().then(function () {
@@ -4024,7 +4152,7 @@ document.getElementById('pg-buy').addEventListener('click', function () {
         });
       }).then(function (bytes) { downloadBytes(bytes, 'postage-labels' + (j.mode !== 'production' ? '-TEST' : '') + '.pdf'); });
     })
-    .catch(function (err) { msg.innerHTML = '<div class="error-box">' + esc(err.message) + '</div>'; })
+    .catch(function (err) { msg.innerHTML = '<div class="error-box">' + esc(friendlyPostageError(err.message)) + '</div>'; })
     .then(function () { btn.disabled = false; updatePostageSummary(); });
 });
 
