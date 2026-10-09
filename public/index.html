@@ -4204,7 +4204,7 @@ document.getElementById('pg-buy').addEventListener('click', function () {
     .then(function (j) {
       var ok = j.results.filter(function (x) { return x.ok; });
       var bad = j.results.filter(function (x) { return !x.ok; });
-      trackEvent('postage_bought');
+      if (ok.length) trackEvent('postage_bought'); // only real purchases count
       // Tracking numbers go straight into the tracking box, matched by order number.
       var input = document.getElementById('tracking-input');
       var lines = (input.value || '').split(/\r?\n/).filter(function (l) { return l.trim(); });
