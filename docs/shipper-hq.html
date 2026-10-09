@@ -1,141 +1,163 @@
 <title>Shipper HQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: a shipping-label control desk. Sticky progress strip, tabbed body, task "labels" that expand, chat dock. */
+/* Layout: a night-shift dispatch console. Header with live counts, one "next up" ticket, stages as collapsible lanes of compact task rows, chat docked on the right. Dark by design. */
 :root{
-  --bg:#eef1f6; --paper:#ffffff; --ink:#14213d; --muted:#5b6782; --line:#d5dbe7;
-  --accent:#1f47c4; --accent-soft:#e3e9fb; --stamp:#c8372d; --ok:#1d7a4c; --ok-soft:#dff2e8; --warn:#a86400; --warn-soft:#fbefd9;
-  --display:"Archivo","Arial Narrow",system-ui,sans-serif;
-  --body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
-  --r:6px;
+  color-scheme:dark;
+  --bg:#0a0c11; --panel:#11141b; --raised:#171b24; --line:#222838; --line-2:#2c3346;
+  --text:#e7e9ef; --muted:#8c93a8; --faint:#5d6479;
+  --accent:#7aa2ff; --accent-ink:#0a0c11; --accent-soft:rgba(122,162,255,.12);
+  --hot:#ffb44d; --hot-soft:rgba(255,180,77,.12);
+  --ok:#4fd1a1; --ok-soft:rgba(79,209,161,.12);
+  --money:#f08ab0; --money-soft:rgba(240,138,176,.12);
+  --display:"Bricolage Grotesque","Avenir Next",system-ui,sans-serif;
+  --body:"Geist",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"Geist Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:14px; --r-sm:9px;
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0e1424; --paper:#161e33; --ink:#e7ecf7; --muted:#9aa6c2; --line:#2a3552;
-  --accent:#7d9bff; --accent-soft:#1e2a4d; --stamp:#ff7a6e; --ok:#5fd29a; --ok-soft:#173828; --warn:#f2b45a; --warn-soft:#3a2c13; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#0e1424; --paper:#161e33; --ink:#e7ecf7; --muted:#9aa6c2; --line:#2a3552;
-  --accent:#7d9bff; --accent-soft:#1e2a4d; --stamp:#ff7a6e; --ok:#5fd29a; --ok-soft:#173828; --warn:#f2b45a; --warn-soft:#3a2c13; color-scheme:dark}
 *{box-sizing:border-box}
-body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--body);margin:0}
-.wrap{max-width:980px;margin:0 auto;padding-inline:16px;padding-block:20px 120px}
-h1,h2,h3{font-family:var(--display);font-stretch:85%;text-wrap:balance;margin:0;line-height:1.15}
-h1{font-size:clamp(28px,5vw,40px);font-weight:800;letter-spacing:-.01em}
-h2{font-size:22px;font-weight:700}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--text);font:15px/1.55 var(--body);margin:0;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto 0;height:340px;pointer-events:none;background:radial-gradient(600px 240px at 18% -40px,rgba(122,162,255,.14),transparent 70%);z-index:0}
+.wrap{position:relative;z-index:1;max-width:1000px;margin:0 auto;padding-inline:18px;padding-block:28px 120px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.12;letter-spacing:-.015em}
+h1{font-size:clamp(30px,5vw,44px);font-weight:800}
+h2{font-size:19px;font-weight:700}
 h3{font-size:17px;font-weight:700}
-.eyebrow{font:500 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.eyebrow{font:500 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
 .mono{font-family:var(--mono)}
 button,input,textarea,select{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 a{color:var(--accent)}
 
-header.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;margin-bottom:16px}
-.sync{font:12px var(--mono);color:var(--muted);display:flex;gap:6px;align-items:center}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
-.dot.on{background:var(--ok)} .dot.off{background:var(--warn)}
+header.top{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:flex-end;justify-content:space-between;margin-bottom:22px}
+.lede{color:var(--muted);max-width:56ch;margin-top:8px}
+.sync{font:12px var(--mono);color:var(--muted);display:inline-flex;gap:8px;align-items:center;padding:6px 10px;border:1px solid var(--line);border-radius:99px;background:var(--panel)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--faint)}
+.dot.on{background:var(--ok);box-shadow:0 0 0 3px var(--ok-soft)} .dot.off{background:var(--hot)}
 
-.strip{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:10px;margin-bottom:8px;border-bottom:1px solid var(--line)}
-.meter{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
-.bar{flex:1 1 220px;height:10px;background:var(--line);border-radius:99px;overflow:hidden;min-width:0}
-.bar i{display:block;height:100%;background:var(--ok);width:0;transition:width .4s}
-.meter b{font:600 14px var(--mono);font-variant-numeric:tabular-nums}
-.tabs{display:flex;gap:4px;margin-top:10px;overflow-x:auto}
-.tab{border:1px solid var(--line);background:var(--paper);padding:7px 12px;border-radius:99px;font-weight:600;font-size:13px;white-space:nowrap}
-.tab[aria-selected="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;min-width:0}
+.stat b{display:block;overflow-wrap:anywhere;font:700 26px/1.1 var(--display);font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--muted)}
+.stat.hot b{color:var(--hot)} .stat.ok b{color:var(--ok)}
+.ring{display:flex;align-items:center;gap:12px}
+.ring svg{flex:none}
+@media (max-width:640px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
-.next{background:var(--paper);border:2px solid var(--ink);border-radius:var(--r);padding:16px;display:grid;gap:8px;margin:16px 0}
-.next .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.strip{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(10,12,17,.86);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);padding-block:10px;margin-inline:-18px;padding-inline:18px;border-bottom:1px solid var(--line)}
+.tabs{display:inline-flex;gap:2px;padding:3px;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow-x:auto;max-width:100%}
+.tab{border:0;background:transparent;color:var(--muted);padding:7px 14px;border-radius:9px;font-weight:600;font-size:13px;white-space:nowrap}
+.tab[aria-selected="true"]{background:var(--raised);color:var(--text);box-shadow:inset 0 0 0 1px var(--line-2)}
+.bar{height:3px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:10px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--ok));width:0;transition:width .5s}
 
-.filters{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
-.chip{border:1px solid var(--line);background:transparent;border-radius:99px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--muted)}
-.chip[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.next{position:relative;overflow:hidden;background:linear-gradient(135deg,rgba(122,162,255,.16),rgba(122,162,255,.03) 60%),var(--panel);border:1px solid rgba(122,162,255,.35);border-radius:var(--r);padding:20px;display:grid;gap:10px;margin:18px 0}
+.next .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.next h3{font-size:22px}
+.next .why-line{color:var(--muted);max-width:70ch}
 
-section.stage{margin-top:28px}
-.stage-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px}
-.stage-sub{color:var(--muted);margin:2px 0 10px;max-width:65ch}
-.stage-count{font:12px var(--mono);color:var(--muted)}
+.filters{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 4px}
+.chip{border:1px solid var(--line);background:var(--panel);border-radius:99px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);border-color:rgba(122,162,255,.45)}
 
-.task{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);margin-bottom:8px}
-.task.done{opacity:.72}
-.task.done .t-title{text-decoration:line-through;text-decoration-color:var(--muted)}
-.t-head{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:start;padding:12px 14px}
-.check{appearance:none;width:24px;height:24px;border:2px solid var(--ink);border-radius:4px;margin:1px 0 0;display:grid;place-items:center;background:var(--paper)}
+section.stage{margin-top:22px}
+.stage-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;width:100%;background:none;border:0;padding:6px 0;text-align:left}
+.stage-head h2 span{color:var(--faint);font-family:var(--mono);font-size:13px;font-weight:500;margin-right:8px}
+.stage-sub{color:var(--muted);margin:2px 0 10px;max-width:65ch;font-size:14px}
+.stage-count{display:flex;align-items:center;gap:8px;font:12px var(--mono);color:var(--muted)}
+.mini{width:70px;height:4px;background:var(--line);border-radius:99px;overflow:hidden}
+.mini i{display:block;height:100%;background:var(--ok)}
+.stage.closed .stage-body{display:none}
+.caret{color:var(--faint);transition:transform .2s;display:inline-block}
+.stage.closed .caret{transform:rotate(-90deg)}
+
+.list{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.task{border-top:1px solid var(--line)}
+.task:first-child{border-top:0}
+.task.done .t-title{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--faint)}
+.t-head{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px 14px;transition:background .15s}
+.t-head:hover{background:rgba(255,255,255,.02)}
+.check{appearance:none;width:22px;height:22px;border:1.5px solid var(--line-2);border-radius:50%;margin:0;display:grid;place-items:center;background:transparent;transition:background .15s,border-color .15s}
+.check:hover{border-color:var(--accent)}
 .check:checked{background:var(--ok);border-color:var(--ok)}
-.check:checked::after{content:"";width:6px;height:11px;border:solid var(--paper);border-width:0 3px 3px 0;transform:rotate(45deg) translate(-1px,-1px)}
-.t-main{min-width:0}
-.t-title{font-weight:600;background:none;border:0;padding:0;text-align:left;display:block;width:100%}
-.t-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
-.tag{font:500 11px/1 var(--mono);padding:4px 6px;border-radius:4px;background:var(--bg);color:var(--muted)}
-.tag.hot{background:var(--stamp);color:#fff}
-.tag.money{background:var(--warn-soft);color:var(--warn)}
-.tag.time{background:var(--accent-soft);color:var(--accent)}
-.tag.id{background:transparent;border:1px solid var(--line)}
-.expand{border:0;background:none;color:var(--muted);font-size:20px;line-height:1;padding:2px 6px;transition:transform .2s}
-.task[open-state="1"] .expand{transform:rotate(90deg)}
-.t-body{padding:0 14px 14px 50px;display:grid;gap:12px}
+.check:checked::after{content:"";width:5px;height:10px;border:solid var(--accent-ink);border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.t-main{min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.t-title{font-weight:500;background:none;border:0;padding:0;text-align:left;color:var(--text);min-width:0}
+.t-meta{display:flex;flex-wrap:wrap;gap:5px}
+.tag{font:500 11px/1 var(--mono);padding:4px 7px;border-radius:6px;background:var(--raised);color:var(--muted);white-space:nowrap}
+.tag.hot{background:var(--hot-soft);color:var(--hot)}
+.tag.money{background:var(--money-soft);color:var(--money)}
+.tag.time{background:transparent;color:var(--faint);padding-inline:0}
+.tag.id{background:transparent;color:var(--faint);border:1px solid var(--line);}
+.tag.noted{background:var(--accent-soft);color:var(--accent)}
+.expand{border:0;background:none;color:var(--faint);font-size:18px;line-height:1;padding:4px 6px;border-radius:6px;transition:transform .2s}
+.task[open-state="1"] .expand{transform:rotate(90deg);color:var(--text)}
+.task[open-state="1"]{background:var(--raised)}
+.t-body{padding:2px 16px 16px 48px;display:grid;gap:12px}
 .t-body[hidden]{display:none!important}
-.why{border-left:3px solid var(--accent);padding-left:10px;color:var(--ink)}
-.steps{margin:0;padding-left:20px;display:grid;gap:6px}
-.steps li{padding-left:2px}
-.unlock{font-size:13px;color:var(--ok);background:var(--ok-soft);padding:8px 10px;border-radius:4px}
-.copy{display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:var(--bg);border:1px dashed var(--line);border-radius:4px;padding:6px 8px;font:13px var(--mono);word-break:break-all}
+.why{color:var(--text);max-width:70ch}
+.steps{margin:0;padding-left:20px;display:grid;gap:7px;color:var(--text)}
+.steps li::marker{color:var(--accent);font-family:var(--mono);font-size:12px}
+.unlock{font-size:13px;color:var(--ok);background:var(--ok-soft);padding:9px 12px;border-radius:var(--r-sm)}
+.copy{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-sm);padding:7px 9px;font:13px var(--mono);word-break:break-all}
 .copy code{flex:1 1 200px;min-width:0}
-.copy button,.btn{border:1px solid var(--line);background:var(--paper);border-radius:4px;padding:4px 10px;font-size:12px;font-weight:600}
-.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
-.note{width:100%;min-height:54px;border:1px solid var(--line);border-radius:4px;padding:8px;background:var(--bg);resize:vertical}
-.note-row{display:grid;gap:4px}
+.copy button,.btn{border:1px solid var(--line-2);background:var(--raised);color:var(--text);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.note{width:100%;min-height:54px;border:1px solid var(--line);border-radius:var(--r-sm);padding:9px 10px;background:var(--bg);resize:vertical}
+.note-row{display:grid;gap:5px}
 .note-row label{font-size:12px;color:var(--muted)}
 .t-actions{display:flex;flex-wrap:wrap;gap:6px}
-@media (max-width:520px){.t-body{padding-left:14px}}
+@media (max-width:560px){.t-body{padding-left:14px}.t-head{padding:12px}}
 
-.explainer{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;gap:12px;margin-top:12px}
+.explainer{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:20px;display:grid;gap:14px;margin-top:16px}
 .lanes{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
-.lane{border:1px solid var(--line);border-radius:4px;padding:12px;display:grid;gap:6px;align-content:start}
+.lane{background:var(--raised);border:1px solid var(--line);border-radius:var(--r-sm);padding:14px;display:grid;gap:6px;align-content:start}
 .lane .eyebrow{color:var(--accent)}
-.lane.now{border-color:var(--ok);box-shadow:inset 0 3px 0 var(--ok)}
+.lane.now{border-color:rgba(79,209,161,.5)}
 
 table{border-collapse:collapse;width:100%;font-size:14px}
-.tbl{overflow-x:auto;background:var(--paper);border:1px solid var(--line);border-radius:var(--r)}
-th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
-th{font:500 11px var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.tbl{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+th{font:500 11px var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--faint);background:var(--raised)}
 td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
-.phase{margin-top:22px}
-.phase h3{margin-bottom:8px}
+.phase{margin-top:24px}
+.phase h3{margin-bottom:10px}
 
-.ladder{display:grid;gap:10px;margin-top:12px}
-.rung{display:grid;grid-template-columns:110px 1fr;gap:14px;background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:14px}
-.rung .amt{font:800 26px/1 var(--display);font-stretch:80%}
-.rung.here{border-color:var(--ok)}
+.ladder{display:grid;gap:8px;margin-top:14px}
+.rung{display:grid;grid-template-columns:120px 1fr;gap:16px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.rung .amt{font:800 26px/1 var(--display);font-variant-numeric:tabular-nums}
+.rung.here{border-color:rgba(79,209,161,.55);background:linear-gradient(90deg,var(--ok-soft),transparent 60%),var(--panel)}
 @media (max-width:520px){.rung{grid-template-columns:1fr}}
 
 /* chat dock */
-.dock-btn{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:20;background:var(--ink);color:var(--paper);border:0;border-radius:99px;padding:12px 18px;font-weight:700;box-shadow:0 6px 20px rgba(0,0,0,.25)}
-.dock{position:fixed;right:16px;bottom:calc(72px + env(safe-area-inset-bottom,0px));z-index:21;width:min(420px,calc(100vw - 32px));height:min(600px,calc(100vh - 120px));background:var(--paper);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.3);display:flex;flex-direction:column;overflow:hidden}
-.dock header{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px}
-.dock-tabs{display:flex;gap:4px}
-.msgs{flex:1;overflow-y:auto;padding:12px 14px;display:grid;gap:10px;align-content:start}
-.msg{padding:9px 11px;border-radius:8px;max-width:92%;white-space:pre-wrap;word-wrap:break-word;font-size:14px}
-.msg.me{background:var(--accent);color:#fff;justify-self:end}
-.msg.ai{background:var(--bg);justify-self:start}
+.dock-btn{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:20;background:var(--accent);color:var(--accent-ink);border:0;border-radius:99px;padding:12px 18px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+.dock{position:fixed;right:16px;bottom:calc(72px + env(safe-area-inset-bottom,0px));z-index:21;width:min(420px,calc(100vw - 32px));height:min(600px,calc(100vh - 120px));background:var(--panel);border:1px solid var(--line-2);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.6);display:flex;flex-direction:column;overflow:hidden}
+.dock header{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.msgs{flex:1;overflow-y:auto;padding:14px 16px;display:grid;gap:10px;align-content:start}
+.msg{padding:9px 12px;border-radius:12px;max-width:92%;white-space:pre-wrap;word-wrap:break-word;font-size:14px}
+.msg.me{background:var(--accent);color:var(--accent-ink);justify-self:end;border-bottom-right-radius:4px}
+.msg.ai{background:var(--raised);border:1px solid var(--line);justify-self:start;border-bottom-left-radius:4px}
 .msg.sys{background:transparent;color:var(--muted);font-size:12px;justify-self:center;text-align:center}
 .msg small{display:block;opacity:.7;font-size:11px;margin-top:4px}
-.composer{border-top:1px solid var(--line);padding:10px;display:grid;gap:6px}
-.composer textarea{width:100%;min-height:58px;border:1px solid var(--line);border-radius:6px;padding:8px;background:var(--bg);resize:none}
+.composer{border-top:1px solid var(--line);padding:12px;display:grid;gap:8px}
+.composer textarea{width:100%;min-height:58px;border:1px solid var(--line);border-radius:10px;padding:9px 10px;background:var(--bg);resize:none}
 .composer .row{display:flex;gap:6px;justify-content:space-between;align-items:center;flex-wrap:wrap}
-.hint{font-size:12px;color:var(--muted)}
-.empty{color:var(--muted);font-size:13px;text-align:center;padding:20px}
-@media (min-width:1100px){
+.empty{color:var(--muted);font-size:13px;text-align:center;padding:24px}
+@media (min-width:1180px){
   body{padding-right:380px}
   .dock{position:fixed;top:0;right:0;bottom:0;width:364px;height:auto;border-radius:0;border-width:0 0 0 1px;box-shadow:none;padding-top:env(safe-area-inset-top,0px)}
   .dock[hidden]{display:flex!important}
   .dock-btn,#dockClose{display:none}
 }
 .dock h3{font-size:16px}
-.quick{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 10px}
-.quick button{border:1px solid var(--line);background:var(--bg);border-radius:99px;padding:4px 10px;font-size:12px}
+.quick{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 10px}
+.quick button{border:1px solid var(--line);background:var(--raised);border-radius:99px;padding:5px 11px;font-size:12px;color:var(--muted)}
 .inbox-link{background:none;border:0;padding:0;color:var(--accent);font-size:12px;text-decoration:underline}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -145,22 +167,24 @@ td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:now
     <div>
       <div class="eyebrow">TCG Speed Shipper · owner desk</div>
       <h1>Shipper HQ</h1>
-      <div style="color:var(--muted);max-width:60ch;margin-top:6px">Everything only you can do, in order, with the exact clicks. Tick a task and Claude sees it. Leave a note on any task, or use the <b>Quick questions</b> chat.</div>
+      <div class="lede">Everything only you can do, in priority order, with the exact clicks. Tick a task and Claude sees it. Leave a note on any task, or ask in the chat.</div>
     </div>
     <div class="sync"><span class="dot" id="syncDot"></span><span id="syncText">Connecting…</span></div>
   </header>
 
+  <div class="stats" id="stats"></div>
+
   <div class="strip">
-    <div class="meter"><div class="bar"><i id="barFill"></i></div><b id="countText">0 / 0 done</b></div>
     <div class="tabs" role="tablist">
-      <button class="tab" role="tab" data-tab="todo" aria-selected="true">Your to-do</button>
-      <button class="tab" role="tab" data-tab="pb" aria-selected="false">Pitney Bowes guide</button>
-      <button class="tab" role="tab" data-tab="build" aria-selected="false">What we're building</button>
-      <button class="tab" role="tab" data-tab="money" aria-selected="false">Money ladder</button>
+      <button class="tab" role="tab" data-tab="todo" aria-selected="true">To-do</button>
+      <button class="tab" role="tab" data-tab="pb" aria-selected="false">Pitney Bowes</button>
+      <button class="tab" role="tab" data-tab="build" aria-selected="false">Roadmap</button>
+      <button class="tab" role="tab" data-tab="money" aria-selected="false">Money</button>
     </div>
+    <div class="bar"><i id="barFill"></i></div>
   </div>
 
-  <main>
+<main>
     <div id="tab-todo">
       <div class="next" id="nextCard"></div>
       <div class="filters" id="filters">
@@ -447,7 +471,11 @@ const BUILD = [
   ["Postage on Shipping 360","Labels, prepaid balance, reprints, refunds (packages), tracking","A fee on every label",""],
   ["$0.50 package label fee","Letters stay $0.21","More kept per label",""],
   ["Site on Supabase's new public key","Lets you turn off the exposed old keys","Security","B4 B8"],
-  ["Shipper HQ board","This page: tasks, notes, inbox, quick questions","You and Claude in one place",""]]},
+  ["Shipper HQ board","This page: tasks, notes, inbox, quick questions","You and Claude in one place",""],
+  ["Postage buy flow redone","Phone asked once, live total vs balance, bad addresses flagged","Fewer failed buys","A8"],
+  ["Bot check on sign-up","Cloudflare Turnstile, live Oct 9","Fewer fake accounts",""],
+  ["Email sending (Resend)","Owner test email in /admin; verification next","Unlocks welcome emails","B10"],
+  ["New homepage","Upload first, 3 steps, compact previews","More visitors print their first batch",""]]},
  {name:"Next · October: postage goes live", rows:[
   ["Fix anything the first test label shows","Real Pitney Bowes answers instead of test stubs","Postage works for Rob","A8"],
   ["Tracking straight into TCGplayer","After buying postage, one click makes TCGplayer's mark-shipped file","Saves sellers 20+ min a day",""],
@@ -479,7 +507,7 @@ const LEVERS = [
 ];
 
 const LADDER = [
- {amt:"$30–40", label:"Today", body:"9 paying (5 Premium, 4 Base). Subscriptions only.", here:1},
+ {amt:"$40–50", label:"Today", body:"11 paying (5 Premium, 6 Base). Subscriptions only.", here:1},
  {amt:"$300", label:"Next", body:"Rob + 10 sellers on postage (about 3,500 labels a month × ~$0.15 kept ≈ $500), or 20 Pro sellers. Unlocked by Stage A."},
  {amt:"$1,000", label:"", body:"30 active postage sellers. Search Console + Ads bring about 1,000 visits a week. Welcome emails turn 10% of signups into payers."},
  {amt:"$3,000", label:"", body:"eBay + Whatnot import, insurance, referrals. 100 postage sellers."},
@@ -491,6 +519,8 @@ const ALL = STAGES.flatMap(s => s.tasks.map(t => ({...t, stage:s.id})));
 let progress = {};           // id -> {done, note}
 let filter = "open";
 const openSet = new Set();
+const closedStages = new Set(local0("hq-closed")||[]);
+function local0(k){ try{return JSON.parse(localStorage.getItem(k))}catch(e){return null} }
 let db = null, sample = null;
 const local = { get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}}, set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}} };
 progress = local.get("hq-progress") || {};
@@ -501,7 +531,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":
 const isDone = id => !!(progress[id] && progress[id].done);
 
 /* ---------- Render: to-do ---------- */
-function timeLabel(m){ return m >= 60 ? (m/60)+" hr" : m+" min"; }
+function timeLabel(m){ if (m < 60) return m+" min"; const h=Math.floor(m/60), r=Math.round(m%60); return h+" hr"+(r?" "+r+" min":""); }
 function taskHTML(t){
   const p = progress[t.id] || {};
   const open = openSet.has(t.id);
@@ -511,11 +541,11 @@ function taskHTML(t){
       <div class="t-main">
         <button class="t-title" data-toggle="${t.id}">${esc(t.title)}</button>
         <div class="t-meta">
-          <span class="tag id">${t.id}</span>
-          ${t.hot?'<span class="tag hot">Do first</span>':""}
-          <span class="tag time">${timeLabel(t.min)}</span>
+          ${t.hot&&!p.done?'<span class="tag hot">Do first</span>':""}
           ${t.money?'<span class="tag money">costs money</span>':""}
-          ${p.note?'<span class="tag">has note</span>':""}
+          ${p.note?'<span class="tag noted">note</span>':""}
+          <span class="tag id">${t.id}</span>
+          <span class="tag time">${timeLabel(t.min)}</span>
         </div>
       </div>
       <button class="expand" data-toggle="${t.id}" aria-label="Show steps">›</button>
@@ -549,24 +579,35 @@ function renderTodo(){
     const vis = s.tasks.filter(visible);
     const done = s.tasks.filter(t=>isDone(t.id)).length;
     if (!vis.length) return "";
-    return `<section class="stage"><div class="stage-head"><h2>${s.id} · ${esc(s.name)}</h2><span class="stage-count">${done}/${s.tasks.length} done</span></div>
-      <p class="stage-sub">${esc(s.sub)}</p>${vis.map(taskHTML).join("")}</section>`;
+    const closed = closedStages.has(s.id);
+    return `<section class="stage ${closed?"closed":""}"><button class="stage-head" data-stage="${s.id}" aria-expanded="${!closed}"><h2><span>${s.id}</span>${esc(s.name)}</h2><span class="stage-count"><span class="mini"><i style="width:${done/s.tasks.length*100}%"></i></span>${done}/${s.tasks.length}<span class="caret">▾</span></span></button>
+      <div class="stage-body"><p class="stage-sub">${esc(s.sub)}</p><div class="list">${vis.map(taskHTML).join("")}</div></div></section>`;
   }).join("") || `<div class="empty">Nothing here for this filter. ${filter==="done"?"Tick a task and it shows up here.":"Everything in this view is done. 🎉"}</div>`;
   document.querySelectorAll("#filters .chip").forEach(c=>c.setAttribute("aria-pressed", c.dataset.f===filter));
   renderMeter(); renderNext();
 }
 function renderMeter(){
   const d = ALL.filter(t=>isDone(t.id)).length;
-  $("#barFill").style.width = (d/ALL.length*100)+"%";
-  $("#countText").textContent = `${d} / ${ALL.length} done`;
+  const pct = Math.round(d/ALL.length*100);
+  $("#barFill").style.width = pct+"%";
+  const open = ALL.filter(t=>!isDone(t.id));
+  const hot = open.filter(t=>t.hot).length;
+  const quick = open.filter(t=>t.min<=5).length;
+  const mins = open.filter(t=>t.hot).reduce((m,t)=>m+t.min,0);
+  const C = 2*Math.PI*16;
+  $("#stats").innerHTML = `
+    <div class="stat ring"><svg width="44" height="44" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16" fill="none" stroke="var(--line)" stroke-width="4"/><circle cx="20" cy="20" r="16" fill="none" stroke="var(--ok)" stroke-width="4" stroke-linecap="round" stroke-dasharray="${C*pct/100} ${C}" transform="rotate(-90 20 20)"/></svg><div><b>${pct}%</b><span>${d} of ${ALL.length} done</span></div></div>
+    <div class="stat hot"><b>${hot}</b><span>marked do first</span></div>
+    <div class="stat"><b>${quick}</b><span>take 5 minutes or less</span></div>
+    <div class="stat"><b>${timeLabel(mins||0)}</b><span>to clear the do-first list</span></div>`;
 }
 function renderNext(){
   const n = ALL.find(t=>t.hot && !isDone(t.id)) || ALL.find(t=>!isDone(t.id));
   const c = $("#nextCard");
   if (!n){ c.innerHTML = `<div class="eyebrow">Next up</div><h3>Every task is done.</h3>`; return; }
-  c.innerHTML = `<div class="eyebrow">Next up · ${timeLabel(n.min)}</div>
-    <div class="row"><h3 style="min-width:0">${esc(n.title)}</h3><button class="btn primary" data-jump="${n.id}">Show me how</button></div>
-    <div style="color:var(--muted)">${n.why}</div>`;
+  c.innerHTML = `<div class="eyebrow" style="color:var(--accent)">Next up · ${n.id} · about ${timeLabel(n.min)}</div>
+    <div class="row"><h3 style="min-width:0">${esc(n.title)}</h3><button class="btn primary" data-jump="${n.id}">Show me how →</button></div>
+    <div class="why-line">${n.why}</div>`;
 }
 
 /* ---------- Render: other tabs ---------- */
@@ -617,17 +658,19 @@ function renderMoney(){
   <h3 style="margin-top:24px">What we keep per label</h3>
   <div class="tbl" style="margin-top:8px"><table>
     <tr><th>Label</th><th>Our fee</th><th>Seller pays</th><th>We keep (card)</th><th>We keep (bank)</th></tr>
-    <tr><td>Tracked letter</td><td class="num">$0.21</td><td class="num">$0.99</td><td class="num">$0.13</td><td class="num">$0.15</td></tr>
+    <tr><td>Tracked letter (proposed, C6)</td><td class="num">$0.10–0.15</td><td class="num">$0.88–0.93</td><td class="num">$0.06–0.11</td><td class="num">$0.09–0.14</td></tr>
         <tr><td>Ground Advantage</td><td class="num">$0.50</td><td class="num">≈$5.00</td><td class="num">$0.28</td><td class="num">$0.41</td></tr>
   </table></div>`;
 }
 
 /* ---------- Events ---------- */
 document.addEventListener("click", e=>{
+  const st = e.target.closest("[data-stage]");
+  if (st){ const id=st.dataset.stage; closedStages.has(id)?closedStages.delete(id):closedStages.add(id); try{localStorage.setItem("hq-closed",JSON.stringify([...closedStages]))}catch(err){} renderTodo(); return; }
   const t = e.target.closest("[data-toggle]");
   if (t){ const id=t.dataset.toggle; openSet.has(id)?openSet.delete(id):openSet.add(id); renderTodo(); return; }
   const j = e.target.closest("[data-jump]");
-  if (j){ const id=j.dataset.jump; openSet.add(id); filter="all"; renderTodo(); document.querySelector(`[data-id="${id}"]`)?.scrollIntoView({behavior:"smooth",block:"start"}); return; }
+  if (j){ const id=j.dataset.jump; openSet.add(id); filter="all"; const stg=ALL.find(x=>x.id===id); if(stg) closedStages.delete(stg.stage); renderTodo(); document.querySelector(`[data-id="${id}"]`)?.scrollIntoView({behavior:"smooth",block:"start"}); return; }
   const c = e.target.closest("[data-copy]");
   if (c){ const v=c.dataset.copy; navigator.clipboard?.writeText(v).then(()=>{c.textContent="Copied";setTimeout(()=>c.textContent="Copy",1400)}).catch(()=>{const r=document.createRange();r.selectNodeContents(c.previousElementSibling);const s=getSelection();s.removeAllRanges();s.addRange(r);c.textContent="Selected";}); return; }
   const f = e.target.closest("[data-f]");
@@ -719,7 +762,7 @@ function context(){
   }).join("\n")).join("\n\n");
   return `You are the helper inside "Shipper HQ", the owner's to-do board for TCG Speed Shipper (tcgspeedshipper.com), a web app that turns TCGplayer order CSVs into shipping labels, envelopes and packing slips, now adding Pitney Bowes postage with a per-label fee and a prepaid balance (Stripe). Hosting: Railway (auto-deploys on merge). Database/auth: Supabase. DNS: Porkbun. The owner (Sam) is not technical and uses an iPad. Answer in 1-4 short sentences, plainly, with exact click paths and the task id (like A1) when relevant. Never ask for or repeat secret values (keys, secrets, passwords); tell him to paste secrets only into Railway Variables. If something needs code changes or a decision recorded, tell him to send it via the Inbox tab, which goes to the Claude that builds the app.
 
-Pitney Bowes facts: Sam's account is Pitney Bowes Shipping 360 (360.pitneybowes.com), tabs Dashboard / API Keys / Merchants / Settings. Client ID = PB_API_KEY, Secret = PB_API_SECRET (Railway Variables). The Merchants page being empty is normal; no Shipper ID is needed; never click Invite Merchant (it invites other businesses to ship under his platform). "Set up Postage Payment Method" is only for real postage after production approval. Sandbox needs no payment; test labels are free. The app's code now uses the Shipping 360 API (done Oct 5). Sam's return address needs a phone number. Letter (IMb) postage can't be refunded per USPS; package labels can. Supabase: the website now uses the new publishable key; next Sam creates a new sb_secret key in Supabase (API Keys → Publishable and secret API keys → Secret keys → New secret key), pastes it into Railway SUPABASE_SERVICE_ROLE_KEY and deploys (task B4); only after Claude confirms does he disable legacy keys (B8). Leaked-password protection needs the paid Supabase plan, so it's skipped. Postage rollout: PB_ACCESS=owner (default) means only Sam's account sees postage; everyone else sees 'coming soon'. Order: Sam buys a real label (A9) → PB_ACCESS=pilot + PB_PILOT_EMAILS for Rob (A3) → PB_ACCESS=all after Claude updates Terms/Support/FAQ (A10). Bot check: Cloudflare Turnstile is built into Create Account (task B9: free Cloudflare account, Turnstile widget, two Railway variables TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY). USPS: Mailer ID received Oct 5 (number in task A7's note); next is requesting Informed Visibility (A11). Gmail drafts ready for Sam to review: Rob testimonial ask (E2), Rob postage pilot reply (A3, hold until A9), Mana Pool listing (D5, needs their email), Pitney Bowes production/partnership follow-up (A4). Porkbun DNS is all correct (G8). Pricing v2 (docs/pricing-plan.md, awaiting approval): Free $0 10 labels + 10 postage labels/mo; Base $2.99 500 labels; Premium $6.99 (new customers; existing keep $5.99 unlimited) 1,000 labels; Pro $14.99 unlimited + lowest fees + extras; Enterprise no price. Fees letter/package: Free & Base $0.25/$0.60, Premium $0.21/$0.45, Pro $0.18/$0.30. Stripe connector is live-only; Claude won't create products there until Sam makes a sandbox (C5) or says 'live inactive'. Chrome extension is a draft for discussion (docs/research/chrome-extension.md). Oct 6: the October update email went to 18 accounts (all except the owner; Rob got a personal note). The old no-contact rule for mmuszak34 is lifted. X account @TCGSPEEDSHIPPER launched and linked from the site. Devin's subscription ended; Claude recommends not renewing until revenue is ~$500/mo and covers Devin's lane. Oct 6 morning: Rob's testimonial is on the homepage; Rob asked about $0.78 metered vs $0.82 (decision C6); Pitney Bowes passed our questions to their Sales team. Never enable CAPTCHA in Supabase: it would break logins and wouldn't protect our sign-up. The www TXT record at Porkbun is correct; Railway is re-checking it. PB_PILOT_EMAILS = comma-separated login emails of sellers allowed to see the postage panel.
+Pitney Bowes facts: Sam's account is Pitney Bowes Shipping 360 (360.pitneybowes.com), tabs Dashboard / API Keys / Merchants / Settings. Client ID = PB_API_KEY, Secret = PB_API_SECRET (Railway Variables). The Merchants page being empty is normal; no Shipper ID is needed; never click Invite Merchant (it invites other businesses to ship under his platform). "Set up Postage Payment Method" is only for real postage after production approval. Sandbox needs no payment; test labels are free. The app's code now uses the Shipping 360 API (done Oct 5). Sam's return address needs a phone number. Letter (IMb) postage can't be refunded per USPS; package labels can. Supabase: the website now uses the new publishable key; next Sam creates a new sb_secret key in Supabase (API Keys → Publishable and secret API keys → Secret keys → New secret key), pastes it into Railway SUPABASE_SERVICE_ROLE_KEY and deploys (task B4); only after Claude confirms does he disable legacy keys (B8). Leaked-password protection needs the paid Supabase plan, so it's skipped. Postage rollout: PB_ACCESS=owner (default) means only Sam's account sees postage; everyone else sees 'coming soon'. Order: Sam buys a real label (A9) → PB_ACCESS=pilot + PB_PILOT_EMAILS for Rob (A3) → PB_ACCESS=all after Claude updates Terms/Support/FAQ (A10). Bot check: Cloudflare Turnstile is built into Create Account (task B9: free Cloudflare account, Turnstile widget, two Railway variables TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY). USPS: Mailer ID received Oct 5 (number in task A7's note); next is requesting Informed Visibility (A11). Gmail drafts ready for Sam to review: Rob testimonial ask (E2), Rob postage pilot reply (A3, hold until A9), Mana Pool listing (D5, needs their email), Pitney Bowes production/partnership follow-up (A4). Porkbun DNS is all correct (G8). Pricing v2 (docs/pricing-plan.md, awaiting approval): Free $0 10 labels + 10 postage labels/mo; Base $2.99 500 labels; Premium $6.99 (new customers; existing keep $5.99 unlimited) 1,000 labels; Pro $14.99 unlimited + lowest fees + extras; Enterprise no price. Fees letter/package: Free & Base $0.25/$0.60, Premium $0.21/$0.45, Pro $0.18/$0.30. Stripe connector is live-only; Claude won't create products there until Sam makes a sandbox (C5) or says 'live inactive'. Chrome extension is a draft for discussion (docs/research/chrome-extension.md). Oct 6: the October update email went to 18 accounts (all except the owner; Rob got a personal note). The old no-contact rule for mmuszak34 is lifted. X account @TCGSPEEDSHIPPER launched and linked from the site. Devin's subscription ended; Claude recommends not renewing until revenue is ~$500/mo and covers Devin's lane. Oct 6 morning: Rob's testimonial is on the homepage; Rob asked about $0.78 metered vs $0.82 (decision C6); Pitney Bowes passed our questions to their Sales team. Oct 9: B4 is done (server uses the new sb_secret key, verified in logs); Claude gave the go for B8 (disable legacy keys in Supabase > Project Settings > API Keys > Legacy API keys). Turnstile (B9) is live. Resend email code is live; Sam adds RESEND_API_KEY in Railway and clicks 'Send me a test email' in /admin (B10), then verifies the domain in Resend. Pitney Bowes Sales (Sean Zehnder) replied Oct 7; Sam's answers are drafted in Gmail and need 2-3 call times (A4). Rob says a per-label fee stops beating his $30 meter at 150-300 labels/mo; C6 option D = Pro $14.99 with 300 fee-free postage labels then 5c; a reply asking his volume is drafted. Postage now asks for a phone in the 'Ships from' box. Never enable CAPTCHA in Supabase: it would break logins and wouldn't protect our sign-up. The www TXT record at Porkbun is correct; Railway is re-checking it. PB_PILOT_EMAILS = comma-separated login emails of sellers allowed to see the postage panel.
 
 Current tasks and progress:
 ${lines}`;
