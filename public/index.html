@@ -347,6 +347,40 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
   animation: fadeInUp .3s ease;
 }
 .options-bar.visible { display: flex; }
+/* Ready-to-print card: the one thing to do after the orders load */
+.ready-card.visible { display: grid; gap: 14px; padding: 1.25rem 1.4rem; }
+.ready-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.ready-num { display: grid; gap: 2px; min-width: 0; }
+.ready-num #count-label { font-family: 'DM Serif Display', serif; font-size: 26px; line-height: 1.15; color: var(--text); }
+.ready-num small { font-size: 12px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+.ready-dl { min-height: 48px; padding: 0 28px; font-size: 16px; }
+.ready-opts { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding-top: 12px; border-top: 1px solid var(--border); }
+.ready-opt { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); min-width: 0; }
+.ready-opt .opt-select { max-width: 260px; }
+.link-btn { margin-left: auto; background: none; border: 0; padding: 4px 0; font-size: 13px; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.link-btn:hover { color: var(--text); }
+@media (max-width: 520px) { .ready-dl { width: 100%; } .link-btn { margin-left: 0; } }
+/* Everything optional folds away under one line each */
+.fold { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin: 0 0 10px; padding: 0 1.1rem; }
+.fold > summary { list-style: none; cursor: pointer; padding: 14px 0; font-size: 14px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; }
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary::after { content: '+'; margin-left: auto; color: var(--muted); font-weight: 400; font-size: 18px; line-height: 1; }
+.fold[open] > summary::after { content: '−'; }
+.fold[open] { padding-bottom: 1rem; }
+.fold-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.pg-fold .pg-mode { margin-left: 2px; }
+/* Once orders are loaded, the page is about this batch only */
+body.has-orders #tab-home .home-hero,
+body.has-orders #tab-home .content-section,
+body.has-orders #upload-zone,
+body.has-orders .sticky-bar,
+body.has-orders .sample-row { display: none !important; }
+.reload-csv { display: none; margin: 0 0 6px; }
+body.has-orders #tab-home.active { display: flex; flex-direction: column; }
+body.has-orders #csv-section { order: -3; }
+body.has-orders .ready-card { order: -2; }
+body.has-orders #preview-area { order: -1; }
+body.has-orders .reload-csv { display: inline-block; }
 .opt-group { display: flex; align-items: center; gap: 8px; }
 .opt-label { font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; white-space: nowrap; font-weight: 500; text-transform: uppercase; letter-spacing: .04em; }
 .opt-select {
@@ -975,7 +1009,7 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
     </div>
 
     <!-- CSV upload -->
-    <div class="section fade-in-up" style="animation-delay:.1s">
+    <div class="section fade-in-up" id="csv-section" style="animation-delay:.1s">
       <div class="section-label"><span class="sec-num">1</span> Your TCGplayer orders (shipping export CSV)</div>
       <div class="upload-zone" id="upload-zone">
         <span class="upload-icon">📦</span>
@@ -983,7 +1017,8 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
         <small>TCGplayer Seller Portal → Orders → tick your orders → <strong>Export Shipping</strong></small>
       </div>
       <input type="file" id="csv-input" accept=".csv,.txt" />
-      <div class="btn-row" style="margin-top:10px;align-items:center;">
+      <button type="button" class="link-btn reload-csv" id="reload-csv">Load a different file</button>
+      <div class="btn-row sample-row" style="margin-top:10px;align-items:center;">
         <button type="button" class="btn-ghost" id="sample-order-btn">No CSV handy? Try a sample order</button>
         <a href="/samples/tcgplayer-sample-shipping-export.csv" download style="font-size:13px;color:var(--accent);">Download the sample CSV</a>
       </div>
@@ -994,7 +1029,7 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
           <button type="button" class="btn-ghost" id="tcg-slip-dl" hidden>&#11015; Slips in label order</button>
           <button type="button" class="btn-ghost" id="tcg-slip-remove" hidden>Remove slips</button>
         </div>
-        <p class="tip" id="tcg-slip-msg">Optional, to get card lists on your slips: in TCGplayer, tick the same orders and click <strong>Packing Slip</strong>, then add that PDF here.</p>
+        <p class="tip" id="tcg-slip-msg">Optional: add TCGplayer's <strong>Packing Slip</strong> PDF to put card lists on your slips.</p>
       </div>
       <div id="loaded-msg"></div>
       <div id="error-msg"></div>
@@ -1049,11 +1084,15 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
       </div>
     </div>
 
-    <!-- Options (shown after CSV loaded) -->
-    <div class="options-bar" id="options-bar">
-      <div class="opt-group">
-        <span class="opt-label">Format</span>
-        <select class="opt-select" id="fmt-main">
+    <!-- Ready to print (shown after orders load) -->
+    <div class="options-bar ready-card" id="options-bar">
+      <div class="ready-top">
+        <div class="ready-num"><span id="count-label"></span><small id="ready-quota"></small></div>
+        <button class="btn-dl ready-dl" id="dl-btn">Download PDF</button>
+      </div>
+      <div class="ready-opts">
+        <label class="ready-opt">Format
+          <select class="opt-select" id="fmt-main">
           <option value="4x6">4×6 Thermal</option>
           <option value="letter1">8.5×11 — 1 per page</option>
           <option value="letter2">8.5×11 — 2 per page</option>
@@ -1063,78 +1102,21 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
           <option value="avery5160">Avery 5160 address labels — 30 per sheet</option>
           <option value="env10">#10 envelope (PWE)</option>
         </select>
-      </div>
-      <div class="opt-group tog-light">
-        <span class="opt-label tog-label">Packing Slips</span>
-        <label class="tog"><input type="checkbox" id="slip-main" /><span class="tog-sl"></span></label>
+        </label>
+        <label class="ready-opt ready-tog tog-light">Packing slips <span class="tog"><input type="checkbox" id="slip-main" /><span class="tog-sl"></span></span></label>
+        <button type="button" class="link-btn" id="clear-btn">Start over</button>
       </div>
     </div>
 
-    <!-- Preview -->
     <div id="preview-area">
-      <div class="preview-header">
-        <h2>Preview</h2>
-        <span id="count-label"></span>
-      </div>
-      <div class="ship-plan" id="ship-plan" style="display:none;">
-        <div class="ship-plan-row">
-          <span class="ship-plan-title">Shipping plan</span>
-          <label class="ship-plan-filter">Print
-            <select class="opt-select" id="print-filter">
-              <option value="all">All orders</option>
-              <option value="envelope">Envelopes only (under $20)</option>
-              <option value="tracked">Tracked only ($20+ / expedited)</option>
-              <option value="unshipped">Not yet marked shipped</option>
-            </select>
-          </label>
-        </div>
-        <p class="ship-plan-summary" id="ship-plan-summary"></p>
-        <p class="ship-plan-note" id="ship-plan-note"></p>
-        <div class="stamp-plan" id="stamp-plan" style="display:none;">
-          <p class="stamp-summary" id="stamp-summary" role="status"></p>
-          <div class="stamp-opts">
-            <label for="pkg-oz">Envelope + toploader + slip
-              <input type="number" id="pkg-oz" min="0" max="3" step="0.05" inputmode="decimal" placeholder="e.g. 0.6"> oz</label>
-            <label class="stamp-rigid"><input type="checkbox" id="pwe-rigid"> Rigid envelope (nonmachinable, +$0.49)</label>
-          </div>
-          <p class="stamp-fine">Estimate: TCGplayer's product weight plus your packaging, at USPS stamped-letter prices (from <span id="stamp-effective"></span>). Weigh anything close to the next ounce. <a href="/blog/how-many-stamps-to-mail-a-trading-card.html">How many stamps? →</a></p>
-        </div>
-        <div id="pirate-ship-export" style="display:none;margin-top:10px;">
-          <button type="button" class="btn-ghost" id="pirate-ship-download"></button>
-          <p style="font-size:12px;color:var(--hint);margin:6px 0 0;line-height:1.5;">Upload it at pirateship.com → Ship → Import Spreadsheet, then paste the tracking numbers back here for your TCGplayer import.</p>
-        </div>
-        <div id="pull-sheet-export" style="display:none;margin-top:10px;">
-          <button type="button" class="btn-ghost" id="pull-sheet-download"></button>
-          <p style="font-size:12px;color:var(--hint);margin:6px 0 0;line-height:1.5;">Every card in this batch on one checklist, sorted by set, with the orders each goes to. Free, and it doesn't use labels.</p>
-        </div>
-        <p class="ship-plan-fine">Based on TCGplayer's seller shipping guidelines (tracking over $49.99, signature at $250+, tracking recommended over $20). Always check the order in TCGplayer. <a href="/blog/tcgplayer-shipping-guidelines.html">Read the guidelines →</a></p>
-        <form class="postage-early" id="postage-early" novalidate>
-          <div class="pe-copy"><strong>Coming soon: buy postage right here.</strong> Envelope postage with delivery scans, at a stamp's price or less, and Ground Advantage labels for tracked orders, printed with your labels and slips. Want early access?</div>
-          <div class="pe-row">
-            <label class="sr-only" for="pe-email">Email for early access</label>
-            <input type="email" id="pe-email" name="email" autocomplete="email" placeholder="you@example.com" required />
-            <button type="submit" class="btn-ghost">Get early access</button>
-          </div>
-          <input class="sf-news-hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
-          <p class="pe-msg" id="pe-msg" role="status" aria-live="polite"></p>
-        </form>
-      </div>
       <!-- Postage pilot (Pitney Bowes): only for allowed accounts -->
       <div id="postage-area" style="display:none;">
         <div class="pg-card" id="pg-soon" hidden>
           <div class="section-label">Postage with tracking <span class="pg-mode sandbox">COMING SOON</span></div>
           <p class="tip" style="margin:0;">Soon you'll buy USPS postage with tracking right here, like on eBay or Whatnot, and it lands in the same PDF as your labels and slips.</p>
         </div>
-        <div class="pg-card" id="pg-main">
-          <div class="pg-head">
-            <div class="section-label" style="margin:0;">Buy postage <span class="pg-mode" id="pg-mode"></span></div>
-            <span class="pg-bal-chip" id="pg-bal-chip" hidden>Balance <b id="pg-bal">$0.00</b></span>
-          </div>
-          <ol class="pg-steps">
-            <li>Pick <b>Letter</b> (envelopes, under $50) or <b>Ground</b> (tracked packages) for each order.</li>
-            <li>Check the total.</li>
-            <li>Buy. The labels download as one PDF and the tracking numbers fill in for your TCGplayer upload.</li>
-          </ol>
+        <details class="fold pg-fold" id="pg-main">
+          <summary>Buy postage <span class="pg-mode" id="pg-mode"></span> <span class="pg-bal-chip" id="pg-bal-chip" hidden>Balance <b id="pg-bal">$0.00</b></span></summary>
           <div class="pg-from" id="pg-from"></div>
           <div class="pg-bulk">Set all to:
             <button type="button" class="btn-ghost" data-pg-all="letter">Letter</button>
@@ -1161,33 +1143,66 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
             <div id="pg-history-list"></div>
             <p class="tip">Refund a Ground label you didn't use and its price goes back to your balance. Don't mail a refunded label. Letter postage can't be refunded.</p>
           </details>
-        </div>
+        </details>
       </div>
-      <div class="shipped-progress" id="shipped-progress" style="display:none;">
-        <span id="shipped-progress-text"></span>
-        <button type="button" id="shipped-mark-all-btn">Mark all shipped</button>
-        <button type="button" id="shipped-clear-btn">Clear shipped marks</button>
-      </div>
-      <div id="preview-list"></div>
-      <button type="button" class="btn-ghost" id="preview-more" hidden></button>
-      <div class="btn-row">
-        <button class="btn-dl" id="dl-btn">⬇ Download PDF</button>
-        <button class="btn-ghost" id="clear-btn">Clear</button>
-      </div>
-      <p class="tip" id="fmt-tip">4×6: print on thermal, margins none  ·  8.5×11: any printer, cut on lines</p>
-    </div>
 
-    <!-- Tracking number reference (shown after CSV loaded) -->
-    <div id="tracking-area" style="display:none;">
-      <div class="section fade-in-up">
-        <div class="section-label">Tracking Numbers <span style="font-weight:400;color:var(--hint);text-transform:none;letter-spacing:0;">— optional</span></div>
-        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:10px;line-height:1.6;">
-          TCGplayer doesn't generate tracking for you — paste the numbers from your carrier, Pirate Ship, or Click-N-Ship below, one per line in the same order as the labels above, or as <code>order# tracking#</code> pairs in any order. You'll get a quick-copy reference list for entering each one back into TCGplayer.
-        </p>
+      <details class="fold" id="fold-preview">
+        <summary>Preview labels</summary>
+        <div class="shipped-progress" id="shipped-progress" style="display:none;">
+          <span id="shipped-progress-text"></span>
+          <button type="button" id="shipped-mark-all-btn">Mark all shipped</button>
+          <button type="button" id="shipped-clear-btn">Clear shipped marks</button>
+        </div>
+        <div id="preview-list"></div>
+        <button type="button" class="btn-ghost" id="preview-more" hidden></button>
+      </details>
+
+      <details class="fold ship-plan" id="ship-plan" style="display:none;">
+        <summary>Shipping plan and stamps</summary>
+        <div class="ship-plan-row">
+          <label class="ship-plan-filter">Print
+            <select class="opt-select" id="print-filter">
+              <option value="all">All orders</option>
+              <option value="envelope">Envelopes only (under $20)</option>
+              <option value="tracked">Tracked only ($20+ / expedited)</option>
+              <option value="unshipped">Not yet marked shipped</option>
+            </select>
+          </label>
+        </div>
+        <p class="ship-plan-summary" id="ship-plan-summary"></p>
+        <p class="ship-plan-note" id="ship-plan-note"></p>
+        <div class="stamp-plan" id="stamp-plan" style="display:none;">
+          <p class="stamp-summary" id="stamp-summary" role="status"></p>
+          <div class="stamp-opts">
+            <label for="pkg-oz">Envelope + toploader + slip
+              <input type="number" id="pkg-oz" min="0" max="3" step="0.05" inputmode="decimal" placeholder="e.g. 0.6"> oz</label>
+            <label class="stamp-rigid"><input type="checkbox" id="pwe-rigid"> Rigid envelope (nonmachinable, +$0.49)</label>
+          </div>
+          <p class="stamp-fine">Estimate: TCGplayer's product weight plus your packaging, at USPS stamped-letter prices (from <span id="stamp-effective"></span>). Weigh anything close to the next ounce. <a href="/blog/how-many-stamps-to-mail-a-trading-card.html">How many stamps? →</a></p>
+        </div>
+        <div class="fold-btns">
+          <span id="pirate-ship-export" style="display:none;"><button type="button" class="btn-ghost" id="pirate-ship-download"></button></span>
+          <span id="pull-sheet-export" style="display:none;"><button type="button" class="btn-ghost" id="pull-sheet-download"></button></span>
+        </div>
+        <form class="postage-early" id="postage-early" novalidate>
+          <div class="pe-copy">Postage with tracking is coming soon. Get early access:</div>
+          <div class="pe-row">
+            <label class="sr-only" for="pe-email">Email for early access</label>
+            <input type="email" id="pe-email" name="email" autocomplete="email" placeholder="you@example.com" required />
+            <button type="submit" class="btn-ghost">Get early access</button>
+          </div>
+          <input class="sf-news-hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
+          <p class="pe-msg" id="pe-msg" role="status" aria-live="polite"></p>
+        </form>
+      </details>
+
+      <details class="fold" id="tracking-area" style="display:none;">
+        <summary>Tracking numbers and TCGplayer upload</summary>
+        <p class="tip" style="margin-top:0;">Paste tracking numbers, one per line in label order, or as <code>order# tracking#</code>.</p>
         <textarea id="tracking-input" class="paste-textarea" rows="4" placeholder="9400100000000000000000&#10;9400100000000000000001&#10;..."></textarea>
         <div class="btn-row" style="margin-top:10px;">
-          <button class="btn-ghost" id="tracking-match-btn" type="button">Match to Orders</button>
-          <button class="btn-ghost" id="tracking-copy-all-btn" type="button" style="display:none;">Copy All</button>
+          <button class="btn-ghost" id="tracking-match-btn" type="button">Match to orders</button>
+          <button class="btn-ghost" id="tracking-copy-all-btn" type="button" style="display:none;">Copy all</button>
         </div>
         <div id="tracking-mismatch-note" class="tracking-mismatch-note" style="display:none;"></div>
         <div id="tracking-reference" style="display:none;margin-top:12px;">
@@ -1196,14 +1211,13 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
         <div id="tcg-import" class="tcg-import" style="display:none;">
           <div class="tcg-import-head">
             <strong>Mark the whole batch shipped in TCGplayer</strong>
-            <span class="tip-inline">One upload instead of copying numbers one by one</span>
           </div>
           <label class="tcg-import-opt"><input type="checkbox" id="tcg-import-mark" checked> Mark orders with no tracking number as <code>Shipped</code> (envelope / PWE orders)</label>
           <button class="btn-dl" id="tcg-import-btn" type="button">⬇ Download TCGplayer import file</button>
           <div id="tcg-import-msg"></div>
-          <p class="tip">In the TCGplayer Seller Portal, open <b>Orders</b> and import this file with <b>Import Shipping Info</b> (TCGplayer's help article: "Importing Shipping Info for Customer Orders"). It's your own export with the Tracking # and Carrier columns filled in. Check one order after importing the first time.</p>
+          <p class="tip">Upload it in TCGplayer: Orders → Import Shipping Info.</p>
         </div>
-      </div>
+      </details>
     </div>
 
     <div class="content-section">
@@ -2938,7 +2952,9 @@ function renderPreviews() {
     quota = ' · ' + left + ' left this month';
   }
   renderShipPlan(toPrint);
-  document.getElementById('count-label').textContent=txt+quota;
+  document.getElementById('count-label').textContent=txt;
+  var rq = document.getElementById('ready-quota'); if (rq) rq.textContent = quota.replace(/^ · /, '');
+  document.body.classList.add('has-orders');
   document.getElementById('sticky-count').textContent=txt+quota;
   document.getElementById('preview-area').style.display='block';
   document.getElementById('options-bar').classList.add('visible');
@@ -3763,6 +3779,7 @@ document.getElementById('ret-edit-btn').addEventListener('click', function () {
   document.getElementById('s-name').focus();
 });
 document.getElementById('hero-upload-btn').addEventListener('click', function () { document.getElementById('csv-input').click(); });
+document.getElementById('reload-csv').addEventListener('click', function () { document.getElementById('csv-input').click(); });
 document.getElementById('hero-sample-btn').addEventListener('click', function () {
   document.getElementById('sample-order-btn').click();
   setTimeout(function () { var pa = document.getElementById('preview-area'); if (pa && pa.scrollIntoView) pa.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 300);
@@ -3846,6 +3863,7 @@ document.getElementById('clear-btn').addEventListener('click',function(){
   document.getElementById('loaded-msg').innerHTML='';
   document.getElementById('error-msg').innerHTML='';
   document.getElementById('preview-area').style.display='none';
+  document.body.classList.remove('has-orders');
   document.getElementById('preview-list').innerHTML='';
   document.getElementById('options-bar').classList.remove('visible');
   document.getElementById('sticky-bar').classList.remove('visible');
