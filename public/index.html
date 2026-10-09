@@ -204,6 +204,17 @@ body { font-family: 'Source Serif 4', Georgia, serif; background: var(--bg); col
   max-width: 540px;
   margin: 0 auto;
 }
+.hero-cta { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 1.25rem 0 1.4rem; }
+.hero-cta .btn-dl, .hero-cta .btn-ghost { min-height: 46px; padding: 0 22px; font-size: 15px; }
+.hero-steps { list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; max-width: 680px; margin: 0 auto; padding: 0; text-align: left; }
+.hero-steps li { display: flex; gap: 10px; align-items: flex-start; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px; font-size: 13px; line-height: 1.45; color: var(--text-secondary, #4a473e); }
+.hero-steps b { flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-family: 'JetBrains Mono', monospace; }
+.hero-trust { font-size: 13px !important; margin-top: 1rem !important; max-width: 560px; }
+@media (max-width: 600px) { .hero-steps { grid-template-columns: 1fr; } }
+.sec-num { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 11px; letter-spacing: 0; margin-right: 6px; vertical-align: 1px; }
+.ret-summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; color: var(--text); margin-top: 8px; }
+.ret-summary .btn-ghost { padding: 6px 14px; min-height: 0; font-size: 13px; }
+#ret-summary[hidden], #ret-fields[hidden], #preview-more[hidden] { display: none !important; }
 .home-hero .badge-row {
   display: flex; justify-content: center; gap: 8px; margin-top: 1rem; flex-wrap: wrap;
 }
@@ -346,6 +357,8 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
   cursor: pointer; outline: none; transition: border-color .2s;
 }
 .opt-select:focus { border-color: var(--accent); }
+.opt-group { min-width: 0; max-width: 100%; }
+.opt-select { max-width: 100%; min-width: 0; text-overflow: ellipsis; }
 .tog-light .tog-sl { background: #d0cdc6; }
 .tog-light .tog-label { color: var(--muted); }
 
@@ -354,10 +367,14 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
 .preview-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: .75rem; }
 .preview-header h2 { font-size: 16px; font-weight: 600; color: var(--text); font-family: 'DM Serif Display', serif; }
 .preview-header span { font-size: 12px; color: var(--hint); font-family: 'JetBrains Mono', monospace; }
+#preview-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; margin-bottom: 8px; }
+#preview-list.collapsed .label-card:nth-child(n+7) { display: none; }
+#preview-more { display: block; width: 100%; margin: 0 0 10px; }
+@media (max-width: 520px) { #preview-list { grid-template-columns: 1fr 1fr; } #preview-list .label-card { padding: 1.7rem .7rem .8rem; font-size: 11px; } }
 .label-card {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 1.85rem 1.25rem 1.1rem;
-  margin-bottom: 8px; font-family: 'JetBrains Mono', monospace;
+  border-radius: var(--radius); padding: 1.85rem 1rem 1rem;
+  margin-bottom: 0; font-family: 'JetBrains Mono', monospace; min-width: 0; overflow-wrap: anywhere;
   position: relative; box-shadow: var(--shadow-sm);
   transition: transform .15s, box-shadow .15s;
   animation: fadeInUp .35s cubic-bezier(.2,.8,.2,1) both;
@@ -943,21 +960,57 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
   <div class="tab-panel active" id="tab-home">
 
     <div class="home-hero fade-in-up">
-      <h1>Ship Cards Faster</h1>
-      <p>Upload your TCGPlayer packing list CSV and get print-ready PDF shipping labels in seconds. Free plan needs no signup — upgrade any time for more volume and custom design.</p>
-      <div class="badge-row">
-        <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Free Plan Included</span>
-        <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Private</span>
-        <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10"/></svg> Instant</span>
+      <h1>Print your TCGplayer labels in two minutes</h1>
+      <p>Drop in TCGplayer's shipping export and get print-ready labels, envelopes and packing slips. Free for 10 labels a month, no account needed.</p>
+      <div class="hero-cta">
+        <button type="button" class="btn-dl" id="hero-upload-btn">Upload my orders</button>
+        <button type="button" class="btn-ghost" id="hero-sample-btn">Try a sample order</button>
       </div>
+      <ol class="hero-steps" aria-label="How it works">
+        <li><b>1</b><span>In TCGplayer, tick your orders and click <em>Export Shipping</em></span></li>
+        <li><b>2</b><span>Drop that CSV below</span></li>
+        <li><b>3</b><span>Download one PDF and print</span></li>
+      </ol>
+      <p class="hero-trust">Works with Rollo, MUNBYN and Dymo thermal printers, plain paper, Avery 5160 and #10 envelopes. Your buyers' addresses never leave your browser.</p>
+    </div>
+
+    <!-- CSV upload -->
+    <div class="section fade-in-up" style="animation-delay:.1s">
+      <div class="section-label"><span class="sec-num">1</span> Your TCGplayer orders (shipping export CSV)</div>
+      <div class="upload-zone" id="upload-zone">
+        <span class="upload-icon">📦</span>
+        <p id="upload-text">Drop your CSV here, or tap to browse</p>
+        <small>TCGplayer Seller Portal → Orders → tick your orders → <strong>Export Shipping</strong></small>
+      </div>
+      <input type="file" id="csv-input" accept=".csv,.txt" />
+      <div class="btn-row" style="margin-top:10px;align-items:center;">
+        <button type="button" class="btn-ghost" id="sample-order-btn">No CSV handy? Try a sample order</button>
+        <a href="/samples/tcgplayer-sample-shipping-export.csv" download style="font-size:13px;color:var(--accent);">Download the sample CSV</a>
+      </div>
+      <div class="slip-attach" id="slip-attach">
+        <div class="btn-row" style="align-items:center;">
+          <label class="btn-ghost" for="tcg-slip-input" style="cursor:pointer;">+ Add TCGplayer packing slips (PDF)</label>
+          <input type="file" id="tcg-slip-input" accept=".pdf,application/pdf" hidden />
+          <button type="button" class="btn-ghost" id="tcg-slip-dl" hidden>&#11015; Slips in label order</button>
+          <button type="button" class="btn-ghost" id="tcg-slip-remove" hidden>Remove slips</button>
+        </div>
+        <p class="tip" id="tcg-slip-msg">Optional, to get card lists on your slips: in TCGplayer, tick the same orders and click <strong>Packing Slip</strong>, then add that PDF here.</p>
+      </div>
+      <div id="loaded-msg"></div>
+      <div id="error-msg"></div>
     </div>
 
     <!-- Return address -->
-    <div class="section fade-in-up" style="animation-delay:.1s">
+    <div class="section fade-in-up" id="ret-section" style="animation-delay:.15s">
       <div class="section-label-row">
-        <span class="section-label" style="margin-bottom:0;">Return Address</span>
+        <span class="section-label" style="margin-bottom:0;"><span class="sec-num">2</span> Your return address</span>
         <span class="saved-badge" id="saved-badge">✓ Saved</span>
       </div>
+      <div class="ret-summary" id="ret-summary" hidden>
+        <span id="ret-summary-text"></span>
+        <button type="button" class="btn-ghost" id="ret-edit-btn">Edit</button>
+      </div>
+      <div class="ret-fields" id="ret-fields">
       <div class="grid-2 mb">
         <div class="field">
           <label for="s-name">Store / Your Name</label>
@@ -992,32 +1045,8 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
       </div>
       <label class="bold-ret" for="s-bold"><input type="checkbox" id="s-bold" /><span class="bold-ret-text">Print the return address in bold <span>(darker on thermal printers)</span></span></label>
       <label class="bold-ret" for="s-noline"><input type="checkbox" id="s-noline" /><span class="bold-ret-text">No divider line under the return address <span>(keeps the top-right clear for a postage meter)</span></span></label>
-    </div>
-
-    <!-- CSV upload -->
-    <div class="section fade-in-up" style="animation-delay:.15s">
-      <div class="section-label">TCGPlayer Shipping Export (CSV)</div>
-      <div class="upload-zone" id="upload-zone">
-        <span class="upload-icon">📦</span>
-        <p id="upload-text">Drop your CSV here, or tap to browse</p>
-        <small>TCGplayer Seller Portal → Orders → tick your orders → <strong>Export Shipping</strong></small>
+      <p class="tip" style="margin-top:8px;">Saved on this device, so you only type it once.</p>
       </div>
-      <input type="file" id="csv-input" accept=".csv,.txt" />
-      <div class="btn-row" style="margin-top:10px;align-items:center;">
-        <button type="button" class="btn-ghost" id="sample-order-btn">No CSV handy? Try a sample order</button>
-        <a href="/samples/tcgplayer-sample-shipping-export.csv" download style="font-size:13px;color:var(--accent);">Download the sample CSV</a>
-      </div>
-      <div class="slip-attach" id="slip-attach">
-        <div class="btn-row" style="align-items:center;">
-          <label class="btn-ghost" for="tcg-slip-input" style="cursor:pointer;">+ Add TCGplayer packing slips (PDF)</label>
-          <input type="file" id="tcg-slip-input" accept=".pdf,application/pdf" hidden />
-          <button type="button" class="btn-ghost" id="tcg-slip-dl" hidden>&#11015; Slips in label order</button>
-          <button type="button" class="btn-ghost" id="tcg-slip-remove" hidden>Remove slips</button>
-        </div>
-        <p class="tip" id="tcg-slip-msg">Optional, to get card lists on your slips: in TCGplayer, tick the same orders and click <strong>Packing Slip</strong>, then add that PDF here.</p>
-      </div>
-      <div id="loaded-msg"></div>
-      <div id="error-msg"></div>
     </div>
 
     <!-- Options (shown after CSV loaded) -->
@@ -1140,6 +1169,7 @@ input[type=text]::placeholder, input[type=password]::placeholder, input[type=ema
         <button type="button" id="shipped-clear-btn">Clear shipped marks</button>
       </div>
       <div id="preview-list"></div>
+      <button type="button" class="btn-ghost" id="preview-more" hidden></button>
       <div class="btn-row">
         <button class="btn-dl" id="dl-btn">⬇ Download PDF</button>
         <button class="btn-ghost" id="clear-btn">Clear</button>
@@ -2948,6 +2978,16 @@ function renderPreviews() {
     list.appendChild(div);
   });
 
+  // Long batches: show the first 6 previews, the rest on request.
+  var more = document.getElementById('preview-more');
+  if (orders.length > 6 && !previewExpanded) {
+    list.classList.add('collapsed');
+    more.hidden = false; more.textContent = 'Show all ' + orders.length + ' label previews';
+  } else {
+    list.classList.remove('collapsed');
+    more.hidden = orders.length <= 6; more.textContent = 'Show fewer';
+  }
+
   var progress = document.getElementById('shipped-progress');
   var progressText = document.getElementById('shipped-progress-text');
   var markAllBtn = document.getElementById('shipped-mark-all-btn');
@@ -3701,6 +3741,32 @@ document.getElementById('csv-input').addEventListener('change',function(e){
   var file=e.target.files[0]; if(!file) return;
   handleFile(file);
 });
+var previewExpanded = false;
+document.getElementById('preview-more').addEventListener('click', function () {
+  previewExpanded = !previewExpanded;
+  var list = document.getElementById('preview-list');
+  list.classList.toggle('collapsed', !previewExpanded);
+  this.textContent = previewExpanded ? 'Show fewer' : 'Show all ' + orders.length + ' label previews';
+});
+// Return address: once it's complete, fold it into one line.
+function updateRetSummary(collapse) {
+  var s = getSender();
+  var done = s.addr1 && s.city && s.state && s.zip;
+  var sum = document.getElementById('ret-summary'), fields = document.getElementById('ret-fields');
+  if (!done) { sum.hidden = true; fields.hidden = false; return; }
+  document.getElementById('ret-summary-text').textContent = 'From: ' + [s.name, s.addr1 + (s.addr2 ? ' ' + s.addr2 : ''), s.city + ', ' + s.state + ' ' + s.zip].filter(Boolean).join(' · ');
+  if (collapse) { sum.hidden = false; fields.hidden = true; }
+}
+document.getElementById('ret-edit-btn').addEventListener('click', function () {
+  document.getElementById('ret-summary').hidden = true;
+  document.getElementById('ret-fields').hidden = false;
+  document.getElementById('s-name').focus();
+});
+document.getElementById('hero-upload-btn').addEventListener('click', function () { document.getElementById('csv-input').click(); });
+document.getElementById('hero-sample-btn').addEventListener('click', function () {
+  document.getElementById('sample-order-btn').click();
+  setTimeout(function () { var pa = document.getElementById('preview-area'); if (pa && pa.scrollIntoView) pa.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 300);
+});
 document.getElementById('sample-order-btn').addEventListener('click',function(){
   var btn=this;
   btn.disabled=true;
@@ -3953,9 +4019,8 @@ function renderPostage() {
   if (!area) return;
   var key = session ? session.user.id : null;
   if (!key) {
-    // Signed out: just let people know it's coming.
-    area.style.display = orders.length ? 'block' : 'none';
-    document.getElementById('pg-soon').hidden = false; document.getElementById('pg-main').hidden = true;
+    // Signed out: the early-access box in the shipping plan already says it's coming.
+    area.style.display = 'none';
     postageFor = null; return;
   }
   if (postageFor !== key) {
@@ -3967,14 +4032,12 @@ function renderPostage() {
     return;
   }
   var soon = document.getElementById('pg-soon');
-  if (postageStatus && !postageStatus.allowed && postageStatus.comingSoon && orders.length) {
-    area.style.display = 'block'; if (soon) soon.hidden = false;
-    document.getElementById('pg-main').hidden = true; return;
-  }
+  if (postageStatus && !postageStatus.allowed) { area.style.display = 'none'; return; }
   if (soon) soon.hidden = true;
   document.getElementById('pg-main').hidden = false;
   if (!postageStatus || !postageStatus.allowed || !orders.length) { area.style.display = 'none'; return; }
   area.style.display = 'block';
+  var early = document.getElementById('postage-early'); if (early) early.style.display = 'none'; // already has postage
   var badge = document.getElementById('pg-mode');
   badge.className = 'pg-mode ' + postageStatus.mode;
   badge.textContent = postageStatus.mode === 'production' ? 'LIVE' : 'TEST MODE (labels can\'t be mailed)';
@@ -4718,6 +4781,7 @@ document.querySelectorAll('[data-hiw-go]').forEach(function (b) {
 });
 openTabFromHash();
 loadAddr();
+updateRetSummary(true);
 loadPlans();
 refreshSession().then(function(){
   var params = new URLSearchParams(window.location.search);
