@@ -159,51 +159,64 @@ td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:now
 .quick{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 10px}
 .quick button{border:1px solid var(--line);background:var(--raised);border-radius:99px;padding:5px 11px;font-size:12px;color:var(--muted)}
 .inbox-link{background:none;border:0;padding:0;color:var(--accent);font-size:12px;text-decoration:underline}
+/* calm layout overrides */
+body::before{display:none}
+.wrap{max-width:760px;padding-block:32px 120px}
+header.top{align-items:center;margin-bottom:28px}
+h1{font-size:28px}
+.progress-line{display:flex;align-items:center;gap:12px;margin-top:10px;color:var(--muted);font:13px var(--mono)}
+.progress-line .bar{width:180px;max-width:40vw;height:4px;margin:0}
+.sync{border:0;background:none;padding:0;font-size:11px;color:var(--faint)}
+.block{margin-top:28px}
+.block h2{font-size:13px;font-family:var(--mono);font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-bottom:10px}
+.t-head{padding:14px 16px}
+.t-title{font-size:15px}
+.t-meta .tag.id{display:none}
+.more-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.ghost{background:none;border:1px solid var(--line);color:var(--muted);border-radius:99px;padding:8px 14px;font-size:13px;font-weight:600}
+.ghost:hover{color:var(--text);border-color:var(--line-2)}
+.ghost[hidden]{display:none}
+#stages section.stage{margin-top:18px}
+.foot-nav{display:flex;flex-wrap:wrap;gap:4px 18px;margin-top:48px;padding-top:18px;border-top:1px solid var(--line)}
+.foot-nav button{background:none;border:0;padding:4px 0;color:var(--muted);font-size:13px}
+.foot-nav button[aria-selected="true"]{color:var(--text);text-decoration:underline;text-underline-offset:4px}
+@media (min-width:1180px){body{padding-right:0}.dock{position:fixed;top:auto;right:16px;bottom:calc(72px + env(safe-area-inset-bottom,0px));width:min(420px,calc(100vw - 32px));height:min(600px,calc(100vh - 120px));border-radius:16px;border-width:1px;box-shadow:0 20px 60px rgba(0,0,0,.6)}.dock[hidden]{display:none!important}.dock-btn,#dockClose{display:inline-block}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
 <div class="wrap">
   <header class="top">
-    <div>
-      <div class="eyebrow">TCG Speed Shipper · owner desk</div>
+    <div style="min-width:0">
       <h1>Shipper HQ</h1>
-      <div class="lede">Everything only you can do, in priority order, with the exact clicks. Tick a task and Claude sees it. Leave a note on any task, or ask in the chat.</div>
+      <div class="progress-line"><div class="bar"><i id="barFill"></i></div><span id="countText"></span></div>
     </div>
-    <div class="sync"><span class="dot" id="syncDot"></span><span id="syncText">Connecting…</span></div>
+    <span class="sync" title="Sync status"><span class="dot" id="syncDot"></span><span id="syncText">Connecting…</span></span>
   </header>
 
-  <div class="stats" id="stats"></div>
-
-  <div class="strip">
-    <div class="tabs" role="tablist">
-      <button class="tab" role="tab" data-tab="todo" aria-selected="true">To-do</button>
-      <button class="tab" role="tab" data-tab="pb" aria-selected="false">Pitney Bowes</button>
-      <button class="tab" role="tab" data-tab="build" aria-selected="false">Roadmap</button>
-      <button class="tab" role="tab" data-tab="money" aria-selected="false">Money</button>
-    </div>
-    <div class="bar"><i id="barFill"></i></div>
-  </div>
-
-<main>
+  <main>
     <div id="tab-todo">
-      <div class="next" id="nextCard"></div>
-      <div class="filters" id="filters">
-        <button class="chip" data-f="open" aria-pressed="true">Not done</button>
-        <button class="chip" data-f="all" aria-pressed="false">All</button>
-        <button class="chip" data-f="quick" aria-pressed="false">Under 5 min</button>
-        <button class="chip" data-f="hot" aria-pressed="false">Do first</button>
-        <button class="chip" data-f="done" aria-pressed="false">Done</button>
+      <section class="block"><h2>Do now</h2><div class="list" id="nowList"></div></section>
+      <section class="block" id="nextBlock"><h2>After that</h2><div class="list" id="nextList"></div></section>
+      <div class="more-row">
+        <button class="ghost" id="restBtn" aria-expanded="false"></button>
+        <button class="ghost" id="doneBtn" aria-expanded="false"></button>
       </div>
-      <div id="stages"></div>
+      <section class="block" id="restBlock" hidden><div id="stages"></div></section>
+      <section class="block" id="doneBlock" hidden><h2>Done</h2><div class="list" id="doneList"></div></section>
     </div>
-
     <div id="tab-pb" hidden></div>
     <div id="tab-build" hidden></div>
     <div id="tab-money" hidden></div>
   </main>
+  <nav class="foot-nav" role="tablist">
+    <button role="tab" data-tab="todo" aria-selected="true">To-do</button>
+    <button role="tab" data-tab="pb" aria-selected="false">Pitney Bowes guide</button>
+    <button role="tab" data-tab="build" aria-selected="false">Roadmap</button>
+    <button role="tab" data-tab="money" aria-selected="false">Money plan</button>
+  </nav>
 </div>
 
-<button class="dock-btn" id="dockBtn">Ask a question</button>
+<button class="dock-btn" id="dockBtn">Ask Claude</button>
 <div class="dock" id="dock" hidden>
   <header>
     <h3 id="dockTitle">Quick questions</h3>
@@ -541,10 +554,8 @@ function taskHTML(t){
       <div class="t-main">
         <button class="t-title" data-toggle="${t.id}">${esc(t.title)}</button>
         <div class="t-meta">
-          ${t.hot&&!p.done?'<span class="tag hot">Do first</span>':""}
           ${t.money?'<span class="tag money">costs money</span>':""}
           ${p.note?'<span class="tag noted">note</span>':""}
-          <span class="tag id">${t.id}</span>
           <span class="tag time">${timeLabel(t.min)}</span>
         </div>
       </div>
@@ -573,42 +584,41 @@ function visible(t){
   if (filter==="hot") return !d && t.hot;
   return true;
 }
+let showRest=false, showDone=false;
 function renderTodo(){
-  const host = $("#stages");
-  host.innerHTML = STAGES.map(s=>{
-    const vis = s.tasks.filter(visible);
-    const done = s.tasks.filter(t=>isDone(t.id)).length;
+  const open = ALL.filter(t=>!isDone(t.id));
+  const ordered = [...open.filter(t=>t.hot), ...open.filter(t=>!t.hot)];
+  const now = ordered.slice(0,3), next = ordered.slice(3,8), restIds = new Set(ordered.slice(8).map(t=>t.id));
+  const done = ALL.filter(t=>isDone(t.id));
+  $("#nowList").innerHTML = now.length ? now.map(taskHTML).join("") : `<div class="empty">Nothing left. Everything is done.</div>`;
+  $("#nextList").innerHTML = next.map(taskHTML).join("");
+  $("#nextBlock").hidden = !next.length;
+  $("#stages").innerHTML = STAGES.map(s=>{
+    const vis = s.tasks.filter(t=>restIds.has(t.id));
     if (!vis.length) return "";
-    const closed = closedStages.has(s.id);
-    return `<section class="stage ${closed?"closed":""}"><button class="stage-head" data-stage="${s.id}" aria-expanded="${!closed}"><h2><span>${s.id}</span>${esc(s.name)}</h2><span class="stage-count"><span class="mini"><i style="width:${done/s.tasks.length*100}%"></i></span>${done}/${s.tasks.length}<span class="caret">▾</span></span></button>
-      <div class="stage-body"><p class="stage-sub">${esc(s.sub)}</p><div class="list">${vis.map(taskHTML).join("")}</div></div></section>`;
-  }).join("") || `<div class="empty">Nothing here for this filter. ${filter==="done"?"Tick a task and it shows up here.":"Everything in this view is done. 🎉"}</div>`;
-  document.querySelectorAll("#filters .chip").forEach(c=>c.setAttribute("aria-pressed", c.dataset.f===filter));
-  renderMeter(); renderNext();
+    return `<section class="stage"><h2 class="stage-name">${esc(s.name)}</h2><div class="list">${vis.map(taskHTML).join("")}</div></section>`;
+  }).join("");
+  $("#restBtn").hidden = !restIds.size;
+  $("#restBtn").textContent = showRest ? "Hide the rest" : `Show the rest (${restIds.size})`;
+  $("#restBtn").setAttribute("aria-expanded", showRest);
+  $("#restBlock").hidden = !showRest || !restIds.size;
+  $("#doneList").innerHTML = done.map(taskHTML).join("");
+  $("#doneBtn").hidden = !done.length;
+  $("#doneBtn").textContent = showDone ? "Hide done" : `Done (${done.length})`;
+  $("#doneBtn").setAttribute("aria-expanded", showDone);
+  $("#doneBlock").hidden = !showDone || !done.length;
+  renderMeter();
 }
 function renderMeter(){
   const d = ALL.filter(t=>isDone(t.id)).length;
-  const pct = Math.round(d/ALL.length*100);
-  $("#barFill").style.width = pct+"%";
-  const open = ALL.filter(t=>!isDone(t.id));
-  const hot = open.filter(t=>t.hot).length;
-  const quick = open.filter(t=>t.min<=5).length;
-  const mins = open.filter(t=>t.hot).reduce((m,t)=>m+t.min,0);
-  const C = 2*Math.PI*16;
-  $("#stats").innerHTML = `
-    <div class="stat ring"><svg width="44" height="44" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16" fill="none" stroke="var(--line)" stroke-width="4"/><circle cx="20" cy="20" r="16" fill="none" stroke="var(--ok)" stroke-width="4" stroke-linecap="round" stroke-dasharray="${C*pct/100} ${C}" transform="rotate(-90 20 20)"/></svg><div><b>${pct}%</b><span>${d} of ${ALL.length} done</span></div></div>
-    <div class="stat hot"><b>${hot}</b><span>marked do first</span></div>
-    <div class="stat"><b>${quick}</b><span>take 5 minutes or less</span></div>
-    <div class="stat"><b>${timeLabel(mins||0)}</b><span>to clear the do-first list</span></div>`;
+  $("#barFill").style.width = (d/ALL.length*100)+"%";
+  $("#countText").textContent = `${d} of ${ALL.length} done`;
 }
-function renderNext(){
-  const n = ALL.find(t=>t.hot && !isDone(t.id)) || ALL.find(t=>!isDone(t.id));
-  const c = $("#nextCard");
-  if (!n){ c.innerHTML = `<div class="eyebrow">Next up</div><h3>Every task is done.</h3>`; return; }
-  c.innerHTML = `<div class="eyebrow" style="color:var(--accent)">Next up · ${n.id} · about ${timeLabel(n.min)}</div>
-    <div class="row"><h3 style="min-width:0">${esc(n.title)}</h3><button class="btn primary" data-jump="${n.id}">Show me how →</button></div>
-    <div class="why-line">${n.why}</div>`;
-}
+function renderNext(){}
+document.addEventListener("click", e=>{
+  if (e.target.closest("#restBtn")){ showRest=!showRest; renderTodo(); }
+  if (e.target.closest("#doneBtn")){ showDone=!showDone; renderTodo(); }
+});
 
 /* ---------- Render: other tabs ---------- */
 function renderPB(){
