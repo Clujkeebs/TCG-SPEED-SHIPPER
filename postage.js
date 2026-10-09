@@ -155,6 +155,15 @@ function money(r) {
   return Number.isFinite(n) ? Math.round(n * 100) / 100 : null;
 }
 
+// USPS labels through Shipping 360 need a phone on the sender. TCGplayer
+// exports have no buyer phones, so the sender's (or PB_DEFAULT_PHONE) is
+// required up front instead of failing once per label.
+function senderPhone(fromAddress, env) {
+  const ph = String((fromAddress && fromAddress.phone) || (env && env.PB_DEFAULT_PHONE) || '');
+  return ph.replace(/\D/g, '').length >= 10 ? ph : '';
+}
+const PHONE_NEEDED = { error: 'Add a phone number to your return address. USPS needs one on postage labels.', field: 'phone' };
+
 module.exports = function mountPostageRoutes(router, d) {
   const { supabaseAdmin, requireUser, requireSupabase, OWNER_EMAIL, logError } = d;
   const stripe = d.stripe || (() => null);
@@ -213,6 +222,7 @@ module.exports = function mountPostageRoutes(router, d) {
     const from = pbAddress(b.from), to = pbAddress(b.to);
     if (from.missing.length) return res.status(400).json({ error: 'Return address needs: ' + from.missing.join(', ') });
     if (to.missing.length) return res.status(400).json({ error: 'Address needs: ' + to.missing.join(', ') });
+    if (!senderPhone(from.address, env)) return res.status(400).json(PHONE_NEEDED);
     const oz = Number(b.weightOz) || 1;
     if (oz < s.minOz || oz > s.maxOz) return res.status(400).json({ error: s.label + ' allows up to ' + s.maxOz + ' oz' });
     try {
@@ -221,6 +231,45 @@ module.exports = function mountPostageRoutes(router, d) {
       const rate = r && (Array.isArray(r.rate) ? r.rate[0] : r.rate || (r.rates && r.rates[0]));
       res.json(Object.assign({ service: b.service, mode: pbConfig(env).mode }, priced(b.service, money(rate), env)));
     } catch (err) { pbFail(res, err, 'Rate quote'); }
+  });
+
+  // Price a whole batch before buying: { from, labels: [{ ref, to, service, weightOz }] }
+  // → { items: [{ ref, ok, postage, fee, price } | { ref, ok: false, error }], total }.
+  // Nothing is bought; the app shows the total next to the balance.
+  router.post('/postage/quote', guard, async (req, res) => {
+    const b = req.body || {};
+    const list = Array.isArray(b.labels) ? b.labels : [];
+    if (!list.length) return res.status(400).json({ error: 'No labels requested' });
+    if (list.length > MAX_LABELS_PER_REQUEST) return res.status(400).json({ error: 'Up to ' + MAX_LABELS_PER_REQUEST + ' labels at a time' });
+    const from = pbAddress(b.from);
+    if (from.missing.length) return res.status(400).json({ error: 'Return address needs: ' + from.missing.join(', ') });
+    if (!senderPhone(from.address, env)) return res.status(400).json(PHONE_NEEDED);
+    const quoteOne = async (item) => {
+      const ref = clean(item && item.ref, 40);
+      const s = SERVICES[item && item.service];
+      const to = pbAddress(item && item.to);
+      const oz = Number(item && item.weightOz) || 1;
+      if (!s) return { ref, ok: false, error: 'Unknown service' };
+      if (to.missing.length) return { ref, ok: false, error: 'Address needs: ' + to.missing.join(', ') };
+      if (oz < s.minOz || oz > s.maxOz) return { ref, ok: false, error: s.label + ' allows up to ' + s.maxOz + ' oz' };
+      try {
+        const q = await pb().rate(buildShipment({ from: from.address, to: to.address, service: item.service, weightOz: oz, phone: env.PB_DEFAULT_PHONE }));
+        const p = priced(item.service, money(q && (Array.isArray(q.rate) ? q.rate[0] : q.rate)), env);
+        return p.price == null ? { ref, ok: false, error: 'No price came back' } : Object.assign({ ref, ok: true }, p);
+      } catch (err) {
+        return { ref, ok: false, error: err instanceof PbError ? err.message : 'Quote failed, please retry' };
+      }
+    };
+    // A few at a time: fast enough for a batch, gentle on the carrier API.
+    const items = new Array(list.length);
+    let next = 0;
+    await Promise.all(Array.from({ length: Math.min(4, list.length) }, async () => {
+      while (next < list.length) { const i = next++; items[i] = await quoteOne(list[i]); }
+    }));
+    const total = Math.round(items.reduce((t, x) => t + (x.ok ? x.price : 0), 0) * 100) / 100;
+    const out = { items, total, mode: pbConfig(env).mode };
+    if (pbConfig(env).balance) { try { out.balanceCents = await balanceOf(req.user.id); } catch (e) { /* shown without it */ } }
+    res.json(out);
   });
 
   // Buy labels: { from, labels: [{ ref, to, service, weightOz }] }.
@@ -233,6 +282,7 @@ module.exports = function mountPostageRoutes(router, d) {
     if (list.length > MAX_LABELS_PER_REQUEST) return res.status(400).json({ error: 'Up to ' + MAX_LABELS_PER_REQUEST + ' labels at a time' });
     const from = pbAddress(b.from);
     if (from.missing.length) return res.status(400).json({ error: 'Return address needs: ' + from.missing.join(', ') });
+    if (!senderPhone(from.address, env)) return res.status(400).json(PHONE_NEEDED);
     const mode = pbConfig(env).mode;
     const useBalance = pbConfig(env).balance;
     if (useBalance) {

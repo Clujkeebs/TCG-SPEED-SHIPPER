@@ -101,7 +101,8 @@ function req(method, urlPath, body, token) {
 let passed = 0, failed = 0;
 function check(name, cond, extra) { if (cond) { passed++; console.log('  PASS  ' + name); } else { failed++; console.log('  FAIL  ' + name + (extra ? '  — ' + extra : '')); } }
 
-const FROM = { name: 'Card Shop Co', addr1: '123 Seller St', city: 'Springfield', state: 'IL', zip: '62701' };
+const FROM = { name: 'Card Shop Co', addr1: '123 Seller St', city: 'Springfield', state: 'IL', zip: '62701', phone: '(555) 123-4567' };
+const FROM_NO_PHONE = Object.assign({}, FROM, { phone: '' });
 const TO = { firstName: 'Jane', lastName: 'Doe', addr1: '456 Oak Ave', addr2: 'Apt 2', city: 'Chicago', state: 'IL', zip: '60601' };
 
 server.listen(0, async () => {
@@ -138,6 +139,11 @@ server.listen(0, async () => {
     check('international is refused for now', pbAddress(Object.assign({}, TO, { country: 'CA' })).missing.length === 1);
 
     console.log('\n-- Rates and labels --');
+    let np = pbCalls.length;
+    r = await req('POST', '/api/postage/labels', { from: FROM_NO_PHONE, labels: [{ to: TO, service: 'letter' }] }, 'pilot-token');
+    check('no sender phone: one clear error up front, PB never called', r.status === 400 && r.body.field === 'phone' && /phone/i.test(r.body.error) && pbCalls.length === np, JSON.stringify(r.body));
+    r = await req('POST', '/api/postage/quote', { from: FROM, labels: [{ ref: 'Q1', to: TO, service: 'letter', weightOz: 1 }, { ref: 'Q2', to: TO, service: 'ground', weightOz: 3 }] }, 'pilot-token');
+    check('quote prices the whole batch and buys nothing', r.status === 200 && r.body.items.length === 2 && r.body.items.every((x) => x.ok && x.price > 0) && Math.abs(r.body.total - (r.body.items[0].price + r.body.items[1].price)) < 0.001 && !pbCalls.slice(np).some((c) => /\/shipments(\?|$)/.test(String(c.url))) && pbCalls.slice(np).some((c) => /\/rates/.test(String(c.url))), JSON.stringify(r.body));
     r = await req('POST', '/api/postage/rates', { from: FROM, to: TO, service: 'letter', weightOz: 1 }, 'owner-token');
     check('rate quote shows postage, our fee and the price', r.status === 200 && r.body.postage === 0.78 && r.body.fee === 0.21 && r.body.price === 0.99, JSON.stringify(r.body));
     r = await req('POST', '/api/postage/rates', { from: FROM, to: TO, service: 'letter', weightOz: 5 }, 'owner-token');
