@@ -146,6 +146,7 @@ a { color: var(--accent); }
       <div class="card">
         <h2>Setup checks</h2>
         <div id="setup-checks"><p class="muted">Checking…</p></div>
+        <p style="margin-top:10px;"><button type="button" id="test-email-btn">Send me a test email</button> <span id="test-email-msg" class="muted"></span></p>
       </div>
       <div class="card">
         <h2>Newest users</h2>
@@ -344,6 +345,16 @@ function deployRow(v, row) {
   row(false, 'Production is behind main: live ' + liveText + '; main is ' + short(v.main.sha) + (v.main.date ? ', merged ' + ago(v.main.date) : ''), fix);
 }
 
+$('test-email-btn').addEventListener('click', async function () {
+  var btn = this, msg = $('test-email-msg');
+  btn.disabled = true; msg.textContent = 'Sending…';
+  try {
+    var r = await api('/test-email', { method: 'POST', body: {} });
+    msg.textContent = 'Sent from ' + r.from + '. Check your inbox (and spam).';
+  } catch (e) { msg.textContent = 'Failed: ' + e.message; }
+  btn.disabled = false;
+});
+
 async function loadSetupChecks() {
   var box = clear($('setup-checks'));
   var h = await fetch('/api/health').then(function (r) { return r.json(); }).catch(function () { return null; });
@@ -356,6 +367,7 @@ async function loadSetupChecks() {
     row(h.ok, h.ok ? 'Server config complete' : 'Missing server config: ' + (h.missing || []).join(', '), 'Set these in Netlify → Environment variables, then redeploy.');
     row(/^https:\/\/tcgspeedshipper\.com$/.test(h.config.site_url), 'Site URL: ' + h.config.site_url, 'Set PUBLIC_SITE_URL=https://tcgspeedshipper.com in Netlify.');
     // Mirrors the pricing page: the yearly toggle shows when either plan has a yearly price.
+    row(!!h.config.email_key, h.config.email_key ? 'Email (Resend): key set' : 'Email (Resend): not set up yet', 'Add RESEND_API_KEY in Railway → Variables, then use "Send me a test email".');
     var yb = h.config.price_base_annual, yp = h.config.price_premium_annual;
     row(yb || yp, 'Yearly prices: ' + (yb && yp ? 'Base and Premium' : yb ? 'Base only (Premium is monthly-only)' : yp ? 'Premium only (Base is monthly-only)' : 'not set, so the yearly toggle stays hidden'),
       'Create yearly prices in Stripe and set STRIPE_PRICE_BASE_ANNUAL / STRIPE_PRICE_PREMIUM_ANNUAL.');

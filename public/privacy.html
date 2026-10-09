@@ -190,6 +190,7 @@ a { color: var(--accent); }
       <li><strong>Supabase</strong> — authentication and account/plan storage, if you sign in.</li>
       <li><strong>Stripe</strong> — payment processing and the billing portal for paid plans and postage balances.</li>
       <li><strong>Pitney Bowes</strong> — only if you buy postage in the app: the recipient and return address, weight and service for that label are sent to Pitney Bowes to create the USPS label and tracking.</li>
+      <li><strong>Resend</strong> — sends account emails (like a sign-up confirmation or password help) to the email address on your account. It receives that address and the message, nothing else.</li>
       <li><strong>Cloudflare Turnstile</strong> — a privacy-first “I'm human” check shown only on the Create Account form, to stop bot sign-ups. It doesn't set advertising or tracking cookies.</li>
             <li><strong>No third-party script hosts</strong> (one exception: the Cloudflare Turnstile check on the Create Account form). The open-source jsPDF, QR code and Supabase libraries are served from our own domain, and our fonts are self-hosted, so loading a page doesn't contact a CDN or Google.</li>
     </ul>

@@ -519,9 +519,11 @@ router.get('/health', (req, res) => {
     // Postage pilot (optional): Pitney Bowes keys and which mode it runs in.
     pb_keys: !!(process.env.PB_API_KEY && process.env.PB_API_SECRET),
     pb_mode: require('./postage').pbConfig().mode,
+    // Transactional email (optional until sign-up verification ships).
+    email_key: require('./email').emailConfig().configured,
   };
   // Yearly prices and postage are optional, so their absence doesn't mark the deploy unhealthy.
-  const missing = Object.keys(config).filter((k) => config[k] === false && !/_annual$|^pb_/.test(k));
+  const missing = Object.keys(config).filter((k) => config[k] === false && !/_annual$|^pb_|^email_/.test(k));
   res.json({
     ok: missing.length === 0,
     clients: { stripe: !!stripe, supabase_admin: !!supabaseAdmin },
@@ -1152,6 +1154,23 @@ router.get('/admin/affiliates', requireSupabase, requireUser, requireOwner, asyn
 // Creator partner deal: 40% of every payment their referrals make, for as
 // long as they stay subscribed, plus a free year of Premium on activation.
 const AFFILIATE_DEFAULT_RATE = 0.4;
+
+// Owner-only: send a test email to the owner, to confirm Resend works.
+router.post('/admin/test-email', express.json(), requireSupabase, requireUser, requireOwner, async (req, res) => {
+  const { sendEmail, emailConfig } = require('./email');
+  try {
+    const r = await sendEmail({
+      to: OWNER_EMAIL,
+      subject: 'TCG Speed Shipper: test email',
+      html: '<p>Your email setup works. Sent from <strong>' + emailConfig().from.replace(/[<>&]/g, '') + '</strong>.</p>',
+      text: 'Your email setup works. Sent from ' + emailConfig().from,
+    });
+    res.json({ ok: true, id: r.id, from: emailConfig().from });
+  } catch (e) {
+    await logError('email', 'test email failed:', e && e.message);
+    res.status(e.status && e.status < 500 ? 400 : 502).json({ error: e.message || 'Could not send.' });
+  }
+});
 
 router.post('/admin/affiliates', express.json(), requireSupabase, requireUser, requireOwner, async (req, res) => {
   try {
