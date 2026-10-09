@@ -143,7 +143,9 @@ function reset(existing) { state.existing = existing || null; state.created.leng
   global.fetch = async (url, init) => {
     if (String(url).includes('challenges.cloudflare.com')) {
       verifyCalls.push(String(init.body));
-      return { json: async () => ({ success: /response=good/.test(String(init.body)) }) };
+      const body = String(init.body);
+      const ok = /response=(good|elsewhere|otherform)/.test(body);
+      return { json: async () => ({ success: ok, action: /otherform/.test(body) ? 'login' : 'signup', hostname: /elsewhere/.test(body) ? 'evil.example' : 'tcgspeedshipper.com' }) };
     }
     return realFetch(url, init);
   };
@@ -154,7 +156,11 @@ function reset(existing) { state.existing = existing || null; state.created.leng
   check('on: a failed check is refused', res.status === 400 && state.created.length === 0);
   res = await post('/api/signup', { email: 'human@example.com', password: 'longenough1', captchaToken: 'good' }, '198.51.100.3');
   check('on: a passed check creates the account', res.status === 200 && state.created.length === 1, JSON.stringify(res.body));
-  check('the secret goes only to Cloudflare, with the token', verifyCalls.length === 2 && verifyCalls.every((b) => /secret=0x4AAA-secret/.test(b)));
+  res = await post('/api/signup', { email: 'h2@example.com', password: 'longenough1', captchaToken: 'elsewhere' }, '198.51.100.5');
+  check('on: a token solved on another website is refused', res.status === 400);
+  res = await post('/api/signup', { email: 'h3@example.com', password: 'longenough1', captchaToken: 'otherform' }, '198.51.100.6');
+  check('on: a token from a different form is refused', res.status === 400 && state.created.length === 1);
+  check('the secret goes only to Cloudflare, with the token', verifyCalls.length === 4 && verifyCalls.every((b) => /secret=0x4AAA-secret/.test(b)));
   global.fetch = async (url, init) => { if (String(url).includes('challenges.cloudflare.com')) throw new Error('down'); return realFetch(url, init); };
   reset(null);
   res = await post('/api/signup', { email: 'outage@example.com', password: 'longenough1', captchaToken: 'x' }, '198.51.100.4');

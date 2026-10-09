@@ -690,6 +690,7 @@ router.get('/captcha', (req, res) => {
   res.set('Cache-Control', 'no-store');
   res.json({ siteKey: (process.env.TURNSTILE_SECRET_KEY && process.env.TURNSTILE_SITE_KEY) || null });
 });
+const CAPTCHA_HOST_RE = /^(?:(?:www\.)?tcgspeedshipper\.com|[a-z0-9-]+\.up\.railway\.app|localhost|127\.0\.0\.1)$/i;
 async function captchaOk(token, ip) {
   const secret = process.env.TURNSTILE_SECRET_KEY;
   if (!secret || !process.env.TURNSTILE_SITE_KEY) return true;
@@ -702,7 +703,11 @@ async function captchaOk(token, ip) {
       signal: AbortSignal.timeout(8000),
     });
     const j = await r.json();
-    return !!(j && j.success);
+    if (!(j && j.success)) return false;
+    // A valid token from another site or another form must not count.
+    if (j.action && j.action !== 'signup') return false;
+    if (j.hostname && !CAPTCHA_HOST_RE.test(j.hostname)) return false;
+    return true;
   } catch (e) {
     // Cloudflare unreachable: let real people in (the per-IP sign-up
     // throttle still applies) rather than block every sign-up.

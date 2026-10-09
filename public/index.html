@@ -4256,6 +4256,7 @@ document.getElementById('tracking-copy-all-btn').addEventListener('click', funct
           box.hidden = false;
           captcha.widget = window.turnstile.render(box, {
             sitekey: captcha.siteKey,
+            action: 'signup',
             callback: function (t) { captcha.token = t; },
             'expired-callback': function () { captcha.token = null; },
             'error-callback': function () { captcha.token = null; }
