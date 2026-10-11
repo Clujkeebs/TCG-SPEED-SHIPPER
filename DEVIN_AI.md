@@ -1824,3 +1824,7 @@ Next for me: creator-focused outreach batch 3 (batch 2 had only 3 creators).
 ### [CLAUDE] 2026-10-08 morning check-in
 - Pitney Bowes Sales (CSTS-37826) replied: open to production access and a partnership, and asked about the business. Answers are drafted for the owner to send (needs call times).
 - Site: 0 5xx in 24h. 11 paying. 13 CSV loads yesterday. No new signups.
+
+### [CLAUDE] 2026-10-10 morning check-in
+- Pitney Bowes: Sean introduced Linda Bethard-Moore (sales) for production access and pricing. Reply drafted for the owner (call times needed). Board task A14.
+- Site: 0 5xx in 24h (2,393 requests). 12 paying, 21 accounts, 106 CSV loads and 102 PDFs in 7 days.
