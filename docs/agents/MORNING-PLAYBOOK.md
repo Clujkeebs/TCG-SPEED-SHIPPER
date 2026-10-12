@@ -85,6 +85,7 @@ deploy.
     the post and its dateModified/sitemap lastmod the same day.
 
 ## Changelog
+- 2026-10-12 (5am run): Monday scoreboard row added. A Premium subscription was cancelled last week (premium 5 to 4); the board still waits on the owner for the Linda reply (A14). Newsletter dates re-checked: USPS military/international dates are not out yet, so the Oct 13 issue stays as written.
 - 2026-10-11 (5am run): quiet Sunday, nothing new from the owner or customers. Paying count dropped 12 to 11 between runs: when it moves, check Stripe for a cancellation and note it. Unmerged work from the previous run (PR never opened) is easy to miss: run `git status -sb` first and ship leftovers.
 - 2026-10-10 (5am run): Pitney Bowes handed us to a sales rep overnight (Gmail inbox search with newer_than:2d catches late-evening replies; a thread's newest message is hidden in search previews, so open the thread). Added board task A14 and drafted the reply.
 - 2026-10-09 (5am run): the owner sent the Pitney Bowes answers and Rob's volume question overnight; check Sent mail (in:sent to:<address>) to tick tasks, since the owner often acts on drafts without ticking. Fixed postage_bought counting failed buys.
