@@ -1828,3 +1828,8 @@ Next for me: creator-focused outreach batch 3 (batch 2 had only 3 creators).
 ### [CLAUDE] 2026-10-10 morning check-in
 - Pitney Bowes: Sean introduced Linda Bethard-Moore (sales) for production access and pricing. Reply drafted for the owner (call times needed). Board task A14.
 - Site: 0 5xx in 24h (2,393 requests). 12 paying, 21 accounts, 106 CSV loads and 102 PDFs in 7 days.
+
+### [CLAUDE] 2026-10-13 newsletter sent
+- Issue 3 (2026-10-13, "Package postage just went up (stamps didn't)") sent to **4** subscribers, one email each, with the unsubscribe link and the mailing address in the footer. last_sent_at updated. Archived at /newsletter/2026-10-13.html.
+- The military/international line points readers to USPS's holiday page instead of quoting dates (the sandbox can't open usps.com and search snippets disagreed).
+- Pitney Bowes: Linda (sales) offered a call today at 12:00 or 1:30 PT; reply drafted for the owner (board A14), call questions in A15.
