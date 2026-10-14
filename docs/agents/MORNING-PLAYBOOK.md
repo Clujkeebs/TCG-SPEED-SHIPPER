@@ -81,10 +81,12 @@ deploy.
 8. Chrome extension, "Paste tracking" first (draft:
    docs/research/chrome-extension.md; owner discussion E5).
 9. SEO pages with Devin: TCGplayer shipping how-tos, comparisons.
+11. Send the newsletter through Resend (email.js) once B11 is done: plain links, no Google redirect wrappers, one-click unsubscribe header.
 10. Keep evergreen posts fresh: when a USPS or TCGplayer fact changes, update
     the post and its dateModified/sitemap lastmod the same day.
 
 ## Changelog
+- 2026-10-13 (newsletter send): the Gmail connector wraps links in google.com/url redirects on send (the draft view and sent copy show it). Newsletters should move to the Resend sender once B11 (domain verified) is done; added to Ideas. Replies to newsletters arrive within minutes (Rob asked about the postage pilot): check the inbox again after a send.
 - 2026-10-13 (5am run): Linda (Pitney Bowes sales) answered the owner's intro with call times for the same day. Vendor replies can be time-critical: read the thread's timestamps and zones, draft the reply right away, and put the deadline in the task title. Also: the sandbox can't open usps.com, so link to USPS pages instead of quoting dates from search snippets.
 - 2026-10-12 (5am run): Monday scoreboard row added. A Premium subscription was cancelled last week (premium 5 to 4); the board still waits on the owner for the Linda reply (A14). Newsletter dates re-checked: USPS military/international dates are not out yet, so the Oct 13 issue stays as written.
 - 2026-10-11 (5am run): quiet Sunday, nothing new from the owner or customers. Paying count dropped 12 to 11 between runs: when it moves, check Stripe for a cancellation and note it. Unmerged work from the previous run (PR never opened) is easy to miss: run `git status -sb` first and ship leftovers.
