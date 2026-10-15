@@ -63,3 +63,10 @@ Needs owner: a real TCGplayer inventory export (board task S4); about 50 card ph
 starts); Granola set up before the Pitney Bowes call (G12); test the sign-up code with a second email
 (B13).
 Next: review PRs; write the `suite` status document to the board each morning.
+
+### 2026-10-15 · hq · board redesign · done
+Rebuilt the owner's board (`docs/shipper-hq.html`) with top tabs: Now, Roadmap, Suite, Library, Meetings, Ideas. Now shows the newest Claude posts, one Next up card and the open tasks in priority order (security first). Roadmap, Suite (product cards, milestones, upload box), Library (about 50 links), Meetings (call notes saved to `meetings`) and Ideas (24 ranked, Do this / Not now saved to `ideas`) are new. Added tasks B13, G12, S4, S5. The owner's ticks and notes (`progress`, `inbox`) are read and written as before; nothing was deleted.
+Numbers: no console errors and no sideways scroll at 820x1180, 1180x820 and 390x844, in dark and light.
+Needs Builder: write document `suite/status` in the board's database each morning: `{ updatedAt, products: [{ id: "scan"|"ext"|"agent"|"sites", name, state, milestone, line }], log: [{ at, who, line }] }`. Until then the Suite tab shows the Oct 15 starting facts.
+Needs owner: none beyond the new tasks B13 and G12 on the board.
+Next: none.
