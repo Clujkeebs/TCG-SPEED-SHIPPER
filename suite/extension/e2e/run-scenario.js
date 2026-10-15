@@ -9,8 +9,12 @@ export const pwPath = process.env.PLAYWRIGHT_PATH || '/opt/node22/lib/node_modul
 export const canRun = existsSync(chromePath) && existsSync(pwPath);
 
 export async function runScenario(scenarioPath, timeoutMs = 60000) {
-  const env = { ...process.env };
-  delete env.NODE_TEST_CONTEXT; // otherwise the child behaves as a test-runner child and can hang
+  // Allow-listed environment: proxy variables, NODE_OPTIONS, npm_config_* and NODE_TEST_CONTEXT
+  // from the caller must not reach the browser scenario, so it behaves the same in every shell.
+  const env = {};
+  for (const key of ['PATH', 'HOME', 'TMPDIR', 'CHROMIUM_PATH', 'PLAYWRIGHT_PATH', 'PLAYWRIGHT_BROWSERS_PATH']) {
+    if (process.env[key] !== undefined) env[key] = process.env[key];
+  }
   const child = spawn(process.execPath, [scenarioPath], { detached: true, stdio: ['ignore', 'pipe', 'pipe'], env });
   let log = '';
   child.stdout.on('data', (d) => (log += d));
@@ -22,5 +26,6 @@ export async function runScenario(scenarioPath, timeoutMs = 60000) {
   try { process.kill(-child.pid, 'SIGKILL'); } catch { /* already gone */ }
   child.stdout.destroy();
   child.stderr.destroy();
-  return { code, log: log.split('\n').filter((l) => !/dbus/.test(l)).slice(-20).join('\n') };
+  const lines = log.split('\n').filter((l) => !/dbus/.test(l));
+  return { code, log: (code === 'timeout' ? `(no result after ${timeoutMs} ms; last output follows)\n` : '') + lines.slice(-30).join('\n') };
 }
