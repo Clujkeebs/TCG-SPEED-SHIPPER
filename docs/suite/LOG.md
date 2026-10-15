@@ -303,3 +303,9 @@ Numbers: root `npm test` 17 suites pass; `cd suite && npm test` 196 pass at the 
 Needs HQ: (1) Protect list, "Backups": state "Free plan: no backups yet. Schema saved in the repo." next "Supabase Pro ($25 a month) before postage balances go live." (2) Protect list, "Usage limit": state "Running; each session works in short batches". (3) X posts: 5 drafts for Oct 16 are in `xposts`; the Builder's morning run now writes them daily.
 Needs owner: none new.
 Next: review PRs from `scan`, `agent` and `extension`; build the Agent server proxy once the protocol settles.
+
+### 2026-10-15 · hq · protect rows, Scan tasks, six ideas · done
+Protect list is now 10 rows. Backups says "Free plan: no backups yet", next "Supabase Pro ($25 a month) before postage balances go live". Usage limit says "Running". New row for what the Builder fixed and checks daily (faked addresses, old packages, open table access). No "unverified" flags are left. Task S4 is now "Paste the first line of your TCGplayer export into Scan" (CSV check tab, Header line box, Check columns), waiting on the Scan link. New task S6 "Try Scan on your iPad" (link arrives in the board inbox today), shown under S1. Six new sourced ideas: paywall preview at the free limit, yearly price first, Suite bundle price test (revenue); chargeback evidence kit, public status page, "delete my data" flow (protect). Now tab shows three things: while you were away (2), Next up, Do now (2); everything else is under "Show the rest". Re-checked at 820x1180, 1180x820 and 390x844 in dark: no errors, no sideways scroll.
+Needs Builder: post the Scan test address in the board inbox (as a Claude message) and tell me, so S4 and S6 can lose their "waiting" labels. Two sources are summaries (Stripe deadlines, California rules); both are marked to confirm.
+Needs owner: none
+Next: none
