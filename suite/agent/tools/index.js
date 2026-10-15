@@ -7,18 +7,20 @@ import { draftReply, TONES } from '../support.js';
 import { CHART_KINDS, chartSeries, weeklyText, weekly } from '../analytics.js';
 import { findDeals, defaultFeed, CATEGORIES as DEAL_CATEGORIES, ALLOWED_SOURCES } from '../deals.js';
 import { validatePriceRule } from '../../shared/models.js';
+import { weeklySuggestions } from '../suggestions.js';
+import { createActTools } from './acts.js';
 
 const str = { type: 'string' };
 const int = { type: 'integer', minimum: 0 };
 
 // data: { orders, inventory, printings, rules?, now }
 export function createTools(data) {
-  const { orders, inventory, printings, rules = [DEFAULT_RULE], now, dealFeed = defaultFeed } = data;
+  const { orders, inventory, printings, rules = [DEFAULT_RULE], now, dealFeed = defaultFeed, messages = [], memory, automations } = data;
   const nowIso = () => (typeof now === 'function' ? now() : now);
   const printingById = new Map(printings.map((p) => [p.id, p]));
   const cap = (n, d = 20) => Math.min(n ?? d, 100);
 
-  return [
+  const tools = [
     {
       name: 'orders.search', tier: 'read',
       description: 'Find orders by buyer key, ship-to state, status, date range or item text. Never returns names or street addresses.',
@@ -147,7 +149,7 @@ export function createTools(data) {
     {
       name: 'pricing.suggestBatch', tier: 'read',
       description: 'Suggest prices for many inventory cards at once with a price rule, showing the change from the current price. Only suggests; changes no listing.',
-      inputSchema: { type: 'object', properties: { ruleId: str, rule: { type: 'object' }, onlyChanged: { type: 'boolean' }, limit: { type: 'integer', minimum: 1, maximum: 100 } } },
+      inputSchema: { type: 'object', properties: { ruleId: str, rule: { type: 'object' }, finish: { type: 'string', enum: FINISHES }, onlyChanged: { type: 'boolean' }, limit: { type: 'integer', minimum: 1, maximum: 100 } } },
       handler: (a) => {
         let rule = a.ruleId ? rules.find((r) => r.id === a.ruleId) : rules[0];
         if (a.rule) {
@@ -160,7 +162,7 @@ export function createTools(data) {
         let missing = 0, skipped = 0;
         for (const i of inventory) {
           const p = printingById.get(i.printingId);
-          if (!p || i.quantity <= 0) continue;
+          if (!p || i.quantity <= 0 || (a.finish && i.finish !== a.finish)) continue;
           const r = applyPriceRule(rule, p, { condition: i.condition, finish: i.finish });
           if (r.status === 'missing') { missing += 1; continue; }
           if (r.status === 'skip') { skipped += 1; continue; }
@@ -177,6 +179,16 @@ export function createTools(data) {
       description: 'Find supply deals (sleeves, toploaders, boxes, shelving, monitors, scanners) in the allow-listed sources. Reads a saved feed; never browses, never buys.',
       inputSchema: { type: 'object', properties: { category: { type: 'string', enum: DEAL_CATEGORIES }, maxPriceCents: int, minDiscountPct: { type: 'number', minimum: 0, maximum: 100 }, limit: { type: 'integer', minimum: 1, maximum: 50 } } },
       handler: (a) => ({ ...findDeals(dealFeed(), a), allowedSources: ALLOWED_SOURCES.map((s) => s.name) }),
+    },
+    {
+      name: 'messages.unanswered', tier: 'read',
+      description: 'Buyer messages that have no reply yet and are older than a number of hours (default 24).',
+      inputSchema: { type: 'object', properties: { hours: { type: 'integer', minimum: 0, maximum: 720 } } },
+      handler: (a) => {
+        const hours = a.hours ?? 24;
+        const list = messages.filter((m) => !m.answered && Date.parse(nowIso()) - Date.parse(m.receivedAt) > hours * 3600000).sort((x, y) => x.receivedAt.localeCompare(y.receivedAt));
+        return { total: list.length, messages: list.map((m) => ({ id: m.id, orderId: m.orderId, receivedAt: m.receivedAt, text: m.text })) };
+      },
     },
     {
       name: 'sync.previewImport', tier: 'read',
@@ -204,6 +216,15 @@ export function createTools(data) {
       handler: (a) => exportInventoryCsv(a.target, inventory, printings),
     },
   ];
+  const run = (name, args) => tools.find((t) => t.name === name).handler(args || {});
+  tools.push({
+    name: 'suggestions.weekly', tier: 'read',
+    description: 'Up to five things worth doing this week, from orders and stock, each with the numbers behind it and a goal to start.',
+    inputSchema: { type: 'object', properties: { limit: { type: 'integer', minimum: 1, maximum: 10 } } },
+    handler: (a) => weeklySuggestions({ run, now: nowIso(), memory, limit: a.limit }),
+  });
+  if (memory) tools.push(...createActTools({ inventory, printings, memory, automations }));
+  return tools;
 }
 
 export function registerAll(registry, data) {

@@ -76,3 +76,29 @@ in analytics), `shipTo { name?, address1, address2?, city, state, postalCode, co
 - Web apps and the extension keep working data in IndexedDB on the device.
 - Cloud sync, if we add it, is opt-in and encrypted on the client. Not in v0.
 - Nothing in this model is sent to our server unless a feature needs it and says so on screen.
+
+## Agent messages and records (added 2026-10-15, code in `suite/agent/`)
+Side panel <-> Agent messages use the bridge shape: request `{ source: 'tcgss-panel', v: 1, id, type, payload }`, response
+`{ source: 'tcgss-agent', v: 1, id, ok, result | error }`, events `{ source: 'tcgss-agent', v: 1, event, ... }`.
+`hello` returns `types` (every request type and event this service supports), plus `requests` and `events` separately. The new
+types appear only when the service has an agent, so an older panel sees no change. Checked by `validateEvent` in `protocol.js`.
+
+| Message | Shape |
+|---|---|
+| request `agent.memory.list` | no payload. Response `{ items: [{ id, text }] }` |
+| request `agent.memory.forget` | `{ id }`. Response `{ forgotten: true }` |
+| request `agent.undo` | `{ approvalId }`. Response `{ undone: true, status }` |
+| request `agent.inbox.list` | no payload. Response `{ cards: [{ approvalId, tool, description, why, undo, expected, args }] }` |
+| request `agent.suggestions` | no payload. Response `{ weekEnding, suggestions: [{ rank, id, title, why, goal }] }` (at most 5) |
+| event `agent.plan` | `{ planId, steps: [{ text, state: todo\|doing\|done\|skipped }] }` (1 to 8 steps) |
+| event `agent.memory` | `{ items: [{ id, text }] }` |
+| event `agent.progress` | `{ tool, ok, denied, summary }`; `summary` is a short plain-words line, never arguments |
+| event `agent.approval-needed` | `{ approvalId, tool, description, why, undo, expected?, args }` |
+
+Other records (all local to the device):
+- **Fact** (shop memory): `{ id, text, category: setting\|preference\|decision\|fact, source: user\|agent, key?, value?, createdAt, updatedAt }`. No emails, phone numbers or street addresses.
+- **Plan**: `{ id, goal, createdAt, source: rules\|model, steps: [{ id: 's1', tool, args, why, check? }] }`. An argument may be `"$s1.path"` or `{ $map: { from, pick } }` to use an earlier result.
+- **Card** (approval inbox): `{ id, status: pending\|approved\|done\|failed\|declined\|expired\|undone, tool, args, what, why, expected, undoText, actor, planId?, stepId?, createdAt, result?, undo? }`. Pending cards expire after 7 days.
+- **Report** (background job): `{ id, jobId, title, text, steps, cardIds, drafts?, event?, ranAt }`.
+- **Automation** is unchanged; `trigger` may now be `{ type: 'event', value: 'low-stock' | 'new-order' | 'unanswered-message' }`. Jobs the agent saves are always `approvalMode: 'always'`.
+- Buyer drafts carry `{{first_name}}`; the name is filled in on the device only.

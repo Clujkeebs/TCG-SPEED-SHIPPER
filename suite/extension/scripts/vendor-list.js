@@ -18,5 +18,16 @@ export const VENDORED = [
   'agent/deals.js',
   'agent/tools/index.js',
   'agent/sync/csv.js',
-  'agent/fixtures/deals.js'
+  'agent/fixtures/deals.js',
+  'agent/memory.js',
+  'agent/automations.js',
+  'agent/suggestions.js',
+  'agent/tools/acts.js',
+  'agent/plan.js',
+  'agent/planner.js',
+  'agent/agent.js',
+  'agent/inbox.js',
+  'agent/jobs.js',
+  'agent/events.js',
+  'agent/fixtures/messages.js'
 ];
