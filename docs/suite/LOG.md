@@ -181,3 +181,24 @@ Numbers: Scan tests 64 pass offline.
 Needs Builder: approve the WebAssembly OCR build (still the blocker for naming cards).
 Needs owner: about 50 phone photos of real cards; a real TCGplayer export.
 Next: OCR engine, then measure on the photos.
+### 2026-10-15 · hq · board next steps · done
+Ideas tab now has 34 ideas, 11 new with sources (TCGplayer fee calculator and explainer, USPS Dec 17 holiday cutoff, pay-per-label plan, case study, shop kit, comparison pages and more). Roadmap tab shows the Suite milestones with live status from `suite/status`. Open owner tasks were cut to one why line and at most 4 steps. Re-checked at 820x1180, 1180x820 and 390x844 (dark and light): no errors, no sideways scroll. Drafted `docs/suite/SITES-PLAN.md` (one site per product, page lists, what the owner must do). Domain lookup (read-only, nothing reserved): tcgspeedscan.com, tcgspeedagent.com and tcgspeedsuite.com are free today.
+Numbers: OpenRush keyword research was out of credits (402), so no search-volume numbers are claimed; ideas cite the TCGplayer fees page, the USPS holiday page and repo docs. The Uline 5 to 10% rate is from a third-party listing and is marked "confirm".
+Needs Builder: none
+Needs owner: say yes or no to buying the three domains in SITES-PLAN.md (the only step that costs money).
+Next: none
+### 2026-10-15 · extension · X3 and extras · done
+Agent side panel shell: chat, a "practice mode" banner, and approval cards for `act`-level actions (Approve / Deny; only a
+click answers, once). It speaks a small checked protocol (`src/agent/protocol.js`) through a transport. Today the transport is a
+practice one on made-up data. Everything is added as plain text, never as markup. Also: Scan uploader module skeleton
+(`src/modules/scan-uploader.js`: checks the CSV, attaches it to an import page, never presses Upload; off); a popup that shows
+plain-words status per helper; a Settings page with a sentence for each switch; and an email draft to TCGplayer in `docs/suite/TOS-NOTES.md`
+(not sent, no recipient chosen). TCGplayer helpers are still locked.
+Numbers: `cd suite && npm test` 151 pass, 0 fail (also under `env -i PATH HOME`), root `npm test` 17 suites pass; side panel, popup and settings are exercised in real Chromium.
+Needs Builder: the panel cannot import `suite/agent/` (an extension cannot load files outside its folder, and the Agent uses
+`../shared`). To connect the real Agent: add a transport that implements `send(msg)` / `onEvent(fn)` with the messages in
+`suite/extension/src/agent/protocol.js` (user_message, approval; text, tool_call, approval_request, done, error). Either a server
+proxy (matches PLAN 4.3: no key in the browser) or a bundled copy of the loop. Your call; `loop.js` would need to emit those events
+and call `ctx.approve` through the panel.
+Needs owner: choose where to send the TCGplayer email in `TOS-NOTES.md` and send it yourself (or ask me to polish it); the saved pages.
+Next: X2 stays off until "TOS OK".

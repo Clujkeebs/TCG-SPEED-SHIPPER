@@ -1,4 +1,4 @@
-# TCG Speed Suite: Chrome extension (milestones X0 and X1)
+# TCG Speed Suite: Chrome extension (milestones X0, X1, X3)
 
 Manifest V3, plain JavaScript modules, no runtime dependencies, no build tools. **Nothing in it
 touches TCGplayer yet**: there is no TCGplayer content script, and a code gate (`TOS_OK` in
@@ -31,6 +31,9 @@ either is missing.
 | `src/store.js` | IndexedDB (memory fallback), validated with `src/vendor/models.js`. |
 | `src/adapters/selectors.js` | Every page selector, in one file (synthetic placeholders for now). |
 | `src/adapters/index.js` | `detectPage`, `readOrders`, `fillTracking`, `openImport`, `attachFile`, `selfTest`. Dry run by default; never submits or uploads. |
+| `src/agent/` | Side-panel protocol (checked messages), practice transport (made-up data), and the panel's DOM-free controller. Approval cards for `act` actions: only a click answers one, once. |
+| `src/modules/scan-uploader.js` | Puts the Scan CSV in an import page's file box. Never presses Upload. Off. |
+| `src/flags-text.js` | Plain-words text for Settings and the popup. |
 | `src/ui/` | Popup, side panel placeholder, options page. |
 | `PRIVACY.md`, `STORE-CHECKLIST.md` | Drafts for the Web Store. Not submitted. |
 

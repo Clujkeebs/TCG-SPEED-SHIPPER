@@ -589,6 +589,28 @@ T.S5 = {id:"S5", later:1, min:0, title:"About 50 photos of cards for Scan testin
   steps:["Plain surface, normal light, one card per photo, straight on.","Mix the games: Magic, Pokémon, Yu-Gi-Oh!, One Piece. Include some foils and a few in sleeves or toploaders.","Add them in the Suite tab's upload box."],
   unlock:"Scan's accuracy gets measured on real cards."};
 
+
+/* Short versions of the long tasks (Oct 15): one why line, at most 4 steps. */
+const SHORT = {
+ A15:{why:"This call decides when real postage goes live and what each label costs.", steps:["Ask the five questions listed in the Meetings tab.","Afterwards paste what they said into the note. Claude turns it into a plan."]},
+ G12:{why:"Granola writes the call notes so you can listen. Claude reads them and makes tasks.", steps:["Install <b>Granola</b> (granola.ai: Mac, Windows and iPhone; an iPad app is unconfirmed) on the device for the call. Sign in, connect your calendar and allow the microphone.","At the start of the call say “I use an AI note-taker, OK?” and start Granola.","In claude.ai go to <b>Settings → Connectors</b>, find <b>Granola</b>, tap <b>Connect</b> and sign in. Claude cannot do this sign-in. (If it is missing, add a custom connector with the address below.)","After the call tap “Tell Claude: call notes are in” in the Meetings tab."]},
+ H2:{steps:["New campaign → goal <b>Website traffic</b> → type <b>Search</b>. Untick Search Partners and Display. United States, English.","Bidding <b>Maximize clicks</b>, max CPC <b>$1.50</b>, budget <b>$5/day</b>. Turn <b>off</b> auto-apply recommendations and AI Max.","Paste the value below as the final URL suffix. It shows which ad brought each visitor.","Paste the 4 ad groups from the Google Ads kit (START-HERE.html, Copy buttons)."]},
+ A11:{why:"Informed Visibility gives the scan updates that let us offer free tracking on stamped envelopes.", steps:["Log in at <b>gateway.usps.com</b> (Business Customer Gateway).","Open <b>Manage Services</b>, find <b>Informed Visibility – Mail Tracking & Reporting</b> and tap <b>Request Access</b>. Approve it yourself if it asks.","Write “IV requested” in the note. Claude then builds the barcode and the scan feed."]},
+ D7:{why:"Sellers ask how to ship TCGplayer orders fast on Reddit, Discord and Facebook. A helpful answer brings the warmest signups, free."},
+ H1:{why:"Paid search puts us in front of sellers searching “TCGplayer shipping labels”. Ignore Performance Max; use H2's Search-only setup."},
+ E5:{why:"A free browser add-on: “Print shipping” on TCGplayer's Orders page and “Paste tracking” back. Draft only; nothing is built."},
+ C1:{why:"TCGplayer's seller agreement bans marketing on packing slips, so a seller's account could be flagged."},
+ G9:{why:"Devin's work is useful long-term SEO, but at about $40 a month in revenue the subscription costs more than it earns back."},
+ S1:{why:"You asked for a suite: Shipper, Scan, a Chrome extension and an Agent. The plan is written and work has started."},
+ S2:{why:"The extension touches TCGplayer's site and their terms reportedly forbid bots, so we ask permission first."},
+ A13:{why:"A test buy proves the rebuilt buy flow before Rob uses it."},
+ C5:{why:"Your Stripe connector only reaches the live account. A free Sandbox lets Claude build plans safely."},
+ F3:{why:"After uploading orders you now get one card. Your eye is the test."},
+ G10:{why:"The old Netlify copy is still online and is a duplicate Google can find."}
+};
+Object.keys(SHORT).forEach(k=>{ if (T[k]) T[k] = Object.assign({}, T[k], SHORT[k]); });
+const CALL_QS = ["How do we get production access, and how long does it take?","What do we pay per letter (First-Class) and per Ground Advantage package? Any volume tiers?","Which company signs? (A family corporation with your dad as the officer is normal.)","Can we use one platform account, with sellers prepaying a balance in our app?","What is the next step, and by what date?"];
+
 /* Priority order: security first, then postage, free growth, paid growth, content and decisions, housekeeping, Suite. */
 const STAGES = [
  {id:"P1", name:"Security", tasks:["B13","B12","B4","B8","B9","B10","B11","B3","B6","B7","B1","B2","B5"].map(k=>T[k])},
@@ -712,18 +734,28 @@ const IDEAS = [
  {id:"newsletter-resend", what:"Send the weekly newsletter through Resend", why:"Removes Google's link wrappers and keeps sending in one place.", i:2, e:1, who:"Claude"},
  {id:"failed-pay", what:"Failed-payment emails and an annual-plan nudge", why:"The $29 yearly Base plan saves $6.88 over twelve $2.99 months, and recovered payments are revenue you already earned.", i:2, e:1, who:"Claude"},
  {id:"autoreload", what:"Auto-reload the postage balance", why:"“Add $50 when under $10” means fewer failed batches and more labels per seller.", i:2, e:1, who:"Claude", src:"Roadmap, Next"},
- {id:"seo-tools", what:"Free calculator pages: TCGplayer fees, envelope vs package cost", why:"Pages that answer a question sellers search for bring in visitors before they need labels.", i:3, e:2, who:"Claude"},
+ {id:"fee-calc", what:"A “what you keep after TCGplayer fees” calculator page", why:"Fees are 10.75% of the subtotal (capped at $75 per item) plus 2.5% and $0.30 on the order total, which is hard to do in your head. A free tool brings sellers in before they need labels.", i:3, e:1, who:"Claude", src:"help.tcgplayer.com/hc/en-us/articles/201357836 (other fee calculators exist, so make ours show postage too)"},
+ {id:"envelope-calc", what:"An envelope vs package cost calculator page", why:"Shows a seller what a tracked letter and a Ground Advantage package cost for their order, which leads straight to our postage.", i:2, e:1, who:"Claude", src:"docs/research/tracked-envelope-postage.md"},
+ {id:"fee-explainer", what:"An article and X thread: what TCGplayer takes from a sale", why:"Secondary sources say the commission rose to 10.75% and the per-item cap to $75 in February 2026. Sellers search for fee changes, and the page can link the calculator.", i:2, e:1, who:"Claude", src:"TCGplayer fees help page; misprint.com guide (a competitor, so confirm figures first)"},
+ {id:"low-volume-plan", what:"A pay-per-label plan with no monthly fee", why:"Rob says per-label fees stop beating his $30 meter at 150 to 300 labels a month, so small sellers are the best fit for per-label pricing.", i:2, e:2, who:"Claude, needs your yes on pricing (C5)", src:"Board task C6"},
+ {id:"rob-case-study", what:"Rob's story as a short case study", why:"He rented a $30 postage meter and said he'd drop it. A real seller's story lifts signups more than our own claims.", i:2, e:1, who:"Claude drafts, Rob and you approve", src:"Board tasks E2 and C6"},
+ {id:"cutoff-email", what:"Holiday cutoff reminder email to subscribers", why:"USPS says Ground Advantage and First-Class should be mailed by Dec 17 to arrive before Christmas. Two reminders (early and mid December) bring sellers back to print labels.", i:2, e:1, who:"Claude", src:"usps.com/holiday/holiday-shipping-dates.htm"},
+ {id:"seller-check-in", what:"A one-question check-in to paying sellers", why:"With about 12 paying accounts, personal replies are possible. “What one thing should we add?” guides what to build.", i:2, e:1, who:"Claude drafts, you approve", src:"Board stats: 11 to 12 paying accounts"},
+ {id:"card-postage-guide", what:"A “how much to mail 1, 5, 20 cards” price page", why:"It answers the most basic seller question and points to envelopes for cheap orders and packages for expensive ones.", i:2, e:1, who:"Claude", src:"USPS public rates (checked when written)"},
+ {id:"shop-kit", what:"A one-page kit for card shops and creators", why:"One page with a partner code and three talking points makes it easy to say yes. The ranked shortlist already exists.", i:2, e:1, who:"Claude builds, you send", src:"docs/partner-prospects.md"},
+ {id:"vs-pages", what:"Honest comparison pages: us vs other shipping tools", why:"Sellers search tool names before choosing. The competitor research already lists what each tool has and lacks.", i:2, e:1, who:"Claude", src:"docs/competitors.md"},
+ {id:"changelog", what:"A public “what's new” page", why:"Gives sellers a reason to come back and gives you a link to post on X when something ships.", i:1, e:1, who:"Claude"},
  {id:"pro-plan", what:"Pro plan and the new prices", why:"20 Pro sellers is about $300 a month on their own. The plan is written and waits for your answer on C5.", i:3, e:2, who:"Claude, needs your answer on C5", src:"docs/pricing-plan.md"},
  {id:"ebay-whatnot", what:"eBay and Whatnot CSV presets", why:"The same app serves sellers beyond TCGplayer, which the plan sizes at about three times the market. Needs one sample file from each.", i:3, e:2, who:"Claude, needs sample files (F2)", src:"docs/competitors.md"},
  {id:"partners", what:"Partner push to card shops and YouTubers", why:"A ranked shortlist already exists. Partners cost nothing until they bring a paying seller.", i:2, e:1, who:"You send, Claude drafts", src:"docs/partner-prospects.md"},
  {id:"demo-video", what:"A silent, captioned demo video", why:"One short clip works on X, TikTok, Shorts, Reels and the homepage.", i:3, e:2, who:"Claude, you post", src:"Task E1"},
- {id:"holiday-guide", what:"Holiday shipping cutoff guide", why:"A dated page is easy to share and gets searched in the weeks before the cutoff (Dec 17 for the post we drafted).", i:2, e:1, who:"Claude"},
+ {id:"holiday-guide", what:"Holiday shipping cutoff guide", why:"USPS lists Dec 17 as the last recommended day for Ground Advantage and First-Class to arrive before Christmas. A dated page is easy to share.", i:2, e:1, who:"Claude", src:"usps.com/holiday/holiday-shipping-dates.htm"},
  {id:"guides", what:"Weekly guides for Lorcana, One Piece, Flesh and Blood and sports cards", why:"Each game has its own sellers and its own searches. One guide a week keeps the blog growing.", i:2, e:2, who:"Claude"},
  {id:"community", what:"Weekly community posts", why:"Reddit, Discord and Facebook groups are where sellers ask how to ship fast. Claude drafts to each group's rules.", i:2, e:1, who:"You post, Claude drafts", src:"docs/community-channels.md"},
  {id:"uptime", what:"Error and uptime alerts by email", why:"You hear about a problem before a customer does.", i:2, e:1, who:"Claude"},
  {id:"seller-stories", what:"Apply to TCGplayer Seller Stories", why:"A feature on TCGplayer's blog reaches the exact audience we want.", i:2, e:1, who:"You", src:"Task D4"},
  {id:"referral", what:"Refer a seller: both get a free month", why:"Sellers know other sellers, and it costs nothing until it works.", i:2, e:2, who:"Claude", src:"Roadmap, November"},
- {id:"supplies", what:"Supplies page with affiliate links", why:"Envelopes, toploaders and printers pay about 3 to 8% on each purchase, and we hold no stock.", i:1, e:1, who:"Claude", src:"docs/research/road-to-10k.md"},
+ {id:"supplies", what:"Supplies page with affiliate links", why:"Envelopes, toploaders and printers pay about 3 to 8% on each purchase, and we hold no stock. A third-party listing says Uline pays 5 to 10%; confirm on Uline's own page.", i:1, e:1, who:"Claude", src:"docs/research/road-to-10k.md"},
  {id:"winback", what:"Win-back email for cancelled and quiet accounts", why:"Cheaper than finding a new seller. The email rules already cover it.", i:1, e:1, who:"Claude"},
  {id:"savings", what:"Show “time and money saved this month” inside the app", why:"Reminds sellers what they get at renewal time.", i:1, e:1, who:"Claude"},
  {id:"envelope-tracking", what:"Free tracking on stamped envelopes", why:"Three competitors charge for it. We have the Mailer ID. Needs Informed Visibility access (A11).", i:3, e:3, who:"Claude, needs A11", src:"docs/competitors.md"},
@@ -827,7 +859,8 @@ function renderRoadmap(){
     <ol class="path card">${PATH.map((p,i)=>{ const d=p[1].every(isDone); return `<li class="${d?"done":i===curStep?"now":""}"><span class="mk"></span><div><b>${esc(p[0])}</b> ${p[1].map(chip).join(" ")}<div class="muted small">${esc(p[2])}</div></div></li>`; }).join("")}</ol>
   </section>
   <section class="sec"><h2>Suite roadmap</h2>
-    <div class="card" style="display:grid;gap:8px">${suiteView().products.filter(p=>p.ms.length).map(p=>`<div><b>${esc(p.name)}</b> <span class="muted small">${p.ms.map(m=>m[0]).join(" → ")}</span></div>`).join("")}<div><button class="link-btn" data-gotab="suite">Open the Suite tab</button></div></div>
+    <div class="card" style="display:grid;gap:14px">${suiteView().products.map(p=>{ const ci=p.cur?p.ms.findIndex(m=>m[0]===p.cur):-1; return `<div><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><b>${esc(p.name)}</b><span class="muted small">${esc(p.state||"")}</span></div>${p.ms.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${p.ms.map((m,i)=>`<span class="pill ${ci>=0&&i<ci?"ok":i===ci?"acc":""}" title="${esc(m[1])}">${m[0]}${ci>=0&&i<ci?" ✓":""}</span>`).join("")}</div><div class="muted small" style="margin-top:6px">${ci>=0?esc(p.ms[ci][1]):esc(p.line||"")}</div>`:`<div class="muted small">${esc(p.line||"")}</div>`}</div>`; }).join("")}
+    <div><button class="link-btn" data-gotab="suite">Open the Suite tab</button></div></div>
   </section>
   <section class="sec"><h2>The long game</h2><div class="card" style="display:grid;gap:8px">${LONG.map(l=>`<p>${esc(l)}</p>`).join("")}</div></section>
   <section class="sec">
@@ -922,13 +955,13 @@ function renderLibrary(){
 /* ---------- Meetings ---------- */
 let meetInit=false;
 function renderMeetings(){
-  if(!meetInit){ meetInit=true; openSet.add("A15"); openSet.add("G12"); }
+  if(!meetInit){ meetInit=true; openSet.add("G12"); }
   const draft = local.get("hq-meet-draft") || {title:"", text:""};
   $("#tab-meetings").innerHTML = `
   <section class="sec"><h2>Next call</h2>
     <div class="card" style="display:grid;gap:8px"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><h3>Pitney Bowes</h3><span class="pill warn">No date yet</span></div>
     <p class="muted">Waiting on Linda to pick a time. This call decides when real postage goes live and what each label costs.</p></div></section>
-  <section class="sec"><h2>Five questions</h2><div class="list">${byId.A15?taskHTML(byId.A15):""}</div></section>
+  <section class="sec"><h2>Five questions</h2><div class="card"><ol class="qs">${CALL_QS.map(q=>`<li>${esc(q)}</li>`).join("")}</ol></div><div class="list">${byId.A15?taskHTML(byId.A15):""}</div></section>
   <section class="sec"><h2>Set up Granola</h2><div class="list">${byId.G12?taskHTML(byId.G12):""}</div></section>
   <section class="sec"><h2>Call notes</h2>
     <div class="card" style="display:grid;gap:10px">
