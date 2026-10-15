@@ -9,6 +9,7 @@ import { detectCard } from '../vision/detect.js';
 import { createLiveScanner } from '../core/live.js';
 import { identifyFrame } from '../ocr/pipeline.js';
 import { browserFeedback } from '../core/rapid.js';
+import { createBrowserEngine } from '../ocr/engine-browser.js';
 
 const $ = (id) => document.getElementById(id);
 const FOIL_FOR = { mtg: 'foil', pokemon: 'holo', yugioh: 'first-edition', onepiece: 'foil' };
@@ -215,13 +216,20 @@ function showChoices(options) {
 }
 
 // One frame (live, captured or from a photo) -> add, ask, or explain. Returns a short text for photo lists.
+let builtIn = null;
+async function getEngine() {
+  if (window.SpeedScanOcr) return window.SpeedScanOcr; // a test or a different reader can be plugged in
+  builtIn ||= createBrowserEngine();
+  try { await builtIn.ready(); return builtIn; } catch { builtIn = null; return null; }
+}
 async function handleFrame(frame, name = '') {
-  const engine = window.SpeedScanOcr;
   const prefix = name ? name + ': ' : '';
+  scanSay(prefix + 'reading…');
+  const engine = await getEngine();
   if (!engine) {
     const box = detectCard(frame);
     feedback[box ? 'needsTap' : 'miss']();
-    const msg = box ? 'card found, but no text reader is installed yet, so add it by search.' : 'no card found. Try a plain background and more light.';
+    const msg = box ? 'card found, but the text reader could not load, so add it by search.' : 'no card found. Try a plain background and more light.';
     scanSay(prefix + msg);
     return msg;
   }

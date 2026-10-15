@@ -25,6 +25,11 @@ test('parse: reading slips inside numbers are repaired, names are left alone', (
   assert.equal(parseCardText(null).name, undefined);
 });
 
+test('parse: a bullet misread as another symbol still finds the set code', () => {
+  assert.equal(parseCardText('Lightning Bolt\n149/274 R\nM11 «EN', 'mtg').setCode, 'M11');
+  assert.equal(parseCardText('X\n267/274 R\nMH2 « EN', 'mtg').setCode, 'MH2');
+});
+
 test('similarity', () => {
   assert.equal(similarity('Nami', 'nami'), 1);
   assert.ok(similarity('Lightnng Bolt', 'Lightning Bolt') > 0.9);

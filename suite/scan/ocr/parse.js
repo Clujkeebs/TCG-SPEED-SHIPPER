@@ -20,7 +20,7 @@ export function parseCardText(text, game) {
       m = joined.match(/\b([0-9OIl]{1,4})\s*\/\s*([0-9OIl]{2,4})\b/);
       if (m) clues.number = fixDigits(m[1]);
       // Set code: 3-5 capitals/digits next to a language tag (M11 EN, OBF EN) or a bullet.
-      const s = joined.match(/\b([A-Z][A-Z0-9]{2,4})\s*[•·.\-]?\s*(?:EN|JA|DE|FR|ES|IT|PT)\b/);
+      const s = joined.match(/\b([A-Z][A-Z0-9]{2,4})\s*[^\w\s]{0,2}\s*(?:EN|JA|DE|FR|ES|IT|PT)\b/);
       if (s) clues.setCode = s[1];
     }
   }
