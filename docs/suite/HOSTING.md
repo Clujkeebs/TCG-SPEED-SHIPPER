@@ -6,12 +6,16 @@ touch the other. The live Shipper server never imports `suite/` and does not ser
 
 ## Scan test copy (private preview)
 - A second Railway service in the same project (name: `suite-scan-preview`), built from `main`.
-- Config file: `suite/host/railway.json` (the Shipper's own `railway.json` at the repo root is not used by it).
-  Start command: build Scan to a static folder, then serve it with `suite/host/server.js` (no dependencies).
-- Redeploys only when something under `suite/scan/`, `suite/shared/` or `suite/host/` changes.
+- Settings live on the service in Railway (set with `update-service`), not in a file, because the repo's root
+  `railway.json` is shared by both services. That file now holds only the health check (`/api/health`, which
+  both servers answer) and the restart policy. The Shipper starts with `npm start`; do not put a
+  `startCommand` back in it, or it would override the preview's own start command.
+- Start command: `node suite/scan/build.js suite/scan/dist && node suite/host/server.js suite/scan/dist`
+  (builds Scan to a static folder, then serves it; no dependencies).
+- Watch paths: `suite/scan/**`, `suite/shared/**`, `suite/host/**`, so it redeploys only when those change.
 - Private: search engines are told to stay out (`X-Robots-Tag: noindex` and `robots.txt` Disallow). The address
   is not linked anywhere. Camera access is allowed for the app itself and nothing else.
-- Health check: `/healthz`. Logs: Railway, service `suite-scan-preview`.
+- Health check: `/api/health` (also `/healthz`). Logs: Railway, service `suite-scan-preview`.
 - Cost: one small Node process, well under a dollar a month of the Hobby plan's usage.
 - Rollback: delete the service in Railway. Nothing else depends on it.
 

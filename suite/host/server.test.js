@@ -97,6 +97,7 @@ test('health check and robots; HSTS only behind https', async () => {
   const s = await up();
   try {
     const h = await get(s, '/healthz'); assert.equal(h.status, 200); assert.equal(h.body.toString(), 'ok');
+    assert.equal((await get(s, '/api/health')).status, 200, 'the Shipper\'s health check path also works here');
     const r = await get(s, '/robots.txt'); assert.match(r.body.toString(), /Disallow: \//);
     assert.equal(h.headers['strict-transport-security'], undefined);
     const t = await get(s, '/', { headers: { 'x-forwarded-proto': 'https' } });

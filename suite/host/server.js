@@ -53,7 +53,7 @@ export function createHost({ root, noindex = true } = {}) {
       let pathname;
       try { pathname = decodeURIComponent(new URL(req.url, 'http://x').pathname); } catch { return plain(req, res, 400, 'Bad request'); }
       if (pathname.includes('\0')) return plain(req, res, 400, 'Bad request');
-      if (pathname === '/healthz') return plain(req, res, 200, 'ok', { 'Cache-Control': 'no-store' });
+      if (pathname === '/healthz' || pathname === '/api/health') return plain(req, res, 200, 'ok', { 'Cache-Control': 'no-store' });
       if (noindex && pathname === '/robots.txt') return plain(req, res, 200, 'User-agent: *\nDisallow: /\n', { 'Cache-Control': 'no-cache' });
 
       let file = resolve(join(base, pathname));
