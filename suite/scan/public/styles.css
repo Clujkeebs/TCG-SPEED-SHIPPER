@@ -19,7 +19,7 @@ body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.45 'So
 .nav-tab:hover { color: #fff; }
 .nav-tab.active { color: #fff; border-bottom-color: var(--accent-light); }
 .nav-tab span { background: var(--accent); color: #fff; border-radius: 99px; padding: 0 7px; font-size: 11px; }
-@media (max-width: 520px) { .nav-brand { padding: 0 10px; font-size: 13px; } .nav-tab { font-size: 10px; } }
+@media (max-width: 520px) { .nav-brand { padding: 0 8px; font-size: 12px; } .nav-tab { font-size: 9px; padding: 0 2px; } }
 main { max-width: 760px; margin: 0 auto; padding: 14px 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .tab { display: grid; gap: 12px; }
 .tab[hidden] { display: none; }
@@ -67,3 +67,5 @@ button:disabled { opacity: .45; cursor: not-allowed; transform: none; }
 .bar > div { font: 600 13px 'JetBrains Mono', ui-monospace, monospace; }
 .danger { color: var(--danger); }
 .thumbs { display: grid; gap: 6px; }
+textarea { font: 14px 'JetBrains Mono', ui-monospace, monospace; width: 100%; border: 1px solid var(--border-mid); border-radius: var(--radius-sm); padding: 10px 12px; }
+textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(45,106,79,.15); }

@@ -1,13 +1,13 @@
 # Speed Scan: reading cards (S1 evaluation)
 
-Status 2026-10-15. **No accuracy number on real cards exists yet.** Nothing below is a claim about real photos.
+Status 2026-10-15. **No accuracy number on real cards exists yet.** Everything measured below is on synthetic cards.
 
 ## What is built (all offline, tested)
 | Step | Code | State |
 |---|---|---|
 | Camera | `public/camera.js` (`getUserMedia`, frames stay on the device) | Starts and captures in a headless browser with a fake camera. Not tried on a real phone. |
 | Find and crop the card | `vision/detect.js` | Works on synthetic frames (plain background, noise). Straight-on boxes only, no perspective fix. Unknown on real photos. |
-| Read text | `ocr/pipeline.js` takes any engine with `recognize(image)` | **No engine bundled.** The app says so and falls back to search. |
+| Read text | `ocr/engine-browser.js`: self-hosted Tesseract.js in a worker, same `recognize(image)` interface as the test stand-in | Works offline after first load; measured on synthetic cards only. |
 | Text to clues | `ocr/parse.js` (set code, number, name; fixes O/0 and I/1 slips in numbers) | Unit-tested on typed examples for four games. |
 | Clues to cards | `ocr/resolve.js` over the offline index | See simulated numbers below. |
 | Accept or ask | `core/rapid.js`: auto-accept only if the top score is 0.9+ and 0.15 ahead; otherwise show 3 choices to tap | Tested. Name-only and number+name matches never auto-accept. |
@@ -26,11 +26,23 @@ the box overlaps the true one by 90% or more. 100 frames per row, 640×480, on t
 
 This only shows the finder is sound on clean synthetic frames. It says nothing about real photos or a phone's speed.
 
-## The text-reading engine: not chosen, and why
-iOS Safari has no text-detection API, so reading must run in WebAssembly. First candidate is a self-hosted
-Tesseract.js build. It is a vendored file of several MB plus language data, and needs its licence checked, so I did
-not add it without the Builder's say-so (see the log, "Needs Builder"). Image embeddings are the planned fallback for
-telling reprints apart. Neither was run, so there is **no speed or accuracy figure for either.**
+## Measured: the real text reader on synthetic cards (SYNTHETIC, not real photos)
+Reader: Tesseract.js 5.1.1 with the English "best" model, self-hosted in `vendor/` (see `vendor/VENDOR.md`), run in
+headless Chromium on this sandbox's CPU. `eval/ocr-synthetic.cjs` draws each of the 96 sample cards as a flat synthetic
+photo (clean fonts, printed name on top, number and set code in small type at the bottom, no glare, tilt, sleeves or
+clutter), then runs the full pipeline: find card, crop, read two strips, parse, look up. Seller has chosen the game.
+
+| Card height in the picture | Right card first | In top 3 | Auto-accepted | Auto-accepted but wrong | Median / 90th pct time per card |
+|---|---|---|---|---|---|
+| 700 px | 100% (96/96) | 100% | 64.6% | 0 | 117 ms / 158 ms |
+| 450 px | 100% | 100% | 55.2% | 0 | not recorded |
+| 300 px | 93.8% | 99% | 5.2% | 0 | not recorded |
+
+Also 100% first at 700 px with no game chosen. First scan loads the reader in about 0.5-1.2 s (11 MB, then cached).
+Auto-accept is lower than "right first" on purpose: Pokémon (printed set code differs from the provider's) and
+reprints are never accepted without a tap. What this shows: the pipeline works end to end and small print is the weak
+point. What it does **not** show: any accuracy on real photos, on a real phone, in real light, or on foils and sleeves.
+Real numbers need the photos below. Targets from the plan (95% top-1, 98% top-3, under 3 s) are therefore **unverified**.
 
 ## Simulated results (lookup only, NOT real OCR accuracy)
 `node scan/eval/run-simulated.js` (from `suite/`) builds the text a perfect reader would see for each of the 96
@@ -53,6 +65,6 @@ sleeves, a few foils, taken the way a seller would (flat on a table, card fillin
 with what the card is, for example `mtg-m11-149.jpg`, or send a list.
 
 ## Next steps to a real number
-1. Builder approves vendoring a WebAssembly OCR build (name, size, licence).
+1. (Done) Tesseract.js vendored, approved by the Builder.
 2. Run the harness on the photos: top-1, top-3, auto-accept error rate, median seconds per card, on a named phone.
 3. Targets from the plan: 95% top-1, 98% top-3, median under 3 s. Report plainly if missed.

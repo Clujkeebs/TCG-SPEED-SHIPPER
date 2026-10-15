@@ -1,6 +1,6 @@
 import { applyPriceRule, DEFAULT_CONDITION_MULTIPLIERS } from '../core/pricing.js';
 import { PRESETS, presetToFields } from '../core/presets.js';
-import { buildCsv } from '../core/csv.js';
+import { buildCsv, checkHeader } from '../core/csv.js';
 import { openSession, createIndexedDbStore } from '../core/session.js';
 import { createIndex } from '../data/index.js';
 import { formatUsd, dollarsToCents } from '../../shared/models.js';
@@ -205,17 +205,20 @@ let stopCamera = null;
 let liveTimer = null;
 let scanner = null;
 
-function showChoices(options) {
+// Cards that need a tap stay on screen, one group per card, until the seller picks or dismisses them.
+function showChoices(options, title = '') {
   const ul = $('choices');
-  ul.replaceChildren();
+  const group = el('li', { class: 'item' });
+  if (title) group.append(el('div', { class: 'meta' }, title));
   for (const o of options) {
-    ul.append(el('li', { class: 'item' }, el('div', { class: 'title' }, label(o.printing)),
-      el('div', { class: 'meta' }, (o.printing.setName || o.printing.setCode) + ' · ' + o.printing.finishes.join(', ')),
-      el('div', { class: 'controls' }, el('button', { type: 'button', class: 'btn-dl', 'aria-label': 'Add ' + label(o.printing), onclick: () => { addCard(o.printing); ul.replaceChildren(); } }, 'This one'))));
+    group.append(el('div', { class: 'controls' },
+      el('span', { class: 'title' }, label(o.printing)),
+      el('button', { type: 'button', class: 'btn-dl', 'aria-label': 'Add ' + label(o.printing), onclick: () => { addCard(o.printing); group.remove(); } }, 'This one')));
   }
+  group.append(el('div', { class: 'controls' }, el('button', { type: 'button', class: 'btn-ghost', onclick: () => group.remove() }, 'Skip')));
+  ul.append(group);
 }
 
-// One frame (live, captured or from a photo) -> add, ask, or explain. Returns a short text for photo lists.
 let builtIn = null;
 async function getEngine() {
   if (window.SpeedScanOcr) return window.SpeedScanOcr; // a test or a different reader can be plugged in
@@ -237,7 +240,7 @@ async function handleFrame(frame, name = '') {
   let msg;
   if (!r.ok) { feedback.miss(); msg = 'no card found.'; }
   else if (r.decision.action === 'accept') { feedback.accepted(); addCard(r.decision.pick); msg = 'added ' + label(r.decision.pick) + ' (' + Math.round(r.ms) + ' ms)'; }
-  else if (r.decision.action === 'choose') { feedback.needsTap(); showChoices(r.decision.options); msg = 'tap the right one.'; }
+  else if (r.decision.action === 'choose') { feedback.needsTap(); showChoices(r.decision.options, name); msg = 'tap the right one.'; }
   else { feedback.miss(); msg = 'could not tell which card. Add it by search.'; }
   scanSay(prefix + msg);
   return msg;
@@ -306,6 +309,12 @@ const drop = $('drop');
 for (const ev of ['dragenter', 'dragover']) drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('dragover'); });
 for (const ev of ['dragleave', 'drop']) drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove('dragover'); });
 drop.addEventListener('drop', (e) => handleFiles(e.dataTransfer.files));
+
+$('hdrCheck').addEventListener('click', () => {
+  const r = checkHeader($('hdr').value);
+  const ul = $('hdrOut'); ul.replaceChildren();
+  for (const n of r.notes) ul.append(el('li', { class: 'item' }, el('div', { class: r.ok ? 'title' : 'title danger' }, n)));
+});
 
 // Tabs.
 for (const t of document.querySelectorAll('.nav-tab')) {

@@ -67,3 +67,17 @@ test('condition labels', () => {
   assert.equal(conditionLabel('NM', 'nonfoil'), 'Near Mint');
   assert.equal(conditionLabel('DMG', 'etched'), 'Damaged Foil');
 });
+
+import { checkHeader, splitHeader } from './csv-format.js';
+
+test('header check: same, different spelling, missing, extra', () => {
+  assert.equal(checkHeader('TCGPlayer Id,Condition,Total Quantity,TCG Marketplace Price').ok, true);
+  const sp = checkHeader('TCGplayer Id,Condition,Total Quantity,TCG Marketplace Price');
+  assert.equal(sp.ok, false); assert.deepEqual(sp.spelling, [{ ours: 'TCGPlayer Id', theirs: 'TCGplayer Id' }]);
+  const real = checkHeader('"TCGplayer Id","Product Line","Set Name","Product Name","Number","Condition","Total Quantity","TCG Marketplace Price"');
+  assert.deepEqual(real.unused, ['Product Line', 'Set Name', 'Product Name', 'Number']);
+  assert.match(checkHeader('Id,Qty').notes.join(' '), /no column with that name/);
+  assert.equal(checkHeader('').ok, false);
+  assert.deepEqual(splitHeader('a,"b,c","d ""x"""'), ['a', 'b,c', 'd "x"']);
+  assert.equal(checkHeader('﻿TCGPlayer Id,Condition,Total Quantity,TCG Marketplace Price\r\n1,2').ok, true);
+});

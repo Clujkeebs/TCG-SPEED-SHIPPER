@@ -1,4 +1,4 @@
-// Browser text reader: self-hosted Tesseract.js (see vendor/README.md). Loaded on first use, runs in a worker, offline.
+// Browser text reader: self-hosted Tesseract.js (see vendor/VENDOR.md). Loaded on first use, runs in a worker, offline.
 // engine.recognize(grayImage, { region }) -> Promise<string>
 const BASE = new URL('../vendor/tesseract/', import.meta.url).href;
 const MODES = { title: '7', bottom: '6' }; // single line for the name; a small block for number and set code

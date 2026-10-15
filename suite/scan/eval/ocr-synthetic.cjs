@@ -5,12 +5,13 @@
 const { chromium } = require('playwright');
 const base = process.argv[2] || 'http://localhost:8127';
 const cardH = Number(process.argv[3]) || 700;
+const noGame = process.argv[4] === 'nogame'; // seller has not picked a game
 (async () => {
   const b = await chromium.launch();
   const p = await b.newPage();
   p.on('console', (m) => m.type() === 'error' && console.error('page error:', m.text()));
   await p.goto(base + '/scan/public/index.html');
-  const res = await p.evaluate(async (cardH) => {
+  const res = await p.evaluate(async ({ cardH, noGame }) => {
     const { createBrowserEngine } = await import('../ocr/engine-browser.js');
     const { identifyFrame } = await import('../ocr/pipeline.js');
     const { createIndex } = await import('../data/index.js');
@@ -34,7 +35,7 @@ const cardH = Number(process.argv[3]) || 700;
       lines.slice(1).forEach((l, i) => g.fillText(l, x0 + cw * 0.06, y0 + cardH * (0.925 + i * 0.033)));
       const frame = { width: W, height: H, data: g.getImageData(0, 0, W, H).data };
       const t1 = performance.now();
-      const r = await identifyFrame(frame, { engine, index, game: pr.game });
+      const r = await identifyFrame(frame, { engine, index, game: noGame ? undefined : pr.game });
       const ms = performance.now() - t1;
       const ids = r.ok ? r.candidates.map((x) => x.printing.id) : [];
       rows.push({ game: pr.game, name: pr.name, top1: ids[0] === pr.id, top3: ids.slice(0, 3).includes(pr.id), auto: r.ok && r.decision.action === 'accept', wrong: r.ok && r.decision.action === 'accept' && ids[0] !== pr.id, ms, text: r.text });
@@ -45,7 +46,7 @@ const cardH = Number(process.argv[3]) || 700;
     const ms = rows.map((r) => r.ms).sort((a, b) => a - b);
     const games = {}; for (const g of ['mtg', 'pokemon', 'yugioh', 'onepiece']) games[g] = sum(by((r) => r.game === g));
     return { loadMs: Math.round(loadMs), overall: sum(rows), games, msPerCard: { median: Math.round(ms[ms.length >> 1]), p90: Math.round(ms[Math.floor(ms.length * 0.9)]), max: Math.round(ms[ms.length - 1]) }, misses: rows.filter((r) => !r.top1 || (r.game === 'mtg' && !r.auto)).slice(0, 6).map((r) => [r.name, r.text.replace(/\n+/g, ' | ')]) };
-  }, cardH);
+  }, { cardH, noGame });
   console.log(JSON.stringify(res, null, 1));
   await b.close();
 })();
