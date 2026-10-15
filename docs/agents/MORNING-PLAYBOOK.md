@@ -75,7 +75,7 @@ deploy.
 4. USPS IMb barcode on #10 envelopes, once Informed Visibility access
    exists (A11).
 5. Welcome email series for new signups (needs Resend, G3).
-   **Sign-up email codes are built (Oct 15, `signup-code.js`) and off.** When B11 shows Verified in Resend: (1) `set-variables` `EMAIL_FROM=TCG Speed Shipper <hello@tcgspeedshipper.com>` (not a secret); (2) the owner clicks /admin → Setup checks → Send me a test email; (3) `set-variables` `SIGNUP_EMAIL_CODE=on`; (4) `/api/health` must show `signup_code: on`; (5) test a real sign-up with a second address end to end, then tell the owner. Roll back by removing `SIGNUP_EMAIL_CODE`.
+   **Sign-up email codes are built (Oct 15, `signup-code.js`) and off.** The owner ticked B11 on Oct 14; (1) `EMAIL_FROM=TCG Speed Shipper <hello@tcgspeedshipper.com>` was set on Oct 15 (not a secret); (2) the owner's test tap is board task B12 (/admin → Setup checks → Send me a test email; a failure message means the domain is not verified yet); when B12 says it worked: (3) `set-variables` `SIGNUP_EMAIL_CODE=on`; (4) `/api/health` must show `signup_code: on`; (5) test a real sign-up with a second address end to end, then tell the owner. Roll back by removing `SIGNUP_EMAIL_CODE`.
 6. Refer-a-seller: a free month each.
 7. eBay + Whatnot CSV import (waits on F2 sample files).
 8. Chrome extension, "Paste tracking" first (draft:
