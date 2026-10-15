@@ -89,7 +89,12 @@ per-label fee** (Stamps.com-style), or to lower the fee after the first 100
   per-label fees."
 - Card fees: Pro top-ups default to bank (0.8%). A card top-up adds 3%, so
   heavy shippers don't eat our margin.
-- Waiting on Rob: his normal and peak monthly volume (reply drafted).
+- **Rob's reply (Oct 14, evening):** on Premium, 12¢ a label passes his $30 meter at about 250 labels a
+  month, he often ships more than that, and he would keep the meter at that price. He suggested a lower
+  fee, or a new tier above Premium with no surcharge. That is Option D's Pro tier: 250 labels a month is
+  $14.99 and 500 is $24.99, and the break-even against a $30 meter is about 600 labels a month. A seller
+  above that needs a lower per-label fee after the first 300 (idea: 3¢) or a higher tier. A draft reply
+  describes Pro as a plan, not a price (the owner sends it). His real volume is still unknown.
 
 ## Existing customers
 - **Current Premium subscribers keep $5.99 and unlimited labels.** Their
