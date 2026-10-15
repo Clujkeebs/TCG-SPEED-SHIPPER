@@ -1,4 +1,5 @@
 import { applyPriceRule, DEFAULT_CONDITION_MULTIPLIERS } from '../core/pricing.js';
+import { PRESETS, presetToFields } from '../core/presets.js';
 import { buildCsv } from '../core/csv.js';
 import { openSession, createIndexedDbStore } from '../core/session.js';
 import { createIndex } from '../data/index.js';
@@ -184,6 +185,15 @@ $('download').addEventListener('click', () => {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   say('Downloaded ' + r.listed + ' rows (format unverified).' + (r.missingId.length + r.missingPrice.length ? ' Some rows were left out.' : ''));
 });
+for (const p of PRESETS) $('preset').append(el('option', { value: p.key }, p.label));
+$('preset').addEventListener('change', () => {
+  const p = PRESETS.find((x) => x.key === $('preset').value);
+  if (!p) return;
+  for (const [k, v] of Object.entries(presetToFields(p))) $(k).value = v;
+  session.setDefaults(readDefaults()); render(); renderResults();
+  say('Rule set: ' + p.label);
+});
+
 // Camera. An OCR engine can be plugged in as window.SpeedScanOcr = { recognize(grayImage, { region }) -> Promise<string> }.
 const feedback = browserFeedback();
 let stopCamera = null;
