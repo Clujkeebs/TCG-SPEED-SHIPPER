@@ -8,6 +8,15 @@ export const RESPONSE_SOURCE = 'tcgss-extension';
 export const ALLOWED_ORIGINS = ['https://tcgspeedshipper.com', 'http://localhost'];
 export const COLLECTIONS = ['orders', 'listings', 'inventory', 'scans'];
 export const MAX_ID_LENGTH = 80;
+export const MAX_RECORD_BYTES = 64 * 1024;
+
+function tooBig(record) {
+  try {
+    return JSON.stringify(record).length > MAX_RECORD_BYTES;
+  } catch {
+    return true; // cannot be serialized
+  }
+}
 
 // localhost may carry any port in development; every other origin must match exactly.
 export function isAllowedOrigin(origin) {
@@ -31,7 +40,8 @@ const PAYLOADS = {
   hello: (p) => (p === undefined || (isObj(p) && Object.keys(p).length === 0) ? null : 'hello takes no payload'),
   'store.put': (p) => {
     if (!isObj(p) || !COLLECTIONS.includes(p.collection)) return 'collection must be one of ' + COLLECTIONS.join(', ');
-    return isObj(p.record) ? null : 'record must be an object';
+    if (!isObj(p.record)) return 'record must be an object';
+    return tooBig(p.record) ? 'record too large' : null;
   },
   'store.get': (p) => {
     if (!isObj(p) || !COLLECTIONS.includes(p.collection)) return 'collection must be one of ' + COLLECTIONS.join(', ');
