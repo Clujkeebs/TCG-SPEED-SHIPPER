@@ -12,6 +12,20 @@ Status 2026-10-15. **No accuracy number on real cards exists yet.** Nothing belo
 | Clues to cards | `ocr/resolve.js` over the offline index | See simulated numbers below. |
 | Accept or ask | `core/rapid.js`: auto-accept only if the top score is 0.9+ and 0.15 ahead; otherwise show 3 choices to tap | Tested. Name-only and number+name matches never auto-accept. |
 
+## Measured: card finding on rendered synthetic cards
+`eval/render-synthetic.cjs` draws cards on a canvas in headless Chromium (random size, position, tilt, background
+brightness, noise; flat cards with two text-like bars, no glare, no clutter), runs `detectCard`, and counts a hit when
+the box overlaps the true one by 90% or more. 100 frames per row, 640×480, on this sandbox's CPU:
+
+| Largest random tilt | Found correctly | Mean time per frame |
+|---|---|---|
+| 0° | 100/100 | 3.4 ms |
+| 2° | 100/100 | 2.3 ms |
+| 5° | 100/100 | 2.5 ms |
+| 10° | 95/100 | 2.3 ms |
+
+This only shows the finder is sound on clean synthetic frames. It says nothing about real photos or a phone's speed.
+
 ## The text-reading engine: not chosen, and why
 iOS Safari has no text-detection API, so reading must run in WebAssembly. First candidate is a self-hosted
 Tesseract.js build. It is a vendored file of several MB plus language data, and needs its licence checked, so I did
