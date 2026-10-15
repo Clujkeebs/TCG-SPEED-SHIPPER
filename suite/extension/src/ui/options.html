@@ -7,4 +7,10 @@ h1{font-size:22px}label{display:block;margin:14px 0 2px;font-weight:600}.what{ma
 <p>Switch each helper on or off. Everything is off until you turn it on. Your choices stay on this computer.</p>
 <p class="lock" id="gate"></p>
 <div id="flags"></div>
+<h2 style="font-size:18px;margin-top:28px">Agent connection (advanced)</h2>
+<p class="what" style="margin-left:0">Practice mode runs entirely on this computer and needs nothing here. Later, the Agent may use a server of ours so that no secret key is ever stored in your browser. This is off, and nothing uses it yet.</p>
+<label for="endpoint">Server address</label>
+<input id="endpoint" type="text" placeholder="https://..." style="width:100%;padding:6px">
+<label><input id="endpointOn" type="checkbox"> Use this server</label>
+<button id="saveEndpoint">Save</button> <span id="endpointMsg" role="status"></span>
 <script type="module" src="options.js"></script></body></html>

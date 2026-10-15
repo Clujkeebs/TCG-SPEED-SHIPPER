@@ -23,3 +23,29 @@ test('attachCsv does nothing while the helper is off', async () => {
   assert.equal(r.ok, false);
   assert.match(r.message, /switched off/);
 });
+
+import { buildCsv } from '../src/vendor/scan/core/csv.js';
+
+const draft = (id, over = {}) => ({ id, printingId: 'mtg:practice:p1', condition: 'NM', finish: 'nonfoil', language: 'en', quantity: 2, priceCents: 99, source: 'scan', createdAt: '2026-10-15T12:00:00Z', ...over });
+const printing = { id: 'mtg:practice:p1', name: 'Ember Drake', setCode: 'PRC', number: '1', tcgplayerProductId: 12345 };
+
+test("Scan's own CSV output is accepted, counted, and recognised as Scan format", () => {
+  const out = buildCsv([draft('a'), draft('b', { condition: 'LP', quantity: 1 })], () => printing);
+  const r = prepareUpload({ name: 'speed-scan-2026-10-15.csv', text: out.csv });
+  assert.equal(r.ok, true);
+  assert.equal(r.rows, 2);
+  assert.equal(r.matchesScan, true);
+  assert.equal(r.formatVerified, false, 'the TCGplayer format is still unverified upstream');
+});
+
+test('a CSV that is not from Scan is allowed but flagged', () => {
+  const r = prepareUpload({ name: 'other.csv', text: 'Sku,Qty\nA,1\n' });
+  assert.equal(r.ok, true);
+  assert.equal(r.matchesScan, false);
+});
+
+test('rows Scan could not place (no product id) never reach the file, so the uploader sees only whole rows', () => {
+  const out = buildCsv([draft('a', {}), draft('b')], (id) => ({ ...printing, tcgplayerProductId: undefined }));
+  assert.equal(out.listed, 0);
+  assert.equal(prepareUpload({ name: 'none.csv', text: out.csv }).ok, false, 'header only => refused');
+});

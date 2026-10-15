@@ -5,7 +5,7 @@ import {
   validateListingDraft,
   validateInventoryItem,
   validateScanRecord
-} from './vendor/models.js';
+} from './vendor/shared/models.js';
 
 export const DB_NAME = 'tcgss_suite';
 export const DB_VERSION = 1;
