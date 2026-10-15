@@ -7,108 +7,133 @@
 <title>TCG Speed Scan</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="fonts/fonts.css">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<header class="top">
-  <h1>TCG Speed Scan</h1>
-  <p class="sub">Set it once, add cards fast, download one CSV.</p>
-</header>
+<nav class="top-nav" aria-label="Sections">
+  <div class="nav-brand">TCG Speed Scan</div>
+  <div class="nav-tabs" role="tablist">
+    <button class="nav-tab active" role="tab" id="t-add" data-tab="add" aria-selected="true" aria-controls="tab-add">Add</button>
+    <button class="nav-tab" role="tab" id="t-list" data-tab="list" aria-selected="false" aria-controls="tab-list">List <span id="navCount">0</span></button>
+    <button class="nav-tab" role="tab" id="t-rules" data-tab="rules" aria-selected="false" aria-controls="tab-rules">Price rule</button>
+  </div>
+</nav>
 
 <main>
-  <p class="notice" role="note"><strong>Draft.</strong> The CSV columns are <strong>unverified</strong>: we have not yet checked them against a real TCGplayer export. Check the file before you upload it. Prices in the sample list are made-up demo numbers.</p>
+  <p class="notice" role="note"><strong>Draft.</strong> The CSV columns are <strong>unverified</strong>: we have not checked them against a real TCGplayer export yet, so check the file before you upload it. Sample prices are made-up demo numbers.</p>
 
-  <details class="panel" id="defaults" open>
-    <summary>Defaults for every card</summary>
-    <div class="grid">
-      <label class="wide">Quick price rule
-        <select id="preset"><option value="">Choose a preset…</option></select>
-      </label>
-      <label>Game
-        <select id="game"><option value="">All games</option><option value="mtg">Magic</option><option value="pokemon">Pokémon</option><option value="yugioh">Yu-Gi-Oh!</option><option value="onepiece">One Piece</option></select>
-      </label>
-      <label>Condition
-        <select id="condition"><option value="NM">Near Mint</option><option value="LP">Lightly Played</option><option value="MP">Moderately Played</option><option value="HP">Heavily Played</option><option value="DMG">Damaged</option></select>
-      </label>
-      <label>Finish
-        <select id="finish"><option value="auto">Regular (non-foil)</option><option value="foil">Foil / holo</option></select>
-      </label>
-      <label>Language
-        <select id="language"><option value="en">English</option><option value="ja">Japanese</option><option value="de">German</option><option value="fr">French</option><option value="es">Spanish</option><option value="it">Italian</option><option value="pt">Portuguese</option></select>
-      </label>
-      <label>Quantity
-        <input id="quantity" type="number" inputmode="numeric" min="1" step="1" value="1">
-      </label>
-      <label>Price is based on
-        <select id="basis"><option value="market">Market price</option><option value="low">Lowest price</option><option value="mid">Middle price</option><option value="fixed">One fixed price</option></select>
-      </label>
-      <label>Percent (−5 = 5% below)
-        <input id="percent" type="number" inputmode="decimal" step="any" value="-5">
-      </label>
-      <label id="fixedWrap" hidden>Fixed price ($)
-        <input id="fixed" type="number" inputmode="decimal" min="0" step="0.01" value="1.00">
-      </label>
-      <label>Round to
-        <select id="rounding"><option value="ends-99">Ends in .99</option><option value="ends-95">Ends in .95</option><option value="dollar">Whole dollar</option><option value="dime">10 cents</option><option value="nickel">5 cents</option><option value="cent">Exact cent</option></select>
-      </label>
-      <label>Never below ($)
-        <input id="floor" type="number" inputmode="decimal" min="0" step="0.01" value="0.25">
-      </label>
-      <label>Never above ($, optional)
-        <input id="ceiling" type="number" inputmode="decimal" min="0" step="0.01" value="">
-      </label>
-      <label>Skip cards under ($)
-        <input id="minList" type="number" inputmode="decimal" min="0" step="0.01" value="0.25">
-      </label>
-      <label class="check"><input id="byCondition" type="checkbox" checked> Lower the price for played cards (LP 90%, MP 75%, HP 55%, damaged 40%)</label>
-    </div>
-  </details>
-
-  <section class="panel" aria-labelledby="addh">
-    <h2 id="addh">Add a card</h2>
-    <label for="q">Search by name, set code or number</label>
-    <input id="q" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="e.g. bolt m11, charizard base1, nami op01">
-    <p id="status" class="status" role="status" aria-live="polite"></p>
-    <ul id="results" class="list"></ul>
-  </section>
-
-  <section class="panel" aria-labelledby="sh">
-    <h2 id="sh">Scan with the camera</h2>
-    <p class="muted" id="scanNote">Beta. Frames stay on this device. Reading the card text needs an OCR engine that is not installed yet, so for now this shows what the camera finds and you add the card by search.</p>
-    <video id="video" playsinline muted hidden></video>
-    <canvas id="canvas" hidden></canvas>
-    <div class="row-actions">
-      <button id="camStart" type="button" class="ghost">Start camera</button>
-      <button id="camShot" type="button" class="primary" disabled>Capture card</button>
-      <button id="camStop" type="button" class="ghost" disabled>Stop</button>
-    </div>
-    <p id="scanStatus" class="status" role="status" aria-live="polite"></p>
-    <ul id="choices" class="list"></ul>
-  </section>
-
-  <section class="panel" aria-labelledby="qh">
-    <div class="row-head">
-      <h2 id="qh">Your list</h2>
-      <div class="row-actions">
-        <button id="undo" type="button" class="ghost" disabled>Undo</button>
-        <button id="merge" type="button" class="ghost">Merge duplicates</button>
-        <button id="clear" type="button" class="ghost">Clear</button>
+  <section id="tab-add" class="tab" role="tabpanel" aria-labelledby="t-add">
+    <div class="card">
+      <h2>Set once, then rapid-fire</h2>
+      <div class="grid">
+        <label class="wide">Price rule
+          <select id="preset"><option value="">Custom (see Price rule tab)</option></select>
+        </label>
+        <label>Game
+          <select id="game"><option value="">All games</option><option value="mtg">Magic</option><option value="pokemon">Pokémon</option><option value="yugioh">Yu-Gi-Oh!</option><option value="onepiece">One Piece</option></select>
+        </label>
+        <label>Condition
+          <select id="condition"><option value="NM">Near Mint</option><option value="LP">Lightly Played</option><option value="MP">Moderately Played</option><option value="HP">Heavily Played</option><option value="DMG">Damaged</option></select>
+        </label>
+        <label>Finish
+          <select id="finish"><option value="auto">Regular (non-foil)</option><option value="foil">Foil / holo</option></select>
+        </label>
+        <label>Language
+          <select id="language"><option value="en">English</option><option value="ja">Japanese</option><option value="de">German</option><option value="fr">French</option><option value="es">Spanish</option><option value="it">Italian</option><option value="pt">Portuguese</option></select>
+        </label>
+        <label>Quantity
+          <input id="quantity" type="number" inputmode="numeric" min="1" step="1" value="1">
+        </label>
       </div>
     </div>
-    <p id="empty" class="muted">Nothing yet. Search above and tap Add.</p>
-    <ul id="queue" class="list"></ul>
+
+    <div class="card">
+      <h2>Scan</h2>
+      <p class="muted" id="scanNote">Live camera or photos. Everything stays on this device.</p>
+      <div class="stage" id="stage">
+        <video id="video" playsinline muted hidden></video>
+        <canvas id="overlay" hidden></canvas>
+        <img id="preview" alt="Photo being checked" hidden>
+      </div>
+      <canvas id="canvas" hidden></canvas>
+      <div class="btn-row">
+        <button id="camStart" type="button" class="btn-dl">Start live camera</button>
+        <button id="camShot" type="button" class="btn-ghost" disabled>Capture now</button>
+        <button id="camStop" type="button" class="btn-ghost" disabled>Stop</button>
+      </div>
+      <label class="upload-zone" id="drop" for="file">
+        <input id="file" type="file" accept="image/*" multiple>
+        <span><strong>Upload photos</strong> or drop them here</span>
+        <small>One card per photo works best</small>
+      </label>
+      <p id="scanStatus" class="status" role="status" aria-live="polite"></p>
+      <ul id="choices" class="list"></ul>
+    </div>
+
+    <div class="card">
+      <h2>Or search</h2>
+      <label for="q">Name, set code or number</label>
+      <input id="q" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="e.g. bolt m11, charizard base1, nami op01">
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+      <ul id="results" class="list"></ul>
+    </div>
   </section>
 
-  <section id="problems" class="panel" hidden aria-labelledby="ph">
-    <h2 id="ph">Needs your help before upload</h2>
-    <p class="muted">These rows are left out of the CSV. We never guess a TCGplayer product ID or a price.</p>
-    <ul id="problemList" class="list"></ul>
+  <section id="tab-list" class="tab" role="tabpanel" aria-labelledby="t-list" hidden>
+    <div class="card">
+      <div class="row-head">
+        <h2>Your list</h2>
+        <div class="row-actions">
+          <button id="undo" type="button" class="btn-ghost" disabled>Undo</button>
+          <button id="merge" type="button" class="btn-ghost">Merge duplicates</button>
+          <button id="clear" type="button" class="btn-ghost">Clear</button>
+        </div>
+      </div>
+      <p id="empty" class="muted">Nothing yet. Scan or search on the Add tab.</p>
+      <ul id="queue" class="list"></ul>
+    </div>
+    <div id="problems" class="card" hidden>
+      <h2>Needs your help before upload</h2>
+      <p class="muted">These rows are left out of the CSV. We never guess a TCGplayer product ID or a price.</p>
+      <ul id="problemList" class="list"></ul>
+    </div>
+  </section>
+
+  <section id="tab-rules" class="tab" role="tabpanel" aria-labelledby="t-rules" hidden>
+    <div class="card">
+      <h2>Price rule</h2>
+      <div class="grid">
+        <label>Price is based on
+          <select id="basis"><option value="market">Market price</option><option value="low">Lowest price</option><option value="mid">Middle price</option><option value="fixed">One fixed price</option></select>
+        </label>
+        <label>Percent (−5 = 5% below)
+          <input id="percent" type="number" inputmode="decimal" step="any" value="-5">
+        </label>
+        <label id="fixedWrap" hidden>Fixed price ($)
+          <input id="fixed" type="number" inputmode="decimal" min="0" step="0.01" value="1.00">
+        </label>
+        <label>Round to
+          <select id="rounding"><option value="ends-99">Ends in .99</option><option value="ends-95">Ends in .95</option><option value="dollar">Whole dollar</option><option value="dime">10 cents</option><option value="nickel">5 cents</option><option value="cent">Exact cent</option></select>
+        </label>
+        <label>Never below ($)
+          <input id="floor" type="number" inputmode="decimal" min="0" step="0.01" value="0.25">
+        </label>
+        <label>Never above ($, optional)
+          <input id="ceiling" type="number" inputmode="decimal" min="0" step="0.01" value="">
+        </label>
+        <label>Skip cards under ($)
+          <input id="minList" type="number" inputmode="decimal" min="0" step="0.01" value="0.25">
+        </label>
+        <label class="check"><input id="byCondition" type="checkbox" checked> Lower the price for played cards (LP 90%, MP 75%, HP 55%, damaged 40%)</label>
+      </div>
+    </div>
   </section>
 </main>
 
 <footer class="bar">
   <div id="totals" aria-live="polite">0 cards</div>
-  <button id="download" type="button" class="primary" disabled>Download CSV</button>
+  <button id="download" type="button" class="btn-dl" disabled>Download CSV</button>
 </footer>
 <script type="module" src="app.js"></script>
 </body>

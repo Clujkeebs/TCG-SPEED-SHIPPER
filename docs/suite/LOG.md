@@ -170,6 +170,17 @@ anything on real TCGplayer pages (selectors are still guesses until saved pages 
 Needs Builder: none. Needs owner: the saved TCGplayer pages listed in the X1 entry.
 Next: X3 when there is room.
 
+### 2026-10-15 · scan · look and live scan · done
+Owner asked for the same design as TCG Speed Shipper, live camera streaming, and photo upload. Done: dark top bar with
+mono tabs (Add / List / Price rule), cream page, serif headings, green gradient buttons, same fonts (own copy, OFL) and
+tokens; live camera that watches frames, waits for a card to hold still, reads it once, then waits for the next card
+(`core/live.js`, tested); photo upload with drag-and-drop, several at once; box drawn over the live video. Checked at 390px
+and 1280px with a fake camera and a synthetic photo; no console errors. Reading text still needs the OCR engine, so live
+and upload find the card but cannot yet name it (with a stand-in reader they add the card correctly).
+Numbers: Scan tests 64 pass offline.
+Needs Builder: approve the WebAssembly OCR build (still the blocker for naming cards).
+Needs owner: about 50 phone photos of real cards; a real TCGplayer export.
+Next: OCR engine, then measure on the photos.
 ### 2026-10-15 · hq · board next steps · done
 Ideas tab now has 34 ideas, 11 new with sources (TCGplayer fee calculator and explainer, USPS Dec 17 holiday cutoff, pay-per-label plan, case study, shop kit, comparison pages and more). Roadmap tab shows the Suite milestones with live status from `suite/status`. Open owner tasks were cut to one why line and at most 4 steps. Re-checked at 820x1180, 1180x820 and 390x844 (dark and light): no errors, no sideways scroll. Drafted `docs/suite/SITES-PLAN.md` (one site per product, page lists, what the owner must do). Domain lookup (read-only, nothing reserved): tcgspeedscan.com, tcgspeedagent.com and tcgspeedsuite.com are free today.
 Numbers: OpenRush keyword research was out of credits (402), so no search-volume numbers are claimed; ideas cite the TCGplayer fees page, the USPS holiday page and repo docs. The Uline 5 to 10% rate is from a third-party listing and is marked "confirm".

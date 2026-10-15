@@ -1,9 +1,9 @@
 // Offline after the first visit: cache the app files, serve them cache-first.
-const CACHE = 'speed-scan-v2';
+const CACHE = 'speed-scan-v3';
 const FILES = [
-  './', './index.html', './app.js', './styles.css', './manifest.webmanifest', './icon.svg', './camera.js',
+  './', './index.html', './app.js', './styles.css', './manifest.webmanifest', './icon.svg', './camera.js', './fonts/fonts.css', './fonts/dm-serif-display-latin-400-normal.woff2', './fonts/jetbrains-mono-latin-500-normal.woff2', './fonts/jetbrains-mono-latin-600-normal.woff2', './fonts/source-serif-4-latin-400-normal.woff2', './fonts/source-serif-4-latin-600-normal.woff2', './fonts/source-serif-4-latin-700-normal.woff2',
   '../core/pricing.js', '../core/csv.js', '../core/session.js',
-  '../data/index.js', '../vision/detect.js', '../ocr/pipeline.js', '../ocr/parse.js', '../ocr/resolve.js', '../core/rapid.js', '../core/presets.js', '../data/sample/printings.json', '../../shared/models.js',
+  '../data/index.js', '../vision/detect.js', '../ocr/pipeline.js', '../ocr/parse.js', '../ocr/resolve.js', '../core/rapid.js', '../core/presets.js', '../core/live.js', '../data/sample/printings.json', '../../shared/models.js',
 ];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));

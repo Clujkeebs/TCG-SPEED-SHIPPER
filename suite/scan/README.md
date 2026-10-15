@@ -7,7 +7,7 @@ TCGplayer Seller Portal import. Works offline after the first visit. No build st
 1. `node suite/scan/serve.js`, open <http://localhost:8080/scan/public/> (phone: same Wi-Fi, use the computer's address; the camera needs https or localhost).
 2. Pick **Quick price rule** (for example "5% under market"). Set condition, finish, language once.
 3. Type a name ("bolt"), press Enter to add the top match, or tap **Add**. Wrong card? **Undo**.
-4. Tap **Start camera** and **Capture card**: it finds the card and buzzes. It cannot read it yet (no text reader installed), so add by search.
+4. **Start live camera**: hold a card steady and it is picked up when it stops moving (swap cards to keep going). Or **Upload photos** (pick or drop several). It finds the card and buzzes; it cannot read the text yet (no text reader installed), so add by search.
 5. Type TCGplayer product IDs where asked, then **Download CSV**. Remember the columns are unverified.
 
 ## Host it on its own site

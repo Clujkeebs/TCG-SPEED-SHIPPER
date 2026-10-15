@@ -4,7 +4,9 @@ import { buildCsv } from '../core/csv.js';
 import { openSession, createIndexedDbStore } from '../core/session.js';
 import { createIndex } from '../data/index.js';
 import { formatUsd, dollarsToCents } from '../../shared/models.js';
-import { startCamera, grabFrame } from './camera.js';
+import { startCamera, grabFrame, frameFromFile } from './camera.js';
+import { detectCard } from '../vision/detect.js';
+import { createLiveScanner } from '../core/live.js';
 import { identifyFrame } from '../ocr/pipeline.js';
 import { browserFeedback } from '../core/rapid.js';
 
@@ -92,7 +94,7 @@ function renderResults() {
       el('div', { class: 'meta' }, (p.setName || p.setCode) + ' · ' + p.setCode + ' ' + p.number + ' · ' + finish),
       el('div', { class: 'controls' },
         el('span', { class: 'price' }, priceText),
-        el('button', { type: 'button', class: 'primary', 'aria-label': 'Add ' + label(p), onclick: () => { addCard(p); $('q').focus(); $('q').select(); } }, 'Add'))));
+        el('button', { type: 'button', class: 'btn-dl', 'aria-label': 'Add ' + label(p), onclick: () => { addCard(p); $('q').focus(); $('q').select(); } }, 'Add'))));
   }
 }
 
@@ -118,7 +120,7 @@ function renderQueue() {
         el('strong', { 'aria-label': 'Quantity' }, '× ' + it.quantity),
         el('button', { type: 'button', 'aria-label': 'One more ' + name, onclick: () => step(1) }, '+'),
         el('label', {}, '$', priceInput),
-        el('button', { type: 'button', class: 'ghost', 'aria-label': 'Remove ' + name, onclick: () => session.remove(it.id) }, 'Remove'))));
+        el('button', { type: 'button', class: 'btn-ghost', 'aria-label': 'Remove ' + name, onclick: () => session.remove(it.id) }, 'Remove'))));
   }
 }
 
@@ -164,6 +166,7 @@ function renderAll() {
   $('totals').textContent = t.cards + ' card' + (t.cards === 1 ? '' : 's') + ' · ' + formatUsd(t.valueCents) + (result.listed < t.rows ? ' · ' + (t.rows - result.listed) + ' to fix' : '');
   $('download').disabled = result.listed === 0;
   $('undo').disabled = !session.canUndo();
+  $('navCount').textContent = String(t.cards);
   $('fixedWrap').hidden = $('basis').value !== 'fixed';
 }
 
@@ -194,45 +197,117 @@ $('preset').addEventListener('change', () => {
   say('Rule set: ' + p.label);
 });
 
-// Camera. An OCR engine can be plugged in as window.SpeedScanOcr = { recognize(grayImage, { region }) -> Promise<string> }.
+// Camera and photos. An OCR engine can be plugged in as window.SpeedScanOcr = { recognize(grayImage, { region }) -> Promise<string> }.
 const feedback = browserFeedback();
-let stopCamera = null;
 const scanSay = (m) => { $('scanStatus').textContent = m; };
+let stopCamera = null;
+let liveTimer = null;
+let scanner = null;
+
 function showChoices(options) {
   const ul = $('choices');
   ul.replaceChildren();
   for (const o of options) {
     ul.append(el('li', { class: 'item' }, el('div', { class: 'title' }, label(o.printing)),
-      el('div', { class: 'controls' }, el('button', { type: 'button', class: 'primary', 'aria-label': 'Add ' + label(o.printing), onclick: () => { addCard(o.printing); ul.replaceChildren(); } }, 'This one'))));
+      el('div', { class: 'meta' }, (o.printing.setName || o.printing.setCode) + ' · ' + o.printing.finishes.join(', ')),
+      el('div', { class: 'controls' }, el('button', { type: 'button', class: 'btn-dl', 'aria-label': 'Add ' + label(o.printing), onclick: () => { addCard(o.printing); ul.replaceChildren(); } }, 'This one'))));
   }
 }
-$('camStart').addEventListener('click', async () => {
-  try {
-    stopCamera = await startCamera($('video'));
-    $('video').hidden = false; $('camShot').disabled = false; $('camStop').disabled = false; $('camStart').disabled = true;
-    scanSay('Camera on. Hold one card flat, fill most of the picture.');
-  } catch (e) { scanSay('Could not start the camera: ' + e.message); }
-});
-$('camStop').addEventListener('click', () => {
-  stopCamera?.(); stopCamera = null;
-  $('video').hidden = true; $('camShot').disabled = true; $('camStop').disabled = true; $('camStart').disabled = false;
-});
-$('camShot').addEventListener('click', async () => {
-  const frame = grabFrame($('video'), $('canvas'));
+
+// One frame (live, captured or from a photo) -> add, ask, or explain. Returns a short text for photo lists.
+async function handleFrame(frame, name = '') {
   const engine = window.SpeedScanOcr;
+  const prefix = name ? name + ': ' : '';
   if (!engine) {
-    const { detectCard } = await import('../vision/detect.js');
     const box = detectCard(frame);
     feedback[box ? 'needsTap' : 'miss']();
-    scanSay(box ? 'Found a card (' + box.w + '×' + box.h + '). No text reader installed yet: add it by search.' : 'No card found. Try a plain background and more light.');
-    return;
+    const msg = box ? 'card found, but no text reader is installed yet, so add it by search.' : 'no card found. Try a plain background and more light.';
+    scanSay(prefix + msg);
+    return msg;
   }
   const r = await identifyFrame(frame, { engine, index, game: $('game').value || undefined });
-  if (!r.ok) { feedback.miss(); scanSay('No card found. Try again.'); return; }
-  if (r.decision.action === 'accept') { feedback.accepted(); addCard(r.decision.pick); scanSay('Added ' + label(r.decision.pick) + ' (' + Math.round(r.ms) + ' ms)'); }
-  else if (r.decision.action === 'choose') { feedback.needsTap(); scanSay('Tap the right one.'); showChoices(r.decision.options); }
-  else { feedback.miss(); scanSay('Could not tell which card. Add it by search.'); }
+  let msg;
+  if (!r.ok) { feedback.miss(); msg = 'no card found.'; }
+  else if (r.decision.action === 'accept') { feedback.accepted(); addCard(r.decision.pick); msg = 'added ' + label(r.decision.pick) + ' (' + Math.round(r.ms) + ' ms)'; }
+  else if (r.decision.action === 'choose') { feedback.needsTap(); showChoices(r.decision.options); msg = 'tap the right one.'; }
+  else { feedback.miss(); msg = 'could not tell which card. Add it by search.'; }
+  scanSay(prefix + msg);
+  return msg;
+}
+
+function drawOverlay(box, frame) {
+  const c = $('overlay');
+  c.width = frame.width; c.height = frame.height;
+  const g = c.getContext('2d');
+  g.clearRect(0, 0, c.width, c.height);
+  if (!box) return;
+  g.lineWidth = Math.max(3, frame.width / 200);
+  g.strokeStyle = box.confidence >= 0.3 ? '#40916c' : '#e2c46b';
+  g.strokeRect(box.x, box.y, box.w, box.h);
+}
+
+function setCameraUi(on) {
+  $('video').hidden = !on; $('overlay').hidden = !on;
+  $('camShot').disabled = !on; $('camStop').disabled = !on; $('camStart').disabled = on;
+}
+function stopLive() {
+  clearInterval(liveTimer); liveTimer = null;
+  stopCamera?.(); stopCamera = null; scanner = null;
+  setCameraUi(false);
+}
+
+$('camStart').addEventListener('click', async () => {
+  try {
+    $('preview').hidden = true;
+    stopCamera = await startCamera($('video'));
+    setCameraUi(true);
+    scanner = createLiveScanner({
+      detect: (f) => detectCard(f),
+      identify: (f) => handleFrame(f),
+    });
+    scanSay('Live camera on. Hold one card steady in the frame; it is read when it stops moving. Swap cards to keep going.');
+    liveTimer = setInterval(async () => {
+      if (!stopCamera || $('video').readyState < 2) return;
+      const frame = grabFrame($('video'), $('canvas'));
+      const ev = await scanner.step(frame);
+      drawOverlay(ev.box, frame);
+    }, 400);
+  } catch (e) { scanSay('Could not start the camera: ' + e.message + ' You can still upload photos.'); }
 });
+$('camStop').addEventListener('click', stopLive);
+$('camShot').addEventListener('click', () => handleFrame(grabFrame($('video'), $('canvas'))));
+
+// Photos: pick or drop one or many; each is checked in turn.
+async function handleFiles(files) {
+  const list = [...files].filter((f) => f.type.startsWith('image/'));
+  if (!list.length) { scanSay('That is not a photo. Use JPG, PNG or HEIC from your camera roll.'); return; }
+  let n = 0;
+  for (const f of list) {
+    n += 1;
+    try {
+      const frame = await frameFromFile(f, $('canvas'));
+      const url = URL.createObjectURL(f);
+      $('preview').src = url; $('preview').hidden = false; $('video').hidden = true;
+      await handleFrame(frame, list.length > 1 ? n + '/' + list.length + ' ' + f.name : f.name);
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch { scanSay(f.name + ': could not open this photo.'); }
+  }
+}
+$('file').addEventListener('change', (e) => { handleFiles(e.target.files); e.target.value = ''; });
+const drop = $('drop');
+for (const ev of ['dragenter', 'dragover']) drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('dragover'); });
+for (const ev of ['dragleave', 'drop']) drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove('dragover'); });
+drop.addEventListener('drop', (e) => handleFiles(e.dataTransfer.files));
+
+// Tabs.
+for (const t of document.querySelectorAll('.nav-tab')) {
+  t.addEventListener('click', () => {
+    for (const o of document.querySelectorAll('.nav-tab')) { o.classList.toggle('active', o === t); o.setAttribute('aria-selected', String(o === t)); }
+    for (const s of document.querySelectorAll('.tab')) s.hidden = s.id !== 'tab-' + t.dataset.tab;
+    if (t.dataset.tab !== 'add' && stopCamera) stopLive();
+    window.scrollTo(0, 0);
+  });
+}
 
 session.onChange(render);
 render();
