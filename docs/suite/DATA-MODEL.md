@@ -44,7 +44,8 @@ Rules for every shape:
 
 ### ListingDraft (one row about to be listed)
 `id`, `printingId`, `condition`, `finish`, `language`, `quantity` (1 or more), `priceCents`,
-`priceRuleId?`, `source` (`scan`, `manual`, `import`), `createdAt`.
+`priceRuleId?`, `tcgplayerProductId?` (a product id the seller typed or the provider supplied; never
+guessed), `source` (`scan`, `manual`, `import`), `createdAt`.
 
 ### ScanRecord (one card seen by the camera)
 `id`, `sessionId`, `at`, `printingId` (or `null` when unresolved), `confidence` (0 to 1), `method`,
