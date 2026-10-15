@@ -28,6 +28,15 @@ function get(p, host, extra) {
     r.on('error', reject); r.end();
   });
 }
+function post(p, headers, body) {
+  return new Promise((resolve, reject) => {
+    const payload = JSON.stringify(body || {});
+    const r = http.request({ host: '127.0.0.1', port: server.address().port, path: p, method: 'POST', headers: Object.assign({ Host: 'tcgspeedshipper.com', 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }, headers || {}) }, (res) => {
+      let d = ''; res.on('data', (c) => { d += c; }); res.on('end', () => resolve({ status: res.statusCode, body: d }));
+    });
+    r.on('error', reject); r.end(payload);
+  });
+}
 let pass = 0, fail = 0;
 function check(name, cond, detail) {
   if (cond) { pass++; console.log('  PASS  ' + name); }
@@ -93,6 +102,14 @@ server.listen(0, async () => {
 
     r = await get('/../server.js');
     check('no path traversal out of public/', r.status === 404 && !/require\(/.test(r.body));
+
+    // A visitor cannot dodge a per-IP limit by faking x-forwarded-for.
+    // /api/client-error allows 30 per 10 minutes per address.
+    let last;
+    for (let i = 0; i < 31; i++) last = await post('/api/client-error', { 'x-forwarded-for': '203.0.113.' + (i + 1) + ', 198.51.100.7' }, { message: 'test ' + i });
+    check('a faked first x-forwarded-for entry does not dodge the per-IP limit', last.status === 429, 'status ' + last.status);
+    last = await post('/api/client-error', { 'x-real-ip': '198.51.100.99', 'x-forwarded-for': '198.51.100.7' }, { message: 'fresh address' });
+    check('x-real-ip (set by the Railway edge) is the address used when present', last.status === 200, 'status ' + last.status);
   } catch (e) { fail++; console.log('  FAIL  threw: ' + e.stack); }
   server.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
