@@ -30,6 +30,15 @@ model identifiers or the mailing address in the repo. Drafts only for customer e
 - Run the health-check skill: deploy status, 5xx, boot self-check
   (`supabase_key=OK`), www and apex certificates.
 - Fix real problems right away (ship skill).
+- Protect checks (2 min, read-only; small answers only — never list all
+  Stripe subscriptions, the output is huge):
+  `npm audit --omit=dev` at the repo root (anything above "low": run
+  `npm audit fix`, test, ship); Supabase `get_advisors` type `security`
+  (the 5 "SECURITY DEFINER callable by signed-in users" warnings are the
+  browser RPCs and use `auth.uid()`; only NEW findings matter); Stripe
+  `GetSubscriptions` with `status: past_due` and `limit: 5`, and
+  `GetDisputes` with `limit: 5`; Railway logs `@httpStatus:429` (many 429s
+  could mean every visitor shares one address: check `getClientIp`).
 
 ## 3. Numbers (5 min)
 - Run the funnel skill. On Mondays, add the Scoreboard row to
@@ -73,6 +82,13 @@ deploy.
 - Post one inbox doc on the board, and send a short message: what shipped,
   numbers, what you need from them (top 3, by board task id).
 - Use docs/OWNER-TODO.md only as a backup. The board is the to-do list.
+- X post drafts (before 7 AM PT): write 3 to 5 into the board database,
+  collection `xposts`, one document per post, id `YYYY-MM-DD-N`:
+  `{date, order: N, status: "draft", text, note?}`. Under 280 characters,
+  plain words, true claims only (nothing about Pitney Bowes, no prices or
+  dates that are not decided), no emoji walls, no engagement bait. Never set
+  `status` to posted and never post anything: the owner taps Copy, posts,
+  then Mark posted. His inbox message "more x posts" means write extra drafts.
 
 ## Ideas (Claude keeps this list ranked; add freely)
 1. Pricing v2 + Pro plan (C6 is decided: option D; letter fees by plan are built). Still needs the owner's go (C4) and a Stripe sandbox (C5) for Pro, its 300 fee-free labels, the Premium $6.99 price and package tiers (docs/pricing-plan.md).
@@ -95,6 +111,7 @@ deploy.
     the post and its dateModified/sitemap lastmod the same day.
 
 ## Changelog
+- 2026-10-15 (evening, protect pass): (1) npm audit found 1 critical and 3 moderate production vulnerabilities (proxy-addr, qs, body-parser, express); fixed with `npm audit fix` (lockfile only). (2) `getClientIp` trusted the first x-forwarded-for entry, which a visitor can fake to skip every per-IP limit; it now uses `x-real-ip` (documented by Railway) then `req.ip`. Check Railway `@httpStatus:429` after deploys in case every visitor shares one address. (3) The database schema was not in git and the Supabase free plan has no backups: exported docs/db/schema-2026-10-15.sql (replayed in a scratch Postgres, it builds and the money functions behave), added docs/db/README.md with recovery steps, and gated postage go-live on Supabase Pro (docs/postage-go-live.md). (4) anon and authenticated had full privileges on 6 tables (RLS blocked them anyway); revoked all and changed the default privileges (migration tcgss_revoke_client_table_grants, docs/db). (5) Stripe: 12 subscriptions (10 active, 1 trialing, 1 cancelled), no past_due, no disputes. Lesson: `GetSubscriptions` without a narrow filter returns a huge payload; use `status` and `limit`.
 - 2026-10-15 (5am run): the Suite is now four cloud sessions (scan, extension, agent, hq) plus the Builder, all on the owner's one usage limit. At about 8:40 PM PT the five-hour limit rejected everything ("session limit, resets 6:50am UTC"); two sessions stopped before doing anything. The Builder session is the big spender (hundreds of dollars of cache reads against a few dollars per sub-session), so keep Builder turns short and let the sub-sessions do the long work. Mechanics: `ListAgents` and `SendMessage` cannot reach cloud sessions; to wake an idle one use `fire_trigger` on a one-shot trigger created with `persistent_session_id`, or `create_trigger` with `persistent_session_id` and `run_once_at` a few minutes ahead. Railway http log filter that works: `@httpStatus:>=400` (`@status` is ignored). Rob replied again to the owner's reply within 15 minutes: his math says 12c a label beats his $30 meter only under 250 labels a month, so Pro (docs/pricing-plan.md) is the answer for heavy sellers; a draft reply is in Gmail.
 - 2026-10-15 (late): finalized the Rob reply from his real invoice (Stripe tools came online after the owner re-authorized the connector; use `list_available_accounts_or_orgs`, then `GetInvoices` with `subscription` or `customer`; reads are fine, credits and refunds need the owner). Lessons: (1) check an owner's billing explanation against the invoice before it goes to a customer: 'charged for both' did not add up ($1.99 + $5.99 is $7.98, not $8.99), and the invoice showed the old plan as a -$1.50 credit. (2) A customer-facing price or feature claim must match docs/pricing-plan.md and what the customer was already told (Rob was told $0.88-0.93 and 'tracking scans' on Oct 6; letters get no delivery scan). (3) Read the SENT message, not my own draft. I told the owner his Linda reply proposed a time that had already passed, but he had edited my draft before sending: it offered the weekend or any time after 5 PM PT next Tuesday or Wednesday. I made a task, a second draft and a fuss for nothing. Open the sent body (`get_thread`, plain text) before saying what the owner sent. (4) A board tick is not proof either way: check Sent mail, then say what you found. (5) Do not put a week or day in a customer email unless the date is fixed ('next week' for a call nobody has booked).
 - 2026-10-15: built sign-up email codes behind a flag (signup-code.js, table tcgss_signup_codes, 38 new tests, code step in the sign-up form). Nothing is created until the code is right, so no half-made accounts; stranded old accounts can be claimed only with a code. Waiting on B11 to switch on.
