@@ -499,7 +499,11 @@ T.B11 = {id:"B11", min:10, title:"Resend: verify tcgspeedshipper.com so emails r
   why:"Right now Resend can only email you. Verifying the domain lets the app email your customers from hello@tcgspeedshipper.com. The sign-up email code is already built and waiting: new accounts will have to enter a 6-digit code sent to their email, which stops fake sign-ups.",
   steps:["resend.com → Domains → Add domain → <b>tcgspeedshipper.com</b>.","It shows 3-4 DNS records. Screenshot that page and send it to Claude.","Claude tells you exactly what to add in Porkbun → DNS.","Back in Resend, click Verify (can take up to an hour)."],
   unlock:"Sign-up email codes (Claude switches them on the same day), welcome emails, and newsletters without Google's link wrappers."};
-T.G10 = {id:"G10", min:2, title:"Delete the old Netlify copy of the site",
+T.B12 = {id:"B12", hot:1, min:1, title:"Tap “Send me a test email” (proves B11 worked)",
+  why:"You ticked B11, so the domain should be verified in Resend. I set the app's sender to hello@tcgspeedshipper.com. One tap shows whether it works. If it does, I switch on the sign-up email codes the same day (they stop fake sign-ups). If it fails, the message says what Resend still needs.",
+  steps:["Open tcgspeedshipper.com/admin on your iPad and sign in.","Under <b>Setup checks</b>, tap <b>Send me a test email</b>.","Check your inbox (and spam) for it. Write “test worked”, or what the red message said, in this note."],
+  unlock:"Sign-up email codes, welcome emails, and newsletters without Google's link wrappers."};
+T.G10 ={id:"G10", min:2, title:"Delete the old Netlify copy of the site",
   why:"The site moved to Railway, but the old Netlify copy is still online and still trying the old database key. It's a duplicate Google can find.",
   steps:["app.netlify.com → click the old TCG Speed Shipper site.","Site configuration → scroll to the bottom → <b>Delete this site</b> → confirm."]};
 T.G11 = {id:"G11", min:5, title:"Stripe: show “TCG Speed Shipper” on customers' card statements",
@@ -510,12 +514,12 @@ T.D8 = {id:"D8", min:3, title:"Post on X once a day this week",
   steps:["Copy one post a day from the chat (Mon–Fri).","Pin the question post (“What's the slowest part of your shipping day?”).","Reply to anyone who answers. Ask Claude for more any time."]};
 T.F3 = {id:"F3", min:5, title:"Try the new upload page and say what still bugs you",
   why:"After you upload orders you now get one card: count, Download PDF, format, slips. Everything else is folded away. Your eye is the test.",
-  steps:["Open tcgspeedshipper.com on your iPad, load the sample order.","Download a PDF, open each folded section once.","Screenshot anything ugly or confusing and send it to Claude."]};
+  steps:["Open tcgspeedshipper.com on your iPad. Claude simplified the page on Oct 15 (see this note for what changed).","Load the sample order, download a PDF, open each folded section once.","Tell Claude what still feels busy, or send a screenshot."]};
 T.C7 = {id:"C7", min:2, title:"Send Rob the monthly-volume question",
   why:"His answer decides the postage plan price (task C6). The reply is drafted.",
   steps:["Gmail → Drafts → reply to Rob (“Re: Quick favor? A line for the homepage”).","Read it, send it."]};
 const STAGES = [
- {id:"P1", name:"Security first", sub:"Do these before anything else. They protect your accounts, your customers' data and your money.", tasks:["B4","B8","B9","B10","B11","B3","B6","B7","B1","B2","B5"].map(k=>T[k])},
+ {id:"P1", name:"Security first", sub:"Do these before anything else. They protect your accounts, your customers' data and your money.", tasks:["B12","B4","B8","B9","B10","B11","B3","B6","B7","B1","B2","B5"].map(k=>T[k])},
  {id:"P2", name:"Switch on postage (the money)", sub:"Every label any seller prints earns a fee. Rob alone ships 500+ a month.", tasks:["A17","A18","A16","A14","A15","A12","A13","A8","A1","A2","A5","A4","A6","A9","A3","A10","A11","A7"].map(k=>T[k])},
  {id:"P3", name:"Get found for free", sub:"Organic search and seller communities cost nothing and compound.", tasks:["D6","D8","D1","D3","D2","D7","D4","D5"].map(k=>T[k])},
  {id:"P4", name:"Paid growth: Google Ads test", sub:"After P3's Search Console. Small, measured, with a clear keep-or-kill rule.", tasks:["H1","H2","H3"].map(k=>T[k])},
