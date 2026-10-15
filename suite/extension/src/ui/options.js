@@ -1,5 +1,6 @@
 import { FLAG_DEFS, getFlags, setFlag, TOS_OK } from '../flags.js';
 import { FLAG_TEXT, LOCK_NOTE } from '../flags-text.js';
+import { getSettings, saveEndpoint } from '../settings.js';
 
 const box = document.getElementById('flags');
 const gate = document.getElementById('gate');
@@ -20,3 +21,11 @@ for (const [name, def] of Object.entries(FLAG_DEFS)) {
   what.textContent = FLAG_TEXT[name].what;
   box.append(label, what);
 }
+
+const settings = await getSettings();
+document.getElementById('endpoint').value = settings.agentEndpoint;
+document.getElementById('endpointOn').checked = settings.agentEndpointEnabled;
+document.getElementById('saveEndpoint').addEventListener('click', async () => {
+  const res = await saveEndpoint(document.getElementById('endpoint').value.trim(), document.getElementById('endpointOn').checked);
+  document.getElementById('endpointMsg').textContent = res.ok ? 'Saved.' : res.error;
+});

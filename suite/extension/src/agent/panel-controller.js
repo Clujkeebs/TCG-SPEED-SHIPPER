@@ -25,7 +25,7 @@ export function createPanel(transport) {
         state.items.push({ kind: 'progress', text: (e.denied ? 'Was not allowed to use ' : e.ok ? 'Used ' : 'Tried and failed: ') + e.tool });
         break;
       case 'agent.approval-needed':
-        state.items.push({ kind: 'approval', id: e.approvalId, tool: e.tool, description: e.description, rows: argRows(e.args), state: 'waiting' });
+        state.items.push({ kind: 'approval', id: e.approvalId, tool: e.tool, description: e.description, rows: argRows(e.args), why: e.why, undo: e.undo, state: 'waiting' });
         break;
       case 'agent.answer':
         state.busy = false;

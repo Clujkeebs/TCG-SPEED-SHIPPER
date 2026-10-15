@@ -49,7 +49,9 @@ export function validateEvent(m) {
     case 'agent.progress':
       return plainName(m.tool) && typeof m.ok === 'boolean' && typeof m.denied === 'boolean' ? { ok: true } : bad;
     case 'agent.approval-needed':
-      return str(m.approvalId, MAX_ID) && plainName(m.tool) && str(m.description, 400) && isObj(m.args) ? { ok: true } : bad;
+      // summary, why and undo are PROPOSED optional plain-words fields for the approval card.
+      return str(m.approvalId, MAX_ID) && plainName(m.tool) && str(m.description, 400) && isObj(m.args)
+        && ['summary', 'why', 'undo'].every((k) => m[k] === undefined || str(m[k], 400)) ? { ok: true } : bad;
     case 'agent.answer':
       return ['done', 'stopped', 'step-limit', 'error'].includes(m.status) && typeof (m.text ?? '') === 'string' && String(m.text ?? '').length <= 8000 ? { ok: true } : bad;
     case 'agent.stopped':

@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { validateEvent, validateResponse, makeRequest, argRows, AGENT_SOURCE as source, PROTOCOL_VERSION as v } from '../src/agent/protocol.js';
 import { createPanel } from '../src/agent/panel-controller.js';
-import { createFixtureTransport } from '../src/agent/fixture-transport.js';
+import { hostTransport } from './helpers/host-transport.js';
 
-const tick = () => new Promise((r) => setTimeout(r, 5));
+const tick = () => new Promise((r) => setTimeout(r, 40));
 const ev = (event, data = {}) => ({ source, v, event, ...data });
 const approval = ev('agent.approval-needed', { approvalId: 'ap-1', tool: 'listing.setPrice', description: 'Change a price', args: { card: 'X' } });
 
@@ -42,7 +42,7 @@ test('approval rows show every value as text, capped', () => {
 });
 
 async function ready() {
-  const p = createPanel(createFixtureTransport());
+  const p = createPanel(hostTransport());
   assert.equal(await p.connect(), true);
   await tick();
   return p;
@@ -60,7 +60,7 @@ test('a plain goal shows a plan, progress and an answer, then is free again', as
   assert.equal(await p.start('second at once'), false, 'one goal at a time');
   await tick();
   assert.equal(p.state.busy, false);
-  assert.deepEqual(p.state.plan.map((s) => s.state), ['done', 'done', 'done']);
+  assert.deepEqual(p.state.plan.map((s) => s.state), ['done', 'done']);
   assert.deepEqual(p.state.items.map((i) => i.kind), ['user', 'progress', 'answer']);
 });
 
@@ -71,13 +71,13 @@ test('an action waits for a click, can be answered once, and nothing changes in 
   assert.equal(p.waitingForApproval, true);
   assert.equal(p.state.busy, true);
   const card = p.state.items.find((i) => i.kind === 'approval');
-  assert.deepEqual(card.rows.map((r) => r.label), ['card', 'oldPriceCents', 'newPriceCents']);
+  assert.deepEqual(card.rows.map((r) => r.label), ['printingId', 'newPriceCents']);
   assert.equal(await p.answer('wrong-id', true), false);
   assert.equal(await p.answer(card.id, true), true);
   assert.equal(await p.answer(card.id, false), false, 'cannot answer twice');
   await tick();
   assert.equal(card.state, 'approved');
-  assert.match(p.state.items.at(-1).text, /nothing was changed/);
+  assert.match(p.state.items.at(-1).text, /^Done, in practice data only/);
   assert.equal(p.state.busy, false);
 });
 

@@ -24,10 +24,23 @@ test('every file the manifest names exists', () => {
   for (const f of files) assert.ok(existsSync(join(root, f)), f);
 });
 
-test('the vendored models.js is identical to suite/shared/models.js', () => {
-  const a = readFileSync(join(root, 'src/vendor/models.js'), 'utf8');
-  const b = readFileSync(join(root, '..', 'shared', 'models.js'), 'utf8');
-  assert.equal(a, b, 'run: cp ../shared/models.js src/vendor/models.js');
+test('every vendored file is identical to its source (refresh with: npm run vendor)', async () => {
+  const { VENDORED } = await import('../scripts/vendor-list.js');
+  for (const f of VENDORED) {
+    assert.equal(readFileSync(join(root, 'src/vendor', f), 'utf8'), readFileSync(join(root, '..', f), 'utf8'), f + ' is out of date');
+  }
+});
+
+test('vendored files import nothing from node: and nothing outside the vendor folder', async () => {
+  const { VENDORED } = await import('../scripts/vendor-list.js');
+  for (const f of VENDORED) {
+    const text = readFileSync(join(root, 'src/vendor', f), 'utf8');
+    assert.ok(!/from 'node:|require\(/.test(text), f + ' uses node-only code');
+    for (const m of text.matchAll(/from '(\.[^']+)'/g)) {
+      const target = join(root, 'src/vendor', f, '..', m[1]);
+      assert.ok(existsSync(target), f + ' imports ' + m[1] + ' which is not vendored');
+    }
+  }
 });
 
 test('no remote code, analytics or model names in the sources', () => {

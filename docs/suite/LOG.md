@@ -250,3 +250,31 @@ Read `CONTEXT.md`. Suite tab now opens with an Agents panel: each chat's goal, i
 Needs Builder: (1) the Agents panel matches log lines by the `who` field: scan, extension, agent, hq, builder. Keep those names. (2) Two Protect rows are unverified and say so: Backups ("Not checked") and Usage limit. Please confirm the Supabase backup plan and a restore test, then tell me the status to show.
 Needs owner: none
 Next: none
+
+### 2026-10-15 · extension · real Agent engine in the panel · done
+Step 1 done: practice mode now runs the REAL Agent engine inside the extension. `npm run vendor` (in `suite/extension`) copies the
+Agent (loop, registry, audit, limits, protocol, analytics, support, deals, tools, CSV sync), Scan's pricing and CSV writer, and the
+shared models into `src/vendor/`, keeping the folder layout so their imports work unchanged; a test fails if any copy is stale, and
+another if a copy uses node-only code. (`agent/fixtures/orders.js` is not copied: it reads files with node:fs. The extension has
+its own small made-up shop, `src/agent-host/shop.js`.) The service worker hosts `createAgentService` (`src/agent-host/host.js`) over
+that shop; the panel talks to it with chrome.runtime. The panel really plans (steps update as tools run), asks approval (a practice-only
+`act` tool changes made-up prices; audit shows `act`, `ok`, approved by `user`; denied is audited as `denied`), remembers
+("remember that ..." adds a fact; Forget removes it), and stops (kill switch denies the waiting approval; Resume continues). Only a
+stand-in "model" (keyword routing) is fake. Server address (Settings, advanced): validated https only, OFF by default, nothing uses
+it, and a test checks no extension code makes network requests.
+Also: (a) Scan uploader accepts Scan's real CSV output (tested with the vendored `buildCsv`), flags files that do not look like Scan's
+and says the TCGplayer columns are unverified; attaches only, never presses Upload. (b) `docs/suite/EXTENSION-PERMISSIONS.md` + a test that
+fails if the manifest gains or loses any permission, host or page match without a matching row (checked by adding one: it fails), plus
+a ban-list of powerful permissions. (c) TCGplayer email in `docs/suite/TOS-NOTES.md` rewritten to ready-to-send: short, polite, three
+specific questions, no recipient. (d) `npm run build` makes `tcg-speed-suite-<version>-<date>-<commit>.zip` with BUILD.txt, tests and dev
+files excluded (tested); README says plainly that extensions need desktop Chrome or Edge, not an iPad.
+Numbers: `cd suite && npm test` 217 pass, 0 fail (also under `env -i PATH HOME`); root `npm test` 17 suites pass; the whole panel flow
+(plan, approval, remember, forget, stop, resume) runs against the real engine in real Chromium.
+Needs Builder: (1) The host adds plan and memory itself because upstream protocol.js lacks them. When the Agent session adds
+`agent.plan`, `agent.memory`, `agent.memory.list`, `agent.memory.forget`, `summary`, `why`, `undo`, tell me and I delete the host's
+extras (the panel already accepts them only when `hello` lists them; `why` and `undo` show on approval cards now). (2) After any change under
+`suite/agent/`, `suite/scan/core/pricing.js`, `suite/scan/core/csv.js` or `suite/shared/models.js`, the extension's test goes red until
+someone runs `cd suite/extension && npm run vendor`. That is by design, but it means those PRs need that one command; say if you would
+rather I vendor automatically. (3) Still to remove before a Web Store submission: the `http://localhost/*` match.
+Needs owner: send the email in `docs/suite/TOS-NOTES.md` (add the recipient yourself); the saved pages. Extensions need desktop Chrome.
+Next: nothing blocked on me except X2 ("TOS OK").
