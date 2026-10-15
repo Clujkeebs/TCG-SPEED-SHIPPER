@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Fixture: pretend Speed Shipper page</title></head>
+<body><h1>Fixture page</h1><pre id="out">waiting</pre>
+<script>
+// Made-up data only. Speaks the bridge protocol the real web app will use.
+const send = (type, payload) => new Promise((resolve) => {
+  const id = 'fx-' + Math.random().toString(36).slice(2);
+  const onMsg = (e) => { if (e.source === window && e.data && e.data.source === 'tcgss-extension' && e.data.id === id) { window.removeEventListener('message', onMsg); resolve(e.data); } };
+  window.addEventListener('message', onMsg);
+  window.postMessage({ source: 'tcgss-app', v: 1, id, type, ...(payload ? { payload } : {}) }, location.origin);
+});
+window.tcgssSend = send;
+</script></body></html>

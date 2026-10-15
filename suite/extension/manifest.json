@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "TCG Speed Suite",
+  "version": "0.1.0",
+  "description": "Helpers for trading-card sellers. Every action is a button you click. Nothing runs against TCGplayer yet.",
+  "minimum_chrome_version": "114",
+  "permissions": ["storage", "sidePanel"],
+  "optional_host_permissions": ["https://seller.tcgplayer.com/*"],
+  "background": { "service_worker": "src/background.js", "type": "module" },
+  "content_scripts": [
+    {
+      "matches": ["https://tcgspeedshipper.com/*", "http://localhost/*"],
+      "js": ["src/content-loader.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["src/content-bridge.js", "src/bridge.js"],
+      "matches": ["https://tcgspeedshipper.com/*", "http://localhost/*"]
+    }
+  ],
+  "side_panel": { "default_path": "src/ui/sidepanel.html" },
+  "options_ui": { "page": "src/ui/options.html", "open_in_tab": true },
+  "action": { "default_title": "TCG Speed Suite", "default_popup": "src/ui/popup.html" },
+  "content_security_policy": { "extension_pages": "script-src 'self'; object-src 'self'" }
+}
