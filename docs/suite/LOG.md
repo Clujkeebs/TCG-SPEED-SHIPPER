@@ -226,3 +226,13 @@ Renamed the board "Suite HQ" (same address, owner data untouched). Library now o
 Needs Builder: the milestone status comes from the product `milestone` text in `suite/status` (it picks the last S/X/A code it finds, e.g. "S0 done, S1 next" gives S1 as next). Keep that wording style. Product ids it understands: shipper, scan, extension (or ext), agent, sites.
 Needs owner: none
 Next: none
+
+### 2026-10-15 · agent · plan for "agent, not chat" · started
+Read `CONTEXT.md`. Plan (all in `suite/agent/`, offline, fake data): (1) goal and plan layer: a goal becomes a short
+visible plan, run step by step with result checks; when a result is empty or odd it says so and stops that branch.
+(2) shop-facts memory with view, edit, delete; used by the planner in later runs. (3) approval inbox: every act step
+becomes a card (what, why, expected effect, undo) and nothing runs until approved. (4) background jobs that leave a
+report, approval required by default. (5) weekly "five things worth doing". (6) one scripted "week in a shop" scenario
+from goal to approved actions with a full audit trail, written up in `AGENT-EVAL.md`. The only act tools I add change
+the seller's own local stock prices, memory and saved schedules. Nothing touches TCGplayer, sends or spends.
+Needs Builder: none yet. Needs owner: none.

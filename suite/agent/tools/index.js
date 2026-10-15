@@ -147,7 +147,7 @@ export function createTools(data) {
     {
       name: 'pricing.suggestBatch', tier: 'read',
       description: 'Suggest prices for many inventory cards at once with a price rule, showing the change from the current price. Only suggests; changes no listing.',
-      inputSchema: { type: 'object', properties: { ruleId: str, rule: { type: 'object' }, onlyChanged: { type: 'boolean' }, limit: { type: 'integer', minimum: 1, maximum: 100 } } },
+      inputSchema: { type: 'object', properties: { ruleId: str, rule: { type: 'object' }, finish: { type: 'string', enum: FINISHES }, onlyChanged: { type: 'boolean' }, limit: { type: 'integer', minimum: 1, maximum: 100 } } },
       handler: (a) => {
         let rule = a.ruleId ? rules.find((r) => r.id === a.ruleId) : rules[0];
         if (a.rule) {
@@ -160,7 +160,7 @@ export function createTools(data) {
         let missing = 0, skipped = 0;
         for (const i of inventory) {
           const p = printingById.get(i.printingId);
-          if (!p || i.quantity <= 0) continue;
+          if (!p || i.quantity <= 0 || (a.finish && i.finish !== a.finish)) continue;
           const r = applyPriceRule(rule, p, { condition: i.condition, finish: i.finish });
           if (r.status === 'missing') { missing += 1; continue; }
           if (r.status === 'skip') { skipped += 1; continue; }

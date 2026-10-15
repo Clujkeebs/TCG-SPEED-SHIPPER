@@ -59,6 +59,7 @@ export function createAutomationStore() {
     get: (id) => (rows.has(id) ? structuredClone(rows.get(id)) : undefined),
     list: () => [...rows.values()].map((a) => structuredClone(a)),
     setEnabled(id, enabled) { const a = rows.get(id); if (!a) throw new Error('unknown automation ' + id); a.enabled = !!enabled; },
+    remove(id) { rows.delete(id); },
     markRun(id, at) { const a = rows.get(id); if (a) a.lastRunAt = at; },
   };
 }
