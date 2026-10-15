@@ -158,3 +158,19 @@ Not covered (honest list): real Chrome with a real signed-in profile; Edge/Firef
 anything on real TCGplayer pages (selectors are still guesses until saved pages arrive).
 Needs Builder: none. Needs owner: the saved TCGplayer pages listed in the X1 entry.
 Next: X3 when there is room.
+
+### 2026-10-15 · extension · X3 and extras · done
+Agent side panel shell: chat, a "practice mode" banner, and approval cards for `act`-level actions (Approve / Deny; only a
+click answers, once). It speaks a small checked protocol (`src/agent/protocol.js`) through a transport. Today the transport is a
+practice one on made-up data. Everything is added as plain text, never as markup. Also: Scan uploader module skeleton
+(`src/modules/scan-uploader.js`: checks the CSV, attaches it to an import page, never presses Upload; off); a popup that shows
+plain-words status per helper; a Settings page with a sentence for each switch; and an email draft to TCGplayer in `docs/suite/TOS-NOTES.md`
+(not sent, no recipient chosen). TCGplayer helpers are still locked.
+Numbers: `cd suite && npm test` 151 pass, 0 fail (also under `env -i PATH HOME`), root `npm test` 17 suites pass; side panel, popup and settings are exercised in real Chromium.
+Needs Builder: the panel cannot import `suite/agent/` (an extension cannot load files outside its folder, and the Agent uses
+`../shared`). To connect the real Agent: add a transport that implements `send(msg)` / `onEvent(fn)` with the messages in
+`suite/extension/src/agent/protocol.js` (user_message, approval; text, tool_call, approval_request, done, error). Either a server
+proxy (matches PLAN 4.3: no key in the browser) or a bundled copy of the loop. Your call; `loop.js` would need to emit those events
+and call `ctx.approve` through the panel.
+Needs owner: choose where to send the TCGplayer email in `TOS-NOTES.md` and send it yourself (or ask me to polish it); the saved pages.
+Next: X2 stays off until "TOS OK".

@@ -107,6 +107,29 @@ async function main() {
       return { off: await guardedAdapter('pasteTracking', document), flagOnTosClosed: null };
     }, mod);
     assert.equal(r5.off, null);
+    // --- Scan uploader module on the import page (flag on + gate opened for the test only) ---
+    await load('import.html');
+    const r6 = await page.evaluate(async (b) => {
+      const { attachCsv } = await import(b + '/src/modules/scan-uploader.js');
+      const flags = await import(b + '/src/flags.js');
+      const area = flags.memoryArea();
+      const csv = { name: 'listings.csv', text: 'TCGplayer Id,Quantity,Price\n1,2,0.99\n' };
+      const off = await attachCsv(document, csv, { flagOptions: { area, tosOk: true } });
+      await flags.setFlag('uploadToTcgplayer', true, area);
+      const dry = await attachCsv(document, csv, { flagOptions: { area, tosOk: true } });
+      const filesAfterDry = document.querySelector('#csv-file').files.length;
+      const closed = await attachCsv(document, csv, { dryRun: false, flagOptions: { area } });
+      const live = await attachCsv(document, csv, { dryRun: false, flagOptions: { area, tosOk: true } });
+      return { off, dry, filesAfterDry, closed, live, files: document.querySelector('#csv-file').files.length, title: document.title };
+    }, base);
+    assert.match(r6.off.message, /switched off/);
+    assert.equal(r6.dry.ok, true);
+    assert.match(r6.dry.message, /Practice run/);
+    assert.equal(r6.filesAfterDry, 0);
+    assert.match(r6.closed.message, /switched off/, 'TOS gate closed => nothing, even with the flag on');
+    assert.equal(r6.live.ok, true);
+    assert.equal(r6.files, 1);
+    assert.ok(!r6.title.includes('UPLOADED'), 'never presses Upload');
     console.log('adapter scenario ok');
   } finally {
     await browser.close();
