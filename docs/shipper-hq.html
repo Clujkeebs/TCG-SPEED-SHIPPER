@@ -1,4 +1,4 @@
-<title>Shipper HQ</title>
+<title>Suite HQ</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -181,6 +181,20 @@ td.num{font-family:var(--mono);white-space:nowrap}
 .idea-act{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .idea .src{font-size:13px;color:var(--faint)}
 
+/* filters and plans */
+.filters{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding-top:14px}
+.sel{min-height:46px;padding:0 10px;font-size:15px;font-weight:600}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+#filterInfo{padding-top:14px}
+#filterInfo .card{display:grid;gap:10px}
+.plan{display:grid;gap:12px;overflow-wrap:anywhere;min-width:0}
+.plan li,.plan p,.copy code{min-width:0}
+.plan h4{margin:6px 0 0;font:500 12px/1.2 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.plan ul,.plan ol{margin:0;padding-left:22px;display:grid;gap:7px;max-width:68ch}
+.plan p{max-width:68ch}
+.sum{font-weight:400;color:var(--muted);font-size:14px;display:block;margin-top:2px}
+details.fold>summary.two{display:grid;grid-template-columns:1fr auto;align-items:center}
+details.fold details.fold{background:var(--bg)}
 /* x posts */
 .post{display:grid;gap:12px;padding:16px;border-top:1px solid var(--line)}
 .post:first-child{border-top:0}
@@ -218,7 +232,7 @@ a.btn{display:inline-flex;align-items:center;text-decoration:none}
 <div class="wrap">
   <div class="bar"><div class="bar-in">
     <div class="bar-top">
-      <div class="brand">Shipper HQ</div>
+      <div class="brand">Suite HQ</div>
       <div class="bar-meta"><span id="countText"></span><span><span class="dot" id="syncDot"></span><span id="syncText">Connecting…</span></span></div>
     </div>
     <nav class="tabs" role="tablist" aria-label="Sections">
@@ -231,6 +245,12 @@ a.btn{display:inline-flex;align-items:center;text-decoration:none}
       <button class="tab" role="tab" data-tab="posts" aria-selected="false">X posts</button>
     </nav>
   </div></div>
+
+  <div class="filters" id="filters">
+    <label class="sr" for="selProd">Product</label><select class="field sel" id="selProd"></select>
+    <label class="sr" for="selMs">Milestone</label><select class="field sel" id="selMs"></select>
+  </div>
+  <div id="filterInfo"></div>
 
   <main>
     <div class="panel" id="tab-now">
@@ -622,7 +642,30 @@ const STAGES = [
  {id:"P7", name:"Suite", tasks:["S1","S2","S3","S4","S5"].map(k=>T[k])}
 ];
 
+const GADS = {"groups": [{"name": "TCGplayer labels", "url": "https://tcgspeedshipper.com/", "path": "tcgspeedshipper.com/labels/free", "keywords": ["[tcgplayer shipping labels]", "[tcgplayer shipping label]", "\"print tcgplayer shipping labels\"", "[tcgplayer label printer]", "[tcgplayer shipping label template]", "[tcgplayer labels]", "\"how to print tcgplayer shipping labels\"", "\"tcgplayer address labels\""], "headlines": ["TCGplayer Orders to Labels", "Print TCGplayer Labels Fast", "CSV to Shipping Labels", "4x6, Envelope & Avery 5160", "Label + Packing Slip in One", "Batch-Print All Your Orders", "Labels in Seconds, Not Hours", "Free: 10 Labels a Month", "No Signup Needed to Start", "Plans From $2.99/mo", "Your Data Stays in Browser", "Built by a TCGplayer Seller", "Try a Sample Order Free", "Unlimited Labels $5.99/mo", "Stop Typing Buyer Addresses"], "descriptions": ["Upload your TCGplayer order CSV and get print-ready labels, envelopes and slips in seconds", "Flags which orders need tracking ($49.99+) or signature ($250+). Free for 10 labels/month.", "Thermal 4x6, #10 envelopes, Avery 5160 or label + slip on one page. Try free, no signup.", "Made by a card seller for card sellers. Addresses never leave your computer. Start free."]}, {"name": "Packing slips with card lists", "url": "https://tcgspeedshipper.com/", "path": "tcgspeedshipper.com/packing-slips/free", "keywords": ["[tcgplayer packing slip]", "[tcgplayer packing slips]", "\"print tcgplayer packing slips\"", "[tcgplayer packing slip template]", "[tcgplayer packing list]", "\"tcgplayer packing slip pdf\""], "headlines": ["Packing Slips With Card Lists", "Slips Sorted to Match Labels", "Label + Packing Slip in One", "Uses TCGplayer's Own Slips", "One File: Label, Then Slip", "No More Mixed-Up Slips", "Print Slips in Label Order", "Free: 10 Labels a Month", "No Signup Needed to Start", "Plans From $2.99/mo", "Your Data Stays in Browser", "Built by a TCGplayer Seller", "Try a Sample Order Free", "Unlimited Labels $5.99/mo", "Stop Typing Buyer Addresses"], "descriptions": ["Add TCGplayer's packing slip PDF and every slip lands right behind its matching label.", "Card lists included. Each slip is matched to its order automatically. Nothing uploaded.", "Thermal printer? Get your slips re-sorted to match your label stack. Free to try.", "Made by a card seller for card sellers. 10 free labels a month, no signup needed."]}, {"name": "PWE and envelopes", "url": "https://tcgspeedshipper.com/", "path": "tcgspeedshipper.com/pwe/envelopes", "keywords": ["\"pwe shipping labels\"", "[print addresses on envelopes from csv]", "\"trading card envelope labels\"", "[avery 5160 from csv]", "\"plain white envelope trading cards\"", "\"print envelopes from csv\"", "\"how many stamps to mail a trading card\""], "headlines": ["PWE Envelopes Printed For You", "Print #10 Envelopes From CSV", "Avery 5160 Sheets From CSV", "Stamp Counts for Every PWE", "Envelope OK or Needs Tracking", "Ship Singles in Envelopes", "Addresses Printed, Not Typed", "Free: 10 Labels a Month", "No Signup Needed to Start", "Plans From $2.99/mo", "Your Data Stays in Browser", "Built by a TCGplayer Seller", "Try a Sample Order Free", "Unlimited Labels $5.99/mo", "Stop Typing Buyer Addresses"], "descriptions": ["Print buyer addresses onto #10 envelopes or Avery 5160 sheets straight from your order CSV", "Counts the stamps for every envelope order and flags anything over 3.5 oz. Try it free.", "Tags each order envelope-OK, tracking required or signature required before you print.", "Made by a card seller for card sellers. Addresses never leave your computer. Start free."]}, {"name": "Card shipping tools", "url": "https://tcgspeedshipper.com/", "path": "tcgspeedshipper.com/shipping/tools", "keywords": ["[tcgplayer shipping tool]", "[tcgplayer shipping software]", "\"card seller shipping software\"", "[trading card shipping software]", "\"shipping labels for card sellers\"", "\"tcgplayer seller tools\""], "headlines": ["Trading Card Shipping Tool", "Shipping Software for TCG", "Made for TCGplayer Sellers", "Pirate Ship Export Built In", "Mark a Batch Shipped at Once", "Tracking Sync for TCGplayer", "Faster Shipping Days", "Free: 10 Labels a Month", "No Signup Needed to Start", "Plans From $2.99/mo", "Your Data Stays in Browser", "Built by a TCGplayer Seller", "Try a Sample Order Free", "Unlimited Labels $5.99/mo", "Stop Typing Buyer Addresses"], "descriptions": ["Labels, packing slips, stamp counts and a Pirate Ship export from one TCGplayer CSV.", "Paste tracking once and get one file that marks the whole batch shipped on TCGplayer.", "Flags which orders need tracking ($49.99+) or signature ($250+). Free for 10 labels/month.", "Made by a card seller for card sellers. Addresses never leave your computer. Start free."]}], "negatives": ["login", "log in", "sign in", "customer service", "phone number", "careers", "jobs", "salary", "refund", "where is my order", "track my order", "buyer protection", "buylist", "sell my cards", "sell cards to tcgplayer", "price guide", "prices", "coupon", "promo code", "app store", "download app", "reddit", "scam", "stock", "ups store", "fedex", "label maker", "dymo software", "wedding", "address labels for christmas cards"], "backup": ["Card Orders to Labels", "Print Card Shipping Labels", "Made for Card Sellers", "Card Seller Shipping Tool"]};
+const PLANS = [{"id": "growth", "title": "Growth plan", "sum": "Fix the top of the funnel first. Search, short videos and creators beat ads. Written Sep 26; some of it is now done.", "html": "<p class=\"muted small\">Written Sep 26, 2026. Done since: postage is built, deploys are automatic, the real domain is bought, sign-up codes are on.</p><h4>Where it started</h4><ul><li>7 paying sellers, $29.93 a month gross. Half of all accounts pay, so the product converts. The problem is visitors.</li><li>Ranked #6 on Google for “tcgplayer shipping labels” with no ads running.</li><li>About 100 cold emails to shops got 0 replies and 8 bounces. Stopped.</li></ul><h4>The math</h4><ul><li>$100 a month needs about 20 payers. $1,000 needs about 140, and only if each pays about $7 instead of $4.28.</li><li>About 1% of visitors end up paying. $100 needs roughly 1,700 visitors; $1,000 roughly 14,000.</li><li>At 6% monthly churn, 140 payers lose about 9 a month, so 9 new ones are needed just to stand still. Annual plans help.</li></ul><h4>Next 60 days (to $100)</h4><ul><li>Search Console and a real domain. Three short videos. One useful Reddit or Discord answer a week.</li><li>A small Google Ads test ($150, keep only if a paying customer costs under $15).</li><li>Two-sided referral, a better free-limit upgrade screen, and 10 small creators at 30%.</li></ul><h4>Months 3 to 12 (to $1,000)</h4><ul><li>Pricing: Base $2.99 for new sellers, yearly plans, a Pro plan. Current subscribers keep their price.</li><li>Product bets in order: tracking upload file, more marketplaces, postage inside the app, order history.</li><li>Channels ranked: SEO and short video first, creators second, ads third, cold email never.</li></ul><h4>Monday scorecard targets</h4><div class=\"tbl\"><table><tr><th>Number</th><th>Phase 1</th><th>Phase 2</th></tr><tr><td>Monthly revenue</td><td>$100</td><td>$1,000</td></tr><tr><td>Paying customers</td><td>20+</td><td>140+</td></tr><tr><td>Visits a week</td><td>200+</td><td>1,500+</td></tr><tr><td>Visit to CSV</td><td>25%+</td><td>30%+</td></tr><tr><td>Sign-ups a week</td><td>5+</td><td>25+</td></tr><tr><td>Monthly churn</td><td>under 8%</td><td>under 5%</td></tr></table></div><h4>Risks</h4><ul><li>TCGplayer changes its CSV and the tool breaks. Parser tests and admin errors catch it.</li><li>One power user is most of the usage. Keep them happy.</li><li>A price rise upsets old subscribers. Grandfather them and say so.</li><li>TCGplayer can restrict its name in ad text. Keep backup headlines ready.</li></ul>"}, {"id": "marketing", "title": "Marketing plan (Sep 29 to Oct 28)", "sum": "Five channels, ranked by return per hour. Visits 259 → 500, paying 8 → 13, partners 0 → 3.", "html": "<h4>30-day targets (weekly numbers)</h4><div class=\"tbl\"><table><tr><th>Metric</th><th>Then</th><th>Target</th></tr><tr><td>Visits</td><td>259</td><td>500</td></tr><tr><td>CSV loads per visit</td><td>15%</td><td>20%</td></tr><tr><td>New accounts</td><td>1</td><td>5</td></tr><tr><td>Paying customers</td><td>8</td><td>13</td></tr><tr><td>Newsletter subscribers</td><td>0</td><td>40</td></tr><tr><td>Active partners</td><td>0</td><td>3</td></tr></table></div><h4>The five channels</h4><ul><li><b>Partners and creators.</b> 40% recurring plus a free year of Premium. One follow-up, then stop. No more cold email to shops.</li><li><b>SEO posts.</b> Two a week from real search demand. Search Console is the best 15 minutes on the list.</li><li><b>Weekly newsletter.</b> Tuesday mornings. The download popup and footer collect sign-ups.</li><li><b>Short video.</b> A 60-second screen demo: CSV, drop, print. Your face builds trust.</li><li><b>Communities.</b> One helpful post a week from your own account, maker disclosed.</li></ul><h4>Weekly rhythm</h4><ul><li>Monday: newsletter drafted, scoreboard updated.</li><li>Tuesday 7:52 AM PT: newsletter goes out.</li><li>Daily 5 AM PT: health check and the owner note.</li><li>You: one community post, one short video, answer partner replies.</li></ul><p class=\"muted small\">Full plan and the weekly scoreboard are in the repo (Library, Plans and research).</p>"}, {"id": "gads", "title": "Google Ads kit", "sum": "A $150, 30-day Search test. Every headline and keyword is ready to copy.", "gads": true, "html": "<h4>Do this, in order (about 45 minutes)</h4><ol><li>At <b>ads.google.com</b>, switch to <b>Expert Mode</b> and create an account without a campaign. United States, Pacific time, USD.</li><li>Add your card. Use a new-account promo code if Google shows one.</li><li>New campaign: goal <b>Website traffic</b>, type <b>Search</b>, named <b>Search - TCG Speed Shipper</b>.</li><li>Untick Search Partners and Display. Location United States. <b>Maximize clicks</b>, max CPC <b>$1.50</b>, <b>$5 a day</b>. Turn off AI Max and auto-apply.</li><li>Final URL suffix: <span class=\"mono\">utm_source=google_ads&amp;utm_medium=cpc&amp;utm_campaign={campaignid}&amp;utm_content={adgroupid}</span></li><li>Create the four ad groups below, add the negative keywords, then publish. If “TCGplayer” is restricted in ad text, use the backup headlines.</li></ol><h4>Keep or stop</h4><ul><li>No tracking tag is needed. The admin funnel counts ad clicks as source google_ads.</li><li>After $150 (about 30 days): 3 or more paying customers means keep going and raise to $10 a day. Fewer means stop and put the money into creators.</li><li>A paying seller is worth about $36, so up to about $15 each is fine.</li><li>Every Monday: add junk searches to the negative list and pause a keyword with $15 spent and no CSV loads.</li></ul><p class=\"small\">Images, logos and the Ads Editor files are in the <a href=\"https://claude.ai/artifact/7uWBkF4HbeRisfsVjyF9Yu\" target=\"_blank\" rel=\"noopener\">Google Ads Kit page</a>.</p>"}, {"id": "suite", "title": "Suite plan", "sum": "One toolkit for a card seller’s whole day: ship, list, run. Scan and the extension first, then the Agent.", "html": "<h4>The pieces</h4><ul><li><b>Shipper</b> (live): labels, slips and postage.</li><li><b>Scan:</b> point a phone at a card, set a price rule once, export a CSV.</li><li><b>Chrome extension:</b> paste tracking, print shipping, upload, and the Agent’s side panel.</li><li><b>Agent:</b> an AI helper for inventory, pricing and replies. Anything that changes money, listings or customers waits for your OK.</li></ul><h4>What could stop it</h4><ul><li><b>TCGplayer’s rules.</b> Their terms reportedly ban bots, so we start with their official CSV and ask in writing before automating.</li><li><b>TCGplayer already scans.</b> We win on speed, price rules, more games and the link to Shipper.</li><li><b>Accuracy.</b> If Scan cannot reach about 95% on modern cards, we stop and say so.</li></ul><h4>Order of work</h4><ul><li>Scan: search first, then camera (Magic, Pokémon), then Yu-Gi-Oh! and One Piece. Pass: 3 to 5 sellers each list 100+ cards and 9 in 10 rows need no edit.</li><li>Extension: skeleton and tests, anything touching TCGplayer stays off until “TOS OK”.</li><li>Agent: starts once the first two have a base.</li></ul><p class=\"muted small\">Rough money: $10,000 a month is about 170 sellers at $59. No price is agreed. Details: Library, Suite and how we work.</p>"}, {"id": "seo", "title": "SEO and Reddit ads (Sep 14)", "sum": "The site needs links from others and real analytics. Reddit is where sellers look for answers.", "html": "<p class=\"muted small\">From a Sep 14 audit. Check against current data before acting.</p><h4>What was found</h4><ul><li>Technical SEO scored 100 out of 100 on 21 pages. The gaps were 0 sites linking to us and Search Console not connected.</li><li>Google’s AI answer for “does TCGplayer provide shipping labels” cited Reddit and TCGplayer’s help pages, not us.</li><li>“tcg tracking” (about 1,600 searches a month) is held by two small sites. It is winnable with links.</li></ul><h4>What to do</h4><ul><li>Connect Search Console and Google Analytics first (15 minutes).</li><li>Ask every partner who says yes for a link on their own site, not only a post.</li><li>Answer real shipping questions on Reddit, mention the tool only when it is the honest answer.</li></ul><h4>Reddit ads, if you try them</h4><ul><li>Aim at “generated a label”, not “paid”. Paid sales are too few for the ad system to learn from.</li><li>Two tests: a broad trading-card audience ($5 to $10 a day) and small seller communities ($10 to $15 a day). Confirm community sizes inside Reddit’s own tools.</li><li>Write ads like a plain first-person post, not a banner.</li><li>Run two weeks before judging. Do not run an organic post in the same community the same week.</li></ul>"}];
+
 /* ---------- Content ---------- */
+const PRODUCTS = [["all","All products"],["shipper","Shipper"],["scan","Scan"],["ext","Extension"],["agent","Agent"]];
+const TASK_PROD = {S1:["scan","ext","agent"], S2:["ext","scan"], S3:["scan","ext"], S4:["scan"], S5:["scan"], E5:["ext"]};
+const IDEA_PROD = {"suite-sites":["scan","agent","ext"], "envelope-tracking":["shipper"]};
+const MILESTONES = [
+ ["S0","scan","Foundation, no camera","Price rules, the TCGplayer CSV writer, card search, the session queue and an offline phone app. Done when 10 cards can be added by search and exported as a CSV."],
+ ["S1","scan","Camera and card reading","Capture, find the card, crop and read the set code and number for Magic and Pokémon. Done when accuracy meets the target on a labeled photo set, or the report says why not."],
+ ["S2","scan","Yu-Gi-Oh! and One Piece","More games, TCGplayer id coverage per game, faster rapid-fire."],
+ ["S3","scan","Beta","Three to five real sellers, Rob first. Pass: each lists 100+ cards and 9 in 10 rows need no edit."],
+ ["X0","ext","Foundation","Manifest V3 skeleton, feature switches (all TCGplayer features off), message bridge, tests, privacy draft."],
+ ["X1","ext","Page adapters","Adapters with settings in config and a self-test, a dry-run mode, built on invented test pages. Still off."],
+ ["X2","ext","Real TCGplayer pages","Needs written “TOS OK” first. Paste tracking comes first."],
+ ["X3","ext","Agent side panel","A shell for the Agent inside the extension."],
+ ["A0","agent","Tools and safety","Tool list, permission levels, audit log, spending limits and an offline test harness."],
+ ["A1","agent","Read-only helper","Analytics and drafts on test data."],
+ ["A2","agent","Inventory and CSV sync","Reads and updates inventory, with your OK."],
+ ["A3","agent","Automations and deal finder","Repeating jobs and supply deals, each switched on by you."],
+ ["A4","agent","Extension chat and billing","Chat in the extension, a server proxy, limits and billing."]
+];
+const MS_TASKS = {S0:["S4"], S1:["S5"], S3:["S3"], X2:["S2"]};
+
 const REPO = "https://github.com/Clujkeebs/TCG-SPEED-SHIPPER/blob/main/";
 const LADDER = [
  {amt:"$40", label:"Today", body:"11 paying sellers. Subscriptions only.", here:1},
@@ -630,6 +673,7 @@ const LADDER = [
  {amt:"$1,000", body:"About 30 active postage sellers, plus search and ads bringing steady visits."},
  {amt:"$10,000", body:"About 250 active shipping sellers, the Chrome extension, shop plans, a better envelope rate."}
 ];
+const ROAD_PROD = {"Suite sessions keep building":["scan","ext","agent"], "Chrome extension, Scan, Agent":["scan","ext","agent"], "Shop plans, a site for each product":["shipper","scan","ext","agent"]};
 const ROAD = [
  {name:"This week", items:[
   ["Test postage labels", ["A8","A13"]],
@@ -767,7 +811,7 @@ const IDEAS = [
 /* ---------- State ---------- */
 const ALL = STAGES.flatMap(s => s.tasks.map(t => ({...t, stage:s.id})));
 const byId = Object.fromEntries(ALL.map(t=>[t.id,t]));
-let xposts = [], progress = {}, inbox = [], suiteDoc = null, meetings = [], ideaState = {}, uploads = [];
+let selProd = "all", selMs = "", xposts = [], progress = {}, inbox = [], suiteDoc = null, meetings = [], ideaState = {}, uploads = [];
 let db = null, sample = null, assets = null, synced = false;
 const local = { get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}}, set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}} };
 progress = local.get("hq-progress") || {};
@@ -776,6 +820,10 @@ let showRest = false, showDone = false, showParked = false, showAllIdeas = false
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s==null?"":s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const taskProds = t => TASK_PROD[t.id] || ["shipper"];
+const msProd = id => (MILESTONES.find(m=>m[0]===id)||[])[1];
+function taskOK(t){ if (selMs) return (MS_TASKS[selMs]||[]).includes(t.id); return selProd==="all" || taskProds(t).includes(selProd); }
+function prodOK(prods){ if (selMs) return prods.includes(msProd(selMs)); return selProd==="all" || prods.includes(selProd); }
 const isDone = id => !!(progress[id] && progress[id].done);
 function toast(msg){ const t=$("#toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast.h); toast.h=setTimeout(()=>t.hidden=true,2400); }
 function fmtDate(iso){ const d=new Date(iso); return isNaN(d)?"":d.toLocaleString([], {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}); }
@@ -807,7 +855,7 @@ function taskHTML(t, big){
 }
 function stageName(t){ const s=STAGES.find(s=>s.id===t.stage); return s?s.name:""; }
 function ordered(){
-  const open = ALL.filter(t=>!isDone(t.id));
+  const open = ALL.filter(t=>!isDone(t.id) && taskOK(t));
   const rank = t => t.later ? 2 : t.wait ? 1 : 0;
   return [0,1,2].flatMap(r => STAGES.flatMap(s => {
     const mine = open.filter(t=>t.stage===s.id && rank(t)===r);
@@ -823,8 +871,8 @@ const awayOpen = new Set();
 function renderTodo(){
   const ord = ordered();
   const nextT = ord[0], now = ord.slice(1,4), after = ord.slice(4,9), rest = ord.slice(9);
-  const done = ALL.filter(t=>isDone(t.id));
-  $("#nextUp").innerHTML = nextT ? taskHTML(nextT,true) : `<div class="card empty">Everything is done.</div>`;
+  const done = ALL.filter(t=>isDone(t.id) && taskOK(t));
+  $("#nextUp").innerHTML = nextT ? taskHTML(nextT,true) : `<div class="card empty">${selMs||selProd!=="all"?"No open tasks for this selection.":"Everything is done."}</div>`;
   $("#nowBlock").hidden = !now.length; $("#nowList").innerHTML = now.map(t=>taskHTML(t)).join("");
   $("#afterBlock").hidden = !after.length; $("#afterList").innerHTML = after.map(t=>taskHTML(t)).join("");
   const restSet = new Set(rest.map(t=>t.id));
@@ -843,30 +891,35 @@ function renderTodo(){
   $("#doneBlock").hidden = !showDone || !done.length;
   renderAway();
   $("#countText").textContent = `${ord.length} open`;
+  if (selMs) ["#awayBlock","#nextUpBlock","#nowBlock","#afterBlock","#restBlock","#restBtn","#doneBtn","#doneBlock"].forEach(i=>{ $(i).hidden = true; });
 }
 
 /* ---------- Roadmap ---------- */
 function renderRoadmap(){
   const curStep = PATH.findIndex(p=>!p[1].every(isDone));
+  const showShip = prodOK(["shipper"]);
+  const roadCols = ROAD.map(c=>({name:c.name, items:c.items.filter(it=>prodOK(ROAD_PROD[it[0]]||["shipper"]))})).filter(c=>c.items.length);
+  const sprods = suiteView().products.filter(p=>p.ms.length && prodOK([p.id]));
   $("#tab-roadmap").innerHTML = `
-  <section class="sec"><h2>Where the money is going</h2>
+  ${showShip?`<section class="sec"><h2>Where the money is going</h2>
     <div class="ladder">${LADDER.map(l=>`<div class="rung ${l.here?"here":""}"><div><b>${l.amt}</b><div class="label" style="margin-top:6px">${l.label||"a month"}</div></div><div>${esc(l.body)}</div></div>`).join("")}</div>
-  </section>
-  <section class="sec"><h2>This week, next, later</h2>
-    <div class="cols">${ROAD.map(c=>`<div class="card"><div class="label" style="margin-bottom:10px">${c.name}</div><div style="display:grid;gap:12px">${c.items.map(it=>`<div>${esc(it[0])}${it[1].length?`<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${it[1].map(chip).join("")}</div>`:""}</div>`).join("")}</div></div>`).join("")}</div>
-  </section>
-  <section class="sec"><h2>Postage launch path</h2>
+  </section>`:""}
+  ${roadCols.length?`<section class="sec"><h2>This week, next, later</h2>
+    <div class="cols">${roadCols.map(c=>`<div class="card"><div class="label" style="margin-bottom:10px">${c.name}</div><div style="display:grid;gap:12px">${c.items.map(it=>`<div>${esc(it[0])}${it[1].length?`<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${it[1].map(chip).join("")}</div>`:""}</div>`).join("")}</div></div>`).join("")}</div>
+  </section>`:""}
+  ${showShip?`<section class="sec"><h2>Postage launch path</h2>
     <ol class="path card">${PATH.map((p,i)=>{ const d=p[1].every(isDone); return `<li class="${d?"done":i===curStep?"now":""}"><span class="mk"></span><div><b>${esc(p[0])}</b> ${p[1].map(chip).join(" ")}<div class="muted small">${esc(p[2])}</div></div></li>`; }).join("")}</ol>
-  </section>
-  <section class="sec"><h2>Suite roadmap</h2>
-    <div class="card" style="display:grid;gap:14px">${suiteView().products.map(p=>{ const ci=p.cur?p.ms.findIndex(m=>m[0]===p.cur):-1; return `<div><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><b>${esc(p.name)}</b><span class="muted small">${esc(p.state||"")}</span></div>${p.ms.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${p.ms.map((m,i)=>`<span class="pill ${ci>=0&&i<ci?"ok":i===ci?"acc":""}" title="${esc(m[1])}">${m[0]}${ci>=0&&i<ci?" ✓":""}</span>`).join("")}</div><div class="muted small" style="margin-top:6px">${ci>=0?esc(p.ms[ci][1]):esc(p.line||"")}</div>`:`<div class="muted small">${esc(p.line||"")}</div>`}</div>`; }).join("")}
+  </section>`:""}
+  ${sprods.length?`<section class="sec"><h2>Suite roadmap</h2>
+    <div class="card" style="display:grid;gap:14px">${sprods.map(p=>{ const ci=p.cur?p.ms.findIndex(m=>m[0]===p.cur):-1; return `<div><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><b>${esc(p.name)}</b><span class="muted small">${esc(p.state||"")}</span></div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${p.ms.map((m,i)=>`<span class="pill ${ci>=0&&i<ci?"ok":i===ci?"acc":""}" title="${esc(m[1])}">${m[0]}${ci>=0&&i<ci?" ✓":""}</span>`).join("")}</div><div class="muted small" style="margin-top:6px">${ci>=0?esc(p.ms[ci][1]):esc(p.line||"")}</div></div>`; }).join("")}
     <div><button class="link-btn" data-gotab="suite">Open the Suite tab</button></div></div>
-  </section>
-  <section class="sec"><h2>The long game</h2><div class="card" style="display:grid;gap:8px">${LONG.map(l=>`<p>${esc(l)}</p>`).join("")}</div></section>
-  <section class="sec">
+  </section>`:""}
+  ${!selMs&&selProd==="all"?`<section class="sec"><h2>The long game</h2><div class="card" style="display:grid;gap:8px">${LONG.map(l=>`<p>${esc(l)}</p>`).join("")}</div></section>`:""}
+  ${showShip?`<section class="sec">
     <details class="fold"><summary>How Pitney Bowes fits in</summary><div class="fold-body">${pbHTML()}</div></details>
     <details class="fold"><summary>Money plan: what we keep per label</summary><div class="fold-body">${moneyHTML()}</div></details>
-  </section>`;
+  </section>`:""}
+  ${!roadCols.length&&!sprods.length&&!showShip?`<div class="card empty">Nothing on the roadmap for this selection.</div>`:""}`;
 }
 function pbHTML(){ return `
   <p>Pitney Bowes sells us real USPS postage through their system. Our app asks for a label, they send back the label with a tracking number, and we add it to the seller's packing slip file.</p>
@@ -903,7 +956,7 @@ function suiteView(){
     const p = defs[alias[o.id]||o.id] || {ms:[]};
     const ids = String(o.milestone||"").match(/\b[SXA]\d\b/g);
     const cur = d ? (ids ? ids[ids.length-1] : null) : p.cur;
-    return {ms:p.ms, id:o.id, name:o.name||p.name, state:(d?o.milestone:p.state)||o.state||p.state, kind:o.state||"", cur, line:o.line||p.line};
+    return {ms:p.ms, id:alias[o.id]||o.id, name:o.name||p.name, state:(d?o.milestone:p.state)||o.state||p.state, kind:o.state||"", cur, line:o.line||p.line};
   });
   return {products, log: d && Array.isArray(d.log) && d.log.length ? d.log : SUITE_LOG_DEFAULT, updatedAt: d && d.updatedAt};
 }
@@ -912,25 +965,27 @@ function renderSuite(){
   const photos = uploads.filter(u=>u.kind==="photo"), csv = uploads.filter(u=>u.kind==="csv");
   const stamp = v.updatedAt ? "Updated "+fmtDate(v.updatedAt) : "Starting facts from Oct 15. The Builder updates this each morning.";
   const log = v.log.slice(-3).reverse();
-  const suiteTasks = ["S1","S2","S3","S4","S5"].map(k=>byId[k]).filter(Boolean);
+  const suiteTasks = ["S1","S2","S3","S4","S5"].map(k=>byId[k]).filter(t=>t&&taskOK(t));
+  const shownProds = v.products.filter(p=>selMs ? p.id===msProd(selMs) : (selProd==="all" || p.id===selProd));
+  const showFiles = !selMs ? (selProd==="all"||selProd==="scan") : msProd(selMs)==="scan";
   $("#tab-suite").innerHTML = `
   <section class="sec"><div class="sec-head"><h2>TCG Speed Suite</h2><span class="muted small">${esc(stamp)}</span></div>
     <p class="lede">Scan, the Chrome extension, the Agent, and later a site for each product.</p></section>
-  <section class="prods">${v.products.map(p=>{
+  <section class="prods">${shownProds.map(p=>{
     const ci = p.cur ? p.ms.findIndex(m=>m[0]===p.cur) : -1;
     return `<div class="card prod ${p.ms.length?"":"wide"}"><div class="prod-top"><h3>${esc(p.name)}</h3><span class="pill ${p.kind==="live"?"ok":/not started|planned|needs/i.test(p.state)||p.kind==="planned"?"":"acc"}">${esc(p.state)}</span></div>
       <p class="muted small">${esc(p.line||"")}</p>
       ${p.ms.length?`<ul class="ms">${p.ms.map((m,i)=>`<li class="${ci>=0&&i<ci?"done":i===ci?"now":""}"><span class="mk"></span><span><b>${m[0]}</b> ${esc(m[1])}</span></li>`).join("")}</ul>`:""}</div>`; }).join("")}</section>
   <section class="sec"><h2>Latest from the log</h2><div class="list">${log.map(l=>`<div class="row"><div class="label">${esc(String(l.at||"").includes("T")?fmtDate(l.at):(l.at||""))} · ${esc(l.who||"")}</div><div>${esc(l.line||"")}</div></div>`).join("")}</div></section>
-  <section class="sec"><h2>Your Suite tasks</h2><div class="list">${suiteTasks.map(t=>taskHTML(t)).join("")}</div></section>
-  <section class="sec"><h2>Add files for Scan</h2><div class="card upl">
+  ${suiteTasks.length?`<section class="sec"><h2>Your Suite tasks</h2><div class="list">${suiteTasks.map(t=>taskHTML(t)).join("")}</div></section>`:""}
+  ${showFiles?`<section class="sec"><h2>Add files for Scan</h2><div class="card upl">
     ${assets ? `
     <div><b>TCGplayer inventory export (CSV)</b><div class="muted small">Seller Portal → manage listings → Export. It has no buyer details. ${csv.length?csv.length+" added.":""}</div>
       <div class="drop" style="margin-top:8px"><input type="file" id="upCsv" accept=".csv,text/csv" hidden><button class="btn" data-upload="csv">Choose CSV</button></div></div>
     <div><b>Card photos (about 50)</b><div class="muted small">One card per photo, mixed games. ${photos.length} added.</div>
       <div class="drop" style="margin-top:8px"><input type="file" id="upPhotos" accept="image/*" multiple hidden><button class="btn" data-upload="photo">Choose photos</button><span class="muted small" id="upStatus"></span></div></div>`
     : `<div class="muted">Uploads are not available in this view. Open this page in claude.ai while signed in. Until then, write what you have in the note on task S4 or S5.</div>`}
-  </div></section>
+  </div></section>`:""}
   <section class="sec"><p class="small muted">One-page plan: <a href="https://claude.ai/artifact/PCzahciuSwBBzRPDrABhnu" target="_blank" rel="noopener">TCG Speed Suite</a></p></section>`;
 }
 async function doUpload(kind, files){
@@ -948,8 +1003,24 @@ async function doUpload(kind, files){
 }
 
 /* ---------- Library ---------- */
+function gadsHTML(){
+  const row = t => `<div class="copy"><code>${esc(t)}</code><button class="btn small" data-copy="${esc(t)}">Copy</button></div>`;
+  return GADS.groups.map(g=>`<details class="fold"><summary>Ad group: ${esc(g.name)}</summary><div class="fold-body">
+    <div class="muted small">Final URL ${esc(g.url)} · path ${esc(g.path)}</div>
+    <div class="label">Keywords</div>${g.keywords.map(row).join("")}
+    <div class="label">15 headlines</div>${g.headlines.map(row).join("")}
+    <div class="label">4 descriptions</div>${g.descriptions.map(row).join("")}</div></details>`).join("")
+   + `<details class="fold"><summary>Negative keywords and backup headlines</summary><div class="fold-body">
+    <div class="copy"><code>${esc(GADS.negatives.join(", "))}</code><button class="btn small" data-copy="${esc(GADS.negatives.join("\n"))}">Copy all</button></div>
+    <div class="label">Backup headlines</div>${GADS.backup.map(row).join("")}</div></details>`;
+}
 function renderLibrary(){
-  $("#tab-library").innerHTML = `<section class="lib">${LIB.map(g=>`<div class="sec"><h2>${esc(g.name)}</h2><div class="links">${g.items.map(i=>`<a class="lk ${g.top?"top":""}" href="${esc(i[1])}" target="_blank" rel="noopener"><b>${esc(i[0])}</b><span>${esc(i[2])}</span></a>`).join("")}</div></div>`).join("")}</section>`;
+  const plan = p => `<details class="fold"><summary class="two"><span>${esc(p.title)}<span class="sum">${esc(p.sum)}</span></span></summary><div class="fold-body plan">${p.html}${p.gads?gadsHTML():""}</div></details>`;
+  $("#tab-library").innerHTML = `<section class="lib">
+    <div class="sec"><h2>Plans</h2><p class="lede">Short summaries. Tap one to open the detail.</p>
+      <div style="display:grid;gap:10px">${PLANS.map(plan).join("")}
+        <div class="links"><button class="lk" data-gotab="roadmap"><b>Pitney Bowes guide</b><span>In the Roadmap tab, at the bottom.</span></button><button class="lk" data-gotab="meetings"><b>Meeting notes</b><span>Next call, questions and saved notes.</span></button></div></div></div>
+    ${LIB.map(g=>`<div class="sec"><h2>${esc(g.name)}</h2><div class="links">${g.items.map(i=>`<a class="lk ${g.top?"top":""}" href="${esc(i[1])}" target="_blank" rel="noopener"><b>${esc(i[0])}</b><span>${esc(i[2])}</span></a>`).join("")}</div></div>`).join("")}</section>`;
 }
 
 /* ---------- Meetings ---------- */
@@ -979,7 +1050,7 @@ function renderIdeas(){
   const score = x => x.i/x.e;
   const list = IDEAS.map((x,k)=>({...x,k})).sort((a,b)=>score(b)-score(a)||a.k-b.k);
   const st = id => (ideaState[id]&&ideaState[id].status)||"open";
-  const openAll = list.filter(x=>st(x.id)!=="not_now"), open = showAllIdeas?openAll:openAll.slice(0,8), parked = list.filter(x=>st(x.id)==="not_now");
+  const openAll = list.filter(x=>st(x.id)!=="not_now" && prodOK(IDEA_PROD[x.id]||["shipper"])), open = showAllIdeas?openAll:openAll.slice(0,8), parked = list.filter(x=>st(x.id)==="not_now" && prodOK(IDEA_PROD[x.id]||["shipper"]));
   const L = ["","Low","Medium","High"], E=["","Small","Medium","Large"];
   const card = x => `<div class="idea"><h3>${esc(x.what)}</h3><p class="muted">${esc(x.why)}</p>
     <div class="idea-meta"><span class="pill ${x.i===3?"ok":""}">Impact: ${L[x.i]}</span><span class="pill">Effort: ${E[x.e]}</span><span class="pill acc">${esc(x.who)}</span></div>
@@ -1033,6 +1104,32 @@ async function postSet(id, patch){
   else toast("Saving needs sync, which is off in this view");
 }
 
+/* ---------- Product and milestone filters ---------- */
+function msStatus(id){
+  const m = MILESTONES.find(x=>x[0]===id); if (!m) return "";
+  const p = suiteView().products.find(x=>x.id===m[1]); if (!p||!p.cur) return "Later";
+  const ms = SUITE_DEFAULT.products.find(x=>x.id===m[1]).ms.map(x=>x[0]);
+  const ci = ms.indexOf(p.cur), i = ms.indexOf(id);
+  return i<ci ? "Done" : i===ci ? (/next|start/i.test(p.state)?"Next":"In progress") : "Later";
+}
+function renderFilters(){
+  const ps = $("#selProd"), ms = $("#selMs");
+  ps.innerHTML = PRODUCTS.map(p=>`<option value="${p[0]}" ${p[0]===selProd?"selected":""}>${p[1]}</option>`).join("");
+  const list = MILESTONES.filter(m=>selProd==="all"||m[1]===selProd);
+  const groups = PRODUCTS.slice(1).map(p=>[p, list.filter(m=>m[1]===p[0])]).filter(g=>g[1].length);
+  ms.innerHTML = `<option value="">Any milestone</option>` + groups.map(g=>`<optgroup label="${g[0][1]}">${g[1].map(m=>`<option value="${m[0]}" ${m[0]===selMs?"selected":""}>${m[0]} · ${esc(m[2])}</option>`).join("")}</optgroup>`).join("");
+  const info = $("#filterInfo");
+  if (selMs){
+    const m = MILESTONES.find(x=>x[0]===selMs), st = msStatus(selMs), tasks = (MS_TASKS[selMs]||[]).map(k=>byId[k]).filter(Boolean);
+    info.innerHTML = `<div class="card"><div class="sec-head"><h3>${m[0]} · ${esc(m[2])}</h3><span class="pill ${st==="Done"?"ok":st==="Later"?"":"acc"}">${st}</span></div><p class="muted">${esc(m[3])}</p>${tasks.length?`<div class="label">Your tasks</div><div class="list">${tasks.map(t=>taskHTML(t)).join("")}</div>`:`<p class="muted small">No tasks for you on this milestone.</p>`}</div>`;
+  } else if (selProd!=="all"){
+    const p = suiteView().products.find(x=>x.id===selProd);
+    info.innerHTML = p ? `<div class="card"><div class="sec-head"><h3>${esc(p.name)}</h3><span class="pill acc">${esc(p.state||"")}</span></div><p class="muted">${esc(p.line||"")}</p></div>` : "";
+  } else info.innerHTML = "";
+  local.set("hq-filter2",{selProd,selMs});
+}
+function applyFilters(){ renderFilters(); RENDER[curTab](); }
+
 /* ---------- Tabs ---------- */
 const RENDER = {now:renderTodo, roadmap:renderRoadmap, suite:renderSuite, library:renderLibrary, meetings:renderMeetings, ideas:renderIdeas, posts:renderPosts};
 function showTab(name, noScroll){
@@ -1040,7 +1137,7 @@ function showTab(name, noScroll){
   curTab = name;
   document.querySelectorAll("[data-tab]").forEach(b=>b.setAttribute("aria-selected", b.dataset.tab===name));
   Object.keys(RENDER).forEach(n=>{ $("#tab-"+n).hidden = n!==name; });
-  RENDER[name]();
+  renderFilters(); RENDER[name]();
   try{ history.replaceState(null,"","#"+name); }catch(e){}
   if (!noScroll) window.scrollTo(0,0);
 }
@@ -1051,7 +1148,7 @@ function jump(id){
   showTab("now", true);
   setTimeout(()=>{ const el=document.querySelector(`#tab-now [data-id="${id}"]`); if(el) el.scrollIntoView({behavior:"smooth",block:"start"}); },30);
 }
-function rerender(){ if (!(document.activeElement && document.activeElement.dataset && document.activeElement.dataset.note)) RENDER[curTab](); else $("#countText").textContent = `${ordered().length} open`; }
+function rerender(){ if (curTab==="library"){ renderFilters(); return; } if (!(document.activeElement && document.activeElement.dataset && document.activeElement.dataset.note)){ renderFilters(); RENDER[curTab](); } else $("#countText").textContent = `${ordered().length} open`; }
 
 /* ---------- Events ---------- */
 document.addEventListener("click", e=>{
@@ -1089,6 +1186,8 @@ document.addEventListener("click", e=>{
 });
 document.addEventListener("change", e=>{
   const t=e.target;
+  if (t.id==="selProd"){ selProd=t.value; if (selMs && selProd!=="all" && msProd(selMs)!==selProd) selMs=""; applyFilters(); return; }
+  if (t.id==="selMs"){ selMs=t.value; if (selMs) selProd=msProd(selMs); applyFilters(); return; }
   if (t.classList.contains("check")){ setProgress(t.id.slice(4), {done:t.checked}); rerender(); }
   if (t.id==="upCsv") { doUpload("csv",[...t.files]); t.value=""; }
   if (t.id==="upPhotos") { doUpload("photo",[...t.files]); t.value=""; }
@@ -1171,7 +1270,7 @@ function context(){
     const p=progress[t.id]||{};
     return `- ${t.id} [${p.done?"DONE":"todo"}] ${t.title}. Why: ${strip(t.why)} Steps: ${t.steps.map(strip).join(" | ")}${t.copy?" Values: "+t.copy.join(", "):""}${p.note?" Owner note: "+p.note:""}`;
   }).join("\n")).join("\n\n");
-  return `You are the helper inside "Shipper HQ", the owner's board for TCG Speed Shipper (tcgspeedshipper.com), a web app that turns TCGplayer order CSVs into shipping labels, envelopes and packing slips, now adding Pitney Bowes postage with a per-label fee and a prepaid balance (Stripe). The owner is not technical and uses an iPad. Answer in 1-4 short sentences, plainly, with exact click paths. Never ask for or repeat secret keys. The board has tabs Now, Roadmap, Suite, Library, Meetings, Ideas and X posts (daily post drafts the owner posts himself). The Pitney Bowes account is Shipping 360 (360.pitneybowes.com); the Merchants page being empty is normal and Invite Merchant should not be used yet. No date is set yet for the Pitney Bowes call; we are waiting on Linda.\n\n${FACTS}\n\nCurrent tasks and progress:\n${lines}`;
+  return `You are the helper inside "Suite HQ", the owner's board for TCG Speed Shipper (tcgspeedshipper.com), a web app that turns TCGplayer order CSVs into shipping labels, envelopes and packing slips, now adding Pitney Bowes postage with a per-label fee and a prepaid balance (Stripe). The owner is not technical and uses an iPad. Answer in 1-4 short sentences, plainly, with exact click paths. Never ask for or repeat secret keys. The board has tabs Now, Roadmap, Suite, Library, Meetings, Ideas and X posts (daily post drafts the owner posts himself). The Pitney Bowes account is Shipping 360 (360.pitneybowes.com); the Merchants page being empty is normal and Invite Merchant should not be used yet. No date is set yet for the Pitney Bowes call; we are waiting on Linda.\n\n${FACTS}\n\nCurrent tasks and progress:\n${lines}`;
 }
 async function send(){
   const text = $("#composer").value.trim();
@@ -1204,6 +1303,7 @@ async function send(){
 }
 
 /* ---------- Boot ---------- */
+{ const f = local.get("hq-filter2"); if (f && PRODUCTS.some(p=>p[0]===f.selProd)){ selProd=f.selProd; selMs=MILESTONES.some(m=>m[0]===f.selMs)?f.selMs:""; } }
 setSync(false,"Connecting…");
 showTab((location.hash||"").replace("#",""), true);
 </script>
