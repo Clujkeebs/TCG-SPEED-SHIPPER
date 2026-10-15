@@ -7,6 +7,7 @@ export const VENDORED = [
   'shared/models.js',
   'scan/core/pricing.js',
   'scan/core/csv.js',
+  'scan/core/csv-format.js',
   'agent/loop.js',
   'agent/registry.js',
   'agent/audit.js',
