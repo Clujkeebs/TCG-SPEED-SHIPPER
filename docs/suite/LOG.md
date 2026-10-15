@@ -70,3 +70,17 @@ Numbers: no console errors and no sideways scroll at 820x1180, 1180x820 and 390x
 Needs Builder: write document `suite/status` in the board's database each morning: `{ updatedAt, products: [{ id: "scan"|"ext"|"agent"|"sites", name, state, milestone, line }], log: [{ at, who, line }] }`. Until then the Suite tab shows the Oct 15 starting facts.
 Needs owner: none beyond the new tasks B13 and G12 on the board.
 Next: none.
+### 2026-10-15 · extension · X1 · done
+Adapter framework in `suite/extension/src/adapters/`: one interface (`detectPage`, `readOrders`, `fillTracking`,
+`openImport`, `attachFile`) plus `selfTest()` that lists selectors that stopped matching. All selectors live in
+`selectors.js`. Dry run is the default and only logs; even with it off, nothing is submitted or uploaded (the seller
+clicks Save / Upload). `guardedAdapter` hands out nothing unless the flag is on and `TOS_OK` is true. Built and tested
+only on invented pages (`test/fixtures/`), run in real Chromium. Still off; nothing on TCGplayer.
+Also fixed a real race from X0: the page's first message could arrive before the bridge script finished loading
+and be lost; the loader now queues and replays early messages.
+Numbers: `cd suite && npm test` 76 pass, 0 fail; root `npm test` 17 suites pass; browser tests passed 3 of 3 runs.
+Needs Builder: none new.
+Needs owner: saved pages are the blocker for X2 (and X2 is blocked by "TOS OK" anyway). From a logged-in browser,
+File > Save Page As > "Webpage, Complete", for: Orders list, one order, "mark as shipped" form, Import CSV page,
+Export Shipping dialog. Blur or change buyer names and addresses first. Selectors are guesses until then.
+Next: X3 (Agent side panel shell) is allowed; X2 waits for "TOS OK". Stopping here to save the owner's weekly limit.
