@@ -75,6 +75,7 @@ deploy.
 4. USPS IMb barcode on #10 envelopes, once Informed Visibility access
    exists (A11).
 5. Welcome email series for new signups (needs Resend, G3).
+   **Sign-up email codes are built (Oct 15, `signup-code.js`) and off.** When B11 shows Verified in Resend: (1) `set-variables` `EMAIL_FROM=TCG Speed Shipper <hello@tcgspeedshipper.com>` (not a secret); (2) the owner clicks /admin → Setup checks → Send me a test email; (3) `set-variables` `SIGNUP_EMAIL_CODE=on`; (4) `/api/health` must show `signup_code: on`; (5) test a real sign-up with a second address end to end, then tell the owner. Roll back by removing `SIGNUP_EMAIL_CODE`.
 6. Refer-a-seller: a free month each.
 7. eBay + Whatnot CSV import (waits on F2 sample files).
 8. Chrome extension, "Paste tracking" first (draft:
@@ -86,6 +87,7 @@ deploy.
     the post and its dateModified/sitemap lastmod the same day.
 
 ## Changelog
+- 2026-10-15: built sign-up email codes behind a flag (signup-code.js, table tcgss_signup_codes, 38 new tests, code step in the sign-up form). Nothing is created until the code is right, so no half-made accounts; stranded old accounts can be claimed only with a code. Waiting on B11 to switch on.
 - 2026-10-14 (late): the owner corrected me twice. (1) He had said he is free next Tuesday and Wednesday, and my Linda draft offered Thursday and the weekend: when the owner states availability or a preference anywhere (chat, board note, Gmail), copy it into the task note before drafting, and ask in one short line when unsure. (2) He left the letter price to Claude: decided option D with the Oct 6 letter fees (15c Free/Base, 12c Premium, 10c Pro; Pro 300 fee-free labels then 5c) and built the plan-based letter fee. A decision the owner delegates gets written down the same day in docs/pricing-plan.md, the board and the code.
 - 2026-10-14 (evening, owner asked 'read emails and continue'): the owner sent the Linda reply at 6:50 PM PT even though it proposed 5 PM that day: any draft that names a same-day time goes stale, so propose times at least a day ahead and say the weekday and date. Rob (Premium) asked why he was charged $8.99 instead of $5.99: I can read plan state from tcgss_profiles but not invoices, so the Stripe connector must stay authorized (it dropped). Wrote docs/postage-go-live.md so the production switch is a checklist, not improvisation.
 - 2026-10-14 (5am run): shipped the weekly SEO post (How to Ship Yu-Gi-Oh! Cards). Topic choice without keyword data: OpenRush returned 402 (out of credits) and Search Console isn't connected to it, so I picked the biggest gap in the blog (MTG, Pokemon and baseball had guides; Yu-Gi-Oh! did not) and checked every game-specific fact with a search. Next gaps: Lorcana, One Piece, Flesh and Blood, sports (football, basketball). The sandbox cannot reach tcgspeedshipper.com, so confirm deploys with Railway list-deployments (SUCCESS on the merge commit), not curl. A draft that says 'tomorrow' goes stale overnight: write the weekday and date.

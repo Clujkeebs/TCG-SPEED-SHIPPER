@@ -368,6 +368,10 @@ async function loadSetupChecks() {
     row(/^https:\/\/tcgspeedshipper\.com$/.test(h.config.site_url), 'Site URL: ' + h.config.site_url, 'Set PUBLIC_SITE_URL=https://tcgspeedshipper.com in Netlify.');
     // Mirrors the pricing page: the yearly toggle shows when either plan has a yearly price.
     row(!!h.config.email_key, h.config.email_key ? 'Email (Resend): key set' : 'Email (Resend): not set up yet', 'Add RESEND_API_KEY in Railway → Variables, then use "Send me a test email".');
+    var sc = h.config.signup_code || 'off';
+    row(sc === 'on' || sc === 'off',
+      sc === 'on' ? 'Sign-up email codes: on' : sc === 'off' ? 'Sign-up email codes: off (turn on after the domain is verified in Resend)' : sc === 'on_default_sender' ? 'Sign-up email codes: ON, but the sender is still the Resend test address, so real customers get no code' : 'Sign-up email codes: ON, but RESEND_API_KEY is missing',
+      'In Railway → Variables set EMAIL_FROM to your verified address (e.g. TCG Speed Shipper <hello@tcgspeedshipper.com>), or remove SIGNUP_EMAIL_CODE to turn the codes off.');
     var yb = h.config.price_base_annual, yp = h.config.price_premium_annual;
     row(yb || yp, 'Yearly prices: ' + (yb && yp ? 'Base and Premium' : yb ? 'Base only (Premium is monthly-only)' : yp ? 'Premium only (Base is monthly-only)' : 'not set, so the yearly toggle stays hidden'),
       'Create yearly prices in Stripe and set STRIPE_PRICE_BASE_ANNUAL / STRIPE_PRICE_PREMIUM_ANNUAL.');

@@ -521,6 +521,8 @@ router.get('/health', (req, res) => {
     pb_mode: require('./postage').pbConfig().mode,
     // Transactional email (optional until sign-up verification ships).
     email_key: require('./email').emailConfig().configured,
+    // Sign-up email codes: off | on | on_default_sender | on_no_email_key.
+    signup_code: require('./signup-code').mode(),
   };
   // Yearly prices and postage are optional, so their absence doesn't mark the deploy unhealthy.
   const missing = Object.keys(config).filter((k) => config[k] === false && !/_annual$|^pb_|^email_/.test(k));
@@ -718,6 +720,12 @@ async function captchaOk(token, ip) {
   }
 }
 
+// Optional sign-up email code (signup-code.js). Off until SIGNUP_EMAIL_CODE=on in
+// Railway, which should only happen once the sending domain is verified in Resend.
+const signupCode = require('./signup-code')({
+  db: () => supabaseAdmin, logError, findAuthUserId, makeThrottle, getClientIp, EMAIL_RE, LEGACY_ACCOUNT_CUTOFF,
+});
+
 router.post('/signup', express.json(), requireSupabase, async (req, res) => {
   try {
     if (tooManySignupAttempts(getClientIp(req))) {
@@ -731,6 +739,10 @@ router.post('/signup', express.json(), requireSupabase, async (req, res) => {
     const password = (req.body && req.body.password) || '';
     if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'Enter a valid email.' });
     if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+
+    // With email codes on, nothing is created until the code is right (step 2,
+    // /signup/verify), so no half-made accounts and no stored password.
+    if (signupCode.enabled()) return await signupCode.start(res, email);
 
     // email_confirm: true creates the account already-verified — no email is
     // sent or required. Supabase Auth hashes the password (bcrypt) before
@@ -794,6 +806,9 @@ router.post('/signup', express.json(), requireSupabase, async (req, res) => {
     res.status(500).json({ error: 'Could not create account' });
   }
 });
+
+router.post('/signup/verify', express.json(), requireSupabase, signupCode.verify);
+router.post('/signup/resend', express.json(), requireSupabase, signupCode.resend);
 
 router.get('/validate-promo-code', requireStripe, requireSupabase, async (req, res) => {
   try {
