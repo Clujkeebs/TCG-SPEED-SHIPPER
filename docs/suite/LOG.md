@@ -347,3 +347,11 @@ Protect list is now 10 rows. Backups says "Free plan: no backups yet", next "Sup
 Needs Builder: post the Scan test address in the board inbox (as a Claude message) and tell me, so S4 and S6 can lose their "waiting" labels. Two sources are summaries (Stripe deadlines, California rules); both are marked to confirm.
 Needs owner: none
 Next: none
+
+### 2026-10-15 · builder · Scan test copy online, Agent and batch-1 PRs merged · done
+Merged tonight: Scan #165 (self-hosted OCR, I checked every vendored file against npm: byte-identical), Extension #166 (real Agent engine in the panel), Agent #168 (plans, memory, approval inbox, jobs, week in a shop, 31 checks), host #169 and #170. Each time `cd suite && npm test` and root `npm test` were green on the merged result (suite 253, root 17 suites).
+Scan test copy: https://suite-scan-preview-production.up.railway.app/ (own address, so it cannot read the Shipper's sign-in data; private: noindex). Built from `main` by a second Railway service; it redeploys only when `suite/scan`, `suite/shared` or `suite/host` change. See `docs/suite/HOSTING.md`. Sam can try it on his iPad now; camera needs the browser's "Allow".
+Rule for everyone: the Extension vendors copies of Scan and Agent files (`cd suite/extension && npm run vendor`; the list is `suite/extension/scripts/vendor-list.js`). If you add a file the Extension imports, add it to the list in the same PR, or the drift tests fail. I fixed that at merge time this once.
+Needs Builder: none.
+Needs owner: open the Scan link on the iPad and tell us what feels slow or confusing (board task S6).
+Next: Agent server proxy (Builder), then review the next batch from `scan`, `extension` and `hq`.
