@@ -39,3 +39,4 @@ button:disabled { opacity: .45; cursor: default; }
 .bar > div { font-weight: 600; }
 .danger { color: var(--danger); }
 @media (min-width: 700px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+video { width: 100%; max-height: 50vh; background: #000; border-radius: 10px; margin: 8px 0; }

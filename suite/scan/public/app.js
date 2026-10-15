@@ -3,6 +3,9 @@ import { buildCsv } from '../core/csv.js';
 import { openSession, createIndexedDbStore } from '../core/session.js';
 import { createIndex } from '../data/index.js';
 import { formatUsd, dollarsToCents } from '../../shared/models.js';
+import { startCamera, grabFrame } from './camera.js';
+import { identifyFrame } from '../ocr/pipeline.js';
+import { browserFeedback } from '../core/rapid.js';
 
 const $ = (id) => document.getElementById(id);
 const FOIL_FOR = { mtg: 'foil', pokemon: 'holo', yugioh: 'first-edition', onepiece: 'foil' };
@@ -119,7 +122,7 @@ function renderQueue() {
 }
 
 function currentCsv() {
-  return buildCsv(session.items, (id) => index.get(id), { productIds: session.productIds });
+  return buildCsv(session.items, (id) => index.get(id));
 }
 
 function renderProblems(result) {
@@ -181,6 +184,46 @@ $('download').addEventListener('click', () => {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   say('Downloaded ' + r.listed + ' rows (format unverified).' + (r.missingId.length + r.missingPrice.length ? ' Some rows were left out.' : ''));
 });
+// Camera. An OCR engine can be plugged in as window.SpeedScanOcr = { recognize(grayImage, { region }) -> Promise<string> }.
+const feedback = browserFeedback();
+let stopCamera = null;
+const scanSay = (m) => { $('scanStatus').textContent = m; };
+function showChoices(options) {
+  const ul = $('choices');
+  ul.replaceChildren();
+  for (const o of options) {
+    ul.append(el('li', { class: 'item' }, el('div', { class: 'title' }, label(o.printing)),
+      el('div', { class: 'controls' }, el('button', { type: 'button', class: 'primary', 'aria-label': 'Add ' + label(o.printing), onclick: () => { addCard(o.printing); ul.replaceChildren(); } }, 'This one'))));
+  }
+}
+$('camStart').addEventListener('click', async () => {
+  try {
+    stopCamera = await startCamera($('video'));
+    $('video').hidden = false; $('camShot').disabled = false; $('camStop').disabled = false; $('camStart').disabled = true;
+    scanSay('Camera on. Hold one card flat, fill most of the picture.');
+  } catch (e) { scanSay('Could not start the camera: ' + e.message); }
+});
+$('camStop').addEventListener('click', () => {
+  stopCamera?.(); stopCamera = null;
+  $('video').hidden = true; $('camShot').disabled = true; $('camStop').disabled = true; $('camStart').disabled = false;
+});
+$('camShot').addEventListener('click', async () => {
+  const frame = grabFrame($('video'), $('canvas'));
+  const engine = window.SpeedScanOcr;
+  if (!engine) {
+    const { detectCard } = await import('../vision/detect.js');
+    const box = detectCard(frame);
+    feedback[box ? 'needsTap' : 'miss']();
+    scanSay(box ? 'Found a card (' + box.w + '×' + box.h + '). No text reader installed yet: add it by search.' : 'No card found. Try a plain background and more light.');
+    return;
+  }
+  const r = await identifyFrame(frame, { engine, index, game: $('game').value || undefined });
+  if (!r.ok) { feedback.miss(); scanSay('No card found. Try again.'); return; }
+  if (r.decision.action === 'accept') { feedback.accepted(); addCard(r.decision.pick); scanSay('Added ' + label(r.decision.pick) + ' (' + Math.round(r.ms) + ' ms)'); }
+  else if (r.decision.action === 'choose') { feedback.needsTap(); scanSay('Tap the right one.'); showChoices(r.decision.options); }
+  else { feedback.miss(); scanSay('Could not tell which card. Add it by search.'); }
+});
+
 session.onChange(render);
 render();
 

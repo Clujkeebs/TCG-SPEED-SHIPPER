@@ -82,11 +82,11 @@ test('persists and reloads, including defaults and product ids', async () => {
   const again = await openSession({ store });
   assert.equal(again.items[0].quantity, 2);
   assert.deepEqual(again.defaults, { game: 'pokemon', condition: 'LP' });
-  assert.equal(again.productIds['mtg:sample:a'], 555);
+  assert.equal(again.items[0].tcgplayerProductId, 555);
   assert.equal(again.add(card({ printingId: 'q' })).id, 'row-2'); // ids keep counting
   assert.throws(() => again.setProductId('x', -3));
   again.setProductId('mtg:sample:a', null);
-  assert.equal('mtg:sample:a' in again.productIds, false);
+  assert.equal('tcgplayerProductId' in again.items[0], false);
 });
 
 test('change listeners fire; the IndexedDB store falls back to memory in Node', async () => {

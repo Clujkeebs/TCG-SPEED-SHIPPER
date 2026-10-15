@@ -1,0 +1,4 @@
+{ "id": 100001, "name": "Test Dragon", "card_sets": [
+  { "set_name": "Test Legends", "set_code": "TST-EN001", "set_rarity": "Ultra Rare", "set_rarity_code": "(UR)" },
+  { "set_name": "Test Reprint", "set_code": "TRP-EN010", "set_rarity": "Common", "set_rarity_code": "(C)" } ],
+  "card_prices": [{ "tcgplayer_price": "1.50" }] }

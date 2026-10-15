@@ -1,0 +1,2 @@
+{ "id": "tst1-4", "name": "Test Dragon", "number": "4", "rarity": "Rare Holo", "set": { "id": "tst1", "name": "Test Base", "ptcgoCode": "TB" },
+  "tcgplayer": { "prices": { "holofoil": { "low": 10.5, "mid": 14.0, "market": 12.25 }, "1stEditionHolofoil": { "market": 99.5 }, "mystery": { "market": 1 } } } }

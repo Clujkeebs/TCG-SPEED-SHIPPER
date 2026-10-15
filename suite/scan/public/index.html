@@ -69,6 +69,20 @@
     <ul id="results" class="list"></ul>
   </section>
 
+  <section class="panel" aria-labelledby="sh">
+    <h2 id="sh">Scan with the camera</h2>
+    <p class="muted" id="scanNote">Beta. Frames stay on this device. Reading the card text needs an OCR engine that is not installed yet, so for now this shows what the camera finds and you add the card by search.</p>
+    <video id="video" playsinline muted hidden></video>
+    <canvas id="canvas" hidden></canvas>
+    <div class="row-actions">
+      <button id="camStart" type="button" class="ghost">Start camera</button>
+      <button id="camShot" type="button" class="primary" disabled>Capture card</button>
+      <button id="camStop" type="button" class="ghost" disabled>Stop</button>
+    </div>
+    <p id="scanStatus" class="status" role="status" aria-live="polite"></p>
+    <ul id="choices" class="list"></ul>
+  </section>
+
   <section class="panel" aria-labelledby="qh">
     <div class="row-head">
       <h2 id="qh">Your list</h2>

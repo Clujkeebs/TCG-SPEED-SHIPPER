@@ -63,3 +63,17 @@ Needs owner: a real TCGplayer inventory export (board task S4); about 50 card ph
 starts); Granola set up before the Pitney Bowes call (G12); test the sign-up code with a second email
 (B13).
 Next: review PRs; write the `suite` status document to the board each morning.
+
+### 2026-10-15 · scan · S1 + S2 groundwork · partly done
+Switched to the new `tcgplayerProductId` on ListingDraft (per-session map removed). Built: camera capture,
+card finding and crop, text-to-clues parser, offline lookup, accept-or-ask logic (auto-accept only when clear),
+sound/vibration feedback, tap-to-fix choices in the app, evaluation harness, and Pokémon, Yu-Gi-Oh! and One Piece
+adapters on fixtures (assumed response shapes, to be confirmed). **No text-reading engine is bundled, so the camera
+cannot yet name a card.** `docs/suite/SCAN-EVAL.md` has simulated lookup numbers only, clearly labelled; there is no
+real accuracy or speed figure.
+Numbers: Scan tests 54 pass (offline). Simulated lookup: 98.3% right-first at 5% damaged characters (96 sample cards).
+Needs Builder: (1) approve vendoring a self-hosted WebAssembly OCR build (Tesseract.js, several MB, check licence) into
+`suite/scan/vendor/`; (2) the `suite/extension` e2e test "fixture page message reaches the service worker" times out
+(60 s) in this sandbox, so `cd suite && npm test` is red for a reason outside Scan; I left my PR open instead of merging.
+Needs owner: about 50 phone photos of real cards (details in SCAN-EVAL.md); a real TCGplayer export (still open).
+Next: plug in the OCR engine once approved, run the harness on the photos, report real numbers.

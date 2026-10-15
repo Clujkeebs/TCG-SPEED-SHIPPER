@@ -39,9 +39,9 @@ export function escapeCell(value) {
 }
 
 // drafts: ListingDraft[]. getPrinting(id) -> Printing | undefined.
-// productIds: optional { printingId: number } typed in by the seller for printings we do not know.
+// The product id comes from the printing (known source) or from the draft (typed by the seller).
 // Returns { csv, listed, cards, missingId[], missingPrice[] }. Rows we cannot place are never guessed.
-export function buildCsv(drafts, getPrinting, { productIds = {}, format = FORMAT } = {}) {
+export function buildCsv(drafts, getPrinting, { format = FORMAT } = {}) {
   const lines = [format.columns.map((c) => escapeCell(c.header)).join(',')];
   const missingId = [];
   const missingPrice = [];
@@ -49,7 +49,7 @@ export function buildCsv(drafts, getPrinting, { productIds = {}, format = FORMAT
   let cards = 0;
   for (const d of drafts) {
     const printing = getPrinting(d.printingId);
-    const productId = (printing && printing.tcgplayerProductId) || productIds[d.printingId];
+    const productId = d.tcgplayerProductId || (printing && printing.tcgplayerProductId);
     const label = printing ? printing.name + ' (' + printing.setCode + ' ' + printing.number + ')' : d.printingId;
     if (!Number.isInteger(productId) || productId <= 0) {
       missingId.push({ draftId: d.id, printingId: d.printingId, label, quantity: d.quantity });
