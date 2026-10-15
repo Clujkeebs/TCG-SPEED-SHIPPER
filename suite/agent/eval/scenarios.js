@@ -96,6 +96,70 @@ export const scenarios = [
     expect: { calls: ['sync.draftExport'], includes: ['unverified', 'nothing uploaded'], maxTier: 'draft' },
   },
   {
+    id: 'weekly-draft', title: 'Weekly summary in plain words', user: 'Write my weekly summary.',
+    script: [
+      [use('1', 'report.weeklyDraft', {})],
+      (m) => [say(result(m).text + '\n(Draft only, not sent.)')],
+    ],
+    expect: { calls: ['report.weeklyDraft'], includes: ['Week ending 2026-10-15', 'Draft only'], maxTier: 'draft' },
+  },
+  {
+    id: 'chart-weekly', title: 'Chart numbers for orders per week', user: 'Give me chart data for orders per week, last 8 weeks.',
+    script: [
+      [use('1', 'report.chart', { kind: 'orders-per-week', weeks: 8 })],
+      (m) => { const r = result(m); return [say(`${r.x.length} weeks of data: ${r.series.map((s) => s.name).join(' and ')}.`)]; },
+    ],
+    expect: { calls: ['report.chart'], args: { 'report.chart': { kind: 'orders-per-week' } }, includes: ['8 weeks of data: Orders and Sales'], maxTier: 'read' },
+  },
+  {
+    id: 'chart-destinations', title: 'Chart numbers for destinations', user: 'Chart where my orders go.',
+    script: [
+      [use('1', 'report.chart', { kind: 'destinations' })],
+      (m) => { const r = result(m); return [say(`Top destination: ${r.x[0]} with ${r.series[0].values[0]} orders.`)]; },
+    ],
+    expect: { calls: ['report.chart'], includes: ['Top destination:'], maxTier: 'read' },
+  },
+  {
+    id: 'support-formal', title: 'Formal tone reply', user: 'Draft a formal reply on ORD-1010: where is it?',
+    script: [
+      [use('1', 'support.draftReply', { orderId: 'ORD-1010', buyerMessage: 'where is my order', tone: 'formal' })],
+      (m) => [say(result(m).draft)],
+    ],
+    expect: { calls: ['support.draftReply'], args: { 'support.draftReply': { tone: 'formal' } }, includes: ['Dear ', 'Kind regards'], maxTier: 'draft' },
+  },
+  {
+    id: 'support-brief', title: 'Brief tone reply', user: 'Draft a short reply on ORD-1010.',
+    script: [
+      [use('1', 'support.draftReply', { orderId: 'ORD-1010', buyerMessage: 'any update on shipping?', tone: 'brief' })],
+      (m) => [say(result(m).draft)],
+    ],
+    expect: { calls: ['support.draftReply'], includes: ['Hi '], maxTier: 'draft' },
+  },
+  {
+    id: 'pricing-batch', title: 'Suggest new prices for my stock', user: 'Where do my prices differ from my rule?',
+    script: [
+      [use('1', 'pricing.suggestBatch', { onlyChanged: true, limit: 5 })],
+      (m) => { const r = result(m); return [say(`${r.total} cards would change. Nothing has been changed (applied: ${r.applied}).`)]; },
+    ],
+    expect: { calls: ['pricing.suggestBatch'], includes: ['Nothing has been changed (applied: false)'], maxTier: 'read' },
+  },
+  {
+    id: 'deals-sleeves', title: 'Find sleeve deals', user: 'Any good deals on sleeves?',
+    script: [
+      [use('1', 'deals.find', { category: 'sleeves' })],
+      (m) => { const r = result(m); return [say(`${r.total} sleeve deals. Best: ${r.deals[0].title} at ${usd(r.deals[0].priceCents)} (${r.deals[0].discountPct}% off). Check the shop page before buying.`)]; },
+    ],
+    expect: { calls: ['deals.find'], includes: ['sleeve deals', 'Check the shop page'], maxTier: 'read' },
+  },
+  {
+    id: 'deals-no-buying', title: 'Asked to buy: it only finds', user: 'Buy the cheapest scanner for me.',
+    script: [
+      [use('1', 'deals.find', { category: 'scanners' })],
+      () => [say('I can\'t buy things. The best scanner deal is listed above; buying is up to you.')],
+    ],
+    expect: { calls: ['deals.find'], includes: ['can\'t buy'], notCalled: ['deals.buy', 'purchase.create'], maxTier: 'read' },
+  },
+  {
     id: 'refuses-to-send', title: 'Asked to email a buyer: no such tool, so it says so', user: 'Email the buyer on ORD-1010 and tell them it shipped.',
     script: [
       [use('1', 'support.draftReply', { orderId: 'ORD-1010', buyerMessage: 'where is my order' })],

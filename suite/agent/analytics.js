@@ -103,3 +103,47 @@ export function weekly(orders, { weekEnding }) {
     unshippedOverTwoDays: waiting,
   };
 }
+
+// Chart-ready data: plain arrays a chart library can take as is. No drawing here.
+//   { kind, title, type: 'line' | 'bar', x: [labels], series: [{ name, unit, values: [numbers] }] }
+export function chartSeries(orders, kind, { now, weeks = 12 } = {}) {
+  if (kind === 'orders-per-week') {
+    const end = t(now);
+    const x = [], count = [], revenue = [];
+    for (let w = weeks - 1; w >= 0; w--) {
+      const lo = end - (w + 1) * 7 * DAY, hi = end - w * 7 * DAY;
+      const list = orders.filter((o) => t(o.orderedAt) >= lo && t(o.orderedAt) < hi);
+      x.push(new Date(lo).toISOString().slice(0, 10));
+      count.push(list.length);
+      revenue.push(list.reduce((s, o) => s + o.itemsTotalCents, 0));
+    }
+    return { kind, title: `Orders per week, last ${weeks} weeks (label = week start)`, type: 'line', x, series: [{ name: 'Orders', unit: 'orders', values: count }, { name: 'Sales', unit: 'cents', values: revenue }] };
+  }
+  if (kind === 'destinations') {
+    const d = destinations(orders).slice(0, 10);
+    return { kind, title: 'Orders by destination state (top 10)', type: 'bar', x: d.map((s) => s.state), series: [{ name: 'Orders', unit: 'orders', values: d.map((s) => s.orders) }] };
+  }
+  if (kind === 'weekday') {
+    const c = cadence(orders);
+    return { kind, title: 'Orders by weekday', type: 'bar', x: WEEKDAYS, series: [{ name: 'Orders', unit: 'orders', values: WEEKDAYS.map((d) => c.byWeekday[d] || 0) }] };
+  }
+  if (kind === 'buyer-mix') {
+    const per = new Map();
+    for (const o of orders) per.set(o.buyerKey, (per.get(o.buyerKey) || 0) + 1);
+    const once = [...per.values()].filter((n) => n === 1).length;
+    return { kind, title: 'Buyers: one order vs repeat', type: 'bar', x: ['One order', 'Repeat'], series: [{ name: 'Buyers', unit: 'buyers', values: [once, per.size - once] }] };
+  }
+  throw new Error('unknown chart ' + kind);
+}
+export const CHART_KINDS = ['orders-per-week', 'destinations', 'weekday', 'buyer-mix'];
+
+const money = (c) => '$' + (c / 100).toFixed(2);
+// A plain-words weekly summary written from the numbers (no model needed).
+export function weeklyText(w) {
+  const lines = [`Week ending ${w.weekEnding.slice(0, 10)}`];
+  lines.push(`${w.orders} orders, ${money(w.revenueCents)} in sales` + (w.changeInRevenuePct === null ? '.' : ` (${w.changeInRevenuePct >= 0 ? 'up' : 'down'} ${Math.abs(w.changeInRevenuePct)}% on last week).`));
+  lines.push(`${w.newBuyers} new buyers, ${w.returningBuyers} returning.`);
+  if (w.topItems.length) lines.push('Best sellers: ' + w.topItems.map((i) => `${i.name} (${i.units})`).join(', ') + '.');
+  lines.push(w.unshippedOverTwoDays.length ? `Needs attention: ${w.unshippedOverTwoDays.length} paid orders not shipped after 2 days (${w.unshippedOverTwoDays.join(', ')}).` : 'Nothing waiting over 2 days.');
+  return lines.join('\n');
+}

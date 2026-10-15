@@ -16,5 +16,6 @@ test('the harness catches a wrong expectation', async () => {
 
 test('report lists every scenario', async () => {
   const md = toMarkdown(await runAll(), '2026-10-15');
-  assert.match(md, /12 of 12|\d+ of \d+ scenarios pass/);
+  assert.match(md, /\d+ of \d+ scenarios pass/);
+  assert.match(md, /Automations/);
 });
