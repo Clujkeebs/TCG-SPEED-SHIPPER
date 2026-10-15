@@ -84,3 +84,9 @@ Needs owner: saved pages are the blocker for X2 (and X2 is blocked by "TOS OK" a
 File > Save Page As > "Webpage, Complete", for: Orders list, one order, "mark as shipped" form, Import CSV page,
 Export Shipping dialog. Blur or change buyer names and addresses first. Selectors are guesses until then.
 Next: X3 (Agent side panel shell) is allowed; X2 waits for "TOS OK". Stopping here to save the owner's weekly limit.
+
+### 2026-10-15 · hq · board follow-up · done
+Suite tab now reads the real `suite/status` document (product `milestone` text picks the current checklist step). Granola step now says to find Granola in the connector directory (custom address only as a fallback).
+Needs Builder: none
+Needs owner: none
+Next: none

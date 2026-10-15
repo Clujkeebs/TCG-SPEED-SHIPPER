@@ -568,7 +568,7 @@ T.B13 = {id:"B13", hot:1, min:3, title:"Test the sign-up code with a second emai
   unlock:"New customers can sign up without getting stuck."};
 T.G12 = {id:"G12", min:10, title:"Set up Granola for the Pitney Bowes call",
   why:"Granola writes the call notes for you, so you can listen. Claude can then read them and turn them into tasks.",
-  steps:["Install <b>Granola</b> (granola.ai: Mac, Windows and iPhone apps; an iPad app is unconfirmed) on the device you will take the call on, and sign in.","Connect your calendar so it spots the meeting. Allow the microphone (and system audio on a computer).","At the start of the call say “I use an AI note-taker, OK?” and start Granola. Jot a few words during the call.","In claude.ai go to <b>Settings → Connectors</b> → add a custom connector with the address below, and sign in. Claude cannot do this sign-in for you.","After the call write “call notes are in” (the Meetings tab has a button)."],
+  steps:["Install <b>Granola</b> (granola.ai: Mac, Windows and iPhone apps; an iPad app is unconfirmed) on the device you will take the call on, and sign in.","Connect your calendar so it spots the meeting. Allow the microphone (and system audio on a computer).","At the start of the call say “I use an AI note-taker, OK?” and start Granola. Jot a few words during the call.","In claude.ai go to <b>Settings → Connectors</b>, find <b>Granola</b> in the directory, tap <b>Connect</b> and sign in. Claude cannot do this sign-in for you. (Only if Granola is missing, add a custom connector with the address below.)","After the call write “call notes are in” (the Meetings tab has a button)."],
   copy:["https://mcp.granola.ai/mcp"],
   unlock:"Claude can read the call notes. Only notes you own are visible, and the Basic plan keeps 30 days of history."};
 T.S4 = {id:"S4", later:1, min:0, title:"Send one real TCGplayer inventory export",
@@ -853,10 +853,15 @@ function moneyHTML(){ return `
 
 /* ---------- Suite ---------- */
 function suiteView(){
-  const d = suiteDoc && suiteDoc.products ? suiteDoc : null;
-  const products = SUITE_DEFAULT.products.map(p=>{
-    const o = d && d.products.find(x=>x && x.id===p.id) || {};
-    return {...p, name:o.name||p.name, state:o.state||p.state, cur:o.milestone||p.cur, line:o.line||p.line};
+  const d = suiteDoc && Array.isArray(suiteDoc.products) ? suiteDoc : null;
+  const defs = Object.fromEntries(SUITE_DEFAULT.products.map(p=>[p.id,p]));
+  const alias = {extension:"ext"};
+  const src = d ? d.products.filter(x=>x && x.id && x.id!=="hq") : SUITE_DEFAULT.products;
+  const products = src.map(o=>{
+    const p = defs[alias[o.id]||o.id] || {ms:[]};
+    const ids = String(o.milestone||"").match(/\b[SXA]\d\b/g);
+    const cur = d ? (ids ? ids[ids.length-1] : null) : p.cur;
+    return {ms:p.ms, id:o.id, name:o.name||p.name, state:(d?o.milestone:p.state)||o.state||p.state, kind:o.state||"", cur, line:o.line||p.line};
   });
   return {products, log: d && Array.isArray(d.log) && d.log.length ? d.log : SUITE_LOG_DEFAULT, updatedAt: d && d.updatedAt};
 }
@@ -871,10 +876,10 @@ function renderSuite(){
     <p class="lede">Scan, the Chrome extension, the Agent, and later a site for each product.</p></section>
   <section class="prods">${v.products.map(p=>{
     const ci = p.cur ? p.ms.findIndex(m=>m[0]===p.cur) : -1;
-    return `<div class="card prod ${p.ms.length?"":"wide"}"><div class="prod-top"><h3>${esc(p.name)}</h3><span class="pill ${/^done/i.test(p.state)?"ok":/not started/i.test(p.state)?"":"acc"}">${esc(p.state)}</span></div>
+    return `<div class="card prod ${p.ms.length?"":"wide"}"><div class="prod-top"><h3>${esc(p.name)}</h3><span class="pill ${p.kind==="live"?"ok":/not started|planned|needs/i.test(p.state)||p.kind==="planned"?"":"acc"}">${esc(p.state)}</span></div>
       <p class="muted small">${esc(p.line||"")}</p>
       ${p.ms.length?`<ul class="ms">${p.ms.map((m,i)=>`<li class="${ci>=0&&i<ci?"done":i===ci?"now":""}"><span class="mk"></span><span><b>${m[0]}</b> ${esc(m[1])}</span></li>`).join("")}</ul>`:""}</div>`; }).join("")}</section>
-  <section class="sec"><h2>Latest from the log</h2><div class="list">${log.map(l=>`<div class="row"><div class="label">${esc(l.at||"")} · ${esc(l.who||"")}</div><div>${esc(l.line||"")}</div></div>`).join("")}</div></section>
+  <section class="sec"><h2>Latest from the log</h2><div class="list">${log.map(l=>`<div class="row"><div class="label">${esc(String(l.at||"").includes("T")?fmtDate(l.at):(l.at||""))} · ${esc(l.who||"")}</div><div>${esc(l.line||"")}</div></div>`).join("")}</div></section>
   <section class="sec"><h2>Your Suite tasks</h2><div class="list">${suiteTasks.map(t=>taskHTML(t)).join("")}</div></section>
   <section class="sec"><h2>Add files for Scan</h2><div class="card upl">
     ${assets ? `
