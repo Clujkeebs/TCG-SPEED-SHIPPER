@@ -64,6 +64,22 @@ starts); Granola set up before the Pitney Bowes call (G12); test the sign-up cod
 (B13).
 Next: review PRs; write the `suite` status document to the board each morning.
 
+### 2026-10-15 · agent · A0-A2 · done
+Built the Agent engine in `suite/agent/`: tool registry with four tiers (act tools refuse to run without an
+approval step), append-only audit log (arguments hashed, memory and IndexedDB stores), call and spend limits
+with a kill switch, the agent loop, and an adapter for the real model API that tests never call. Read tools:
+order search and stats, repeat customers, shipping cadence and destinations, weekly summary, inventory
+search, price suggestions (uses the Scan price engine). Draft tools: restock list, support reply drafts
+(never sent), inventory CSV compare and upload-file drafts for eBay, Whatnot and Mana Pool. About 320 made-up
+orders over six months. 12 scripted scenarios in `docs/suite/AGENT-EVAL.md`.
+Numbers: 40 Agent tests pass, 12 of 12 scenarios pass, all offline; root `npm test` 17 suites pass; no real model call was made; $0 spent.
+In `cd suite && npm test`, 1 test fails: the extension's browser test ("fixture page message reaches the service worker"). It fails the same way on a clean `main` in this sandbox, so it is not from the Agent. Because of it I did not merge; the PR is open for the Builder.
+Needs Builder: merge the PR after checking that browser test on a machine with a working browser. (Later: a server-side proxy so the model key never reaches a browser; wiring into the
+extension side panel.)
+Needs owner: nothing now. To measure a real model later, a small budget and an API key (owner decision).
+Other marketplaces' CSV columns are guesses until real export files are supplied.
+Next: measure with a real model once allowed; automations (cron with approval gates); supply deal-hunting.
+
 ### 2026-10-15 · hq · board redesign · done
 Rebuilt the owner's board (`docs/shipper-hq.html`) with top tabs: Now, Roadmap, Suite, Library, Meetings, Ideas. Now shows the newest Claude posts, one Next up card and the open tasks in priority order (security first). Roadmap, Suite (product cards, milestones, upload box), Library (about 50 links), Meetings (call notes saved to `meetings`) and Ideas (24 ranked, Do this / Not now saved to `ideas`) are new. Added tasks B13, G12, S4, S5. The owner's ticks and notes (`progress`, `inbox`) are read and written as before; nothing was deleted.
 Numbers: no console errors and no sideways scroll at 820x1180, 1180x820 and 390x844, in dark and light.
