@@ -15,7 +15,9 @@ const pwPath = process.env.PLAYWRIGHT_PATH || '/opt/node22/lib/node_modules/play
 const canRun = existsSync(chromePath) && existsSync(pwPath);
 
 test('fixture page message reaches the service worker and is stored', { skip: !canRun && 'Chromium or Playwright not found', timeout: 90000 }, async () => {
-  const child = spawn(process.execPath, [scenario], { detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
+  const env = { ...process.env };
+  delete env.NODE_TEST_CONTEXT;
+  const child = spawn(process.execPath, [scenario], { detached: true, stdio: ['ignore', 'pipe', 'pipe'], env });
   let log = '';
   child.stdout.on('data', (d) => (log += d));
   child.stderr.on('data', (d) => (log += d));

@@ -25,7 +25,7 @@ Choices: content script plus `postMessage` instead of `externally_connectable` (
 to the worker; checked twice). TCGplayer host is declared as an *optional* host permission (no install-time
 warning, asked only when a module is switched on later). `src/vendor/models.js` is a copy of
 `suite/shared/models.js` because an extension cannot load files outside its folder; a test fails if it drifts.
-Numbers: `cd suite && npm test` 38 pass, 0 fail, offline; root `npm test` 17 suites pass; browser test
+Numbers: `cd suite && npm test` 71 pass, 0 fail (with Scan merged in), offline; root `npm test` 17 suites pass; browser test
 passed 6 of 6 runs. Chromium helper processes can outlive the browser and hang the test runner, so the
 browser runs in its own process group that the test kills.
 Needs Builder: (1) when the site's web app should talk to the extension, it posts `{source:'tcgss-app',v:1,id,type,payload}`
