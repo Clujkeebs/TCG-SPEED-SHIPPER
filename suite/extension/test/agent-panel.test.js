@@ -119,6 +119,7 @@ test('bad events and bad responses become notices and never create a card', asyn
   push('<img src=x onerror=alert(1)>');
   assert.equal(await p.connect(), false);
   assert.ok(p.state.items.every((i) => i.kind === 'notice'));
+  assert.ok(p.state.items.every((i) => !/[{}<>_]|undefined|\[object/.test(i.text)), 'notices are plain words');
   assert.equal(p.waitingForApproval, false);
 });
 

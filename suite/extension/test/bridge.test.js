@@ -92,3 +92,54 @@ test('fuzz: junk never throws and is never accepted', () => {
     }
   }
 });
+
+// ---- tracking batches ----
+const batch = (over = {}) => ({ batchId: 'batch-2026-10-15-1', items: [{ orderId: 'SYN-1001', trackingNumber: '9400 1000 0000 0000 0000 00', carrier: 'USPS' }, { orderId: 'SYN-1002', trackingNumber: '1Z999AA10123456784' }], ...over });
+
+test('tracking.put accepts the documented shape from the Shipper site only', () => {
+  assert.equal(validateRequest(msg({ type: 'tracking.put', payload: batch() }), SITE).ok, true);
+  assert.equal(validateRequest(msg({ type: 'tracking.put', payload: batch() }), 'http://localhost:3000').ok, true, 'dev origin');
+  for (const o of ['https://seller.tcgplayer.com', 'https://evil.example', 'http://tcgspeedshipper.com', 'https://tcgspeedshipper.com.evil.com']) {
+    assert.equal(validateRequest(msg({ type: 'tracking.put', payload: batch() }), o).ok, false, o);
+  }
+  assert.equal(validateRequest(msg({ type: 'tracking.get', payload: { batchId: 'b1' } }), SITE).ok, true);
+  assert.equal(validateRequest(msg({ type: 'tracking.list' }), SITE).ok, true);
+});
+
+test('tracking.put rejects every way the shape can be wrong', () => {
+  const longItems = Array.from({ length: 201 }, (_, i) => ({ orderId: 'O' + i, trackingNumber: '123456' }));
+  const bad = [
+    batch({ batchId: '' }), batch({ batchId: 'has space' }), batch({ batchId: 'x'.repeat(81) }), batch({ batchId: 5 }), batch({ batchId: '../etc' }),
+    batch({ items: [] }), batch({ items: 'x' }), batch({ items: longItems }), batch({ items: [null] }), batch({ items: [[]] }),
+    batch({ items: [{ orderId: 'A', trackingNumber: '123456' }, { orderId: 'A', trackingNumber: '654321' }] }),
+    batch({ items: [{ orderId: 'A b', trackingNumber: '123456' }] }),
+    batch({ items: [{ orderId: 'A', trackingNumber: '123' }] }), batch({ items: [{ orderId: 'A', trackingNumber: 'x'.repeat(41) }] }),
+    batch({ items: [{ orderId: 'A', trackingNumber: '<script>alert(1)</script>' }] }), batch({ items: [{ orderId: 'A', trackingNumber: 123456789 }] }),
+    batch({ items: [{ orderId: 'A', trackingNumber: '123456', carrier: 'Pigeon' }] }),
+    batch({ items: [{ orderId: 'A', trackingNumber: '123456', buyerName: 'Pat' }] }), batch({ extra: 1 }),
+    undefined, null, 'x', [], {}
+  ];
+  for (const payload of bad) assert.equal(validateRequest(msg({ type: 'tracking.put', payload }), SITE).ok, false, JSON.stringify(payload)?.slice(0, 80));
+  assert.equal(validateRequest(msg({ type: 'tracking.get', payload: { batchId: 'b', x: 1 } }), SITE).ok, false);
+  assert.equal(validateRequest(msg({ type: 'tracking.list', payload: { a: 1 } }), SITE).ok, false);
+});
+
+test('fuzz: random mutations of a good tracking message are never accepted unless still valid', () => {
+  let seed = 12345;
+  const rand = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+  const junk = [undefined, null, 0, -1, NaN, '', ' ', 'a'.repeat(100), true, [], {}, { a: 1 }, 'ok-id', '123456', Symbol('s')];
+  for (let n = 0; n < 500; n++) {
+    const b = JSON.parse(JSON.stringify(batch()));
+    const where = [b, b.items[0], b.items[1]][Math.floor(rand() * 3)];
+    const keys = Object.keys(where);
+    const key = keys[Math.floor(rand() * keys.length)];
+    where[key] = junk[Math.floor(rand() * junk.length)];
+    let r;
+    assert.doesNotThrow(() => { r = validateRequest(msg({ type: 'tracking.put', payload: b }), SITE); });
+    if (r.ok) {
+      // accepted only if it genuinely matches the documented shape
+      assert.match(b.batchId, /^[A-Za-z0-9._-]{1,80}$/);
+      for (const it of b.items) { assert.match(it.orderId, /^[A-Za-z0-9._-]{1,80}$/); assert.match(it.trackingNumber, /^[A-Za-z0-9 ]{6,40}$/); }
+    }
+  }
+});

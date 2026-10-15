@@ -6,11 +6,19 @@ import {
   validateInventoryItem,
   validateScanRecord
 } from './vendor/shared/models.js';
+import { checkTrackingBatch } from './bridge.js';
 
 export const DB_NAME = 'tcgss_suite';
-export const DB_VERSION = 1;
+export const DB_VERSION = 2;
+
+// A batch of tracking numbers from the Shipper site, already checked by the bridge (src/bridge.js).
+function validateTrackingBatch(r) {
+  const problem = !r || typeof r !== 'object' || typeof r.receivedAt !== 'string' || Number.isNaN(Date.parse(r.receivedAt)) ? 'receivedAt must be an ISO date' : checkTrackingBatch({ batchId: r.id, items: r.items });
+  return problem ? { ok: false, errors: [problem] } : { ok: true, errors: [] };
+}
 
 export const COLLECTION_DEFS = {
+  trackingBatches: { validate: validateTrackingBatch, keyOf: (r) => r.id },
   orders: { validate: validateOrder, keyOf: (r) => r.id },
   listings: { validate: validateListingDraft, keyOf: (r) => r.id },
   inventory: { validate: validateInventoryItem, keyOf: (r) => [r.printingId, r.condition, r.finish, r.language].join('|') },

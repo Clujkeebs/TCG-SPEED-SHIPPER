@@ -29,3 +29,15 @@ document.getElementById('saveEndpoint').addEventListener('click', async () => {
   const res = await saveEndpoint(document.getElementById('endpoint').value.trim(), document.getElementById('endpointOn').checked);
   document.getElementById('endpointMsg').textContent = res.ok ? 'Saved.' : res.error;
 });
+
+// Clear everything: ask first, then have the service worker erase it all.
+const ask = document.getElementById('clearAsk'), sure = document.getElementById('clearSure'), msg = document.getElementById('clearMsg');
+ask.addEventListener('click', () => { ask.hidden = true; sure.hidden = false; document.getElementById('clearNo').focus(); });
+document.getElementById('clearNo').addEventListener('click', () => { sure.hidden = true; ask.hidden = false; ask.focus(); });
+document.getElementById('clearYes').addEventListener('click', async () => {
+  sure.hidden = true; ask.hidden = false;
+  let res;
+  try { res = await chrome.runtime.sendMessage({ source: 'tcgss-admin', type: 'clear-everything' }); } catch { res = null; }
+  msg.textContent = res && res.ok ? 'Everything was erased. Reload this page to see the defaults.' : 'Something went wrong and nothing was erased. Try again.';
+  ask.focus();
+});

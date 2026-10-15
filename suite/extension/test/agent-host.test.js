@@ -103,3 +103,93 @@ test('memory: remember, list, forget; and only the extension itself may use it',
   assert.equal((await send('agent.ask', { text: 'x' }, stranger)).ok, false);
   assert.equal((await send('agent.memory.forget', { id: '' })).ok, false);
 });
+
+import { memoryStatePersist, cleanState } from '../src/agent-host/persist.js';
+import { createMemoryStore } from '../src/vendor/agent/audit.js';
+
+// A "restart" = a brand-new host sharing only what is saved (state + audit store), like a worker that slept.
+function restartable() {
+  const persist = memoryStatePersist();
+  const auditStore = createMemoryStore();
+  const boot = () => {
+    const host = createPracticeHost({ extensionId: ID, persist, auditStore });
+    const events = [];
+    const emit = (e) => events.push(e);
+    const waitFor = async (event) => { for (let i = 0; i < 200; i++) { const e = events.find((x) => x.event === event && !x.seen); if (e) { e.seen = true; return e; } await new Promise((r) => setTimeout(r, 5)); } throw new Error('timed out waiting for ' + event); };
+    return { host, events, waitFor, send: (t, p) => host.handle(req(t, p), sender, emit) };
+  };
+  return { boot, persist, auditStore };
+}
+
+test('restart: a waiting approval card comes back and the click still finishes the job', async () => {
+  const { boot, auditStore } = restartable();
+  const a = boot();
+  await a.send('agent.ask', { text: 'lower the price' });
+  const card = await a.waitFor('agent.approval-needed');
+
+  const b = boot(); // the worker slept; a new one wakes
+  await b.send('agent.hello');
+  await b.send('agent.memory.list');
+  const again = await b.waitFor('agent.approval-needed');
+  assert.equal(again.approvalId, card.approvalId, 'the same card is offered again');
+  assert.equal(b.host.shop.inventory.find((i) => i.printingId === 'mtg:practice:p2').priceCents > 70, true, 'nothing changed yet');
+  assert.equal((await b.send('agent.approve', { approvalId: card.approvalId, approved: true })).ok, true);
+  const answer = await b.waitFor('agent.answer');
+  assert.match(answer.text, /^Done, in practice data only/);
+  assert.equal(b.host.shop.inventory.find((i) => i.printingId === 'mtg:practice:p2').priceCents, 70);
+
+  const c = boot(); // and again: the change itself survived
+  await c.host.ready;
+  assert.equal(c.host.shop.inventory.find((i) => i.printingId === 'mtg:practice:p2').priceCents, 70);
+  const log = await auditStore.list();
+  assert.ok(log.some((e) => e.tool === 'listing.setPrice' && e.outcome === 'ok' && e.approvedBy === 'user'), 'the approved action is in the audit trail');
+});
+
+test('restart: denying a restored approval changes nothing and is audited as denied', async () => {
+  const { boot, auditStore } = restartable();
+  const a = boot();
+  await a.send('agent.ask', { text: 'reprice' });
+  const card = await a.waitFor('agent.approval-needed');
+  const b = boot();
+  const before = b.host.shop.inventory.find((i) => i.printingId === 'mtg:practice:p2').priceCents;
+  await b.send('agent.approve', { approvalId: card.approvalId, approved: false });
+  assert.match((await b.waitFor('agent.answer')).text, /did not change anything/);
+  assert.equal(b.host.shop.inventory.find((i) => i.printingId === 'mtg:practice:p2').priceCents, before);
+  assert.ok((await auditStore.list()).some((e) => e.tool === 'listing.setPrice' && e.outcome === 'denied'));
+});
+
+test('restart: memory, the stop switch and the plan survive; an approval answers only once', async () => {
+  const { boot } = restartable();
+  const a = boot();
+  await a.send('agent.ask', { text: 'remember that I pack on Mondays' });
+  await a.waitFor('agent.memory');
+  await a.send('agent.stop');
+  const b = boot();
+  await b.send('agent.memory.list');
+  const mem = await b.waitFor('agent.memory');
+  assert.ok(mem.items.some((m) => /Mondays/.test(m.text)));
+  assert.equal((await b.send('agent.ask', { text: 'x' })).ok, false, 'still stopped after the restart');
+  assert.equal((await b.send('agent.approve', { approvalId: 'ap-1', approved: true })).ok, false);
+});
+
+test('a restored approval is dropped when a new goal starts, and cannot be answered twice', async () => {
+  const { boot } = restartable();
+  const a = boot();
+  await a.send('agent.ask', { text: 'lower the price' });
+  const card = await a.waitFor('agent.approval-needed');
+  const b = boot();
+  await b.send('agent.approve', { approvalId: card.approvalId, approved: true });
+  await b.waitFor('agent.answer');
+  assert.equal((await b.send('agent.approve', { approvalId: card.approvalId, approved: true })).ok, false);
+});
+
+test('saved state that has been tampered with is cleaned or ignored', () => {
+  assert.equal(cleanState(null), null);
+  assert.equal(cleanState('x'), null);
+  const c = cleanState({ memory: [{ id: 'a', text: 'ok' }, { id: '', text: 'bad' }, 5], memoryCounter: -3, plan: [{ text: 'a', state: 'weird' }], pending: { approvalId: 'x', tool: 'bad name', description: 'd', args: {} }, prices: { p: -5, q: 100 }, killed: 'yes' });
+  assert.deepEqual(c.memory, [{ id: 'a', text: 'ok' }]);
+  assert.equal(c.plan, null);
+  assert.equal(c.pending, null);
+  assert.deepEqual(c.prices, { q: 100 });
+  assert.equal(c.killed, false);
+});
