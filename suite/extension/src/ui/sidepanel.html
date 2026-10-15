@@ -1,5 +1,25 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>TCG Speed Agent</title>
-<style>body{font:14px system-ui,sans-serif;margin:16px}</style></head>
-<body><h1 style="font-size:18px">TCG Speed Agent</h1>
-<p>Coming later. This panel will hold the Agent's chat and approvals. It does nothing yet.</p></body></html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TCG Speed Agent</title>
+<style>
+body{font:14px system-ui,sans-serif;margin:0;display:flex;flex-direction:column;height:100vh;color:#1d1d1f}
+header{padding:10px 12px;border-bottom:1px solid #ddd}
+#practice{background:#fff7e0;border-bottom:1px solid #ecd9a0;padding:6px 12px;font-size:12px}
+#log{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+.msg{padding:8px 10px;border-radius:8px;max-width:90%;white-space:pre-wrap}
+.user{background:#e8f0fe;align-self:flex-end}.agent{background:#f2f2f2}.tool{font-size:12px;color:#555}
+.error{background:#fde8e8}
+.card{border:2px solid #c97a00;border-radius:8px;padding:10px;background:#fffaf0}
+.card h2{font-size:14px;margin:0 0 6px}.card dl{margin:6px 0}.card dt{font-weight:600;float:left;clear:left;margin-right:6px}.card dd{margin:0 0 2px}
+.card button{margin-right:8px;padding:6px 12px}
+form{display:flex;gap:6px;padding:10px;border-top:1px solid #ddd}form input{flex:1;padding:8px}
+#off{padding:16px}
+</style></head>
+<body>
+<header><strong>TCG Speed Agent</strong></header>
+<div id="off" hidden>The Agent panel is switched off. Turn it on in Settings (click the extension icon, then Settings).</div>
+<div id="practice" hidden>Practice mode: made-up data. Nothing here is real and nothing is changed.</div>
+<div id="log" role="log" aria-live="polite"></div>
+<form id="form" hidden><input id="text" maxlength="2000" autocomplete="off" placeholder="Ask about your orders"><button id="go">Send</button></form>
+<script type="module" src="sidepanel.js"></script>
+</body></html>
