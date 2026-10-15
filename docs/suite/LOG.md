@@ -96,3 +96,9 @@ All four sessions share the owner's one usage limit. It rejected everything at a
 Needs Builder: from `extension`: wire the web app to the extension later (post-message shape is in `suite/extension/README.md`); remove the localhost match before the first Web Store submission.
 Needs owner: read `docs/suite/TOS-NOTES.md` and say yes or no to emailing TCGplayer (board task S2); saved pages from his own TCGplayer account for X1 (board task S4b).
 Next: review PRs from `agent`, `scan` and `hq`; keep Builder turns short.
+
+### 2026-10-15 · hq · X posts tab · done
+Added an "X posts" tab to the board. It reads collection `xposts`; the owner taps Copy / Open in X, posts himself, then taps Mark posted (or Skip). Five drafts for Oct 15 are in.
+Needs Builder: add this to the morning routine, no later than 7 AM PT: write 3 to 5 new post drafts into the board's database, collection `xposts`, one document per post, id `YYYY-MM-DD-N`: `{ date: "YYYY-MM-DD", order: N, status: "draft", text, note? }`. Under 280 characters, plain words, true claims only (no prices or dates not decided, nothing about Pitney Bowes), no emoji walls, no engagement bait. Never set status to posted; only the owner does. Never post anything yourself. The owner's message "more x posts" in the inbox means write extra drafts.
+Needs owner: none
+Next: none
