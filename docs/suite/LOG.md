@@ -220,3 +220,9 @@ Gap I found: `support.draftReply` puts the buyer's first name in its result, whi
 any real-model use: return `{{first_name}}` and fill it in on the device. Logged in the proxy doc.
 Needs owner: decide the proposed limits in `AGENT-PROXY.md` and whether the Agent is Premium only. Nothing else.
 Next: measured run with a real model (needs a key and a small budget from the owner); event triggers for automations.
+
+### 2026-10-15 · hq · Suite HQ · done
+Renamed the board "Suite HQ" (same address, owner data untouched). Library now opens with Plans: Growth plan, Marketing plan, Google Ads kit (all four ad groups with Copy buttons, built from `docs/google-ads/ALL-AD-COPY.txt`), Suite plan, and SEO and Reddit ads, each a short summary that expands. Pitney Bowes guide and meeting notes link from there. New product dropdown (All, Shipper, Scan, Extension, Agent) and milestone dropdown (S0 to S3, X0 to X3, A0 to A4) under the tabs: they filter Now, Roadmap, Suite and Ideas; a milestone shows what it covers, its status (from `suite/status`) and its tasks. Re-checked at 820x1180, 1180x820 and 390x844: no errors, no sideways scroll.
+Needs Builder: the milestone status comes from the product `milestone` text in `suite/status` (it picks the last S/X/A code it finds, e.g. "S0 done, S1 next" gives S1 as next). Keep that wording style. Product ids it understands: shipper, scan, extension (or ext), agent, sites.
+Needs owner: none
+Next: none
