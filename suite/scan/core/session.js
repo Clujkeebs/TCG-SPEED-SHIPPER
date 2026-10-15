@@ -47,16 +47,15 @@ export async function openSession({ store = createMemoryStore(), now = () => new
   const loaded = (await store.load()) || {};
   let items = Array.isArray(loaded.items) ? loaded.items : [];
   let defaults = loaded.defaults || {};
-  let productIds = loaded.productIds || {};
   let seq = Number.isInteger(loaded.seq) ? loaded.seq : items.length;
   const undoStack = [];
   const listeners = new Set();
   let pending = Promise.resolve();
 
-  const snapshot = () => ({ items: JSON.parse(JSON.stringify(items)), productIds: { ...productIds } });
+  const snapshot = () => ({ items: JSON.parse(JSON.stringify(items)) });
   function commit(before) {
     if (before) { undoStack.push(before); if (undoStack.length > MAX_UNDO) undoStack.shift(); }
-    pending = pending.then(() => store.save({ items, defaults, productIds, seq })).catch(() => {});
+    pending = pending.then(() => store.save({ items, defaults, seq })).catch(() => {});
     listeners.forEach((fn) => fn(api));
   }
   function mustBeInt(q) {
@@ -66,25 +65,29 @@ export async function openSession({ store = createMemoryStore(), now = () => new
   const api = {
     get items() { return items.slice(); },
     get defaults() { return { ...defaults }; },
-    get productIds() { return { ...productIds }; },
     canUndo: () => undoStack.length > 0,
     onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     flush: () => pending,
 
     setDefaults(next) { defaults = { ...defaults, ...next }; commit(); },
+    // The seller types a TCGplayer product ID for a printing we do not know; it goes on every row of that printing.
     setProductId(printingId, id) {
+      const clear = id === null || id === undefined || id === '';
+      if (!clear && !(Number.isInteger(id) && id > 0)) throw new Error('product id must be a positive whole number');
       const before = snapshot();
-      if (id === null || id === undefined || id === '') delete productIds[printingId];
-      else if (Number.isInteger(id) && id > 0) productIds[printingId] = id;
-      else throw new Error('product id must be a positive whole number');
+      for (const it of items) {
+        if (it.printingId !== printingId) continue;
+        if (clear) delete it.tcgplayerProductId; else it.tcgplayerProductId = id;
+      }
       commit(before);
     },
 
     // Adds a row, or adds to the quantity of an identical row. Returns the row.
-    add({ printingId, condition, finish, language = 'en', quantity = 1, priceCents = 0, priceRuleId, source = 'manual' }) {
+    add({ printingId, condition, finish, language = 'en', quantity = 1, priceCents = 0, priceRuleId, source = 'manual', tcgplayerProductId }) {
       mustBeInt(quantity);
       const draft = { printingId, condition, finish, language, quantity, priceCents, source };
       if (priceRuleId) draft.priceRuleId = priceRuleId;
+      if (tcgplayerProductId) draft.tcgplayerProductId = tcgplayerProductId;
       const before = snapshot();
       const twin = items.find((it) => sameKey(it, draft));
       if (twin) {
@@ -109,7 +112,7 @@ export async function openSession({ store = createMemoryStore(), now = () => new
     edit(id, changes) {
       const row = items.find((it) => it.id === id);
       if (!row) throw new Error('no such row: ' + id);
-      const allowed = ['condition', 'finish', 'language', 'quantity', 'priceCents'];
+      const allowed = ['condition', 'finish', 'language', 'quantity', 'priceCents', 'tcgplayerProductId'];
       const next = { ...row };
       for (const k of allowed) if (k in changes) next[k] = changes[k];
       if (!CONDITIONS.includes(next.condition) && 'condition' in changes) throw new Error('unknown condition');
@@ -137,7 +140,6 @@ export async function openSession({ store = createMemoryStore(), now = () => new
       const prev = undoStack.pop();
       if (!prev) return false;
       items = prev.items;
-      productIds = prev.productIds;
       commit();
       return true;
     },

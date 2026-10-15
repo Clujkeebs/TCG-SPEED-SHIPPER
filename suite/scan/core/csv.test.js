@@ -37,7 +37,7 @@ test('rows without a product id are listed separately, never guessed', () => {
 });
 
 test('a product id typed by the seller is used', () => {
-  const out = buildCsv([draft('b')], get, { productIds: { b: 222 } });
+  const out = buildCsv([draft('b', { tcgplayerProductId: 222 })], get);
   assert.equal(out.missingId.length, 0);
   assert.match(out.csv, /\r\n222,/);
 });

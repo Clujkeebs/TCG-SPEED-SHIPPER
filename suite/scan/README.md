@@ -1,4 +1,4 @@
-# Speed Scan (S0: foundation, no camera yet)
+# Speed Scan (S0 foundation + S1 camera groundwork)
 
 Search for cards, set your defaults once, build a list with prices, download a CSV for the
 TCGplayer Seller Portal import. Works offline after the first visit. No build step, no dependencies.
@@ -24,8 +24,9 @@ cd suite && npm test
 | Rows with no `tcgplayerProductId` | Never guessed. Left out of the CSV and shown for the seller to fill in by hand. |
 | Scryfall adapter | Tested on hand-written fixtures in the documented shape. Never run against the real service. `dev/fetch-scryfall.js` (not used by tests) can fetch a set, politely and cached. Check Scryfall's terms first. |
 | Sample data (`data/sample/`, 96 printings, 4 games) | Names and set codes are public facts; **collector numbers are best effort, not checked**. Prices are **made-up demo numbers**. No product IDs, no images. |
-| Camera / OCR | Not built yet (S1). |
+| Camera, card detection, text parsing, lookup, accept-or-ask | Built and tested on synthetic data. **No text-reading engine is installed**, so the camera cannot yet name a card. No accuracy on real cards: see `docs/suite/SCAN-EVAL.md`. |
+| Pokémon, Yu-Gi-Oh!, One Piece adapters | Written against assumed response shapes, tested on hand-written fixtures only. |
 | Phone layout | Checked at 390px and 1280px in a headless browser. Not yet tried on a real iPad or iPhone. |
 
 ## Layout
-`core/` pricing, csv, session · `data/` index, provider adapters, sample · `public/` the app · `dev/` scripts not used by the app.
+`core/` pricing, csv, session · `data/` index, provider adapters, sample · `public/` the app · `vision/` card detection · `ocr/` parse, lookup, pipeline · `eval/` harness and simulated cases (`node scan/eval/run-simulated.js` from `suite/`) · `dev/` scripts not used by the app.
