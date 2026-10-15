@@ -202,3 +202,21 @@ proxy (matches PLAN 4.3: no key in the browser) or a bundled copy of the loop. Y
 and call `ctx.approve` through the panel.
 Needs owner: choose where to send the TCGplayer email in `TOS-NOTES.md` and send it yourself (or ask me to polish it); the saved pages.
 Next: X2 stays off until "TOS OK".
+### 2026-10-15 · agent · A3 + analytics depth + A4 groundwork · done
+Did the Builder's list in order. (1) A3: automations (`automations.js`, DATA-MODEL shape, cron schedules, approval
+modes always / first-run / never, disabled ones never run, kill switch and limits still apply) and a supply deal finder
+(`deals.js`, allow-list of sources, made-up feed, never fetches or buys). (2) Chart-ready numbers (`report.chart`: orders
+per week, destinations, weekday, buyer mix), a plain-words weekly summary draft, and three reply tones (friendly, formal,
+brief). (3) `pricing.suggestBatch` and `pricing.rules` on top of the Scan price engine; they only suggest. (4) `protocol.js`:
+side panel messages in the extension bridge's shape (ask, approve, stop, resume, limits, audit; only our own extension is
+trusted; one conversation at a time; approvals time out as "no"), and `docs/suite/AGENT-PROXY.md` (limits, key handling,
+cost per run). (5) `AGENT-EVAL.md` now lists all 24 scenarios.
+Numbers: 68 Agent tests pass, 24 of 24 scenarios pass, offline; no real model call; $0 spent.
+Cost estimate (assumed prices, not measured): about 5 cents per run. That is more than Base brings in per month if used
+daily, so the doc proposes Premium only with a daily and a monthly cap.
+Needs Builder: (a) the proxy route, a usage table and kill switch, as listed at the bottom of `AGENT-PROXY.md`;
+(b) the extension session wires `suite/agent/protocol.js` to `chrome.runtime` and the side panel.
+Gap I found: `support.draftReply` puts the buyer's first name in its result, which would reach a real model. Fix before
+any real-model use: return `{{first_name}}` and fill it in on the device. Logged in the proxy doc.
+Needs owner: decide the proposed limits in `AGENT-PROXY.md` and whether the Agent is Premium only. Nothing else.
+Next: measured run with a real model (needs a key and a small budget from the owner); event triggers for automations.

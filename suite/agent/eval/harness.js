@@ -7,6 +7,7 @@ import { registerAll } from '../tools/index.js';
 import { makeOrders, makeInventory, loadPrintings, FIXTURE_NOW } from '../fixtures/orders.js';
 import { TOOL_TIERS } from '../../shared/models.js';
 import { scenarios } from './scenarios.js';
+import { automationScenarios } from './automation-scenarios.js';
 
 export function makeWorld() {
   const printings = loadPrintings();
@@ -43,9 +44,16 @@ export async function runScenario(sc) {
   return { id: sc.id, title: sc.title, pass: failures.length === 0, failures, calls: names, text: out.text };
 }
 
+export async function runAutomationScenario(sc) {
+  const failures = [];
+  const info = await sc.run(makeWorld(), failures);
+  return { id: sc.id, title: sc.title, pass: failures.length === 0, failures, calls: info || [], group: 'automation' };
+}
+
 export async function runAll(list = scenarios) {
   const results = [];
-  for (const sc of list) results.push(await runScenario(sc));
+  for (const sc of list) results.push({ ...(await runScenario(sc)), group: 'conversation' });
+  if (list === scenarios) for (const sc of automationScenarios) results.push(await runAutomationScenario(sc));
   return results;
 }
 
@@ -59,10 +67,15 @@ export function toMarkdown(results, date) {
     'What this proves: the tools return the right data, the right tier is used, nothing is sent or changed, and every call is logged.',
     'What it does not prove: how a real model chooses tools. That needs a measured run with a real model, which costs money and waits for the owner.',
     '',
-    '| Scenario | Asked | Tools used | Result |',
-    '|---|---|---|---|',
   ];
-  for (const r of results) lines.push(`| ${r.id} | ${r.title} | ${r.calls.join(', ') || 'none'} | ${r.pass ? 'pass' : 'FAIL: ' + r.failures.join('; ')} |`);
+  for (const [group, heading] of [['conversation', 'Conversations (scripted model chooses tools)'], ['automation', 'Automations (saved schedules and approval gates)']]) {
+    const rows = results.filter((r) => r.group === group);
+    if (!rows.length) continue;
+    lines.push(`## ${heading}`, '', '| Scenario | What it checks | Tools used | Result |', '|---|---|---|---|');
+    for (const r of rows) lines.push(`| ${r.id} | ${r.title} | ${r.calls.join(', ') || 'none'} | ${r.pass ? 'pass' : 'FAIL: ' + r.failures.join('; ')} |`);
+    lines.push('');
+  }
+  lines.push('Also covered by unit tests (not scenarios): tool limits and kill switch, audit log hashing, side-panel message protocol, CSV import and export, deal-finder allow-list.');
   lines.push('', 'Re-run: `node suite/agent/eval/run.js` (add `--write` to refresh this file).', '');
   return lines.join('\n');
 }

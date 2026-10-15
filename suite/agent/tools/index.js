@@ -3,14 +3,17 @@ import { DEFAULT_RULE, applyPriceRule } from '../../scan/core/pricing.js';
 import { CONDITIONS, FINISHES } from '../../shared/models.js';
 import * as A from '../analytics.js';
 import { importInventoryCsv, diffInventory, exportInventoryCsv, TARGETS } from '../sync/csv.js';
-import { draftReply } from '../support.js';
+import { draftReply, TONES } from '../support.js';
+import { CHART_KINDS, chartSeries, weeklyText, weekly } from '../analytics.js';
+import { findDeals, defaultFeed, CATEGORIES as DEAL_CATEGORIES, ALLOWED_SOURCES } from '../deals.js';
+import { validatePriceRule } from '../../shared/models.js';
 
 const str = { type: 'string' };
 const int = { type: 'integer', minimum: 0 };
 
 // data: { orders, inventory, printings, rules?, now }
 export function createTools(data) {
-  const { orders, inventory, printings, rules = [DEFAULT_RULE], now } = data;
+  const { orders, inventory, printings, rules = [DEFAULT_RULE], now, dealFeed = defaultFeed } = data;
   const nowIso = () => (typeof now === 'function' ? now() : now);
   const printingById = new Map(printings.map((p) => [p.id, p]));
   const cap = (n, d = 20) => Math.min(n ?? d, 100);
@@ -116,12 +119,64 @@ export function createTools(data) {
     {
       name: 'support.draftReply', tier: 'draft',
       description: 'Draft (never send) a reply to a buyer message, using the order for context. Returns text for the seller to review.',
-      inputSchema: { type: 'object', required: ['orderId', 'buyerMessage'], properties: { orderId: str, buyerMessage: str, sellerName: str } },
+      inputSchema: { type: 'object', required: ['orderId', 'buyerMessage'], properties: { orderId: str, buyerMessage: str, sellerName: str, tone: { type: 'string', enum: TONES } } },
       handler: (a) => {
         const order = orders.find((o) => o.id === a.orderId);
         if (!order) throw new Error('unknown order ' + a.orderId);
-        return draftReply(order, a.buyerMessage, { sellerName: a.sellerName, now: nowIso() });
+        return draftReply(order, a.buyerMessage, { sellerName: a.sellerName, now: nowIso(), tone: a.tone });
       },
+    },
+    {
+      name: 'report.chart', tier: 'read',
+      description: 'Chart-ready numbers (labels and series, no drawing): ' + CHART_KINDS.join(', ') + '.',
+      inputSchema: { type: 'object', required: ['kind'], properties: { kind: { type: 'string', enum: CHART_KINDS }, weeks: { type: 'integer', minimum: 2, maximum: 52 } } },
+      handler: (a) => chartSeries(orders, a.kind, { now: nowIso(), weeks: a.weeks }),
+    },
+    {
+      name: 'report.weeklyDraft', tier: 'draft',
+      description: 'A weekly summary written out in plain words, ready to read or paste. Nothing is sent.',
+      inputSchema: { type: 'object', properties: { weekEnding: str } },
+      handler: (a) => ({ text: weeklyText(weekly(orders, { weekEnding: a.weekEnding || nowIso() })), sent: false }),
+    },
+    {
+      name: 'pricing.rules', tier: 'read',
+      description: 'List the price rules the seller has saved.',
+      inputSchema: { type: 'object', properties: {} },
+      handler: () => ({ rules }),
+    },
+    {
+      name: 'pricing.suggestBatch', tier: 'read',
+      description: 'Suggest prices for many inventory cards at once with a price rule, showing the change from the current price. Only suggests; changes no listing.',
+      inputSchema: { type: 'object', properties: { ruleId: str, rule: { type: 'object' }, onlyChanged: { type: 'boolean' }, limit: { type: 'integer', minimum: 1, maximum: 100 } } },
+      handler: (a) => {
+        let rule = a.ruleId ? rules.find((r) => r.id === a.ruleId) : rules[0];
+        if (a.rule) {
+          const v = validatePriceRule(a.rule);
+          if (!v.ok) throw new Error('bad rule: ' + v.errors.join('; '));
+          rule = a.rule;
+        }
+        if (!rule) throw new Error('unknown price rule ' + a.ruleId);
+        const rows = [];
+        let missing = 0, skipped = 0;
+        for (const i of inventory) {
+          const p = printingById.get(i.printingId);
+          if (!p || i.quantity <= 0) continue;
+          const r = applyPriceRule(rule, p, { condition: i.condition, finish: i.finish });
+          if (r.status === 'missing') { missing += 1; continue; }
+          if (r.status === 'skip') { skipped += 1; continue; }
+          const change = i.priceCents === undefined ? null : r.priceCents - i.priceCents;
+          if (a.onlyChanged && change === 0) continue;
+          rows.push({ printingId: i.printingId, name: p.name, condition: i.condition, finish: i.finish, quantity: i.quantity, currentCents: i.priceCents, suggestedCents: r.priceCents, changeCents: change });
+        }
+        rows.sort((x, y) => Math.abs(y.changeCents ?? 0) - Math.abs(x.changeCents ?? 0) || x.name.localeCompare(y.name));
+        return { ruleId: rule.id, total: rows.length, rows: rows.slice(0, cap(a.limit)), noPriceKnown: missing, belowMinimum: skipped, applied: false };
+      },
+    },
+    {
+      name: 'deals.find', tier: 'read',
+      description: 'Find supply deals (sleeves, toploaders, boxes, shelving, monitors, scanners) in the allow-listed sources. Reads a saved feed; never browses, never buys.',
+      inputSchema: { type: 'object', properties: { category: { type: 'string', enum: DEAL_CATEGORIES }, maxPriceCents: int, minDiscountPct: { type: 'number', minimum: 0, maximum: 100 }, limit: { type: 'integer', minimum: 1, maximum: 50 } } },
+      handler: (a) => ({ ...findDeals(dealFeed(), a), allowedSources: ALLOWED_SOURCES.map((s) => s.name) }),
     },
     {
       name: 'sync.previewImport', tier: 'read',

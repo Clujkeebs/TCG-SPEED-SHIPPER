@@ -1,7 +1,7 @@
 // The agent loop. `model.complete(messages, toolSpecs)` returns
 //   { content: [{type:'text',text} | {type:'tool_use',id,name,input}], costCents?: integer }
 // Tests give it a scripted fake; adapters/anthropic.js is the real one.
-export async function runAgent({ model, registry, messages, ctx = {}, maxSteps = 8, system }) {
+export async function runAgent({ model, registry, messages, ctx = {}, maxSteps = 8, system, onCall }) {
   const limits = registry.limits;
   const run = ctx.run || (ctx.run = limits.newRun());
   const convo = [...messages];
@@ -31,6 +31,7 @@ export async function runAgent({ model, registry, messages, ctx = {}, maxSteps =
     for (const use of uses) {
       const out = await registry.run(use.name, use.input || {}, ctx);
       calls.push({ name: use.name, input: use.input || {}, ok: out.ok, denied: !!out.denied });
+      if (onCall) onCall({ tool: use.name, ok: out.ok, denied: !!out.denied });
       results.push({ type: 'tool_result', tool_use_id: use.id, content: JSON.stringify(out.ok ? out.result : { error: out.error }), is_error: !out.ok });
     }
     convo.push({ role: 'user', content: results });
