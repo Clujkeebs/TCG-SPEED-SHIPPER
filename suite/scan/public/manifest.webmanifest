@@ -1,0 +1,10 @@
+{
+  "name": "TCG Speed Scan",
+  "short_name": "Speed Scan",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f5f0",
+  "theme_color": "#2d6a4f",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
