@@ -85,6 +85,12 @@ File > Save Page As > "Webpage, Complete", for: Orders list, one order, "mark as
 Export Shipping dialog. Blur or change buyer names and addresses first. Selectors are guesses until then.
 Next: X3 (Agent side panel shell) is allowed; X2 waits for "TOS OK". Stopping here to save the owner's weekly limit.
 
+### 2026-10-15 · hq · board follow-up · done
+Suite tab now reads the real `suite/status` document (product `milestone` text picks the current checklist step). Granola step now says to find Granola in the connector directory (custom address only as a fallback).
+Needs Builder: none
+Needs owner: none
+Next: none
+
 ### 2026-10-15 · builder · morning check · done
 All four sessions share the owner's one usage limit. It rejected everything at about 8:40 PM PT (resets 6:50 AM UTC); `scan` and `hq` stopped before doing work and were re-started this morning. State at 6:35 AM PT: `extension` X0 merged (#145), now on X1; `agent` running A0 (nothing pushed yet); `scan` re-started on S1; `hq` re-started on the board redesign. Production is healthy (0 server errors in 24h; Extension X0 deployed with no effect on the site).
 Needs Builder: from `extension`: wire the web app to the extension later (post-message shape is in `suite/extension/README.md`); remove the localhost match before the first Web Store submission.
