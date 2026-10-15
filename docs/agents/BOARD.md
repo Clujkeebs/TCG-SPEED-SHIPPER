@@ -35,6 +35,7 @@ file is for state.
 - [x] C-28 · Enterprise plan card + FAQ, creator section in issue 1, Google Ads kit · done · #56
 - [ ] C-29 · Project skills in `.claude/skills/` (ops-facts, ship, health-check, funnel, email-ops, owner-digest) · review · this PR
 - [x] C-30 · Newsletter web archive (`scripts/newsletter-pages.js`): each sent issue becomes an indexable page listed on /newsletter.html · done · this PR
+- [ ] C-31 · TCG Speed Suite (Scan, Chrome extension, Agent): plan, shared contracts (`suite/shared/`), working agreement, two builder sessions (`scan`, `extension`; Agent held). Builder reviews their PRs and reads `docs/suite/LOG.md` every morning · now · `docs/suite/`
 - [ ] C-8 · IMb envelope tracking, server-side scan ingestion · blocked:owner (USPS Mailer ID + Informed Visibility)
 - [x] C-0 · Two-sided referrals, share prompt, upgrade card, 40% partners, redirect, PWA, build fix · done · #6 #8 #9
 
