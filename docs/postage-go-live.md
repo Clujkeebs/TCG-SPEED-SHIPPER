@@ -41,6 +41,10 @@ Each answer maps to a code or config change, so write them down:
    `PB_API_KEY`, `PB_API_SECRET` = production values. Keep `PB_ACCESS=owner`.
 3. Add `PB_ENV=production` but **not** `PB_LIVE_OK` yet. `/api/health`
    should still show `pb_mode: sandbox`.
+   **Backups first.** Balances are money owed to sellers, and the Supabase free
+   plan has no automatic backups (docs/db/README.md). Before step 4, upgrade
+   Supabase to Pro ($25 a month, daily backups kept 7 days) and do one restore
+   test. Claude records the date here.
 4. Owner says "go live" in the board inbox. Then set `PB_LIVE_OK=yes`.
    `/api/health` now shows `pb_mode: production`, and balances switch on.
 5. Owner adds a small top-up (the $20 minimum), then buys **one real letter**
