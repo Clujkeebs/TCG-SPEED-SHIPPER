@@ -22,7 +22,7 @@ async function main() {
   });
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   const base = `http://localhost:${server.address().port}`;
-  const browser = await chromium.launch({ executablePath: chromePath, args: ['--no-sandbox', '--disable-background-networking', '--disable-breakpad'] });
+  const browser = await chromium.launch({ executablePath: chromePath, args: ['--no-sandbox', '--no-proxy-server', '--disable-background-networking', '--disable-breakpad'] });
   try {
     const page = await browser.newPage();
     const load = (name) => page.goto(`${base}/${name}`);

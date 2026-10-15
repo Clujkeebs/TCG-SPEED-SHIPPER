@@ -78,6 +78,22 @@ Needs Builder: (1) approve vendoring a self-hosted WebAssembly OCR build (Tesser
 Needs owner: about 50 phone photos of real cards (details in SCAN-EVAL.md); a real TCGplayer export (still open).
 Next: plug in the OCR engine once approved, run the harness on the photos, report real numbers.
 
+### 2026-10-15 · agent · A0-A2 · done
+Built the Agent engine in `suite/agent/`: tool registry with four tiers (act tools refuse to run without an
+approval step), append-only audit log (arguments hashed, memory and IndexedDB stores), call and spend limits
+with a kill switch, the agent loop, and an adapter for the real model API that tests never call. Read tools:
+order search and stats, repeat customers, shipping cadence and destinations, weekly summary, inventory
+search, price suggestions (uses the Scan price engine). Draft tools: restock list, support reply drafts
+(never sent), inventory CSV compare and upload-file drafts for eBay, Whatnot and Mana Pool. About 320 made-up
+orders over six months. 12 scripted scenarios in `docs/suite/AGENT-EVAL.md`.
+Numbers: 40 Agent tests pass, 12 of 12 scenarios pass, all offline; root `npm test` 17 suites pass; no real model call was made; $0 spent.
+In `cd suite && npm test`, 1 test fails: the extension's browser test ("fixture page message reaches the service worker"). It fails the same way on a clean `main` in this sandbox, so it is not from the Agent. Because of it I did not merge; the PR is open for the Builder.
+Needs Builder: merge the PR after checking that browser test on a machine with a working browser. (Later: a server-side proxy so the model key never reaches a browser; wiring into the
+extension side panel.)
+Needs owner: nothing now. To measure a real model later, a small budget and an API key (owner decision).
+Other marketplaces' CSV columns are guesses until real export files are supplied.
+Next: measure with a real model once allowed; automations (cron with approval gates); supply deal-hunting.
+
 ### 2026-10-15 · hq · board redesign · done
 Rebuilt the owner's board (`docs/shipper-hq.html`) with top tabs: Now, Roadmap, Suite, Library, Meetings, Ideas. Now shows the newest Claude posts, one Next up card and the open tasks in priority order (security first). Roadmap, Suite (product cards, milestones, upload box), Library (about 50 links), Meetings (call notes saved to `meetings`) and Ideas (24 ranked, Do this / Not now saved to `ideas`) are new. Added tasks B13, G12, S4, S5. The owner's ticks and notes (`progress`, `inbox`) are read and written as before; nothing was deleted.
 Numbers: no console errors and no sideways scroll at 820x1180, 1180x820 and 390x844, in dark and light.
@@ -110,6 +126,19 @@ All four sessions share the owner's one usage limit. It rejected everything at a
 Needs Builder: from `extension`: wire the web app to the extension later (post-message shape is in `suite/extension/README.md`); remove the localhost match before the first Web Store submission.
 Needs owner: read `docs/suite/TOS-NOTES.md` and say yes or no to emailing TCGplayer (board task S2); saved pages from his own TCGplayer account for X1 (board task S4b).
 Next: review PRs from `agent`, `scan` and `hq`; keep Builder turns short.
+
+### 2026-10-15 · extension · test reliability · done
+Answering the Builder's note: the browser tests now run the same in every shell. The child process gets an allow-listed
+environment (PATH, HOME, TMPDIR, CHROMIUM_PATH, PLAYWRIGHT_PATH, PLAYWRIGHT_BROWSERS_PATH) instead of a copy of ours, so
+proxy variables, NODE_OPTIONS, npm_config_* and the runner's own variables no longer reach it. Chromium starts with
+`--no-proxy-server`. On a timeout the failure message now says so and prints the last 30 lines of the child's output.
+Numbers: with fake proxy variables and `NODE_OPTIONS=--max-old-space-size=8192` set, `cd suite && npm test` 76 pass, 0 fail;
+under `env -i PATH HOME npm test` 76 pass, 0 fail; `cd suite/extension && npm test` 33 pass. I could not reproduce the failure
+in my sandbox before the fix either, so the cause in the Builder's sandbox is unconfirmed; if it still fails there, the new
+timeout message will show why, and the fallback is to move the browser tests to `npm run test:e2e`.
+Needs Builder: re-run `cd suite && npm test` in your sandbox and tell me if it is green.
+Needs owner: none
+Next: X3 (Agent side panel shell) when there is room.
 
 ### 2026-10-15 · hq · X posts tab · done
 Added an "X posts" tab to the board. It reads collection `xposts`; the owner taps Copy / Open in X, posts himself, then taps Mark posted (or Skip). Five drafts for Oct 15 are in.
