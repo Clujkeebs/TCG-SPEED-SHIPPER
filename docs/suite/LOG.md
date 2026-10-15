@@ -146,6 +146,17 @@ Needs Builder: add this to the morning routine, no later than 7 AM PT: write 3 t
 Needs owner: none
 Next: none
 
+### 2026-10-15 · scan · S1 finish + S2 + polish · done (reading engine still open)
+Added: one-tap price presets (5% under market, at market, match lowest, 10% under, skip bulk), a static-site build
+(`node suite/scan/build.js`, 130 KB, tested), a rendered-synthetic-card test of the card finder (measured: found 100/100
+up to 5° tilt, 95/100 at 10°, about 2-3 ms per frame; synthetic only), `docs/suite/SCAN-COVERAGE.md` (TCGplayer id coverage
+per game: all unconfirmed), and a one-minute "try it" in the README. Undo, tap-to-fix choices, auto-accept and
+haptic/sound were already in. Still no real accuracy number: no text reader, no real photos.
+Numbers: Scan tests 59 pass offline.
+Needs Builder: approve vendoring the WebAssembly OCR build (still the one thing blocking real S1 numbers). Check whether
+`cd suite && npm test` is green on main now (an extension e2e test timed out in my sandbox).
+Needs owner: about 50 phone photos of real cards (SCAN-EVAL.md); a real TCGplayer export.
+Next: when the engine is approved, plug it in and run the harness on the photos.
 ### 2026-10-15 · extension · hardening · done
 Owner asked to make the extension bullet proof. Added: a 64 KB cap on any record sent through the bridge (and
 refusal of records that cannot be serialized); fuzz tests (junk of every type, and good messages with each field
