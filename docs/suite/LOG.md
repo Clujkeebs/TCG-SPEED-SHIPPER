@@ -244,3 +244,9 @@ in CONTEXT.md. The real wiring (service worker <-> `createAgentService`, and the
 `request(msg) -> Promise<response>` plus `onEvent(fn)`.
 Needs owner: none new.
 Next: nothing blocked on me except X2 ("TOS OK") and the saved pages.
+
+### 2026-10-15 · hq · agents panel and protect list · done
+Read `CONTEXT.md`. Suite tab now opens with an Agents panel: each chat's goal, its current milestone and its last log line, all from `suite/status`. Roadmap tab now has a Protect list: nine business risks, what guards each, a one-line status and the next action (statuses follow the owner's ticks, e.g. leaked keys, sign-up check, uptime alert, statement name). Milestone status now understands text like "X1 done, X2 waits for TOS OK, X3 next" (X2 shows as waiting). Re-checked at 820x1180, 1180x820 and 390x844: no errors, no sideways scroll.
+Needs Builder: (1) the Agents panel matches log lines by the `who` field: scan, extension, agent, hq, builder. Keep those names. (2) Two Protect rows are unverified and say so: Backups ("Not checked") and Usage limit. Please confirm the Supabase backup plan and a restore test, then tell me the status to show.
+Needs owner: none
+Next: none

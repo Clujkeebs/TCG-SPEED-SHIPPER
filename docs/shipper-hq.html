@@ -155,6 +155,8 @@ td.num{font-family:var(--mono);white-space:nowrap}
 .prods{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
 .prod{display:grid;gap:12px;align-content:start}
 .prod.wide{grid-column:1/-1}
+.prod-top .pill,.row .pill{white-space:normal;text-align:right;max-width:62%}
+.prod-top h3{min-width:0}
 .prod-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
 .ms{list-style:none;margin:0;padding:0;display:grid;gap:7px}
 .ms li{display:grid;grid-template-columns:20px 1fr;gap:8px;align-items:start;font-size:14px;color:var(--muted)}
@@ -646,6 +648,24 @@ const GADS = {"groups": [{"name": "TCGplayer labels", "url": "https://tcgspeedsh
 const PLANS = [{"id": "growth", "title": "Growth plan", "sum": "Fix the top of the funnel first. Search, short videos and creators beat ads. Written Sep 26; some of it is now done.", "html": "<p class=\"muted small\">Written Sep 26, 2026. Done since: postage is built, deploys are automatic, the real domain is bought, sign-up codes are on.</p><h4>Where it started</h4><ul><li>7 paying sellers, $29.93 a month gross. Half of all accounts pay, so the product converts. The problem is visitors.</li><li>Ranked #6 on Google for “tcgplayer shipping labels” with no ads running.</li><li>About 100 cold emails to shops got 0 replies and 8 bounces. Stopped.</li></ul><h4>The math</h4><ul><li>$100 a month needs about 20 payers. $1,000 needs about 140, and only if each pays about $7 instead of $4.28.</li><li>About 1% of visitors end up paying. $100 needs roughly 1,700 visitors; $1,000 roughly 14,000.</li><li>At 6% monthly churn, 140 payers lose about 9 a month, so 9 new ones are needed just to stand still. Annual plans help.</li></ul><h4>Next 60 days (to $100)</h4><ul><li>Search Console and a real domain. Three short videos. One useful Reddit or Discord answer a week.</li><li>A small Google Ads test ($150, keep only if a paying customer costs under $15).</li><li>Two-sided referral, a better free-limit upgrade screen, and 10 small creators at 30%.</li></ul><h4>Months 3 to 12 (to $1,000)</h4><ul><li>Pricing: Base $2.99 for new sellers, yearly plans, a Pro plan. Current subscribers keep their price.</li><li>Product bets in order: tracking upload file, more marketplaces, postage inside the app, order history.</li><li>Channels ranked: SEO and short video first, creators second, ads third, cold email never.</li></ul><h4>Monday scorecard targets</h4><div class=\"tbl\"><table><tr><th>Number</th><th>Phase 1</th><th>Phase 2</th></tr><tr><td>Monthly revenue</td><td>$100</td><td>$1,000</td></tr><tr><td>Paying customers</td><td>20+</td><td>140+</td></tr><tr><td>Visits a week</td><td>200+</td><td>1,500+</td></tr><tr><td>Visit to CSV</td><td>25%+</td><td>30%+</td></tr><tr><td>Sign-ups a week</td><td>5+</td><td>25+</td></tr><tr><td>Monthly churn</td><td>under 8%</td><td>under 5%</td></tr></table></div><h4>Risks</h4><ul><li>TCGplayer changes its CSV and the tool breaks. Parser tests and admin errors catch it.</li><li>One power user is most of the usage. Keep them happy.</li><li>A price rise upsets old subscribers. Grandfather them and say so.</li><li>TCGplayer can restrict its name in ad text. Keep backup headlines ready.</li></ul>"}, {"id": "marketing", "title": "Marketing plan (Sep 29 to Oct 28)", "sum": "Five channels, ranked by return per hour. Visits 259 → 500, paying 8 → 13, partners 0 → 3.", "html": "<h4>30-day targets (weekly numbers)</h4><div class=\"tbl\"><table><tr><th>Metric</th><th>Then</th><th>Target</th></tr><tr><td>Visits</td><td>259</td><td>500</td></tr><tr><td>CSV loads per visit</td><td>15%</td><td>20%</td></tr><tr><td>New accounts</td><td>1</td><td>5</td></tr><tr><td>Paying customers</td><td>8</td><td>13</td></tr><tr><td>Newsletter subscribers</td><td>0</td><td>40</td></tr><tr><td>Active partners</td><td>0</td><td>3</td></tr></table></div><h4>The five channels</h4><ul><li><b>Partners and creators.</b> 40% recurring plus a free year of Premium. One follow-up, then stop. No more cold email to shops.</li><li><b>SEO posts.</b> Two a week from real search demand. Search Console is the best 15 minutes on the list.</li><li><b>Weekly newsletter.</b> Tuesday mornings. The download popup and footer collect sign-ups.</li><li><b>Short video.</b> A 60-second screen demo: CSV, drop, print. Your face builds trust.</li><li><b>Communities.</b> One helpful post a week from your own account, maker disclosed.</li></ul><h4>Weekly rhythm</h4><ul><li>Monday: newsletter drafted, scoreboard updated.</li><li>Tuesday 7:52 AM PT: newsletter goes out.</li><li>Daily 5 AM PT: health check and the owner note.</li><li>You: one community post, one short video, answer partner replies.</li></ul><p class=\"muted small\">Full plan and the weekly scoreboard are in the repo (Library, Plans and research).</p>"}, {"id": "gads", "title": "Google Ads kit", "sum": "A $150, 30-day Search test. Every headline and keyword is ready to copy.", "gads": true, "html": "<h4>Do this, in order (about 45 minutes)</h4><ol><li>At <b>ads.google.com</b>, switch to <b>Expert Mode</b> and create an account without a campaign. United States, Pacific time, USD.</li><li>Add your card. Use a new-account promo code if Google shows one.</li><li>New campaign: goal <b>Website traffic</b>, type <b>Search</b>, named <b>Search - TCG Speed Shipper</b>.</li><li>Untick Search Partners and Display. Location United States. <b>Maximize clicks</b>, max CPC <b>$1.50</b>, <b>$5 a day</b>. Turn off AI Max and auto-apply.</li><li>Final URL suffix: <span class=\"mono\">utm_source=google_ads&amp;utm_medium=cpc&amp;utm_campaign={campaignid}&amp;utm_content={adgroupid}</span></li><li>Create the four ad groups below, add the negative keywords, then publish. If “TCGplayer” is restricted in ad text, use the backup headlines.</li></ol><h4>Keep or stop</h4><ul><li>No tracking tag is needed. The admin funnel counts ad clicks as source google_ads.</li><li>After $150 (about 30 days): 3 or more paying customers means keep going and raise to $10 a day. Fewer means stop and put the money into creators.</li><li>A paying seller is worth about $36, so up to about $15 each is fine.</li><li>Every Monday: add junk searches to the negative list and pause a keyword with $15 spent and no CSV loads.</li></ul><p class=\"small\">Images, logos and the Ads Editor files are in the <a href=\"https://claude.ai/artifact/7uWBkF4HbeRisfsVjyF9Yu\" target=\"_blank\" rel=\"noopener\">Google Ads Kit page</a>.</p>"}, {"id": "suite", "title": "Suite plan", "sum": "One toolkit for a card seller’s whole day: ship, list, run. Scan and the extension first, then the Agent.", "html": "<h4>The pieces</h4><ul><li><b>Shipper</b> (live): labels, slips and postage.</li><li><b>Scan:</b> point a phone at a card, set a price rule once, export a CSV.</li><li><b>Chrome extension:</b> paste tracking, print shipping, upload, and the Agent’s side panel.</li><li><b>Agent:</b> an AI helper for inventory, pricing and replies. Anything that changes money, listings or customers waits for your OK.</li></ul><h4>What could stop it</h4><ul><li><b>TCGplayer’s rules.</b> Their terms reportedly ban bots, so we start with their official CSV and ask in writing before automating.</li><li><b>TCGplayer already scans.</b> We win on speed, price rules, more games and the link to Shipper.</li><li><b>Accuracy.</b> If Scan cannot reach about 95% on modern cards, we stop and say so.</li></ul><h4>Order of work</h4><ul><li>Scan: search first, then camera (Magic, Pokémon), then Yu-Gi-Oh! and One Piece. Pass: 3 to 5 sellers each list 100+ cards and 9 in 10 rows need no edit.</li><li>Extension: skeleton and tests, anything touching TCGplayer stays off until “TOS OK”.</li><li>Agent: starts once the first two have a base.</li></ul><p class=\"muted small\">Rough money: $10,000 a month is about 170 sellers at $59. No price is agreed. Details: Library, Suite and how we work.</p>"}, {"id": "seo", "title": "SEO and Reddit ads (Sep 14)", "sum": "The site needs links from others and real analytics. Reddit is where sellers look for answers.", "html": "<p class=\"muted small\">From a Sep 14 audit. Check against current data before acting.</p><h4>What was found</h4><ul><li>Technical SEO scored 100 out of 100 on 21 pages. The gaps were 0 sites linking to us and Search Console not connected.</li><li>Google’s AI answer for “does TCGplayer provide shipping labels” cited Reddit and TCGplayer’s help pages, not us.</li><li>“tcg tracking” (about 1,600 searches a month) is held by two small sites. It is winnable with links.</li></ul><h4>What to do</h4><ul><li>Connect Search Console and Google Analytics first (15 minutes).</li><li>Ask every partner who says yes for a link on their own site, not only a post.</li><li>Answer real shipping questions on Reddit, mention the tool only when it is the honest answer.</li></ul><h4>Reddit ads, if you try them</h4><ul><li>Aim at “generated a label”, not “paid”. Paid sales are too few for the ad system to learn from.</li><li>Two tests: a broad trading-card audience ($5 to $10 a day) and small seller communities ($10 to $15 a day). Confirm community sizes inside Reddit’s own tools.</li><li>Write ads like a plain first-person post, not a banner.</li><li>Run two weeks before judging. Do not run an organic post in the same community the same week.</li></ul>"}];
 
 /* ---------- Content ---------- */
+const AGENTS = [
+ ["scan","Scan chat","scan","A seller lists 100 cards in minutes."],
+ ["extension","Extension chat","extension","The shipping and listing day in a few clicks, with the Agent in a side panel."],
+ ["agent","Agent chat","agent","An assistant a seller would pay for: plans, memory, approvals, automations."],
+ ["hq","This board","hq","One home: next step, status, plans, ideas."],
+ ["builder","Builder","builder","Reviews and merges, guards the live site, keeps this board current."]
+];
+const PROTECT = [
+ {risk:"Leaked keys", guard:"Old keys retired, two-step login on your accounts.", st:()=> isDone("B4")&&isDone("B8")&&isDone("B3") ? ["Old keys are off", "ok"] : ["Old keys still active", "warn"], next:"Never paste keys in chat. Rotate at any doubt."},
+ {risk:"Fake sign-ups", guard:"Human check and a 6-digit email code.", st:()=> isDone("B9") ? (isDone("B13")?["On and tested","ok"]:["On. One more test (B13)","warn"]) : ["Human check not set (B9)","warn"], next:"Test with a second email (B13)."},
+ {risk:"Site down", guard:"Phone alert if tcgspeedshipper.com stops answering.", st:()=> isDone("B7") ? ["Alert is on","ok"] : ["No alert yet (B7)","warn"], next:"Claude adds error alerts by email (an idea on the Ideas tab)."},
+ {risk:"Payment disputes", guard:"Card statements show TCG Speed Shipper.", st:()=> isDone("G11") ? ["Statement name set","ok"] : ["Statement name not set (G11)","warn"], next:"Answer any dispute inside the deadline. Claude drafts the evidence."},
+ {risk:"Customer data", guard:"Buyer addresses are processed in the browser. Tests use made-up buyers.", st:()=>["Rule in force","ok"], next:"No analytics or trackers. Never log buyer data."},
+ {risk:"TCGplayer rules", guard:"Nothing touches TCGplayer pages until “TOS OK”.", st:()=> isDone("S2") ? ["Permission asked","ok"] : ["Extension stays off","warn"], next:"You: task S2, read the rules, then ask permission."},
+ {risk:"Postage money", guard:"Test mode only. Pilot first, then everyone.", st:()=>["Not live yet","warn"], next:"Pitney Bowes call (A15), then one real label (A9)."},
+ {risk:"Backups", guard:"Database backups and a restore test.", st:()=>["Not checked","warn"], next:"Claude confirms the backup plan and a restore test."},
+ {risk:"Usage limit", guard:"Small sessions, restart each morning.", st:()=>["Paused sessions overnight (Oct 15)","warn"], next:"Keep jobs short. Check the Agents panel each morning."}
+];
 const PRODUCTS = [["all","All products"],["shipper","Shipper"],["scan","Scan"],["ext","Extension"],["agent","Agent"]];
 const TASK_PROD = {S1:["scan","ext","agent"], S2:["ext","scan"], S3:["scan","ext"], S4:["scan"], S5:["scan"], E5:["ext"]};
 const IDEA_PROD = {"suite-sites":["scan","agent","ext"], "envelope-tracking":["shipper"]};
@@ -914,6 +934,7 @@ function renderRoadmap(){
     <div class="card" style="display:grid;gap:14px">${sprods.map(p=>{ const ci=p.cur?p.ms.findIndex(m=>m[0]===p.cur):-1; return `<div><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><b>${esc(p.name)}</b><span class="muted small">${esc(p.state||"")}</span></div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${p.ms.map((m,i)=>`<span class="pill ${ci>=0&&i<ci?"ok":i===ci?"acc":""}" title="${esc(m[1])}">${m[0]}${ci>=0&&i<ci?" ✓":""}</span>`).join("")}</div><div class="muted small" style="margin-top:6px">${ci>=0?esc(p.ms[ci][1]):esc(p.line||"")}</div></div>`; }).join("")}
     <div><button class="link-btn" data-gotab="suite">Open the Suite tab</button></div></div>
   </section>`:""}
+  ${!selMs&&selProd==="all"?`<section class="sec"><h2>Protect</h2><p class="lede">What could hurt the business, and what guards it.</p><div class="list">${PROTECT.map(x=>{ const st=x.st(); return `<div class="row"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><b>${esc(x.risk)}</b><span class="pill ${st[1]}">${esc(st[0])}</span></div><div class="muted small">${esc(x.guard)}</div><div class="small">Next: ${esc(x.next)}</div></div>`; }).join("")}</div></section>`:""}
   ${!selMs&&selProd==="all"?`<section class="sec"><h2>The long game</h2><div class="card" style="display:grid;gap:8px">${LONG.map(l=>`<p>${esc(l)}</p>`).join("")}</div></section>`:""}
   ${showShip?`<section class="sec">
     <details class="fold"><summary>How Pitney Bowes fits in</summary><div class="fold-body">${pbHTML()}</div></details>
@@ -947,6 +968,11 @@ function moneyHTML(){ return `
   </table></div>`; }
 
 /* ---------- Suite ---------- */
+function parseMs(str){
+  const parts = String(str||"").split(/[,;]/).map(x=>x.trim()).filter(Boolean);
+  for (const t of parts){ const m = t.match(/\b([SXA]\d)\b/); if (m && !/done|merged/i.test(t)) return {cur:m[1], note:t}; }
+  return {cur:null, note:""};
+}
 function suiteView(){
   const d = suiteDoc && Array.isArray(suiteDoc.products) ? suiteDoc : null;
   const defs = Object.fromEntries(SUITE_DEFAULT.products.map(p=>[p.id,p]));
@@ -954,9 +980,9 @@ function suiteView(){
   const src = d ? d.products.filter(x=>x && x.id && x.id!=="hq") : SUITE_DEFAULT.products;
   const products = src.map(o=>{
     const p = defs[alias[o.id]||o.id] || {ms:[]};
-    const ids = String(o.milestone||"").match(/\b[SXA]\d\b/g);
-    const cur = d ? (ids ? ids[ids.length-1] : null) : p.cur;
-    return {ms:p.ms, id:alias[o.id]||o.id, name:o.name||p.name, state:(d?o.milestone:p.state)||o.state||p.state, kind:o.state||"", cur, line:o.line||p.line};
+    const pm = d ? parseMs(o.milestone) : {cur:p.cur, note:p.state};
+    const cur = pm.cur;
+    return {ms:p.ms, id:alias[o.id]||o.id, name:o.name||p.name, state:(d?o.milestone:p.state)||o.state||p.state, kind:o.state||"", cur, curNote:pm.note||"", line:o.line||p.line};
   });
   return {products, log: d && Array.isArray(d.log) && d.log.length ? d.log : SUITE_LOG_DEFAULT, updatedAt: d && d.updatedAt};
 }
@@ -971,6 +997,11 @@ function renderSuite(){
   $("#tab-suite").innerHTML = `
   <section class="sec"><div class="sec-head"><h2>TCG Speed Suite</h2><span class="muted small">${esc(stamp)}</span></div>
     <p class="lede">Scan, the Chrome extension, the Agent, and later a site for each product.</p></section>
+  ${(selMs||selProd!=="all")?"":`<section class="sec"><h2>Agents</h2><div class="list">${AGENTS.map(a=>{
+    const pr = v.products.find(x=>x.id===a[0]);
+    const lg = v.log.filter(l=>l.who===a[2]).sort((x,y)=>String(y.at).localeCompare(String(x.at)))[0];
+    const last = lg ? lg.line : (pr&&pr.line) || "No news yet.";
+    return `<div class="row"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><b>${esc(a[1])}</b>${pr&&pr.state?`<span class="pill acc">${esc(pr.state)}</span>`:""}</div><div class="muted small">Goal: ${esc(a[3])}</div><div>${esc(last)}</div>${lg?`<div class="label">${esc(String(lg.at).includes("T")?fmtDate(lg.at):lg.at)}</div>`:""}</div>`; }).join("")}</div></section>`}
   <section class="prods">${shownProds.map(p=>{
     const ci = p.cur ? p.ms.findIndex(m=>m[0]===p.cur) : -1;
     return `<div class="card prod ${p.ms.length?"":"wide"}"><div class="prod-top"><h3>${esc(p.name)}</h3><span class="pill ${p.kind==="live"?"ok":/not started|planned|needs/i.test(p.state)||p.kind==="planned"?"":"acc"}">${esc(p.state)}</span></div>
@@ -1110,7 +1141,7 @@ function msStatus(id){
   const p = suiteView().products.find(x=>x.id===m[1]); if (!p||!p.cur) return "Later";
   const ms = SUITE_DEFAULT.products.find(x=>x.id===m[1]).ms.map(x=>x[0]);
   const ci = ms.indexOf(p.cur), i = ms.indexOf(id);
-  return i<ci ? "Done" : i===ci ? (/next|start/i.test(p.state)?"Next":"In progress") : "Later";
+  return i<ci ? "Done" : i===ci ? (/wait/i.test(p.curNote)?"Waiting":/next|start/i.test(p.curNote)?"Next":"In progress") : "Later";
 }
 function renderFilters(){
   const ps = $("#selProd"), ms = $("#selMs");
