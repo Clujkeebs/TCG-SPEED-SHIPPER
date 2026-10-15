@@ -2,7 +2,7 @@ import { applyPriceRule, DEFAULT_CONDITION_MULTIPLIERS } from '../core/pricing.j
 import { PRESETS, presetToFields } from '../core/presets.js';
 import { buildCsv, checkHeader } from '../core/csv.js';
 import { openSession, createIndexedDbStore } from '../core/session.js';
-import { createIndex } from '../data/index.js';
+import { loadIndex } from '../data/load.js';
 import { formatUsd, dollarsToCents } from '../../shared/models.js';
 import { startCamera, grabFrame, frameFromFile } from './camera.js';
 import { detectCard } from '../vision/detect.js';
@@ -15,7 +15,7 @@ const $ = (id) => document.getElementById(id);
 const FOIL_FOR = { mtg: 'foil', pokemon: 'holo', yugioh: 'first-edition', onepiece: 'foil' };
 const FIELDS = ['game', 'condition', 'finish', 'language', 'quantity', 'basis', 'percent', 'fixed', 'rounding', 'floor', 'ceiling', 'minList', 'byCondition'];
 
-const index = createIndex(await (await fetch('../data/sample/printings.json')).json());
+const { index } = await loadIndex(async (u) => { const r = await fetch(u); if (!r.ok) throw new Error(String(r.status)); return r.json(); }, { base: '../data/' });
 const session = await openSession({ store: createIndexedDbStore() });
 
 // Restore saved defaults into the form.

@@ -303,3 +303,26 @@ Numbers: root `npm test` 17 suites pass; `cd suite && npm test` 196 pass at the 
 Needs HQ: (1) Protect list, "Backups": state "Free plan: no backups yet. Schema saved in the repo." next "Supabase Pro ($25 a month) before postage balances go live." (2) Protect list, "Usage limit": state "Running; each session works in short batches". (3) X posts: 5 drafts for Oct 16 are in `xposts`; the Builder's morning run now writes them daily.
 Needs owner: none new.
 Next: review PRs from `scan`, `agent` and `extension`; build the Agent server proxy once the protocol settles.
+
+### 2026-10-15 · scan · batch 2: index, matching, crops, beta kit · done (PR open)
+1) Card index designed and built: per-game compact files (`data/compact.js`), importers for Scryfall, Pokémon TCG API,
+YGOPRODeck and One Piece rows (`data/import/build-index.js`, tests on tiny fixtures only, no downloads), a loader that
+adds any `data/index/<game>.json` to the sample, and a coverage report. `SCAN-COVERAGE.md` rewritten: index design,
+sources, terms (written from memory, unconfirmed), which sources give TCGplayer ids (only Magic, per the plan), and an idea
+for filling other games' ids from the seller's own export. The sandbox cannot reach Scryfall (test fetch refused), so no real
+catalog is loaded: the app still only knows the 96-card sample.
+2) Matching: set code + number first, fuzzy name second (already), now also tolerates a set code read with a slip (MII for
+M11); never auto-accepts that. Measured on the simulation: no change in numbers (same before and after), so no gain claimed.
+3) Crops benchmark (synthetic, 96 cards): at 450 px card height, separate strips 100% right-first at 113 ms median; whole
+card 99% at 253 ms; strips + black-and-white 97.9%. At 300 px: 93.8% / 91.7% / 92.7%. Strips stay the default; thresholding
+stays off. Details in SCAN-EVAL.md. All synthetic.
+4) Beta kit: `docs/suite/SCAN-BETA.md` (one page, plain words, 8 feedback questions). A test checks the built site has no
+root-relative paths, so it works from /scan/public/ on any host over https (service worker registers relative to the page).
+Extension vendoring: no vendored file changed (csv.js, csv-format.js, pricing.js untouched); `npm run vendor` produced no diff.
+New files the Extension does not need.
+Numbers: Scan tests 75 pass offline.
+Needs Builder: before Rob can list anything real, someone with open internet must run the importers on real data (Scryfall bulk
+for Magic at least) and drop `data/index/<game>.json` files into the private test copy, after reading each provider's terms.
+Also confirm terms in SCAN-COVERAGE.md.
+Needs owner: about 50 phone photos of real cards; one real TCGplayer export.
+Next: real catalog files; run the harness on real photos when they arrive.

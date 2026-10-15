@@ -1,7 +1,7 @@
 // Browser text reader: self-hosted Tesseract.js (see vendor/VENDOR.md). Loaded on first use, runs in a worker, offline.
 // engine.recognize(grayImage, { region }) -> Promise<string>
 const BASE = new URL('../vendor/tesseract/', import.meta.url).href;
-const MODES = { title: '7', bottom: '6' }; // single line for the name; a small block for number and set code
+const MODES = { title: '7', bottom: '6', whole: '11' }; // single line for the name; a small block for number and set code
 
 function loadScript(src) {
   return new Promise((resolve, reject) => {
@@ -13,7 +13,16 @@ function loadScript(src) {
 }
 
 // Bigger and higher contrast reads better: scale small strips up to ~900 px wide and stretch the grey range.
-function toCanvas(img) {
+// Otsu threshold: the grey level that best splits dark ink from light card.
+function otsu(gray) {
+  const h = new Array(256).fill(0); for (const v of gray) h[v] += 1;
+  const total = gray.length; let sum = 0; for (let i = 0; i < 256; i += 1) sum += i * h[i];
+  let wB = 0, sB = 0, best = 0, t = 128;
+  for (let i = 0; i < 256; i += 1) { wB += h[i]; if (!wB) continue; const wF = total - wB; if (!wF) break; sB += i * h[i]; const mB = sB / wB, mF = (sum - sB) / wF; const v = wB * wF * (mB - mF) ** 2; if (v > best) { best = v; t = i; } }
+  return t;
+}
+
+function toCanvas(img, binarize = false) {
   const scale = Math.max(1, Math.min(4, 900 / img.width));
   const c = document.createElement('canvas');
   c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
@@ -22,8 +31,10 @@ function toCanvas(img) {
   let lo = 255, hi = 0;
   for (const v of img.gray) { if (v < lo) lo = v; if (v > hi) hi = v; }
   const span = Math.max(1, hi - lo);
+  const thr = binarize ? otsu(img.gray) : 0;
   for (let i = 0; i < img.gray.length; i += 1) {
-    const v = ((img.gray[i] - lo) * 255) / span;
+    let v = ((img.gray[i] - lo) * 255) / span;
+    if (binarize) v = img.gray[i] > thr ? 255 : 0;
     d.data[i * 4] = d.data[i * 4 + 1] = d.data[i * 4 + 2] = v; d.data[i * 4 + 3] = 255;
   }
   sg.putImageData(d, 0, 0);
@@ -31,7 +42,8 @@ function toCanvas(img) {
   return c;
 }
 
-export function createBrowserEngine() {
+// options.binarize: black-and-white the strip before reading (measured in docs/suite/SCAN-EVAL.md).
+export function createBrowserEngine({ binarize = false } = {}) {
   let workerP = null;
   const worker = () => (workerP ||= (async () => {
     await loadScript(BASE + 'tesseract.min.js');
@@ -45,7 +57,7 @@ export function createBrowserEngine() {
     async recognize(img, { region = 'title' } = {}) {
       const w = await worker();
       if (mode !== region) { await w.setParameters({ tessedit_pageseg_mode: MODES[region] || '6' }); mode = region; }
-      const { data } = await w.recognize(toCanvas(img));
+      const { data } = await w.recognize(toCanvas(img, binarize));
       return data.text || '';
     },
     async close() { if (workerP) { const w = await workerP; await w.terminate(); workerP = null; } },

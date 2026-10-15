@@ -111,3 +111,12 @@ test('parse: with no game chosen, One Piece codes are not mistaken for Yu-Gi-Oh!
   assert.equal(parseCardText('Dark Magician\nLOB-EN005').game, 'yugioh');
   assert.equal(parseCardText('Lightning Bolt\n149/274 R\nM11 • EN').setCode, 'M11');
 });
+
+test('resolve: a set code read with a slip still finds the card, but never auto-accepts', () => {
+  const c = resolveClues({ game: 'mtg', setCode: 'MII', number: '149', name: 'Lightning Bolt' }, index);
+  assert.equal(c[0].printing.setCode, 'M11');
+  assert.ok(c[0].score >= 0.7 && c[0].score < 0.9);
+  assert.equal(decide(c).action, 'choose');
+  const o = resolveClues({ game: 'onepiece', setCode: 'OPO1', number: '016', name: 'Nami' }, index);
+  assert.equal(o[0].printing.setCode, 'OP01');
+});

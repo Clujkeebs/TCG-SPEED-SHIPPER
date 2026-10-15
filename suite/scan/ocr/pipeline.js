@@ -6,13 +6,14 @@ import { parseCardText } from './parse.js';
 import { resolveClues } from './resolve.js';
 import { decide } from '../core/rapid.js';
 
-export async function identifyFrame(frame, { engine, index, game, now = () => Date.now(), thresholds } = {}) {
+// strips: 'split' (title and number strips read separately, the default) or 'whole' (one read of the whole card).
+export async function identifyFrame(frame, { engine, index, game, now = () => Date.now(), thresholds, strips = 'split' } = {}) {
   const t0 = now();
   const box = detectCard(frame);
   if (!box || box.confidence < 0.3) return { ok: false, reason: 'no-card', box, ms: now() - t0 };
   const card = cropGray(frame, box);
   const parts = [];
-  for (const key of ['title', 'bottom']) parts.push(await engine.recognize(region(card, REGIONS[key]), { region: key }));
+  for (const key of strips === 'whole' ? ['whole'] : ['title', 'bottom']) parts.push(await engine.recognize(region(card, REGIONS[key]), { region: key }));
   const text = parts.join('\n');
   const clues = parseCardText(text, game);
   const candidates = resolveClues(clues, index);
