@@ -1,245 +1,283 @@
 <title>Shipper HQ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: a night-shift dispatch console. Header with live counts, one "next up" ticket, stages as collapsible lanes of compact task rows, chat docked on the right. Dark by design. */
+/* Layout: one calm column. A sticky top bar holds the six tabs. Now shows the news, one Next up card, then a short list. Dark first, light follows the device. One accent (blue); amber and green only mean "heads up" and "done". */
 :root{
   color-scheme:dark;
-  --bg:#0a0c11; --panel:#11141b; --raised:#171b24; --line:#222838; --line-2:#2c3346;
-  --text:#e7e9ef; --muted:#8c93a8; --faint:#5d6479;
-  --accent:#7aa2ff; --accent-ink:#0a0c11; --accent-soft:rgba(122,162,255,.12);
-  --hot:#ffb44d; --hot-soft:rgba(255,180,77,.12);
-  --ok:#4fd1a1; --ok-soft:rgba(79,209,161,.12);
-  --money:#f08ab0; --money-soft:rgba(240,138,176,.12);
+  --bg:#0d0f14; --surface:#14171e; --raised:#1a1e27; --line:#262b38; --line-2:#333a4b;
+  --text:#e9ebf1; --muted:#9aa2b6; --faint:#6c758b;
+  --accent:#7fa6ff; --accent-ink:#0b0e14; --accent-soft:rgba(127,166,255,.13); --accent-line:rgba(127,166,255,.4);
+  --warn:#f0b45a; --warn-soft:rgba(240,180,90,.13);
+  --ok:#5bd3a6; --ok-soft:rgba(91,211,166,.13);
+  --shadow:0 18px 50px rgba(0,0,0,.55);
   --display:"Bricolage Grotesque","Avenir Next",system-ui,sans-serif;
   --body:"Geist",system-ui,-apple-system,"Segoe UI",sans-serif;
   --mono:"Geist Mono",ui-monospace,Menlo,Consolas,monospace;
-  --r:14px; --r-sm:9px;
+  --r:14px; --r-sm:10px;
+}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){
+  color-scheme:light;
+  --bg:#f5f6fa; --surface:#ffffff; --raised:#eef0f6; --line:#dfe3ec; --line-2:#c9cfdd;
+  --text:#14171f; --muted:#525a6e; --faint:#7b8399;
+  --accent:#2a56d4; --accent-ink:#ffffff; --accent-soft:rgba(42,86,212,.09); --accent-line:rgba(42,86,212,.35);
+  --warn:#8f5600; --warn-soft:rgba(180,110,0,.12);
+  --ok:#0d7a56; --ok-soft:rgba(13,122,86,.1);
+  --shadow:0 18px 50px rgba(20,30,60,.18);
+}}
+:root[data-theme="light"]{
+  color-scheme:light;
+  --bg:#f5f6fa; --surface:#ffffff; --raised:#eef0f6; --line:#dfe3ec; --line-2:#c9cfdd;
+  --text:#14171f; --muted:#525a6e; --faint:#7b8399;
+  --accent:#2a56d4; --accent-ink:#ffffff; --accent-soft:rgba(42,86,212,.09); --accent-line:rgba(42,86,212,.35);
+  --warn:#8f5600; --warn-soft:rgba(180,110,0,.12);
+  --ok:#0d7a56; --ok-soft:rgba(13,122,86,.1);
+  --shadow:0 18px 50px rgba(20,30,60,.18);
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-body{background:var(--bg);color:var(--text);font:15px/1.55 var(--body);margin:0;-webkit-font-smoothing:antialiased}
-body::before{content:"";position:fixed;inset:0 0 auto 0;height:340px;pointer-events:none;background:radial-gradient(600px 240px at 18% -40px,rgba(122,162,255,.14),transparent 70%);z-index:0}
-.wrap{position:relative;z-index:1;max-width:1000px;margin:0 auto;padding-inline:18px;padding-block:28px 120px}
-h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.12;letter-spacing:-.015em}
-h1{font-size:clamp(30px,5vw,44px);font-weight:800}
-h2{font-size:19px;font-weight:700}
+body{background:var(--bg);color:var(--text);font:16px/1.55 var(--body);margin:0;-webkit-font-smoothing:antialiased;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:820px;margin:0 auto;padding-block:0 120px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15;letter-spacing:-.01em}
+h2{font-size:22px;font-weight:700}
 h3{font-size:17px;font-weight:700}
-.eyebrow{font:500 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+p{margin:0}
 .mono{font-family:var(--mono)}
 button,input,textarea,select{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 a{color:var(--accent)}
+.muted{color:var(--muted)} .small{font-size:14px}
+.label{font:500 12px/1.2 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
 
-header.top{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:flex-end;justify-content:space-between;margin-bottom:22px}
-.lede{color:var(--muted);max-width:56ch;margin-top:8px}
-.sync{font:12px var(--mono);color:var(--muted);display:inline-flex;gap:8px;align-items:center;padding:6px 10px;border:1px solid var(--line);border-radius:99px;background:var(--panel)}
-.dot{width:7px;height:7px;border-radius:50%;background:var(--faint)}
-.dot.on{background:var(--ok);box-shadow:0 0 0 3px var(--ok-soft)} .dot.off{background:var(--hot)}
+/* top bar */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;margin-inline:calc(-1*max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px));background:var(--bg);border-bottom:1px solid var(--line);padding-block:10px 0}
+.bar-in{max-width:820px;margin:0 auto}
+.bar-top{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:34px}
+.brand{font:800 20px/1 var(--display)}
+.bar-meta{display:flex;align-items:center;gap:14px;font:12px var(--mono);color:var(--faint)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--faint);margin-right:6px}
+.dot.on{background:var(--ok)} .dot.off{background:var(--warn)}
+.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;margin-inline:-6px}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:1 0 auto;min-height:46px;padding:0 12px;border:0;border-bottom:3px solid transparent;background:none;color:var(--muted);font-weight:600;font-size:15px;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--text);border-bottom-color:var(--accent)}
+@media (max-width:480px){.tab{padding:0 7px;font-size:13px}.brand{font-size:18px}}
 
-.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
-.stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;min-width:0}
-.stat b{display:block;overflow-wrap:anywhere;font:700 26px/1.1 var(--display);font-variant-numeric:tabular-nums}
-.stat span{font-size:12px;color:var(--muted)}
-.stat.hot b{color:var(--hot)} .stat.ok b{color:var(--ok)}
-.ring{display:flex;align-items:center;gap:12px}
-.ring svg{flex:none}
-@media (max-width:640px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.panel{display:grid;gap:30px;padding-top:26px}
+.sec{display:grid;gap:12px}
+.sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.lede{color:var(--muted);max-width:60ch}
 
-.strip{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(10,12,17,.86);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);padding-block:10px;margin-inline:-18px;padding-inline:18px;border-bottom:1px solid var(--line)}
-.tabs{display:inline-flex;gap:2px;padding:3px;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow-x:auto;max-width:100%}
-.tab{border:0;background:transparent;color:var(--muted);padding:7px 14px;border-radius:9px;font-weight:600;font-size:13px;white-space:nowrap}
-.tab[aria-selected="true"]{background:var(--raised);color:var(--text);box-shadow:inset 0 0 0 1px var(--line-2)}
-.bar{height:3px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:10px}
-.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--ok));width:0;transition:width .5s}
-
-.next{position:relative;overflow:hidden;background:linear-gradient(135deg,rgba(122,162,255,.16),rgba(122,162,255,.03) 60%),var(--panel);border:1px solid rgba(122,162,255,.35);border-radius:var(--r);padding:20px;display:grid;gap:10px;margin:18px 0}
-.next .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
-.next h3{font-size:22px}
-.next .why-line{color:var(--muted);max-width:70ch}
-
-.filters{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 4px}
-.chip{border:1px solid var(--line);background:var(--panel);border-radius:99px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--muted)}
-.chip[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);border-color:rgba(122,162,255,.45)}
-
-section.stage{margin-top:22px}
-.stage-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;width:100%;background:none;border:0;padding:6px 0;text-align:left}
-.stage-head h2 span{color:var(--faint);font-family:var(--mono);font-size:13px;font-weight:500;margin-right:8px}
-.stage-sub{color:var(--muted);margin:2px 0 10px;max-width:65ch;font-size:14px}
-.stage-count{display:flex;align-items:center;gap:8px;font:12px var(--mono);color:var(--muted)}
-.mini{width:70px;height:4px;background:var(--line);border-radius:99px;overflow:hidden}
-.mini i{display:block;height:100%;background:var(--ok)}
-.stage.closed .stage-body{display:none}
-.caret{color:var(--faint);transition:transform .2s;display:inline-block}
-.stage.closed .caret{transform:rotate(-90deg)}
-
-.list{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
-.task{border-top:1px solid var(--line)}
-.task:first-child{border-top:0}
-.task.done .t-title{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--faint)}
-.t-head{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px 14px;transition:background .15s}
-.t-head:hover{background:rgba(255,255,255,.02)}
-.check{appearance:none;width:22px;height:22px;border:1.5px solid var(--line-2);border-radius:50%;margin:0;display:grid;place-items:center;background:transparent;transition:background .15s,border-color .15s}
-.check:hover{border-color:var(--accent)}
-.check:checked{background:var(--ok);border-color:var(--ok)}
-.check:checked::after{content:"";width:5px;height:10px;border:solid var(--accent-ink);border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translate(-1px,-1px)}
-.t-main{min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
-.t-title{font-weight:500;background:none;border:0;padding:0;text-align:left;color:var(--text);min-width:0}
-.t-meta{display:flex;flex-wrap:wrap;gap:5px}
-.tag{font:500 11px/1 var(--mono);padding:4px 7px;border-radius:6px;background:var(--raised);color:var(--muted);white-space:nowrap}
-.tag.hot{background:var(--hot-soft);color:var(--hot)}
-.tag.money{background:var(--money-soft);color:var(--money)}
-.tag.time{background:transparent;color:var(--faint);padding-inline:0}
-.tag.id{background:transparent;color:var(--faint);border:1px solid var(--line);}
-.tag.noted{background:var(--accent-soft);color:var(--accent)}
-.expand{border:0;background:none;color:var(--faint);font-size:18px;line-height:1;padding:4px 6px;border-radius:6px;transition:transform .2s}
-.task[open-state="1"] .expand{transform:rotate(90deg);color:var(--text)}
-.task[open-state="1"]{background:var(--raised)}
-.t-body{padding:2px 16px 16px 48px;display:grid;gap:12px}
-.t-body[hidden]{display:none!important}
-.why{color:var(--text);max-width:70ch}
-.steps{margin:0;padding-left:20px;display:grid;gap:7px;color:var(--text)}
-.steps li::marker{color:var(--accent);font-family:var(--mono);font-size:12px}
-.unlock{font-size:13px;color:var(--ok);background:var(--ok-soft);padding:9px 12px;border-radius:var(--r-sm)}
-.copy{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-sm);padding:7px 9px;font:13px var(--mono);word-break:break-all}
-.copy code{flex:1 1 200px;min-width:0}
-.copy button,.btn{border:1px solid var(--line-2);background:var(--raised);color:var(--text);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600}
+/* generic surfaces */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.list{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.row{padding:14px 16px;border-top:1px solid var(--line);display:grid;gap:4px;min-width:0}
+.row:first-child{border-top:0}
+.btn{min-height:44px;border:1px solid var(--line-2);background:var(--raised);color:var(--text);border-radius:var(--r-sm);padding:0 16px;font-weight:600;font-size:15px}
 .btn:hover{border-color:var(--accent)}
 .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-.note{width:100%;min-height:54px;border:1px solid var(--line);border-radius:var(--r-sm);padding:9px 10px;background:var(--bg);resize:vertical}
-.note-row{display:grid;gap:5px}
-.note-row label{font-size:12px;color:var(--muted)}
-.t-actions{display:flex;flex-wrap:wrap;gap:6px}
-@media (max-width:560px){.t-body{padding-left:14px}.t-head{padding:12px}}
+.btn.small{min-height:38px;padding:0 12px;font-size:14px}
+.btn[disabled]{opacity:.55;cursor:default}
+.link-btn{background:none;border:0;color:var(--accent);padding:6px 0;min-height:36px;font-weight:600;font-size:14px}
+.ghost{min-height:44px;background:none;border:1px solid var(--line);color:var(--muted);border-radius:99px;padding:0 18px;font-weight:600;font-size:14px}
+.ghost:hover{color:var(--text);border-color:var(--line-2)}
+.pill{display:inline-block;font:500 12px/1 var(--mono);padding:5px 9px;border-radius:99px;background:var(--raised);color:var(--muted);white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.acc{background:var(--accent-soft);color:var(--accent)}
+.field{width:100%;min-height:44px;border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 12px;background:var(--bg);resize:vertical}
 
-.explainer{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:20px;display:grid;gap:14px;margin-top:16px}
-.lanes{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
-.lane{background:var(--raised);border:1px solid var(--line);border-radius:var(--r-sm);padding:14px;display:grid;gap:6px;align-content:start}
-.lane .eyebrow{color:var(--accent)}
-.lane.now{border-color:rgba(79,209,161,.5)}
+/* away */
+.news{display:grid;gap:0}
+.news-item{padding:14px 16px;border-top:1px solid var(--line);display:grid;gap:4px}
+.news-item:first-child{border-top:0}
+.news-text{white-space:pre-wrap;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.news-item.open .news-text{display:block}
 
+/* tasks */
+.next{border:1px solid var(--accent-line);background:var(--surface);border-radius:var(--r);padding:20px;display:grid;gap:14px}
+.next h3{font-size:24px;line-height:1.2}
+.next .meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.task{border-top:1px solid var(--line)}
+.task:first-child{border-top:0}
+.t-head{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:6px 8px 6px 6px;min-height:60px}
+.check-wrap{width:44px;height:44px;display:grid;place-items:center;cursor:pointer}
+.check{appearance:none;-webkit-appearance:none;width:26px;height:26px;border:2px solid var(--line-2);border-radius:50%;margin:0;display:grid;place-items:center;background:transparent;cursor:pointer}
+.check:hover{border-color:var(--accent)}
+.check:checked{background:var(--ok);border-color:var(--ok)}
+.check:checked::after{content:"";width:6px;height:11px;border:solid var(--bg);border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.t-title{background:none;border:0;padding:6px 0;text-align:left;font-weight:500;font-size:16px;line-height:1.35;min-width:0;display:grid;gap:3px}
+.t-sub{font:12px var(--mono);color:var(--faint);display:flex;gap:10px;flex-wrap:wrap}
+.expand{width:44px;height:44px;border:0;background:none;color:var(--faint);font-size:22px;transition:transform .15s}
+.task.open .expand{transform:rotate(90deg);color:var(--text)}
+.task.done .t-title b{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--faint);font-weight:500}
+.t-body{padding:4px 16px 18px 58px;display:grid;gap:14px}
+.next .t-body{padding:0}
+.why{max-width:64ch}
+.steps{margin:0;padding-left:22px;display:grid;gap:9px;max-width:64ch}
+.steps li::marker{color:var(--accent);font-family:var(--mono);font-size:13px}
+.unlock{font-size:14px;color:var(--ok);background:var(--ok-soft);padding:10px 12px;border-radius:var(--r-sm)}
+.copy{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 10px;font:14px var(--mono)}
+.copy code{flex:1 1 180px;min-width:0;overflow-wrap:anywhere}
+.note-row{display:grid;gap:6px}
+.note-row label{font-size:13px;color:var(--muted)}
+.t-actions{display:flex;flex-wrap:wrap;gap:8px}
+.group-name{margin:22px 0 10px}
+@media (max-width:560px){.t-body{padding-left:16px}}
+
+/* roadmap */
+.ladder{display:grid;gap:8px}
+.rung{display:grid;grid-template-columns:104px 1fr;gap:14px;align-items:baseline;padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.rung b{font:800 24px/1 var(--display);font-variant-numeric:tabular-nums}
+.rung.here{border-color:var(--ok)}
+.path{display:grid;gap:0;list-style:none;margin:0;padding:0}
+.path li{display:grid;grid-template-columns:28px 1fr;gap:12px;padding:12px 0;border-top:1px solid var(--line);align-items:start}
+.path li:first-child{border-top:0}
+.path .mk{width:22px;height:22px;border-radius:50%;border:2px solid var(--line-2);margin-top:2px}
+.path li.done .mk{background:var(--ok);border-color:var(--ok)}
+.path li.now .mk{border-color:var(--accent);background:var(--accent-soft)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+details.fold{border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+details.fold>summary{list-style:none;cursor:pointer;min-height:52px;padding:14px 16px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:10px}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary::after{content:"+";color:var(--faint);font-size:22px;line-height:1}
+details.fold[open]>summary::after{content:"–"}
+details.fold>.fold-body{padding:0 16px 16px;display:grid;gap:12px}
 table{border-collapse:collapse;width:100%;font-size:14px}
-.tbl{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
-th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-sm)}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
 tr:last-child td{border-bottom:0}
-th{font:500 11px var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--faint);background:var(--raised)}
-td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
-.phase{margin-top:24px}
-.phase h3{margin-bottom:10px}
+th{font:500 11px var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--faint);background:var(--raised)}
+td.num{font-family:var(--mono);white-space:nowrap}
 
-.ladder{display:grid;gap:8px;margin-top:14px}
-.rung{display:grid;grid-template-columns:120px 1fr;gap:16px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px}
-.rung .amt{font:800 26px/1 var(--display);font-variant-numeric:tabular-nums}
-.rung.here{border-color:rgba(79,209,161,.55);background:linear-gradient(90deg,var(--ok-soft),transparent 60%),var(--panel)}
-@media (max-width:520px){.rung{grid-template-columns:1fr}}
+/* suite */
+.prods{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+.prod{display:grid;gap:12px;align-content:start}
+.prod.wide{grid-column:1/-1}
+.prod-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.ms{list-style:none;margin:0;padding:0;display:grid;gap:7px}
+.ms li{display:grid;grid-template-columns:20px 1fr;gap:8px;align-items:start;font-size:14px;color:var(--muted)}
+.ms .mk{width:16px;height:16px;border-radius:50%;border:2px solid var(--line-2);margin-top:3px}
+.ms li.done{color:var(--text)} .ms li.done .mk{background:var(--ok);border-color:var(--ok)}
+.ms li.now{color:var(--text)} .ms li.now .mk{border-color:var(--accent);background:var(--accent-soft)}
+.upl{display:grid;gap:10px}
+.drop{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 
-/* chat dock */
-.dock-btn{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:20;background:var(--accent);color:var(--accent-ink);border:0;border-radius:99px;padding:12px 18px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.45)}
-.dock{position:fixed;right:16px;bottom:calc(72px + env(safe-area-inset-bottom,0px));z-index:21;width:min(420px,calc(100vw - 32px));height:min(600px,calc(100vh - 120px));background:var(--panel);border:1px solid var(--line-2);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.6);display:flex;flex-direction:column;overflow:hidden}
-.dock header{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px}
+/* library */
+.lib{display:grid;gap:22px}
+.links{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px}
+.lk{display:grid;gap:2px;padding:12px 14px;min-height:60px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);text-decoration:none;color:var(--text);min-width:0}
+.lk:hover{border-color:var(--accent)}
+.lk b{font-weight:600;font-size:15px}
+.lk span{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.lk.top{border-color:var(--accent-line)}
+
+/* ideas */
+.idea{display:grid;gap:10px;padding:16px;border-top:1px solid var(--line)}
+.idea:first-child{border-top:0}
+.idea h3{font-size:17px}
+.idea-meta{display:flex;flex-wrap:wrap;gap:6px}
+.idea-act{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.idea .src{font-size:13px;color:var(--faint)}
+
+/* x posts */
+.post{display:grid;gap:12px;padding:16px;border-top:1px solid var(--line)}
+.post:first-child{border-top:0}
+.post-text{white-space:pre-wrap;overflow-wrap:anywhere;font-size:17px;line-height:1.5}
+.post-act{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+a.btn{display:inline-flex;align-items:center;text-decoration:none}
+.post.posted .post-text{color:var(--muted);font-size:15px}
+/* meetings */
+.qs{margin:0;padding-left:22px;display:grid;gap:8px}
+.saved{display:grid;gap:0}
+.saved .row b{font-weight:600}
+.saved pre{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font:14px/1.5 var(--body);color:var(--muted)}
+
+.empty{color:var(--muted);padding:22px 16px;text-align:center;font-size:15px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--text);color:var(--bg);padding:10px 16px;border-radius:99px;font-size:14px;font-weight:600;z-index:40;max-width:calc(100vw - 32px)}
+
+/* ask dock */
+.dock-btn{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:20;min-height:48px;background:var(--accent);color:var(--accent-ink);border:0;border-radius:99px;padding:0 20px;font-weight:700;box-shadow:var(--shadow)}
+.dock{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:21;width:min(420px,calc(100vw - 32px));height:min(600px,calc(100vh - 130px));background:var(--surface);border:1px solid var(--line-2);border-radius:16px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden}
+.dock-head{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px}
 .msgs{flex:1;overflow-y:auto;padding:14px 16px;display:grid;gap:10px;align-content:start}
-.msg{padding:9px 12px;border-radius:12px;max-width:92%;white-space:pre-wrap;word-wrap:break-word;font-size:14px}
+.msg{padding:9px 12px;border-radius:12px;max-width:92%;white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px}
 .msg.me{background:var(--accent);color:var(--accent-ink);justify-self:end;border-bottom-right-radius:4px}
 .msg.ai{background:var(--raised);border:1px solid var(--line);justify-self:start;border-bottom-left-radius:4px}
-.msg.sys{background:transparent;color:var(--muted);font-size:12px;justify-self:center;text-align:center}
+.msg.sys{background:transparent;color:var(--muted);font-size:13px;justify-self:center;text-align:center}
 .msg small{display:block;opacity:.7;font-size:11px;margin-top:4px}
 .composer{border-top:1px solid var(--line);padding:12px;display:grid;gap:8px}
 .composer textarea{width:100%;min-height:58px;border:1px solid var(--line);border-radius:10px;padding:9px 10px;background:var(--bg);resize:none}
-.composer .row{display:flex;gap:6px;justify-content:space-between;align-items:center;flex-wrap:wrap}
-.empty{color:var(--muted);font-size:13px;text-align:center;padding:24px}
-@media (min-width:1180px){
-  body{padding-right:380px}
-  .dock{position:fixed;top:0;right:0;bottom:0;width:364px;height:auto;border-radius:0;border-width:0 0 0 1px;box-shadow:none;padding-top:env(safe-area-inset-top,0px)}
-  .dock[hidden]{display:flex!important}
-  .dock-btn,#dockClose{display:none}
-}
-.dock h3{font-size:16px}
+.composer .crow{display:flex;gap:6px;justify-content:space-between;align-items:center;flex-wrap:wrap}
 .quick{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 10px}
-.quick button{border:1px solid var(--line);background:var(--raised);border-radius:99px;padding:5px 11px;font-size:12px;color:var(--muted)}
-.inbox-link{background:none;border:0;padding:0;color:var(--accent);font-size:12px;text-decoration:underline}
-/* calm layout overrides */
-body::before{display:none}
-.wrap{max-width:760px;padding-block:32px 120px}
-header.top{align-items:center;margin-bottom:28px}
-h1{font-size:28px}
-.progress-line{display:flex;align-items:center;gap:12px;margin-top:10px;color:var(--muted);font:13px var(--mono)}
-.progress-line .bar{width:180px;max-width:40vw;height:4px;margin:0}
-.sync{border:0;background:none;padding:0;font-size:11px;color:var(--faint)}
-.block{margin-top:28px}
-.block h2{font-size:13px;font-family:var(--mono);font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-bottom:10px}
-.t-head{padding:14px 16px}
-.t-title{font-size:15px}
-.t-meta .tag.id{display:none}
-.more-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
-.ghost{background:none;border:1px solid var(--line);color:var(--muted);border-radius:99px;padding:8px 14px;font-size:13px;font-weight:600}
-.ghost:hover{color:var(--text);border-color:var(--line-2)}
-.ghost[hidden]{display:none}
-#stages section.stage{margin-top:18px}
-.foot-nav{display:flex;flex-wrap:wrap;gap:4px 18px;margin-top:48px;padding-top:18px;border-top:1px solid var(--line)}
-.foot-nav button{background:none;border:0;padding:4px 0;color:var(--muted);font-size:13px}
-.foot-nav button[aria-selected="true"]{color:var(--text);text-decoration:underline;text-underline-offset:4px}
-@media (min-width:1180px){body{padding-right:0}.dock{position:fixed;top:auto;right:16px;bottom:calc(72px + env(safe-area-inset-bottom,0px));width:min(420px,calc(100vw - 32px));height:min(600px,calc(100vh - 120px));border-radius:16px;border-width:1px;box-shadow:0 20px 60px rgba(0,0,0,.6)}.dock[hidden]{display:none!important}.dock-btn,#dockClose{display:inline-block}}
+.quick button{border:1px solid var(--line);background:var(--raised);border-radius:99px;padding:8px 12px;font-size:13px;color:var(--muted)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
 <div class="wrap">
-  <header class="top">
-    <div style="min-width:0">
-      <h1>Shipper HQ</h1>
-      <div class="progress-line"><div class="bar"><i id="barFill"></i></div><span id="countText"></span></div>
+  <div class="bar"><div class="bar-in">
+    <div class="bar-top">
+      <div class="brand">Shipper HQ</div>
+      <div class="bar-meta"><span id="countText"></span><span><span class="dot" id="syncDot"></span><span id="syncText">Connecting…</span></span></div>
     </div>
-    <span class="sync" title="Sync status"><span class="dot" id="syncDot"></span><span id="syncText">Connecting…</span></span>
-  </header>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab" role="tab" data-tab="now" aria-selected="true">Now</button>
+      <button class="tab" role="tab" data-tab="roadmap" aria-selected="false">Roadmap</button>
+      <button class="tab" role="tab" data-tab="suite" aria-selected="false">Suite</button>
+      <button class="tab" role="tab" data-tab="library" aria-selected="false">Library</button>
+      <button class="tab" role="tab" data-tab="meetings" aria-selected="false">Meetings</button>
+      <button class="tab" role="tab" data-tab="ideas" aria-selected="false">Ideas</button>
+      <button class="tab" role="tab" data-tab="posts" aria-selected="false">X posts</button>
+    </nav>
+  </div></div>
 
   <main>
-    <div id="tab-todo">
-      <section class="block"><h2>Do now</h2><div class="list" id="nowList"></div></section>
-      <section class="block" id="nextBlock"><h2>After that</h2><div class="list" id="nextList"></div></section>
-      <div class="more-row">
+    <div class="panel" id="tab-now">
+      <section class="sec" id="awayBlock" hidden><div class="sec-head"><h2>While you were away</h2><button class="link-btn" id="allMsgs">All messages</button></div><div class="list news" id="awayList"></div></section>
+      <section class="sec" id="nextUpBlock"><div class="label">Next up</div><div id="nextUp"></div></section>
+      <section class="sec" id="nowBlock"><h2>Do now</h2><div class="list" id="nowList"></div></section>
+      <section class="sec" id="afterBlock"><h2>After that</h2><div class="list" id="afterList"></div></section>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
         <button class="ghost" id="restBtn" aria-expanded="false"></button>
         <button class="ghost" id="doneBtn" aria-expanded="false"></button>
       </div>
-      <section class="block" id="restBlock" hidden><div id="stages"></div></section>
-      <section class="block" id="doneBlock" hidden><h2>Done</h2><div class="list" id="doneList"></div></section>
+      <section class="sec" id="restBlock" hidden><div id="stages"></div></section>
+      <section class="sec" id="doneBlock" hidden><h2>Done</h2><div class="list" id="doneList"></div></section>
     </div>
-    <div id="tab-pb" hidden></div>
-    <div id="tab-build" hidden></div>
-    <div id="tab-money" hidden></div>
+    <div class="panel" id="tab-roadmap" hidden></div>
+    <div class="panel" id="tab-suite" hidden></div>
+    <div class="panel" id="tab-library" hidden></div>
+    <div class="panel" id="tab-meetings" hidden></div>
+    <div class="panel" id="tab-ideas" hidden></div>
+    <div class="panel" id="tab-posts" hidden></div>
   </main>
-  <nav class="foot-nav" role="tablist">
-    <button role="tab" data-tab="todo" aria-selected="true">To-do</button>
-    <button role="tab" data-tab="pb" aria-selected="false">Pitney Bowes guide</button>
-    <button role="tab" data-tab="build" aria-selected="false">Roadmap</button>
-    <button role="tab" data-tab="money" aria-selected="false">Money plan</button>
-  </nav>
 </div>
 
+<div class="toast" id="toast" hidden></div>
 <button class="dock-btn" id="dockBtn">Ask Claude</button>
 <div class="dock" id="dock" hidden>
-  <header>
+  <div class="dock-head">
     <h3 id="dockTitle">Quick questions</h3>
-    <button class="btn" id="dockClose">Close</button>
-  </header>
+    <button class="btn small" id="dockClose">Close</button>
+  </div>
   <div class="msgs" id="askMsgs"></div>
   <div class="quick" id="quickAsk">
-    <button>Where's the Shipper ID?</button>
     <button>What do I do first?</button>
-    <button>Do I need to pay for sandbox?</button>
+    <button>What changed today?</button>
+    <button>Explain Pitney Bowes simply</button>
   </div>
   <div class="msgs" id="inboxMsgs" hidden></div>
   <div class="composer">
-    <textarea id="composer" placeholder="Ask anything: “where is the Shipper ID?”, “what do I do after Railway?”"></textarea>
-    <div class="row">
-      <button class="inbox-link" id="modeLink">Send to Claude's inbox instead</button>
-      <button class="btn primary" id="sendBtn">Send</button>
+    <textarea id="composer" placeholder="Ask a small question…"></textarea>
+    <div class="crow">
+      <button class="link-btn" id="modeLink">Send to Claude's inbox instead</button>
+      <button class="btn primary small" id="sendBtn">Send</button>
     </div>
   </div>
 </div>
 
 <script>
-/* ---------- Content ---------- */
 const TXT_VALUE = "railway-verify=2f07e30030ad12a6fcee1329ee23f25808e97b6b21a9f09803683a6ba50dbf54";
 const OLD_STAGES = [
  {id:"A", name:"Switch on postage", sub:"This is the money. Today we earn once a month per seller. With postage we earn on every label every seller prints. Rob alone ships 500+ orders a month.", tasks:[
@@ -525,240 +563,512 @@ T.S2 = {id:"S2", min:15, title:"TCGplayer's rules: read them with Claude, then a
 T.S3 = {id:"S3", min:3, title:"Pick two or three sellers to test Scan and the extension (Rob first)",
   why:"The pass mark is real sellers listing 100+ cards with almost no edits. Rob already trusts the tool.",
   steps:["Write the names here (first names are fine). Don't contact anyone yet; Claude drafts a short ask when the first version works."]};
+
+/* ---------- Updates to older tasks ---------- */
+T.B12 = Object.assign({}, T.B12, {why:"Done. Sign-up codes are on in production (Oct 14). B13 is the last check."});
+T.A3 = Object.assign({}, T.A3, {wait:"After the Pitney Bowes call"});
+T.A9 = Object.assign({}, T.A9, {wait:"After the Pitney Bowes call"});
+T.A10 = Object.assign({}, T.A10, {wait:"After Rob's real labels"});
+
+/* ---------- New tasks (Oct 15) ---------- */
+T.B13 = {id:"B13", hot:1, min:3, title:"Test the sign-up code with a second email",
+  why:"Sign-up codes went live on Oct 14. One real test with a different email proves new customers can get in.",
+  steps:["Open <b>tcgspeedshipper.com</b> in a private tab.","Tap <b>Create Account</b> with a different email (a Gmail works).","Find the 6-digit code from <span class='mono'>hello@tcgspeedshipper.com</span> (check spam) and type it in.","Write “code worked”, or what the screen said, in the note. If anything fails, Claude switches codes off in one step."],
+  unlock:"New customers can sign up without getting stuck."};
+T.G12 = {id:"G12", min:10, title:"Set up Granola for the Pitney Bowes call",
+  why:"Granola writes the call notes for you, so you can listen. Claude can then read them and turn them into tasks.",
+  steps:["Install <b>Granola</b> (granola.ai: Mac, Windows and iPhone apps; an iPad app is unconfirmed) on the device you will take the call on, and sign in.","Connect your calendar so it spots the meeting. Allow the microphone (and system audio on a computer).","At the start of the call say “I use an AI note-taker, OK?” and start Granola. Jot a few words during the call.","In claude.ai go to <b>Settings → Connectors</b>, find <b>Granola</b> in the directory, tap <b>Connect</b> and sign in. Claude cannot do this sign-in for you. (Only if Granola is missing, add a custom connector with the address below.)","After the call write “call notes are in” (the Meetings tab has a button)."],
+  copy:["https://mcp.granola.ai/mcp"],
+  unlock:"Claude can read the call notes. Only notes you own are visible, and the Basic plan keeps 30 days of history."};
+T.S4 = {id:"S4", later:1, min:0, title:"Send one real TCGplayer inventory export",
+  why:"Scan's CSV has to match TCGplayer's real file. An inventory export has no buyer details.",
+  steps:["Seller Portal → the page where you manage your listings → <b>Export</b> (CSV).","Add the file in the Suite tab's upload box."],
+  unlock:"Scan's CSV goes from draft to verified."};
+T.S5 = {id:"S5", later:1, min:0, title:"About 50 photos of cards for Scan testing",
+  why:"Scan needs real photos to measure how well it reads cards.",
+  steps:["Plain surface, normal light, one card per photo, straight on.","Mix the games: Magic, Pokémon, Yu-Gi-Oh!, One Piece. Include some foils and a few in sleeves or toploaders.","Add them in the Suite tab's upload box."],
+  unlock:"Scan's accuracy gets measured on real cards."};
+
+/* Priority order: security first, then postage, free growth, paid growth, content and decisions, housekeeping, Suite. */
 const STAGES = [
- {id:"P1", name:"Security first", sub:"Do these before anything else. They protect your accounts, your customers' data and your money.", tasks:["B12","B4","B8","B9","B10","B11","B3","B6","B7","B1","B2","B5"].map(k=>T[k])},
- {id:"P2", name:"Switch on postage (the money)", sub:"Every label any seller prints earns a fee. Rob alone ships 500+ a month.", tasks:["A18","A16","A14","A15","A12","A13","A8","A1","A2","A5","A4","A6","A9","A3","A10","A11","A7"].map(k=>T[k])},
- {id:"P3", name:"Get found for free", sub:"Organic search and seller communities cost nothing and compound.", tasks:["D6","D8","D1","D3","D2","D7","D4","D5"].map(k=>T[k])},
- {id:"P4", name:"Paid growth: Google Ads test", sub:"After P3's Search Console. Small, measured, with a clear keep-or-kill rule.", tasks:["H1","H2","H3"].map(k=>T[k])},
- {id:"P5", name:"Content and decisions that raise revenue", sub:"A demo video, a real quote, and pricing calls only you can make.", tasks:["C6","C7","C4","E4","C5","E5","E1","E2","C1","E3","C2","C3"].map(k=>T[k])},
- {id:"P6", name:"Tests and housekeeping", sub:"When you have a spare 10 minutes.", tasks:["F3","G11","G10","G9","F1","G1","G2","F2","G4","G8","G5"].map(k=>T[k])},
- {id:"P7", name:"TCG Speed Suite (the big bet)", sub:"Scan, the Chrome extension and the Agent. Two coding chats are running. These are the only things that need you.", tasks:["S1","S2","S3"].map(k=>T[k])}
+ {id:"P1", name:"Security", tasks:["B13","B12","B4","B8","B9","B10","B11","B3","B6","B7","B1","B2","B5"].map(k=>T[k])},
+ {id:"P2", name:"Postage", tasks:["A15","G12","A13","A8","A4","A11","A9","A3","A10","A18","A16","A14","A12","A1","A2","A5","A6","A7"].map(k=>T[k])},
+ {id:"P3", name:"Free growth", tasks:["D6","D8","D1","D3","D2","D7","D4","D5"].map(k=>T[k])},
+ {id:"P4", name:"Paid growth", tasks:["H1","H2","H3"].map(k=>T[k])},
+ {id:"P5", name:"Content and decisions", tasks:["C6","C7","C4","E4","C5","E5","E1","E2","C1","E3","C2","C3"].map(k=>T[k])},
+ {id:"P6", name:"Housekeeping", tasks:["F3","G11","G10","G9","F1","G1","G2","F2","G4","G8","G5"].map(k=>T[k])},
+ {id:"P7", name:"Suite", tasks:["S1","S2","S3","S4","S5"].map(k=>T[k])}
 ];
 
-const BUILD = [
- {name:"Done this week", rows:[
-  ["Postage on Shipping 360","Labels, prepaid balance, reprints, refunds (packages), tracking","A fee on every label",""],
-  ["$0.50 package label fee","Letters: 15¢ Free/Base, 12¢ Premium, 10¢ Pro","More kept per label","C6"],
-  ["Site on Supabase's new public key","Lets you turn off the exposed old keys","Security","B4 B8"],
-  ["Shipper HQ board","This page: tasks, notes, inbox, quick questions","You and Claude in one place",""],
-  ["Postage buy flow redone","Phone asked once, live total vs balance, bad addresses flagged","Fewer failed buys","A8"],
-  ["Bot check on sign-up","Cloudflare Turnstile, live Oct 9","Fewer fake accounts",""],
-  ["Email sending (Resend)","Owner test email in /admin; verification next","Unlocks welcome emails","B10"],
-  ["New homepage","Upload first, 3 steps, compact previews","More visitors print their first batch",""]]},
- {name:"Next · October: postage goes live", rows:[
-  ["Fix anything the first test label shows","Real Pitney Bowes answers instead of test stubs","Postage works for Rob","A8"],
-  ["Tracking straight into TCGplayer","After buying postage, one click makes TCGplayer's mark-shipped file","Saves sellers 20+ min a day",""],
-  ["Pricing v2 + Pro plan $14.99","Lowest postage fees, auto-reload, monthly postage report, one-click mark shipped, duplicate-order guard","20 Pro sellers = $300/mo","C4 C5"],
-  ["Auto-reload balance","“Add $50 when under $10”","Fewer failed batches, more volume",""],
-  ["Production switch-on","For the account model Pitney Bowes approves","Real revenue","A4 A6"]]},
- {name:"November: sellers stay and spend more", rows:[
-  ["Welcome emails","Day 0 how-to, day 2 first batch, day 7 try postage","More signups become payers","G3"],
-  ["Refer a seller","Both get a free month","Cheapest growth there is",""],
-  ["eBay + Whatnot import","Same app for every marketplace","About 3× the market","F2"],
-  ["Shipping insurance toggle","Per order, priced inline","$0.03–0.10 per insured order",""],
-  ["Supplies page","Envelopes, toploaders, printers via affiliate links","3–8% of every purchase",""]]},
- {name:"December+: the default tool", rows:[
-  ["Chrome extension (draft)","“Print shipping” + “Paste tracking” on TCGplayer: 2 clicks","Nobody else has it","E5"],
-  ["Envelope tracking on stamps","USPS barcode on the free #10 envelope","Pulls new sellers in","A7"],
-  ["Shop plans $49–199/mo","Multiple users and stores","A few stores = hundreds a month",""],
-  ["Negotiated envelope rate","With PB/USPS once we have volume","10¢ off on 100k letters = $10k/mo","A4"]]}
-];
-
-const LEVERS = [
- ["1","Postage fees (Rob + pilot sellers)","$100–500/mo per 10 active shippers","P2"],
- ["2","Search Console + SEO articles (Devin writes)","Free traffic that compounds; Google already sends ~60 visits/wk","P3"],
- ["3","Pro plan at $14.99","$15 per heavy seller instead of $3–6","C4"],
- ["4","Google Ads test ($150)","Keep only if 3+ paying customers","P4"],
- ["5","Demo video on TikTok/Shorts/Reels","One asset for every channel and the homepage","E1"],
- ["6","Partners (creators earn 40%)","Pays only when it works; needs payouts set up","C2"],
- ["7","Referral: give a month, get a month","Sellers know sellers; costs nothing upfront",""],
- ["8","eBay + Whatnot sellers","About 3× the market","F2"]
-];
-
+/* ---------- Content ---------- */
+const REPO = "https://github.com/Clujkeebs/TCG-SPEED-SHIPPER/blob/main/";
 const LADDER = [
- {amt:"$40–50", label:"Today", body:"11 paying (5 Premium, 6 Base). Subscriptions only.", here:1},
- {amt:"$300", label:"Next", body:"Rob + 10 sellers on postage (about 3,500 labels a month × ~$0.15 kept ≈ $500), or 20 Pro sellers. Unlocked by Stage A."},
- {amt:"$1,000", label:"", body:"30 active postage sellers. Search Console + Ads bring about 1,000 visits a week. Welcome emails turn 10% of signups into payers."},
- {amt:"$3,000", label:"", body:"eBay + Whatnot import, insurance, referrals. 100 postage sellers."},
- {amt:"$10,000", label:"Goal", body:"About 250 active shipping sellers, the Chrome extension, a few shop plans, and a negotiated envelope rate."}
+ {amt:"$40", label:"Today", body:"11 paying sellers. Subscriptions only.", here:1},
+ {amt:"$100", body:"A few sellers on postage, or the Pro plan."},
+ {amt:"$1,000", body:"About 30 active postage sellers, plus search and ads bringing steady visits."},
+ {amt:"$10,000", body:"About 250 active shipping sellers, the Chrome extension, shop plans, a better envelope rate."}
+];
+const ROAD = [
+ {name:"This week", items:[
+  ["Test postage labels", ["A8","A13"]],
+  ["Pitney Bowes call (waiting on Linda)", ["A15","G12"]],
+  ["Check sign-up codes", ["B13"]],
+  ["Suite sessions keep building", []]]},
+ {name:"Next", items:[
+  ["Real postage switched on", ["A4","A9"]],
+  ["Rob tries it, then everyone", ["A3","A10"]],
+  ["Pricing plan v2 and Pro", ["C5"]],
+  ["Welcome emails, tracking into TCGplayer", []]]},
+ {name:"Later", items:[
+  ["Free tracking on stamped envelopes", ["A11"]],
+  ["eBay and Whatnot import", ["F2"]],
+  ["Chrome extension, Scan, Agent", ["S1"]],
+  ["Shop plans, a site for each product", []]]}
+];
+const PATH = [
+ ["Test labels work", ["A8","A13"], "Free fake labels, so nothing is charged."],
+ ["Pitney Bowes call", ["A15"], "Production access and what each label costs."],
+ ["Production access", ["A4"], "Pitney Bowes approves real postage."],
+ ["One real label, yours", ["A9"], "Real money, one label, then a refund."],
+ ["Rob tries it", ["A3"], "First seller to pay per label."],
+ ["Open to everyone", ["A10"], "Terms and homepage updated, then the switch."]
+];
+const LONG = ["TCG Speed Suite: Shipper (live), Scan, a Chrome extension and an Agent, all in one toolkit.",
+  "A site for each product, so each can be found and sold on its own.",
+  "The goal is to be the default toolkit for a TCGplayer seller's whole day."];
+
+const SUITE_DEFAULT = {
+ updatedAt:null,
+ products:[
+  {id:"scan", name:"TCG Speed Scan", state:"S0 done, S1 next", cur:"S1", line:"Price rules, CSV writer (not yet checked against a real export), search, queue and an offline phone app work. Camera is next.",
+   ms:[["S0","Foundation, no camera"],["S1","Camera and card reading (Magic, Pokémon)"],["S2","Yu-Gi-Oh! and One Piece"],["S3","Beta: 3 to 5 sellers, Rob first"]]},
+  {id:"ext", name:"Chrome extension", state:"X0 in progress", cur:"X0", line:"Skeleton, feature switches (all off) and tests. TCGplayer pages stay off until “TOS OK”.",
+   ms:[["X0","Foundation"],["X1","Page adapters on test pages"],["X2","Real TCGplayer pages (needs “TOS OK”)"],["X3","Agent side panel"]]},
+  {id:"agent", name:"TCG Speed Agent", state:"A0 starting", cur:"A0", line:"Starts once Scan and the extension have a base.",
+   ms:[["A0","Tools, permissions, audit log"],["A1","Read-only analytics and drafts"],["A2","Inventory and CSV sync"],["A3","Automations and deal finder"],["A4","Extension chat, limits, billing"]]},
+  {id:"sites", name:"Sites", state:"Not started", cur:null, line:"One site per product and one for the Suite. Needs domains (you).", ms:[]}
+ ],
+ log:[]
+};
+const SUITE_LOG_DEFAULT = [
+ {at:"2026-10-15", who:"builder", line:"You said start everything. Scan, extension, agent and this board each have a session."},
+ {at:"2026-10-15", who:"scan", line:"S0 done: price rules, CSV writer, search, queue, offline phone app."},
+ {at:"2026-10-15", who:"extension", line:"X0 in progress: skeleton, flags off, tests. Waiting on your yes or no on the TCGplayer questions."}
+];
+
+const LIB = [
+ {name:"Most used", top:1, items:[
+  ["Admin","https://tcgspeedshipper.com/admin/","Owner only. Setup checks and numbers."],
+  ["Stripe","https://dashboard.stripe.com","Payments and plans."],
+  ["Railway","https://railway.com/project/21eb3344-88af-4a90-a884-da7682ad7b13","Where the site runs and its settings."],
+  ["Supabase","https://supabase.com/dashboard/project/lwqnsvlfffugyvwblqaz","Accounts and data."],
+  ["Suite plan","https://claude.ai/artifact/PCzahciuSwBBzRPDrABhnu","The one-page plan."],
+  ["Google Ads kit","https://claude.ai/artifact/7uWBkF4HbeRisfsVjyF9Yu","Every ad, ready to copy."]]},
+ {name:"The live site", items:[
+  ["tcgspeedshipper.com","https://tcgspeedshipper.com","What customers see."],
+  ["Blog","https://tcgspeedshipper.com/blog/","Articles that bring in search visits."],
+  ["Newsletter page","https://tcgspeedshipper.com/newsletter.html","Where sellers sign up."]]},
+ {name:"Dashboards", items:[
+  ["Resend","https://resend.com/domains","Sending email."],
+  ["Porkbun","https://porkbun.com/account/domainsSpeedy","Domains and DNS."],
+  ["Google Search Console","https://search.google.com/search-console","Which searches find us."],
+  ["Cloudflare","https://dash.cloudflare.com","Sign-up bot check."],
+  ["X","https://x.com/TCGSPEEDSHIPPER","Our account."],
+  ["Pitney Bowes","https://360.pitneybowes.com","Postage account."],
+  ["USPS Business Gateway","https://gateway.usps.com","Mailer ID and tracking access."],
+  ["GitHub","https://github.com/Clujkeebs/TCG-SPEED-SHIPPER","All the code and docs."]]},
+ {name:"Plans and research", items:[
+  ["Growth plan","https://claude.ai/artifact/Bwpi2HBJ6DfTAAxTxWKtfZ","The growth plan, in one page."],
+  ["Marketing plan",REPO+"docs/MARKETING-PLAN.md","The next 30 days."],
+  ["Pricing plan",REPO+"docs/pricing-plan.md","Plans and label fees."],
+  ["Postage go-live",REPO+"docs/postage-go-live.md","Steps to switch on real postage."],
+  ["Road to $10k",REPO+"docs/research/road-to-10k.md","Five ways to grow revenue."],
+  ["Competitors",REPO+"docs/competitors.md","What others have that we don't."],
+  ["Envelope postage",REPO+"docs/research/tracked-envelope-postage.md","Can we sell sub-$1 tracked envelopes?"],
+  ["Chrome extension",REPO+"docs/research/chrome-extension.md","The extension idea in full."]]},
+ {name:"Marketing", items:[
+  ["Google Ads start page",REPO+"docs/google-ads/START-HERE.html","Set up the ads step by step."],
+  ["All ad copy",REPO+"docs/google-ads/ALL-AD-COPY.txt","Every headline and description."],
+  ["Google Ads kit notes",REPO+"docs/google-ads/README.md","Settings, budget and keep-or-kill rule."],
+  ["Community channels",REPO+"docs/community-channels.md","Where sellers talk, and the rules."],
+  ["Partner prospects",REPO+"docs/partner-prospects.md","Creators and shops to approach."],
+  ["Outreach",REPO+"docs/outreach/README.md","Partner emails, ready to send."],
+  ["Newsletter",REPO+"docs/newsletter/README.md","How the weekly issue works."]]},
+ {name:"Suite and how we work", items:[
+  ["Suite plan (repo)",REPO+"docs/suite/PLAN.md","Goals, numbers and milestones."],
+  ["Suite log",REPO+"docs/suite/LOG.md","What each session did."],
+  ["Suite data model",REPO+"docs/suite/DATA-MODEL.md","How the products share data."],
+  ["TCGplayer rules notes",REPO+"docs/suite/TOS-NOTES.md","What their terms seem to say."],
+  ["Morning playbook",REPO+"docs/agents/MORNING-PLAYBOOK.md","Claude's daily routine."],
+  ["Owner to-do",REPO+"docs/OWNER-TODO.md","The same list, as a document."],
+  ["How the agents work",REPO+"docs/DUAL-AGENT-SYSTEM.md","Who does what."]]}
+];
+
+/* Impact: 3 high, 2 medium, 1 low. Effort: 1 small, 2 medium, 3 large. Ranked by impact over effort. */
+const IDEAS = [
+ {id:"welcome", what:"Welcome email series", why:"Resend is verified, so new sign-ups can get a how-to on day 0, a nudge to print a first batch on day 2, and a postage tip on day 7.", i:3, e:1, who:"Claude", src:"Retention step in docs/research/road-to-10k.md"},
+ {id:"paste-tracking", what:"Make “paste tracking back” the obvious next click", why:"We already build TCGplayer's tracking file. Making it the next button saves sellers a step after every batch.", i:3, e:1, who:"Claude", src:"docs/competitors.md rates this small"},
+ {id:"upgrade-charge", what:"Charge the plan-upgrade difference when someone upgrades", why:"Rob was surprised by an $8.99 invoice because his upgrade was billed late. Charging it at once avoids that.", i:2, e:1, who:"Claude, needs your yes"},
+ {id:"newsletter-resend", what:"Send the weekly newsletter through Resend", why:"Removes Google's link wrappers and keeps sending in one place.", i:2, e:1, who:"Claude"},
+ {id:"failed-pay", what:"Failed-payment emails and an annual-plan nudge", why:"The $29 yearly Base plan saves $6.88 over twelve $2.99 months, and recovered payments are revenue you already earned.", i:2, e:1, who:"Claude"},
+ {id:"autoreload", what:"Auto-reload the postage balance", why:"“Add $50 when under $10” means fewer failed batches and more labels per seller.", i:2, e:1, who:"Claude", src:"Roadmap, Next"},
+ {id:"seo-tools", what:"Free calculator pages: TCGplayer fees, envelope vs package cost", why:"Pages that answer a question sellers search for bring in visitors before they need labels.", i:3, e:2, who:"Claude"},
+ {id:"pro-plan", what:"Pro plan and the new prices", why:"20 Pro sellers is about $300 a month on their own. The plan is written and waits for your answer on C5.", i:3, e:2, who:"Claude, needs your answer on C5", src:"docs/pricing-plan.md"},
+ {id:"ebay-whatnot", what:"eBay and Whatnot CSV presets", why:"The same app serves sellers beyond TCGplayer, which the plan sizes at about three times the market. Needs one sample file from each.", i:3, e:2, who:"Claude, needs sample files (F2)", src:"docs/competitors.md"},
+ {id:"partners", what:"Partner push to card shops and YouTubers", why:"A ranked shortlist already exists. Partners cost nothing until they bring a paying seller.", i:2, e:1, who:"You send, Claude drafts", src:"docs/partner-prospects.md"},
+ {id:"demo-video", what:"A silent, captioned demo video", why:"One short clip works on X, TikTok, Shorts, Reels and the homepage.", i:3, e:2, who:"Claude, you post", src:"Task E1"},
+ {id:"holiday-guide", what:"Holiday shipping cutoff guide", why:"A dated page is easy to share and gets searched in the weeks before the cutoff (Dec 17 for the post we drafted).", i:2, e:1, who:"Claude"},
+ {id:"guides", what:"Weekly guides for Lorcana, One Piece, Flesh and Blood and sports cards", why:"Each game has its own sellers and its own searches. One guide a week keeps the blog growing.", i:2, e:2, who:"Claude"},
+ {id:"community", what:"Weekly community posts", why:"Reddit, Discord and Facebook groups are where sellers ask how to ship fast. Claude drafts to each group's rules.", i:2, e:1, who:"You post, Claude drafts", src:"docs/community-channels.md"},
+ {id:"uptime", what:"Error and uptime alerts by email", why:"You hear about a problem before a customer does.", i:2, e:1, who:"Claude"},
+ {id:"seller-stories", what:"Apply to TCGplayer Seller Stories", why:"A feature on TCGplayer's blog reaches the exact audience we want.", i:2, e:1, who:"You", src:"Task D4"},
+ {id:"referral", what:"Refer a seller: both get a free month", why:"Sellers know other sellers, and it costs nothing until it works.", i:2, e:2, who:"Claude", src:"Roadmap, November"},
+ {id:"supplies", what:"Supplies page with affiliate links", why:"Envelopes, toploaders and printers pay about 3 to 8% on each purchase, and we hold no stock.", i:1, e:1, who:"Claude", src:"docs/research/road-to-10k.md"},
+ {id:"winback", what:"Win-back email for cancelled and quiet accounts", why:"Cheaper than finding a new seller. The email rules already cover it.", i:1, e:1, who:"Claude"},
+ {id:"savings", what:"Show “time and money saved this month” inside the app", why:"Reminds sellers what they get at renewal time.", i:1, e:1, who:"Claude"},
+ {id:"envelope-tracking", what:"Free tracking on stamped envelopes", why:"Three competitors charge for it. We have the Mailer ID. Needs Informed Visibility access (A11).", i:3, e:3, who:"Claude, needs A11", src:"docs/competitors.md"},
+ {id:"insurance", what:"Shipping insurance toggle", why:"Earns about $0.03 to $0.10 per insured order. Needs an insurance partner agreement first.", i:1, e:2, who:"Claude, needs a partner", src:"docs/research/road-to-10k.md"},
+ {id:"shop-plans", what:"Shop plans at $49 to $199 a month", why:"Stores with several users pay far more than one seller. A few stores make hundreds a month.", i:2, e:3, who:"Claude"},
+ {id:"suite-sites", what:"Landing pages and brand for Scan, Agent and the Suite", why:"Ready the day you buy the domains.", i:2, e:2, who:"Claude builds, you buy domains"}
 ];
 
 /* ---------- State ---------- */
 const ALL = STAGES.flatMap(s => s.tasks.map(t => ({...t, stage:s.id})));
-let progress = {};           // id -> {done, note}
-let filter = "open";
-const openSet = new Set();
-const closedStages = new Set(local0("hq-closed")||[]);
-function local0(k){ try{return JSON.parse(localStorage.getItem(k))}catch(e){return null} }
-let db = null, sample = null;
+const byId = Object.fromEntries(ALL.map(t=>[t.id,t]));
+let xposts = [], progress = {}, inbox = [], suiteDoc = null, meetings = [], ideaState = {}, uploads = [];
+let db = null, sample = null, assets = null, synced = false;
 const local = { get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}}, set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}} };
 progress = local.get("hq-progress") || {};
-filter = local.get("hq-filter") || "open";
+const openSet = new Set();
+let showRest = false, showDone = false, showParked = false, showAllIdeas = false, showPosted = false, curTab = "now";
 
 const $ = s => document.querySelector(s);
-const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const esc = s => String(s==null?"":s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const isDone = id => !!(progress[id] && progress[id].done);
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast.h); toast.h=setTimeout(()=>t.hidden=true,2400); }
+function fmtDate(iso){ const d=new Date(iso); return isNaN(d)?"":d.toLocaleString([], {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}); }
+function chip(id){ const d=isDone(id); return `<button class="pill ${d?"ok":"acc"}" data-jump="${id}" title="Open task ${id}">${id}${d?" ✓":""}</button>`; }
 
-/* ---------- Render: to-do ---------- */
-function timeLabel(m){ if (m < 60) return m+" min"; const h=Math.floor(m/60), r=Math.round(m%60); return h+" hr"+(r?" "+r+" min":""); }
-function taskHTML(t){
+/* ---------- Now ---------- */
+function timeLabel(t){ if (t.later) return "later"; const m=t.min; if (!m) return "optional"; if (m<60) return m+" min"; const h=Math.floor(m/60), r=Math.round(m%60); return h+" hr"+(r?" "+r+" min":""); }
+function taskHTML(t, big){
   const p = progress[t.id] || {};
-  const open = openSet.has(t.id);
-  return `<article class="task ${p.done?"done":""}" data-id="${t.id}" open-state="${open?1:0}">
-    <div class="t-head">
-      <input type="checkbox" class="check" id="chk-${t.id}" aria-label="Mark ${esc(t.title)} done" ${p.done?"checked":""}>
-      <div class="t-main">
-        <button class="t-title" data-toggle="${t.id}">${esc(t.title)}</button>
-        <div class="t-meta">
-          ${t.money?'<span class="tag money">costs money</span>':""}
-          ${p.note?'<span class="tag noted">note</span>':""}
-          <span class="tag time">${timeLabel(t.min)}</span>
-        </div>
-      </div>
-      <button class="expand" data-toggle="${t.id}" aria-label="Show steps">›</button>
-    </div>
-    <div class="t-body" ${open?"":"hidden"}>
+  const open = big || openSet.has(t.id);
+  const body = `<div class="t-body" ${open?"":"hidden"}>
       <div class="why">${t.why}</div>
       <ol class="steps">${t.steps.map(s=>`<li>${s}</li>`).join("")}</ol>
-      ${(t.copy||[]).map(c=>`<div class="copy"><code>${esc(c)}</code><button data-copy="${esc(c)}">Copy</button></div>`).join("")}
+      ${(t.copy||[]).map(c=>`<div class="copy"><code>${esc(c)}</code><button class="btn small" data-copy="${esc(c)}">Copy</button></div>`).join("")}
       ${t.unlock?`<div class="unlock"><b>Unlocks:</b> ${t.unlock}</div>`:""}
       <div class="note-row">
-        <label for="note-${t.id}">Note to Claude (saved, Claude reads these)</label>
-        <textarea class="note" id="note-${t.id}" data-note="${t.id}" placeholder="Stuck? Done differently? Write it here.">${esc(p.note||"")}</textarea>
+        <label for="note-${t.id}">Note (saved; Claude reads it)</label>
+        <textarea class="field" id="note-${t.id}" data-note="${t.id}" placeholder="Stuck? Done differently? Write it here.">${esc(p.note||"")}</textarea>
       </div>
-      <div class="t-actions">
-        <button class="btn" data-ask="${t.id}">Ask Claude about this</button>
-      </div>
-    </div>
-  </article>`;
+      <div class="t-actions"><button class="btn small" data-ask="${t.id}">Ask Claude about this</button></div>
+    </div>`;
+  const tick = `<label class="check-wrap"><input type="checkbox" class="check" id="chk-${t.id}" aria-label="Mark done: ${esc(t.title)}" ${p.done?"checked":""}></label>`;
+  const sub = `<span class="t-sub">${t.wait?`<span>${esc(t.wait)}</span>`:""}<span>${timeLabel(t)}</span>${t.money?"<span>costs money</span>":""}${p.note?"<span>has a note</span>":""}</span>`;
+  if (big) return `<article class="next task ${p.done?"done":""}" data-id="${t.id}">
+      <div class="meta">${tick}<span class="pill warn">${esc(stageName(t))}</span><span class="pill">${timeLabel(t)}</span></div>
+      <h3>${esc(t.title)}</h3>${body}</article>`;
+  return `<article class="task ${p.done?"done":""} ${open?"open":""}" data-id="${t.id}">
+    <div class="t-head">${tick}<button class="t-title" data-toggle="${t.id}"><b>${esc(t.title)}</b>${sub}</button><button class="expand" data-toggle="${t.id}" aria-label="Show steps">›</button></div>${body}</article>`;
 }
-function visible(t){
-  const d = isDone(t.id);
-  if (filter==="open") return !d;
-  if (filter==="done") return d;
-  if (filter==="quick") return !d && t.min<=5;
-  if (filter==="hot") return !d && t.hot;
-  return true;
-}
-let showRest=false, showDone=false;
-function renderTodo(){
+function stageName(t){ const s=STAGES.find(s=>s.id===t.stage); return s?s.name:""; }
+function ordered(){
   const open = ALL.filter(t=>!isDone(t.id));
-  const ordered = [...open.filter(t=>t.hot), ...open.filter(t=>!t.hot)];
-  const now = ordered.slice(0,3), next = ordered.slice(3,8), restIds = new Set(ordered.slice(8).map(t=>t.id));
+  const rank = t => t.later ? 2 : t.wait ? 1 : 0;
+  return [0,1,2].flatMap(r => STAGES.flatMap(s => {
+    const mine = open.filter(t=>t.stage===s.id && rank(t)===r);
+    return [...mine.filter(t=>t.hot), ...mine.filter(t=>!t.hot)];
+  }));
+}
+function renderAway(){
+  const posts = inbox.filter(m=>m.from==="claude").sort((a,b)=>(b.at||"").localeCompare(a.at||"")).slice(0,3);
+  $("#awayBlock").hidden = !posts.length;
+  $("#awayList").innerHTML = posts.map((m,i)=>`<div class="news-item ${awayOpen.has(m.id)?"open":""}" data-away="${esc(m.id)}"><div class="label">${esc(fmtDate(m.at))}</div><div class="news-text">${esc(m.text||"")}</div></div>`).join("");
+}
+const awayOpen = new Set();
+function renderTodo(){
+  const ord = ordered();
+  const nextT = ord[0], now = ord.slice(1,4), after = ord.slice(4,9), rest = ord.slice(9);
   const done = ALL.filter(t=>isDone(t.id));
-  $("#nowList").innerHTML = now.length ? now.map(taskHTML).join("") : `<div class="empty">Nothing left. Everything is done.</div>`;
-  $("#nextList").innerHTML = next.map(taskHTML).join("");
-  $("#nextBlock").hidden = !next.length;
+  $("#nextUp").innerHTML = nextT ? taskHTML(nextT,true) : `<div class="card empty">Everything is done.</div>`;
+  $("#nowBlock").hidden = !now.length; $("#nowList").innerHTML = now.map(t=>taskHTML(t)).join("");
+  $("#afterBlock").hidden = !after.length; $("#afterList").innerHTML = after.map(t=>taskHTML(t)).join("");
+  const restSet = new Set(rest.map(t=>t.id));
   $("#stages").innerHTML = STAGES.map(s=>{
-    const vis = s.tasks.filter(t=>restIds.has(t.id));
-    if (!vis.length) return "";
-    return `<section class="stage"><h2 class="stage-name">${esc(s.name)}</h2><div class="list">${vis.map(taskHTML).join("")}</div></section>`;
+    const vis = ord.filter(t=>t.stage===s.id && restSet.has(t.id));
+    return vis.length ? `<h3 class="group-name">${esc(s.name)}</h3><div class="list">${vis.map(t=>taskHTML(t)).join("")}</div>` : "";
   }).join("");
-  $("#restBtn").hidden = !restIds.size;
-  $("#restBtn").textContent = showRest ? "Hide the rest" : `Show the rest (${restIds.size})`;
+  $("#restBtn").hidden = !rest.length;
+  $("#restBtn").textContent = showRest ? "Hide the rest" : `Show the rest (${rest.length})`;
   $("#restBtn").setAttribute("aria-expanded", showRest);
-  $("#restBlock").hidden = !showRest || !restIds.size;
-  $("#doneList").innerHTML = done.map(taskHTML).join("");
+  $("#restBlock").hidden = !showRest || !rest.length;
+  $("#doneList").innerHTML = done.map(t=>taskHTML(t)).join("");
   $("#doneBtn").hidden = !done.length;
   $("#doneBtn").textContent = showDone ? "Hide done" : `Done (${done.length})`;
   $("#doneBtn").setAttribute("aria-expanded", showDone);
   $("#doneBlock").hidden = !showDone || !done.length;
-  renderMeter();
+  renderAway();
+  $("#countText").textContent = `${ord.length} open`;
 }
-function renderMeter(){
-  const d = ALL.filter(t=>isDone(t.id)).length;
-  $("#barFill").style.width = (d/ALL.length*100)+"%";
-  $("#countText").textContent = `${d} of ${ALL.length} done`;
-}
-function renderNext(){}
-document.addEventListener("click", e=>{
-  if (e.target.closest("#restBtn")){ showRest=!showRest; renderTodo(); }
-  if (e.target.closest("#doneBtn")){ showDone=!showDone; renderTodo(); }
-});
 
-/* ---------- Render: other tabs ---------- */
-function renderPB(){
-  $("#tab-pb").innerHTML = `
-  <div class="explainer">
-    <div><div class="eyebrow">Plain-English guide</div><h2 style="margin-top:6px">How Pitney Bowes fits in</h2></div>
-    <p style="margin:0;max-width:65ch">Pitney Bowes is the company that sells us real USPS postage through their API. Our app asks them for a label, they return the label PDF with a tracking number, and we put it in the same file as the seller's packing slip. There are two worlds:</p>
-    <div class="lanes">
-      <div class="lane now"><div class="eyebrow">Sandbox · now</div><h3>Free test labels</h3>
-        <div>Fake postage, no money, <b>no payment setup needed</b>. Your developer account comes with one test merchant already made for you. Only the Client ID and Secret go into Railway.</div></div>
-      <div class="lane"><div class="eyebrow">Production · after PB approves</div><h3>Real postage</h3>
-        <div>PB gives you production keys. A payment method goes on your PB account (or each seller's, see below). Labels are real and charged. We switch it on with two extra Railway settings once the LLC is done.</div></div>
-    </div>
-    <h3>What the screens mean</h3>
-    <div class="tbl"><table>
-      <tr><th>What you see</th><th>What it is</th><th>What to do</th></tr>
-      <tr><td><b>Client ID</b></td><td>The username for our app</td><td>Railway <span class="mono">PB_API_KEY</span></td></tr>
-      <tr><td><b>Secret</b></td><td>The password for our app</td><td>Railway <span class="mono">PB_API_SECRET</span>. Never share it.</td></tr>
-      <tr><td><b>Merchants</b> page (empty)</td><td>Other businesses you invite to ship under your platform. Empty is normal: you are the shipper.</td><td>Nothing. Not needed.</td></tr>
-      <tr><td><b>Set up Postage Payment Method</b> (top bar)</td><td>The card or bank account PB charges for real postage</td><td>Not needed for sandbox. Do it when production is approved.</td></tr>
-      <tr><td><b>Invite Merchant</b> button</td><td>Sends a seller an email to create <i>their own</i> PB postage account with their own card (link expires in 7 days). Then their labels charge them, not you.</td><td><b>Don't use it yet.</b> It's for production if PB approves Individual accounts. Claude builds the per-seller part first.</td></tr>
-      <tr><td><b>Generated on / Status</b></td><td>When the key was made, and whether it works</td><td>Use the Active row</td></tr>
-    </table></div>
-    <h3>Two ways to pay for postage in production</h3>
-    <div class="lanes">
-      <div class="lane"><div class="eyebrow">Recommended</div><h3>Individual accounts</h3><div>Each seller accepts an <b>Invite Merchant</b> email and adds their own card at Pitney Bowes. PB charges them for postage directly. We charge our fee from our prepaid balance. You never front postage.</div></div>
-      <div class="lane"><div class="eyebrow">Already built</div><h3>Bulk account</h3><div>All postage is charged to your PB account. Sellers prepay us (the balance we built) and we pay PB. More control and margin, but you carry the risk.</div></div>
-    </div>
-    <p style="margin:0;color:var(--muted)">Stuck on a screen? Use <b>Quick questions</b> and describe exactly what you see.</p>
-  </div>`;
+/* ---------- Roadmap ---------- */
+function renderRoadmap(){
+  const curStep = PATH.findIndex(p=>!p[1].every(isDone));
+  $("#tab-roadmap").innerHTML = `
+  <section class="sec"><h2>Where the money is going</h2>
+    <div class="ladder">${LADDER.map(l=>`<div class="rung ${l.here?"here":""}"><div><b>${l.amt}</b><div class="label" style="margin-top:6px">${l.label||"a month"}</div></div><div>${esc(l.body)}</div></div>`).join("")}</div>
+  </section>
+  <section class="sec"><h2>This week, next, later</h2>
+    <div class="cols">${ROAD.map(c=>`<div class="card"><div class="label" style="margin-bottom:10px">${c.name}</div><div style="display:grid;gap:12px">${c.items.map(it=>`<div>${esc(it[0])}${it[1].length?`<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${it[1].map(chip).join("")}</div>`:""}</div>`).join("")}</div></div>`).join("")}</div>
+  </section>
+  <section class="sec"><h2>Postage launch path</h2>
+    <ol class="path card">${PATH.map((p,i)=>{ const d=p[1].every(isDone); return `<li class="${d?"done":i===curStep?"now":""}"><span class="mk"></span><div><b>${esc(p[0])}</b> ${p[1].map(chip).join(" ")}<div class="muted small">${esc(p[2])}</div></div></li>`; }).join("")}</ol>
+  </section>
+  <section class="sec"><h2>Suite roadmap</h2>
+    <div class="card" style="display:grid;gap:8px">${suiteView().products.filter(p=>p.ms.length).map(p=>`<div><b>${esc(p.name)}</b> <span class="muted small">${p.ms.map(m=>m[0]).join(" → ")}</span></div>`).join("")}<div><button class="link-btn" data-gotab="suite">Open the Suite tab</button></div></div>
+  </section>
+  <section class="sec"><h2>The long game</h2><div class="card" style="display:grid;gap:8px">${LONG.map(l=>`<p>${esc(l)}</p>`).join("")}</div></section>
+  <section class="sec">
+    <details class="fold"><summary>How Pitney Bowes fits in</summary><div class="fold-body">${pbHTML()}</div></details>
+    <details class="fold"><summary>Money plan: what we keep per label</summary><div class="fold-body">${moneyHTML()}</div></details>
+  </section>`;
 }
-function renderBuild(){
-  $("#tab-build").innerHTML = `<p class="stage-sub" style="margin-top:16px">Claude builds the server, billing and security. Devin does research, SEO and content. The last column shows which of your tasks a line waits on.</p>` +
-   BUILD.map(ph=>`<div class="phase"><h3>${esc(ph.name)}</h3><div class="tbl"><table>
-    <tr><th>What</th><th>Details</th><th>Why it pays</th><th>Waits on</th></tr>
-    ${ph.rows.map(r=>`<tr><td><b>${esc(r[0])}</b></td><td>${esc(r[1])}</td><td>${esc(r[2])}</td><td class="num">${r[3]?r[3].split(" ").map(id=>`<span class="tag ${isDone(id)?"":"hot"}" title="${isDone(id)?"done":"waiting on you"}">${id}${isDone(id)?" ✓":""}</span>`).join(" "):"—"}</td></tr>`).join("")}
-   </table></div></div>`).join("");
-}
-function renderMoney(){
-  $("#tab-money").innerHTML = `<p class="stage-sub" style="margin-top:16px">The biggest lever is postage volume: a fee on every label every seller prints, every month. Stage A turns it on.</p>
-  <div class="ladder">${LADDER.map(l=>`<div class="rung ${l.here?"here":""}"><div><div class="amt">${l.amt}</div><div class="eyebrow" style="margin-top:6px">${l.label||"per month"}</div></div><div>${esc(l.body)}</div></div>`).join("")}</div>
-  <h3 style="margin-top:24px">Growth levers, ranked</h3>
-  <div class="tbl" style="margin-top:8px"><table>
-    <tr><th>#</th><th>Lever</th><th>What it's worth</th><th>Your task</th></tr>
-    ${LEVERS.map(l=>`<tr><td class="num">${l[0]}</td><td><b>${esc(l[1])}</b></td><td>${esc(l[2])}</td><td class="num">${l[3]||"—"}</td></tr>`).join("")}
+function pbHTML(){ return `
+  <p>Pitney Bowes sells us real USPS postage through their system. Our app asks for a label, they send back the label with a tracking number, and we add it to the seller's packing slip file.</p>
+  <div class="cols">
+    <div class="card"><div class="label">Test mode · now</div><h3 style="margin:6px 0">Free test labels</h3><p class="small">Fake postage, no money, no payment setup. Only the Client ID and Secret go into Railway.</p></div>
+    <div class="card"><div class="label">Real postage · after approval</div><h3 style="margin:6px 0">Production</h3><p class="small">Pitney Bowes gives production keys and a payment method goes on the account. Labels are real and charged.</p></div>
+  </div>
+  <div class="tbl"><table>
+    <tr><th>You see</th><th>What it is</th><th>What to do</th></tr>
+    <tr><td><b>Client ID</b></td><td>The app's username</td><td>Railway <span class="mono">PB_API_KEY</span></td></tr>
+    <tr><td><b>Secret</b></td><td>The app's password</td><td>Railway <span class="mono">PB_API_SECRET</span>. Never share it.</td></tr>
+    <tr><td><b>Merchants</b> (empty)</td><td>Other businesses you invite. Empty is normal.</td><td>Nothing.</td></tr>
+    <tr><td><b>Invite Merchant</b></td><td>Lets a seller open their own Pitney Bowes account and card.</td><td>Don't use it yet.</td></tr>
   </table></div>
-  <h3 style="margin-top:24px">What we keep per label</h3>
-  <div class="tbl" style="margin-top:8px"><table>
+  <div class="cols">
+    <div class="card"><div class="label">Recommended</div><h3 style="margin:6px 0">Individual accounts</h3><p class="small">Each seller adds their own card at Pitney Bowes. You never front postage.</p></div>
+    <div class="card"><div class="label">Already built</div><h3 style="margin:6px 0">Bulk account</h3><p class="small">All postage is charged to you. Sellers prepay us. More margin and more risk.</p></div>
+  </div>`; }
+function moneyHTML(){ return `
+  <p class="muted small">The biggest lever is postage volume: a fee on every label every seller prints.</p>
+  <div class="tbl"><table>
     <tr><th>Label</th><th>Our fee</th><th>Seller pays</th><th>We keep (card)</th><th>We keep (bank)</th></tr>
-    <tr><td>Tracked letter (proposed, C6)</td><td class="num">$0.10–0.15</td><td class="num">$0.88–0.93</td><td class="num">$0.06–0.11</td><td class="num">$0.09–0.14</td></tr>
-        <tr><td>Ground Advantage</td><td class="num">$0.50</td><td class="num">≈$5.00</td><td class="num">$0.28</td><td class="num">$0.41</td></tr>
-  </table></div>`;
+    <tr><td>Tracked letter</td><td class="num">$0.10–0.15</td><td class="num">$0.88–0.93</td><td class="num">$0.06–0.11</td><td class="num">$0.09–0.14</td></tr>
+    <tr><td>Ground Advantage</td><td class="num">$0.50</td><td class="num">≈$5.00</td><td class="num">$0.28</td><td class="num">$0.41</td></tr>
+  </table></div>`; }
+
+/* ---------- Suite ---------- */
+function suiteView(){
+  const d = suiteDoc && Array.isArray(suiteDoc.products) ? suiteDoc : null;
+  const defs = Object.fromEntries(SUITE_DEFAULT.products.map(p=>[p.id,p]));
+  const alias = {extension:"ext"};
+  const src = d ? d.products.filter(x=>x && x.id && x.id!=="hq") : SUITE_DEFAULT.products;
+  const products = src.map(o=>{
+    const p = defs[alias[o.id]||o.id] || {ms:[]};
+    const ids = String(o.milestone||"").match(/\b[SXA]\d\b/g);
+    const cur = d ? (ids ? ids[ids.length-1] : null) : p.cur;
+    return {ms:p.ms, id:o.id, name:o.name||p.name, state:(d?o.milestone:p.state)||o.state||p.state, kind:o.state||"", cur, line:o.line||p.line};
+  });
+  return {products, log: d && Array.isArray(d.log) && d.log.length ? d.log : SUITE_LOG_DEFAULT, updatedAt: d && d.updatedAt};
 }
+function renderSuite(){
+  const v = suiteView();
+  const photos = uploads.filter(u=>u.kind==="photo"), csv = uploads.filter(u=>u.kind==="csv");
+  const stamp = v.updatedAt ? "Updated "+fmtDate(v.updatedAt) : "Starting facts from Oct 15. The Builder updates this each morning.";
+  const log = v.log.slice(-3).reverse();
+  const suiteTasks = ["S1","S2","S3","S4","S5"].map(k=>byId[k]).filter(Boolean);
+  $("#tab-suite").innerHTML = `
+  <section class="sec"><div class="sec-head"><h2>TCG Speed Suite</h2><span class="muted small">${esc(stamp)}</span></div>
+    <p class="lede">Scan, the Chrome extension, the Agent, and later a site for each product.</p></section>
+  <section class="prods">${v.products.map(p=>{
+    const ci = p.cur ? p.ms.findIndex(m=>m[0]===p.cur) : -1;
+    return `<div class="card prod ${p.ms.length?"":"wide"}"><div class="prod-top"><h3>${esc(p.name)}</h3><span class="pill ${p.kind==="live"?"ok":/not started|planned|needs/i.test(p.state)||p.kind==="planned"?"":"acc"}">${esc(p.state)}</span></div>
+      <p class="muted small">${esc(p.line||"")}</p>
+      ${p.ms.length?`<ul class="ms">${p.ms.map((m,i)=>`<li class="${ci>=0&&i<ci?"done":i===ci?"now":""}"><span class="mk"></span><span><b>${m[0]}</b> ${esc(m[1])}</span></li>`).join("")}</ul>`:""}</div>`; }).join("")}</section>
+  <section class="sec"><h2>Latest from the log</h2><div class="list">${log.map(l=>`<div class="row"><div class="label">${esc(String(l.at||"").includes("T")?fmtDate(l.at):(l.at||""))} · ${esc(l.who||"")}</div><div>${esc(l.line||"")}</div></div>`).join("")}</div></section>
+  <section class="sec"><h2>Your Suite tasks</h2><div class="list">${suiteTasks.map(t=>taskHTML(t)).join("")}</div></section>
+  <section class="sec"><h2>Add files for Scan</h2><div class="card upl">
+    ${assets ? `
+    <div><b>TCGplayer inventory export (CSV)</b><div class="muted small">Seller Portal → manage listings → Export. It has no buyer details. ${csv.length?csv.length+" added.":""}</div>
+      <div class="drop" style="margin-top:8px"><input type="file" id="upCsv" accept=".csv,text/csv" hidden><button class="btn" data-upload="csv">Choose CSV</button></div></div>
+    <div><b>Card photos (about 50)</b><div class="muted small">One card per photo, mixed games. ${photos.length} added.</div>
+      <div class="drop" style="margin-top:8px"><input type="file" id="upPhotos" accept="image/*" multiple hidden><button class="btn" data-upload="photo">Choose photos</button><span class="muted small" id="upStatus"></span></div></div>`
+    : `<div class="muted">Uploads are not available in this view. Open this page in claude.ai while signed in. Until then, write what you have in the note on task S4 or S5.</div>`}
+  </div></section>
+  <section class="sec"><p class="small muted">One-page plan: <a href="https://claude.ai/artifact/PCzahciuSwBBzRPDrABhnu" target="_blank" rel="noopener">TCG Speed Suite</a></p></section>`;
+}
+async function doUpload(kind, files){
+  if (!assets || !files.length) return;
+  const st = $("#upStatus"); let n=0;
+  for (const f of files){
+    try{
+      if (st) st.textContent = `Adding ${++n} of ${files.length}…`;
+      const r = await assets.upload(f);
+      if (db) await db.collection("uploads").add({at:new Date().toISOString(), kind, name:f.name, assetId:r.id, url:r.url, size:f.size||0});
+    }catch(e){ toast("Could not add "+f.name); }
+  }
+  if (st) st.textContent = "";
+  toast("Added "+files.length+(files.length>1?" files":" file"));
+}
+
+/* ---------- Library ---------- */
+function renderLibrary(){
+  $("#tab-library").innerHTML = `<section class="lib">${LIB.map(g=>`<div class="sec"><h2>${esc(g.name)}</h2><div class="links">${g.items.map(i=>`<a class="lk ${g.top?"top":""}" href="${esc(i[1])}" target="_blank" rel="noopener"><b>${esc(i[0])}</b><span>${esc(i[2])}</span></a>`).join("")}</div></div>`).join("")}</section>`;
+}
+
+/* ---------- Meetings ---------- */
+let meetInit=false;
+function renderMeetings(){
+  if(!meetInit){ meetInit=true; openSet.add("A15"); openSet.add("G12"); }
+  const draft = local.get("hq-meet-draft") || {title:"", text:""};
+  $("#tab-meetings").innerHTML = `
+  <section class="sec"><h2>Next call</h2>
+    <div class="card" style="display:grid;gap:8px"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><h3>Pitney Bowes</h3><span class="pill warn">No date yet</span></div>
+    <p class="muted">Waiting on Linda to pick a time. This call decides when real postage goes live and what each label costs.</p></div></section>
+  <section class="sec"><h2>Five questions</h2><div class="list">${byId.A15?taskHTML(byId.A15):""}</div></section>
+  <section class="sec"><h2>Set up Granola</h2><div class="list">${byId.G12?taskHTML(byId.G12):""}</div></section>
+  <section class="sec"><h2>Call notes</h2>
+    <div class="card" style="display:grid;gap:10px">
+      <label class="small muted" for="meetTitle">Title</label><input class="field" id="meetTitle" value="${esc(draft.title)}" placeholder="Pitney Bowes call">
+      <label class="small muted" for="meetText">Notes</label><textarea class="field" id="meetText" rows="6" placeholder="What was said, what was promised, dates.">${esc(draft.text)}</textarea>
+      <div class="t-actions"><button class="btn primary" id="saveMeet">Save notes</button><button class="btn" id="callNotes">Tell Claude: call notes are in</button></div>
+      <div class="muted small">After the call, tell Claude “call notes are in”.${db?"":" Saving needs sync, which is off in this view."}</div>
+    </div>
+    <div class="list saved">${meetings.length?meetings.map(m=>`<div class="row"><div class="label">${esc(fmtDate(m.at))}</div><b>${esc(m.title||"Untitled")}</b><pre>${esc(m.text||"")}</pre></div>`).join(""):`<div class="empty">No saved notes yet.</div>`}</div>
+  </section>`;
+}
+
+/* ---------- Ideas ---------- */
+function renderIdeas(){
+  const score = x => x.i/x.e;
+  const list = IDEAS.map((x,k)=>({...x,k})).sort((a,b)=>score(b)-score(a)||a.k-b.k);
+  const st = id => (ideaState[id]&&ideaState[id].status)||"open";
+  const openAll = list.filter(x=>st(x.id)!=="not_now"), open = showAllIdeas?openAll:openAll.slice(0,8), parked = list.filter(x=>st(x.id)==="not_now");
+  const L = ["","Low","Medium","High"], E=["","Small","Medium","Large"];
+  const card = x => `<div class="idea"><h3>${esc(x.what)}</h3><p class="muted">${esc(x.why)}</p>
+    <div class="idea-meta"><span class="pill ${x.i===3?"ok":""}">Impact: ${L[x.i]}</span><span class="pill">Effort: ${E[x.e]}</span><span class="pill acc">${esc(x.who)}</span></div>
+    ${x.src?`<div class="src">${esc(x.src)}</div>`:""}
+    <div class="idea-act">${st(x.id)==="go"?`<span class="pill ok">Sent to Claude</span>`:`<button class="btn primary small" data-idea-go="${x.id}">Do this</button>`}<button class="btn small" data-idea-no="${x.id}">Not now</button></div></div>`;
+  $("#tab-ideas").innerHTML = `
+  <section class="sec"><h2>Ideas, best first</h2><p class="lede">Ranked by impact over effort. “Do this” tells Claude to start.</p>
+    <div class="list">${open.map(card).join("")||`<div class="empty">Nothing left.</div>`}</div>
+    ${openAll.length>8?`<div><button class="ghost" id="moreIdeas">${showAllIdeas?"Show fewer":"Show "+(openAll.length-8)+" more ideas"}</button></div>`:""}</section>
+  ${parked.length?`<section class="sec"><button class="ghost" id="parkBtn" aria-expanded="${showParked}">${showParked?"Hide":"Show"} parked (${parked.length})</button>
+    ${showParked?`<div class="list">${parked.map(x=>`<div class="idea"><h3>${esc(x.what)}</h3><div class="idea-act"><button class="btn small" data-idea-back="${x.id}">Bring back</button></div></div>`).join("")}</div>`:""}</section>`:""}`;
+}
+async function ideaSet(id, status){
+  ideaState[id] = {status};
+  if (db) { try{ await db.doc("ideas/"+id).set({status, at:new Date().toISOString()}); }catch(e){ toast("Saved on this device only"); } }
+  renderIdeas();
+}
+async function postInbox(text){
+  if (!db){ toast("Sending needs sync, which is off in this view"); return false; }
+  try { await db.collection("inbox").add({from:"owner", text, at:new Date().toISOString()}); return true; }
+  catch(e){ toast("Could not send. Try again."); return false; }
+}
+
+/* ---------- X posts ---------- */
+function renderPosts(){
+  const byNew = (a,b)=>(b.date||"").localeCompare(a.date||"")||(a.order||0)-(b.order||0);
+  const drafts = xposts.filter(x=>x.status==="draft").sort(byNew);
+  const posted = xposts.filter(x=>x.status==="posted").sort((a,b)=>(b.postedAt||"").localeCompare(a.postedAt||""));
+  const weekAgo = Date.now()-7*864e5, thisWeek = posted.filter(x=>new Date(x.postedAt||0).getTime()>weekAgo).length;
+  const card = x => { const n=[...(x.text||"")].length; return `<div class="post"><div class="post-text">${esc(x.text||"")}</div>
+    <div class="post-act"><span class="pill ${n>280?"warn":""}">${n}/280</span>
+    <button class="btn small" data-copy="${esc(x.text||"")}">Copy</button>
+    <a class="btn small" href="https://x.com/intent/post?text=${encodeURIComponent(x.text||"")}" target="_blank" rel="noopener">Open in X</a>
+    <button class="btn primary small" data-post-done="${esc(x.id)}">Mark posted</button>
+    <button class="link-btn" data-post-skip="${esc(x.id)}">Skip</button></div>
+    ${x.note?`<div class="muted small">${esc(x.note)}</div>`:""}</div>`; };
+  let last="", html="";
+  drafts.forEach(x=>{ if (x.date!==last){ last=x.date; html+=`<div class="label" style="padding:12px 16px 0">${esc(x.date||"")}</div>`; } html+=card(x); });
+  $("#tab-posts").innerHTML = `
+  <section class="sec"><div class="sec-head"><h2>X posts</h2><span class="muted small">Posted this week: ${thisWeek}</span></div>
+    <p class="lede">Claude writes new posts each morning. Post one or two, then tap Mark posted. Claude never posts for you.</p></section>
+  <section class="sec"><div class="list">${html||`<div class="empty">No drafts right now. Claude writes the next ones tomorrow morning.</div>`}</div>
+    <div><button class="ghost" id="moreXposts">Ask Claude for more</button></div></section>
+  ${posted.length?`<section class="sec"><button class="ghost" id="postedBtn" aria-expanded="${showPosted}">${showPosted?"Hide":"Show"} posted (${posted.length})</button>
+    ${showPosted?`<div class="list">${posted.slice(0,30).map(x=>`<div class="post posted"><div class="label">${esc(fmtDate(x.postedAt))}</div><div class="post-text">${esc(x.text||"")}</div><div class="post-act"><button class="link-btn" data-post-undo="${esc(x.id)}">Undo</button></div></div>`).join("")}</div>`:""}</section>`:""}`;
+}
+async function postSet(id, patch){
+  const x = xposts.find(p=>p.id===id); if (x) Object.assign(x, patch);
+  renderPosts();
+  if (db){ try{ await db.doc("xposts/"+id).update(patch); }catch(e){ toast("Could not save. Try again."); } }
+  else toast("Saving needs sync, which is off in this view");
+}
+
+/* ---------- Tabs ---------- */
+const RENDER = {now:renderTodo, roadmap:renderRoadmap, suite:renderSuite, library:renderLibrary, meetings:renderMeetings, ideas:renderIdeas, posts:renderPosts};
+function showTab(name, noScroll){
+  if (!RENDER[name]) name="now";
+  curTab = name;
+  document.querySelectorAll("[data-tab]").forEach(b=>b.setAttribute("aria-selected", b.dataset.tab===name));
+  Object.keys(RENDER).forEach(n=>{ $("#tab-"+n).hidden = n!==name; });
+  RENDER[name]();
+  try{ history.replaceState(null,"","#"+name); }catch(e){}
+  if (!noScroll) window.scrollTo(0,0);
+}
+function jump(id){
+  const t = byId[id]; if (!t) return;
+  openSet.add(id);
+  if (isDone(id)) showDone = true; else if (!ordered().slice(0,9).some(x=>x.id===id)) showRest = true;
+  showTab("now", true);
+  setTimeout(()=>{ const el=document.querySelector(`#tab-now [data-id="${id}"]`); if(el) el.scrollIntoView({behavior:"smooth",block:"start"}); },30);
+}
+function rerender(){ if (!(document.activeElement && document.activeElement.dataset && document.activeElement.dataset.note)) RENDER[curTab](); else $("#countText").textContent = `${ordered().length} open`; }
 
 /* ---------- Events ---------- */
 document.addEventListener("click", e=>{
-  const st = e.target.closest("[data-stage]");
-  if (st){ const id=st.dataset.stage; closedStages.has(id)?closedStages.delete(id):closedStages.add(id); try{localStorage.setItem("hq-closed",JSON.stringify([...closedStages]))}catch(err){} renderTodo(); return; }
-  const t = e.target.closest("[data-toggle]");
-  if (t){ const id=t.dataset.toggle; openSet.has(id)?openSet.delete(id):openSet.add(id); renderTodo(); return; }
-  const j = e.target.closest("[data-jump]");
-  if (j){ const id=j.dataset.jump; openSet.add(id); filter="all"; const stg=ALL.find(x=>x.id===id); if(stg) closedStages.delete(stg.stage); renderTodo(); document.querySelector(`[data-id="${id}"]`)?.scrollIntoView({behavior:"smooth",block:"start"}); return; }
-  const c = e.target.closest("[data-copy]");
-  if (c){ const v=c.dataset.copy; navigator.clipboard?.writeText(v).then(()=>{c.textContent="Copied";setTimeout(()=>c.textContent="Copy",1400)}).catch(()=>{const r=document.createRange();r.selectNodeContents(c.previousElementSibling);const s=getSelection();s.removeAllRanges();s.addRange(r);c.textContent="Selected";}); return; }
-  const f = e.target.closest("[data-f]");
-  if (f){ filter=f.dataset.f; local.set("hq-filter",filter); renderTodo(); return; }
-  const tab = e.target.closest("[data-tab]");
-  if (tab){ document.querySelectorAll("[data-tab]").forEach(b=>b.setAttribute("aria-selected", b===tab)); ["todo","pb","build","money"].forEach(n=>$("#tab-"+n).hidden = n!==tab.dataset.tab); if(tab.dataset.tab==="build") renderBuild(); return; }
-  const a = e.target.closest("[data-ask]");
-  if (a){ const tk=ALL.find(x=>x.id===a.dataset.ask); openDock("ask"); $("#composer").value=`About ${tk.id} (“${tk.title}”): `; $("#composer").focus(); return; }
+  const g = (s)=>e.target.closest(s);
+  let el;
+  if ((el=g("[data-tab]"))) return showTab(el.dataset.tab);
+  if ((el=g("[data-gotab]"))) return showTab(el.dataset.gotab);
+  if ((el=g("[data-jump]"))) return jump(el.dataset.jump);
+  if ((el=g("[data-toggle]"))){ const id=el.dataset.toggle; openSet.has(id)?openSet.delete(id):openSet.add(id); rerender(); return; }
+  if ((el=g("[data-away]"))){ const id=el.dataset.away; awayOpen.has(id)?awayOpen.delete(id):awayOpen.add(id); renderAway(); return; }
+  if ((el=g("[data-copy]"))){ const v=el.dataset.copy; const done=()=>{el.textContent="Copied";setTimeout(()=>el.textContent="Copy",1400)};
+    (navigator.clipboard?navigator.clipboard.writeText(v):Promise.reject()).then(done).catch(()=>{const r=document.createRange();r.selectNodeContents(el.previousElementSibling);const s=getSelection();s.removeAllRanges();s.addRange(r);el.textContent="Selected";}); return; }
+  if ((el=g("[data-ask]"))){ const tk=byId[el.dataset.ask]; openDock("ask"); $("#composer").value=`About ${tk.id} (“${tk.title}”): `; $("#composer").focus(); return; }
+  if (g("#restBtn")){ showRest=!showRest; renderTodo(); return; }
+  if (g("#doneBtn")){ showDone=!showDone; renderTodo(); return; }
+  if (g("#allMsgs")){ openDock("inbox"); return; }
+  if ((el=g("[data-idea-go]"))){ const id=el.dataset.ideaGo; el.disabled=true; postInbox("go idea "+id).then(ok=>{ if(ok){ ideaSet(id,"go"); toast("Sent to Claude"); } else el.disabled=false; }); return; }
+  if ((el=g("[data-idea-no]"))){ ideaSet(el.dataset.ideaNo,"not_now"); return; }
+  if ((el=g("[data-idea-back]"))){ ideaSet(el.dataset.ideaBack,"open"); return; }
+  if (g("#moreIdeas")){ showAllIdeas=!showAllIdeas; renderIdeas(); return; }
+  if ((el=g("[data-post-done]"))){ postSet(el.dataset.postDone,{status:"posted", postedAt:new Date().toISOString()}); toast("Marked posted"); return; }
+  if ((el=g("[data-post-skip]"))){ postSet(el.dataset.postSkip,{status:"skipped"}); return; }
+  if ((el=g("[data-post-undo]"))){ postSet(el.dataset.postUndo,{status:"draft", postedAt:null}); return; }
+  if (g("#postedBtn")){ showPosted=!showPosted; renderPosts(); return; }
+  if (g("#moreXposts")){ postInbox("more x posts").then(ok=>ok&&toast("Asked Claude")); return; }
+  if (g("#parkBtn")){ showParked=!showParked; renderIdeas(); return; }
+  if ((el=g("[data-upload]"))){ $(el.dataset.upload==="csv"?"#upCsv":"#upPhotos").click(); return; }
+  if (g("#saveMeet")){
+    const title=$("#meetTitle").value.trim()||"Untitled", text=$("#meetText").value.trim();
+    if (!text){ toast("Write something first"); return; }
+    if (!db){ toast("Saving needs sync, which is off in this view"); return; }
+    db.collection("meetings").add({at:new Date().toISOString(), title, text}).then(()=>{ local.set("hq-meet-draft",{title:"",text:""}); toast("Notes saved"); }).catch(()=>toast("Could not save. Try again."));
+    return; }
+  if (g("#callNotes")){ postInbox("call notes are in").then(ok=>ok&&toast("Told Claude")); return; }
 });
 document.addEventListener("change", e=>{
-  if (e.target.classList.contains("check")){
-    const id = e.target.id.slice(4);
-    setProgress(id, {done:e.target.checked});
-    renderTodo();
-  }
+  const t=e.target;
+  if (t.classList.contains("check")){ setProgress(t.id.slice(4), {done:t.checked}); rerender(); }
+  if (t.id==="upCsv") { doUpload("csv",[...t.files]); t.value=""; }
+  if (t.id==="upPhotos") { doUpload("photo",[...t.files]); t.value=""; }
 });
 const noteTimers = {};
 document.addEventListener("input", e=>{
-  const id = e.target.dataset && e.target.dataset.note;
+  const t=e.target;
+  if (t.id==="meetTitle"||t.id==="meetText"){ local.set("hq-meet-draft",{title:$("#meetTitle").value,text:$("#meetText").value}); return; }
+  const id = t.dataset && t.dataset.note;
   if (!id) return;
+  progress[id] = {...(progress[id]||{}), note:t.value};
   clearTimeout(noteTimers[id]);
-  noteTimers[id] = setTimeout(()=>setProgress(id,{note:e.target.value}), 900);
+  noteTimers[id] = setTimeout(()=>setProgress(id,{note:t.value}), 900);
 });
 function setProgress(id, patch){
   progress[id] = {...(progress[id]||{}), ...patch};
@@ -770,23 +1080,30 @@ function setProgress(id, patch){
 function setSync(on, text){ $("#syncDot").className = "dot "+(on?"on":"off"); $("#syncText").textContent = text; }
 (async ()=>{
   try { db = await window.claude?.use?.("db"); } catch(e){ db = null; }
+  try { assets = await window.claude?.use?.("assets"); } catch(e){ assets = null; }
+  if (curTab==="suite") renderSuite();
   if (!db){ setSync(false,"Saved on this device only"); return; }
-  setSync(true,"Synced with Claude");
+  setSync(true,"Synced");
+  const bad = ()=>setSync(false,"Sync paused");
   db.collection("progress").onSnapshot(snap=>{
     snap.docs.forEach(d=>{ const v=d.data()||{}; progress[d.id]={done:!!v.done, note:v.note||""}; });
-    local.set("hq-progress", progress);
-    const active = document.activeElement;
-    if (active && active.dataset && active.dataset.note) { renderMeter(); renderNext(); return; }
-    renderTodo();
-  }, ()=>setSync(false,"Sync paused"));
+    local.set("hq-progress", progress); rerender();
+  }, bad);
   db.collection("inbox").orderBy("at","asc").limit(200).onSnapshot(snap=>{
     inbox = snap.docs.map(d=>({id:d.id, ...(d.data()||{})}));
-    renderInbox();
+    renderInboxDock(); renderAway();
   }, ()=>{});
+  db.doc("suite/status").onSnapshot(s=>{ suiteDoc = s.exists ? s.data() : null; if (curTab==="suite"||curTab==="roadmap") RENDER[curTab](); }, ()=>{});
+  db.collection("meetings").orderBy("at","desc").limit(50).onSnapshot(snap=>{ meetings = snap.docs.map(d=>d.data()||{}); if (curTab==="meetings" && !(document.activeElement&&/^meet/.test(document.activeElement.id||""))) renderMeetings(); }, ()=>{});
+  db.collection("xposts").onSnapshot(snap=>{ xposts = snap.docs.map(d=>({id:d.id, ...(d.data()||{})})); if (curTab==="posts") renderPosts(); }, ()=>{});
+  db.collection("ideas").onSnapshot(snap=>{ ideaState={}; snap.docs.forEach(d=>{ ideaState[d.id]=d.data()||{}; }); if (curTab==="ideas") renderIdeas(); }, ()=>{});
+  db.collection("uploads").orderBy("at","desc").limit(200).onSnapshot(snap=>{ uploads = snap.docs.map(d=>d.data()||{}); if (curTab==="suite") renderSuite(); }, ()=>{});
 })();
 
-/* ---------- Chat dock ---------- */
-let dockMode = "ask", askHistory = [], inbox = [], busy = false;
+const FACTS = "Pitney Bowes facts: Sam's account is Pitney Bowes Shipping 360 (360.pitneybowes.com), tabs Dashboard / API Keys / Merchants / Settings. Client ID = PB_API_KEY, Secret = PB_API_SECRET (Railway Variables). The Merchants page being empty is normal; no Shipper ID is needed; never click Invite Merchant (it invites other businesses to ship under his platform). \"Set up Postage Payment Method\" is only for real postage after production approval. Sandbox needs no payment; test labels are free. The app's code now uses the Shipping 360 API (done Oct 5). Sam's return address needs a phone number. Letter (IMb) postage can't be refunded per USPS; package labels can. Supabase: the website now uses the new publishable key; next Sam creates a new sb_secret key in Supabase (API Keys → Publishable and secret API keys → Secret keys → New secret key), pastes it into Railway SUPABASE_SERVICE_ROLE_KEY and deploys (task B4); only after Claude confirms does he disable legacy keys (B8). Leaked-password protection needs the paid Supabase plan, so it's skipped. Postage rollout: PB_ACCESS=owner (default) means only Sam's account sees postage; everyone else sees 'coming soon'. Order: Sam buys a real label (A9) → PB_ACCESS=pilot + PB_PILOT_EMAILS for Rob (A3) → PB_ACCESS=all after Claude updates Terms/Support/FAQ (A10). Bot check: Cloudflare Turnstile is built into Create Account (task B9: free Cloudflare account, Turnstile widget, two Railway variables TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY). USPS: Mailer ID received Oct 5 (number in task A7's note); next is requesting Informed Visibility (A11). Gmail drafts ready for Sam to review: Rob testimonial ask (E2), Rob postage pilot reply (A3, hold until A9), Mana Pool listing (D5, needs their email), Pitney Bowes production/partnership follow-up (A4). Porkbun DNS is all correct (G8). Pricing v2 (docs/pricing-plan.md, awaiting approval): Free $0 10 labels + 10 postage labels/mo; Base $2.99 500 labels; Premium $6.99 (new customers; existing keep $5.99 unlimited) 1,000 labels; Pro $14.99 unlimited + lowest fees + extras; Enterprise no price. Fees letter/package: letters 15c Free & Base, 12c Premium, 10c Pro (built Oct 14); packages 50c flat in code, plan tiers $0.60/$0.45/$0.30 not built. Stripe connector is live-only; Claude won't create products there until Sam makes a sandbox (C5) or says 'live inactive'. Chrome extension is a draft for discussion (docs/research/chrome-extension.md). Oct 6: the October update email went to 18 accounts (all except the owner; Rob got a personal note). The old no-contact rule for mmuszak34 is lifted. X account @TCGSPEEDSHIPPER launched and linked from the site. Devin's subscription ended; Claude recommends not renewing until revenue is ~$500/mo and covers Devin's lane. Oct 6 morning: Rob's testimonial is on the homepage; Rob asked about $0.78 metered vs $0.82 (decision C6); Pitney Bowes passed our questions to their Sales team. Oct 9 evening: Sean Zehnder introduced Linda Bethard-Moore (PB sales). Oct 12: Sam sent her the intro; she offered a call Oct 13 (passed). Oct 13 evening she sent new times (Wed-Fri). Sam sent the reply on Oct 14 at 6:50 PM PT offering the weekend, or after 5 PM Pacific next Tuesday or Wednesday (A14 done); we are waiting on Linda's answer; call questions are in A15. Rob (Premium $5.99, renewed Oct 13) asked why he was charged $8.99 (A18) and when the pilot starts (A16). Checked in Stripe on Oct 15: he upgraded from Base $1.99 to Premium on Sep 20 and Stripe billed the difference on his Oct 13 invoice ($5.99 + $4.50 - $1.50), one subscription, no double charge. His reply is final in Gmail and offers a $1.99 credit (the owner's call). The Stripe connector works now: Claude can read invoices, but credits, refunds and price changes still need the owner's say. Rob replied to the Oct 13 newsletter asking when the postage pilot goes live; reply drafted (A16). Emails sent from Gmail by Claude get their links wrapped in Google redirects; newsletters should move to Resend after B11. Oct 9: B4 is done (server uses the new sb_secret key, verified in logs); Claude gave the go for B8 (disable legacy keys in Supabase > Project Settings > API Keys > Legacy API keys). Turnstile (B9) is live. Resend email code is live; Sam adds RESEND_API_KEY in Railway and clicks 'Send me a test email' in /admin (B10), then verifies the domain in Resend. Oct 15: the sign-up email code is BUILT behind SIGNUP_EMAIL_CODE=on (off now); Claude flips it after B11: set EMAIL_FROM, owner's test email, then SIGNUP_EMAIL_CODE=on. Pitney Bowes Sales (Sean Zehnder) replied Oct 7; Sam's answers are drafted in Gmail and need 2-3 call times (A4). Rob says a per-label fee stops beating his $30 meter at 150-300 labels/mo; C6 DECIDED Oct 14 by Claude (owner delegated): option D, Pro $14.99 with 300 fee-free postage labels then 5c; letter fees 15c Free/Base, 12c Premium, 10c Pro; a reply asking his volume is drafted. Postage now asks for a phone in the 'Ships from' box. Business: TCG Speed Shipper is a DBA of Dov Kelemer Enterprises, Inc. (internally DKE Toys); no new LLC is needed; the legal name appears only in small print on the Terms and Privacy pages. B8 done Oct 9 (legacy keys off, verified). New tasks Oct 9: A12 send PB answers + call times, A13 test the new postage panel, B11 verify the domain in Resend, G10 delete the old Netlify site, G11 Stripe statement descriptor, D8 daily X posts, F3 review the new upload page, C7 send Rob the volume question. Never enable CAPTCHA in Supabase: it would break logins and wouldn't protect our sign-up. The www TXT record at Porkbun is correct; Railway is re-checking it. PB_PILOT_EMAILS = comma-separated login emails of sellers allowed to see the postage panel. Update Oct 14-15: sign-up email codes are ON in production (SIGNUP_EMAIL_CODE=on); B10, B11 and B12 are done; A17 is closed. New tasks: B13 test sign-up code with a second email, G12 set up Granola for the Pitney Bowes call (no call date yet, waiting on Linda), S4 send a real TCGplayer inventory export, S5 about 50 card photos. The board now also has Roadmap, Suite, Library, Meetings and Ideas tabs.";
+
+/* ---------- Ask Claude dock ---------- */
+let dockMode = "ask", askHistory = [], busy = false;
 function openDock(mode){ $("#dock").hidden=false; setDock(mode||dockMode); }
 function setDock(mode){
   dockMode = mode;
@@ -794,7 +1111,7 @@ function setDock(mode){
   $("#quickAsk").hidden = mode!=="ask";
   $("#dockTitle").textContent = mode==="ask" ? "Quick questions" : "Claude's inbox";
   $("#modeLink").textContent = mode==="ask" ? "Send to Claude's inbox instead" : "Back to quick questions";
-  $("#composer").placeholder = mode==="ask" ? "Ask a small question…" : "Decisions or things to build, e.g. “ground 50”. Claude replies here at the next check-in.";
+  $("#composer").placeholder = mode==="ask" ? "Ask a small question…" : "A decision or something to build, e.g. “ground 50”.";
 }
 $("#dockBtn").onclick = ()=> $("#dock").hidden ? openDock() : ($("#dock").hidden=true);
 $("#dockClose").onclick = ()=> $("#dock").hidden = true;
@@ -802,55 +1119,41 @@ $("#modeLink").onclick = ()=>setDock(dockMode==="ask"?"inbox":"ask");
 document.querySelectorAll("#quickAsk button").forEach(b=>b.onclick=()=>{ setDock("ask"); $("#composer").value=b.textContent; send(); });
 $("#composer").addEventListener("keydown", e=>{ if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); send(); }});
 $("#sendBtn").onclick = send;
-
 function bubble(host, cls, text, small){
   const d = document.createElement("div"); d.className = "msg "+cls; d.textContent = text;
   if (small){ const s=document.createElement("small"); s.textContent=small; d.appendChild(s); }
   host.appendChild(d); host.scrollTop = host.scrollHeight; return d;
 }
-function renderAskIntro(){
-  const h=$("#askMsgs"); h.innerHTML="";
-  bubble(h,"sys","Ask anything small. Answers are short and know this whole board.");
-}
-renderAskIntro();
-function renderInbox(){
+bubble($("#askMsgs"),"sys","Ask anything small. Answers are short and know this whole board.");
+function renderInboxDock(){
   const h=$("#inboxMsgs"); h.innerHTML="";
-  if (!inbox.length){ h.innerHTML = `<div class="empty">No messages yet. Anything you send here goes to the Claude that builds the app. Replies show up here.</div>`; return; }
-  inbox.forEach(m=>bubble(h, m.from==="claude"?"ai":"me", m.text||"", (m.from==="claude"?"Claude · ":"You · ")+new Date(m.at).toLocaleString([], {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})));
+  if (!inbox.length){ h.innerHTML = `<div class="msg sys">No messages yet. Anything you send here goes to the Claude that builds the app. Replies show up here.</div>`; return; }
+  inbox.forEach(m=>bubble(h, m.from==="claude"?"ai":"me", m.text||"", (m.from==="claude"?"Claude · ":"You · ")+fmtDate(m.at)));
 }
-renderInbox();
+renderInboxDock();
 
 function context(){
+  const strip = x=>String(x).replace(/<[^>]+>/g,"");
   const lines = STAGES.map(s=>`Stage ${s.id} ${s.name}:\n`+s.tasks.map(t=>{
     const p=progress[t.id]||{};
-    const strip = x=>x.replace(/<[^>]+>/g,"");
     return `- ${t.id} [${p.done?"DONE":"todo"}] ${t.title}. Why: ${strip(t.why)} Steps: ${t.steps.map(strip).join(" | ")}${t.copy?" Values: "+t.copy.join(", "):""}${p.note?" Owner note: "+p.note:""}`;
   }).join("\n")).join("\n\n");
-  return `You are the helper inside "Shipper HQ", the owner's to-do board for TCG Speed Shipper (tcgspeedshipper.com), a web app that turns TCGplayer order CSVs into shipping labels, envelopes and packing slips, now adding Pitney Bowes postage with a per-label fee and a prepaid balance (Stripe). Hosting: Railway (auto-deploys on merge). Database/auth: Supabase. DNS: Porkbun. The owner (Sam) is not technical and uses an iPad. Answer in 1-4 short sentences, plainly, with exact click paths and the task id (like A1) when relevant. Never ask for or repeat secret values (keys, secrets, passwords); tell him to paste secrets only into Railway Variables. If something needs code changes or a decision recorded, tell him to send it via the Inbox tab, which goes to the Claude that builds the app.
-
-Pitney Bowes facts: Sam's account is Pitney Bowes Shipping 360 (360.pitneybowes.com), tabs Dashboard / API Keys / Merchants / Settings. Client ID = PB_API_KEY, Secret = PB_API_SECRET (Railway Variables). The Merchants page being empty is normal; no Shipper ID is needed; never click Invite Merchant (it invites other businesses to ship under his platform). "Set up Postage Payment Method" is only for real postage after production approval. Sandbox needs no payment; test labels are free. The app's code now uses the Shipping 360 API (done Oct 5). Sam's return address needs a phone number. Letter (IMb) postage can't be refunded per USPS; package labels can. Supabase: the website now uses the new publishable key; next Sam creates a new sb_secret key in Supabase (API Keys → Publishable and secret API keys → Secret keys → New secret key), pastes it into Railway SUPABASE_SERVICE_ROLE_KEY and deploys (task B4); only after Claude confirms does he disable legacy keys (B8). Leaked-password protection needs the paid Supabase plan, so it's skipped. Postage rollout: PB_ACCESS=owner (default) means only Sam's account sees postage; everyone else sees 'coming soon'. Order: Sam buys a real label (A9) → PB_ACCESS=pilot + PB_PILOT_EMAILS for Rob (A3) → PB_ACCESS=all after Claude updates Terms/Support/FAQ (A10). Bot check: Cloudflare Turnstile is built into Create Account (task B9: free Cloudflare account, Turnstile widget, two Railway variables TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY). USPS: Mailer ID received Oct 5 (number in task A7's note); next is requesting Informed Visibility (A11). Gmail drafts ready for Sam to review: Rob testimonial ask (E2), Rob postage pilot reply (A3, hold until A9), Mana Pool listing (D5, needs their email), Pitney Bowes production/partnership follow-up (A4). Porkbun DNS is all correct (G8). Pricing v2 (docs/pricing-plan.md, awaiting approval): Free $0 10 labels + 10 postage labels/mo; Base $2.99 500 labels; Premium $6.99 (new customers; existing keep $5.99 unlimited) 1,000 labels; Pro $14.99 unlimited + lowest fees + extras; Enterprise no price. Fees letter/package: letters 15c Free & Base, 12c Premium, 10c Pro (built Oct 14); packages 50c flat in code, plan tiers $0.60/$0.45/$0.30 not built. Stripe connector is live-only; Claude won't create products there until Sam makes a sandbox (C5) or says 'live inactive'. Chrome extension is a draft for discussion (docs/research/chrome-extension.md). Oct 6: the October update email went to 18 accounts (all except the owner; Rob got a personal note). The old no-contact rule for mmuszak34 is lifted. X account @TCGSPEEDSHIPPER launched and linked from the site. Devin's subscription ended; Claude recommends not renewing until revenue is ~$500/mo and covers Devin's lane. Oct 6 morning: Rob's testimonial is on the homepage; Rob asked about $0.78 metered vs $0.82 (decision C6); Pitney Bowes passed our questions to their Sales team. Oct 9 evening: Sean Zehnder introduced Linda Bethard-Moore (PB sales). Oct 12: Sam sent her the intro; she offered a call Oct 13 (passed). Oct 13 evening she sent new times (Wed-Fri). Sam sent the reply on Oct 14 at 6:50 PM PT offering the weekend, or after 5 PM Pacific next Tuesday or Wednesday (A14 done); we are waiting on Linda's answer; call questions are in A15. Rob (Premium $5.99, renewed Oct 13) asked why he was charged $8.99 (A18) and when the pilot starts (A16). Checked in Stripe on Oct 15: he upgraded from Base $1.99 to Premium on Sep 20 and Stripe billed the difference on his Oct 13 invoice ($5.99 + $4.50 - $1.50), one subscription, no double charge. His reply is final in Gmail and offers a $1.99 credit (the owner's call). The Stripe connector works now: Claude can read invoices, but credits, refunds and price changes still need the owner's say. Rob replied to the Oct 13 newsletter asking when the postage pilot goes live; reply drafted (A16). Emails sent from Gmail by Claude get their links wrapped in Google redirects; newsletters should move to Resend after B11. Oct 9: B4 is done (server uses the new sb_secret key, verified in logs); Claude gave the go for B8 (disable legacy keys in Supabase > Project Settings > API Keys > Legacy API keys). Turnstile (B9) is live. Resend email code is live; Sam adds RESEND_API_KEY in Railway and clicks 'Send me a test email' in /admin (B10), then verifies the domain in Resend. Oct 15: the sign-up email code is BUILT behind SIGNUP_EMAIL_CODE=on (off now); Claude flips it after B11: set EMAIL_FROM, owner's test email, then SIGNUP_EMAIL_CODE=on. Pitney Bowes Sales (Sean Zehnder) replied Oct 7; Sam's answers are drafted in Gmail and need 2-3 call times (A4). Rob says a per-label fee stops beating his $30 meter at 150-300 labels/mo; C6 DECIDED Oct 14 by Claude (owner delegated): option D, Pro $14.99 with 300 fee-free postage labels then 5c; letter fees 15c Free/Base, 12c Premium, 10c Pro; a reply asking his volume is drafted. Postage now asks for a phone in the 'Ships from' box. Business: TCG Speed Shipper is a DBA of Dov Kelemer Enterprises, Inc. (internally DKE Toys); no new LLC is needed; the legal name appears only in small print on the Terms and Privacy pages. B8 done Oct 9 (legacy keys off, verified). New tasks Oct 9: A12 send PB answers + call times, A13 test the new postage panel, B11 verify the domain in Resend, G10 delete the old Netlify site, G11 Stripe statement descriptor, D8 daily X posts, F3 review the new upload page, C7 send Rob the volume question. Never enable CAPTCHA in Supabase: it would break logins and wouldn't protect our sign-up. The www TXT record at Porkbun is correct; Railway is re-checking it. PB_PILOT_EMAILS = comma-separated login emails of sellers allowed to see the postage panel.
-
-Current tasks and progress:
-${lines}`;
+  return `You are the helper inside "Shipper HQ", the owner's board for TCG Speed Shipper (tcgspeedshipper.com), a web app that turns TCGplayer order CSVs into shipping labels, envelopes and packing slips, now adding Pitney Bowes postage with a per-label fee and a prepaid balance (Stripe). The owner is not technical and uses an iPad. Answer in 1-4 short sentences, plainly, with exact click paths. Never ask for or repeat secret keys. The board has tabs Now, Roadmap, Suite, Library, Meetings, Ideas and X posts (daily post drafts the owner posts himself). The Pitney Bowes account is Shipping 360 (360.pitneybowes.com); the Merchants page being empty is normal and Invite Merchant should not be used yet. No date is set yet for the Pitney Bowes call; we are waiting on Linda.\n\n${FACTS}\n\nCurrent tasks and progress:\n${lines}`;
 }
-
 async function send(){
   const text = $("#composer").value.trim();
   if (!text || busy) return;
   $("#composer").value = "";
   if (dockMode==="inbox"){
-    if (!db){ bubble($("#inboxMsgs"),"sys","Inbox needs sync, which isn't available in this view. Use Ask now, or write a task note."); return; }
-    try { await db.collection("inbox").add({from:"owner", text, at:new Date().toISOString()});
-      bubble($("#inboxMsgs"),"sys","Sent ✓ Claude reads the inbox at its next check-in and replies here. For an answer right now, tell Claude in the Claude app, or use Quick questions."); }
-    catch(e){ bubble($("#inboxMsgs"),"sys","Couldn't send. Check your connection and try again."); $("#composer").value=text; }
+    if (!db){ bubble($("#inboxMsgs"),"sys","The inbox needs sync, which is off in this view."); return; }
+    if (await postInbox(text)) bubble($("#inboxMsgs"),"sys","Sent. Claude reads the inbox at the next check-in and replies here.");
+    else $("#composer").value=text;
     return;
   }
   const h = $("#askMsgs");
   bubble(h,"me",text);
-  if (sample===null || sample===undefined){
-    try { sample = await window.claude?.use?.("sample"); } catch(e){ sample = null; }
-  }
-  if (!sample){ bubble(h,"sys","Quick answers aren't turned on in this view. Open this page in a browser at claude.ai (signed in), and tap Allow when it asks. Or send it to Claude's inbox."); return; }
+  if (sample===null){ try { sample = await window.claude?.use?.("sample"); } catch(e){ sample = undefined; } }
+  if (!sample){ bubble(h,"sys","Quick answers are off in this view. Open the page in claude.ai while signed in, or send it to the inbox."); return; }
   askHistory.push({role:"user", content:text});
   const out = bubble(h,"ai","Thinking…");
   busy = true; $("#sendBtn").disabled = true;
@@ -861,13 +1164,13 @@ async function send(){
     out.textContent = res.text;
     askHistory.push({role:"assistant", content:res.text});
   }catch(e){
-    const msg = {not_granted:"Live answers weren't allowed. You can turn them on from this page's Permissions menu, or use the Inbox.", rate_limited:"Too many questions at once. Wait a minute and try again.", prompt_too_large:"That conversation got long. Close and reopen the chat to start fresh."}[e&&e.code];
-    out.textContent = (e&&e.text) || msg || "Couldn't get an answer ("+((e&&e.code)||"unknown")+"). Try again, or send it to Claude's inbox.";
+    const msg = {not_granted:"Live answers weren't allowed. Turn them on from this page's Permissions menu, or use the inbox.", rate_limited:"Too many questions at once. Wait a minute and try again.", prompt_too_large:"That chat got long. Close and reopen it to start fresh."}[e&&e.code];
+    out.textContent = (e&&e.text) || msg || "Couldn't get an answer. Try again, or send it to the inbox.";
     askHistory.pop();
   }finally{ busy=false; $("#sendBtn").disabled=false; }
 }
 
 /* ---------- Boot ---------- */
-renderTodo(); renderPB(); renderBuild(); renderMoney();
 setSync(false,"Connecting…");
+showTab((location.hash||"").replace("#",""), true);
 </script>
