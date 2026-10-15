@@ -1,20 +1,24 @@
-# TCG Speed Suite: Chrome extension (milestones X0, X1, X3)
+# TCG Speed Suite: Chrome extension (X0, X1, X3 and the practice Agent)
 
 Manifest V3, plain JavaScript modules, no runtime dependencies, no build tools. **Nothing in it
 touches TCGplayer yet**: there is no TCGplayer content script, and a code gate (`TOS_OK` in
 `src/flags.js`) keeps those modules inert until the Builder records "TOS OK" in `docs/suite/LOG.md`.
 
-## Load it unpacked (Chrome or Edge, desktop)
-1. Open `chrome://extensions`, switch on **Developer mode**.
-2. **Load unpacked** and pick this folder (`suite/extension`).
-3. Click the puzzle icon, pin "TCG Speed Suite". The popup links to Settings (flags, all off).
+## Load it unpacked (desktop Chrome or Edge only)
+**Extensions need desktop Chrome (or Edge) on a Mac, Windows or Linux computer. They do not run on an iPad
+or iPhone, so on the iPad use the website and the CSV route as today.**
+1. Get the folder onto the computer (clone the repo, or unzip a package from `npm run build`).
+2. Open `chrome://extensions`, switch on **Developer mode**.
+3. **Load unpacked** and pick this folder (`suite/extension`; or the unzipped package folder).
+4. Click the puzzle icon, pin "TCG Speed Suite". The popup links to Settings (flags, all off).
    The side panel is a placeholder.
 
 ## Run the tests (offline, no keys)
 ```
 cd suite && npm test                 # shared + extension: unit tests and the browser test
 cd suite/extension && npm test       # extension only
-cd suite/extension && npm run build  # zip to dist/ (needs the `zip` command)
+cd suite/extension && npm run build  # stamped zip in dist/ (needs `zip`): tcg-speed-suite-<version>-<date>-<commit>.zip
+cd suite/extension && npm run vendor # refresh src/vendor/ from suite/ (a test fails when it is stale)
 ```
 The browser test drives a local fixture page with Playwright and Chromium (found at
 `/opt/pw-browsers`; override with `CHROMIUM_PATH` and `PLAYWRIGHT_PATH`). It skips itself with a note if
@@ -37,8 +41,20 @@ either is missing.
 | `src/ui/` | Popup, side panel placeholder, options page. |
 | `PRIVACY.md`, `STORE-CHECKLIST.md` | Drafts for the Web Store. Not submitted. |
 
-`src/vendor/models.js` is a copy of `suite/shared/models.js` (an extension cannot load files outside
-its folder). A test fails if the copy drifts; refresh with `cp ../shared/models.js src/vendor/models.js`.
+`src/vendor/` holds copies of files from elsewhere in `suite/` (the shared models, Scan's pricing and CSV writer,
+and the whole Agent engine), because an extension cannot load files outside its folder. The list is in
+`scripts/vendor-list.js`. A test fails if any copy is stale. Refresh with `cd suite/extension && npm run vendor`
+(one command, copies them all).
+
+**Practice Agent.** The service worker (`src/background.js`) hosts the real Agent engine over a made-up shop
+(`src/agent-host/`): real tool registry, real approvals, audit and limits; only the "model" is a keyword stand-in,
+so practice mode needs no key, no network and costs nothing. Its one `act` tool changes made-up data only.
+Plan and memory (and the card's why/undo text) are proposed protocol additions: the panel shows them only when
+the agent's `hello` lists them. The service worker may go to sleep, which resets the practice shop; that is fine.
+**Server address** (Settings, advanced): off by default, nothing uses it yet.
+
+**Permissions.** Every one is listed in `docs/suite/EXTENSION-PERMISSIONS.md`; a test fails if the manifest and
+that page disagree.
 
 ## Talking to the extension from the web app
 Post `{ source: 'tcgss-app', v: 1, id, type, payload }` to `window` and listen for

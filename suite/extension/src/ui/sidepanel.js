@@ -2,7 +2,7 @@
 // says can become markup or script.
 import { getFlags } from '../flags.js';
 import { createPanel } from '../agent/panel-controller.js';
-import { createFixtureTransport } from '../agent/fixture-transport.js';
+import { createRuntimeTransport } from '../agent/runtime-transport.js';
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
@@ -12,7 +12,7 @@ if (!flags.agentPanel) {
   $('off').hidden = false;
   $('stop').hidden = true;
 } else {
-  const panel = createPanel(createFixtureTransport());
+  const panel = createPanel(createRuntimeTransport());
   const s = panel.state;
 
   function render() {
@@ -33,6 +33,8 @@ if (!flags.agentPanel) {
       const dl = el('dl');
       for (const row of i.rows) dl.append(el('dt', '', row.label + ':'), el('dd', '', row.value));
       card.append(dl);
+      if (i.why) card.append(el('p', '', 'Why: ' + i.why));
+      if (i.undo) card.append(el('p', '', 'Undo: ' + i.undo));
       if (i.state === 'waiting') {
         for (const [label, ok] of [['Approve', true], ['Deny', false]]) {
           const b = el('button', '', label);

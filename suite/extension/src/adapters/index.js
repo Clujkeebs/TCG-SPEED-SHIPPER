@@ -7,7 +7,7 @@
 //    page's own Save / Upload button.
 //  - Callers must check the feature flag and the TOS gate first (see `guardedAdapter`).
 import { PAGES } from './selectors.js';
-import { validateOrder, dollarsToCents } from '../vendor/models.js';
+import { validateOrder, dollarsToCents } from '../vendor/shared/models.js';
 import { isEnabled } from '../flags.js';
 
 const text = (el, sel) => el?.querySelector(sel)?.textContent.trim() ?? '';

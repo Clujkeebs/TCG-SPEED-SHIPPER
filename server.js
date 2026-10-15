@@ -431,11 +431,15 @@ const tooManySignupAttempts = makeThrottle(8, 10 * 60 * 1000);
 // Promo codes are guessable strings; this slows down brute-forcing them.
 const tooManyPromoChecks = makeThrottle(20, 10 * 60 * 1000);
 
-// x-forwarded-for can carry a client,proxy,proxy chain; the first entry is the
-// original client. Falls back to req.ip (direct connections, local testing).
+// The visitor's address, for rate limits and one-per-connection checks. A
+// visitor can send any x-forwarded-for they like, so its FIRST entry is never
+// trusted (they could use a new fake one per request and skip every limit).
+// Railway's edge sets x-real-ip to the real client address (documented under
+// Specs & Limits). Without it (local tests, another host), req.ip is the
+// address the nearest proxy appended, because of `trust proxy` above.
 function getClientIp(req) {
-  const header = req.headers['x-forwarded-for'];
-  if (header) return String(header).split(',')[0].trim();
+  const real = req.headers['x-real-ip'];
+  if (real) return String(real).split(',')[0].trim();
   return req.ip || 'unknown';
 }
 

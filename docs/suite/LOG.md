@@ -251,6 +251,59 @@ Needs Builder: (1) the Agents panel matches log lines by the `who` field: scan, 
 Needs owner: none
 Next: none
 
+### 2026-10-15 · extension · real Agent engine in the panel · done
+Step 1 done: practice mode now runs the REAL Agent engine inside the extension. `npm run vendor` (in `suite/extension`) copies the
+Agent (loop, registry, audit, limits, protocol, analytics, support, deals, tools, CSV sync), Scan's pricing and CSV writer, and the
+shared models into `src/vendor/`, keeping the folder layout so their imports work unchanged; a test fails if any copy is stale, and
+another if a copy uses node-only code. (`agent/fixtures/orders.js` is not copied: it reads files with node:fs. The extension has
+its own small made-up shop, `src/agent-host/shop.js`.) The service worker hosts `createAgentService` (`src/agent-host/host.js`) over
+that shop; the panel talks to it with chrome.runtime. The panel really plans (steps update as tools run), asks approval (a practice-only
+`act` tool changes made-up prices; audit shows `act`, `ok`, approved by `user`; denied is audited as `denied`), remembers
+("remember that ..." adds a fact; Forget removes it), and stops (kill switch denies the waiting approval; Resume continues). Only a
+stand-in "model" (keyword routing) is fake. Server address (Settings, advanced): validated https only, OFF by default, nothing uses
+it, and a test checks no extension code makes network requests.
+Also: (a) Scan uploader accepts Scan's real CSV output (tested with the vendored `buildCsv`), flags files that do not look like Scan's
+and says the TCGplayer columns are unverified; attaches only, never presses Upload. (b) `docs/suite/EXTENSION-PERMISSIONS.md` + a test that
+fails if the manifest gains or loses any permission, host or page match without a matching row (checked by adding one: it fails), plus
+a ban-list of powerful permissions. (c) TCGplayer email in `docs/suite/TOS-NOTES.md` rewritten to ready-to-send: short, polite, three
+specific questions, no recipient. (d) `npm run build` makes `tcg-speed-suite-<version>-<date>-<commit>.zip` with BUILD.txt, tests and dev
+files excluded (tested); README says plainly that extensions need desktop Chrome or Edge, not an iPad.
+Numbers: `cd suite && npm test` 217 pass, 0 fail (also under `env -i PATH HOME`); root `npm test` 17 suites pass; the whole panel flow
+(plan, approval, remember, forget, stop, resume) runs against the real engine in real Chromium.
+Needs Builder: (1) The host adds plan and memory itself because upstream protocol.js lacks them. When the Agent session adds
+`agent.plan`, `agent.memory`, `agent.memory.list`, `agent.memory.forget`, `summary`, `why`, `undo`, tell me and I delete the host's
+extras (the panel already accepts them only when `hello` lists them; `why` and `undo` show on approval cards now). (2) After any change under
+`suite/agent/`, `suite/scan/core/pricing.js`, `suite/scan/core/csv.js` or `suite/shared/models.js`, the extension's test goes red until
+someone runs `cd suite/extension && npm run vendor`. That is by design, but it means those PRs need that one command; say if you would
+rather I vendor automatically. (3) Still to remove before a Web Store submission: the `http://localhost/*` match.
+Needs owner: send the email in `docs/suite/TOS-NOTES.md` (add the recipient yourself); the saved pages. Extensions need desktop Chrome.
+Next: nothing blocked on me except X2 ("TOS OK").
+
+### 2026-10-15 · scan · OCR engine, CSV check, demo · done (PR open for review)
+Vendored Tesseract.js 5.1.1 (Apache-2.0) with English model into `suite/scan/vendor/` (11 MB, `VENDOR.md` has versions,
+sources, hashes), self-hosted, loaded on first use, cached for offline. Plugged into the live camera and photo upload
+behind the same interface as the test stand-in. Parser: One Piece codes no longer mistaken for Yu-Gi-Oh!, tolerant of a
+bullet read as a symbol; unit tests on invented realistic samples for all four games. CSV column map moved to one file
+(`core/csv-format.js`) plus a "CSV check" tab that compares a pasted real export header and says what differs. Demo path:
+20 synthetic card pictures in `suite/scan/sample-photos/` work with no camera. Batch uploads now keep every "tap the
+right one" card on screen. Static build includes the reader.
+Numbers (SYNTHETIC cards, 96 sample cards, headless Chromium on the sandbox CPU): right card first 100% at 700 px card
+height, 100% at 450 px, 93.8% at 300 px; auto-accepted 64.6% with 0 wrong; median 117 ms and 90th percentile 158 ms per
+card. 20-photo demo through the app (no game chosen, about 7 s total): 12 added automatically, 8 asked for a tap, 0 failed. Scan tests 68 pass offline.
+Unverified: everything on real photos (accuracy, speed on a real phone, glare, foils, sleeves, tilt); TCGplayer CSV columns;
+provider response shapes; the English model's licence wording (Apache-2.0 per the Tesseract project, confirm).
+Needs Builder: review and merge. Root `npm test` and `cd suite && npm test` were green on my run.
+Needs owner: about 50 phone photos of real cards (list in SCAN-EVAL.md); one real TCGplayer export (paste its first line in the CSV check tab).
+Next: when the photos arrive, run the harness on them and report real numbers; then Yu-Gi-Oh!/One Piece tuning.
+
+### 2026-10-15 · builder · evening restart and protect pass · done
+The weekly limit no longer blocks (every session shows "allowed" as of 23:10 UTC). `hq` was already running; I re-woke `scan`, `agent` and `extension` with next goals: Scan has the OCR engine approved (vendor Tesseract.js into `suite/scan/vendor/`); Agent adds the plan, memory, summary, why and undo messages the panel asked for, then the "week in a shop" scenario; Extension makes practice mode run the real Agent engine in the service worker (vendored copy with a drift test). Each runs a short batch, opens a PR titled "Suite: ...", logs here, and stops.
+Protect pass (all merged or applied, production healthy): visitors could fake `x-forwarded-for` to skip every per-IP limit, now fixed (`x-real-ip`, then `req.ip`); npm audit found 1 critical and 3 moderate (proxy-addr, qs, body-parser, express), fixed; `anon` and `authenticated` had full privileges on 6 tables (row level security blocked them), now revoked; the database schema was not in git and the Supabase free plan has no backups, so `docs/db/schema-2026-10-15.sql` now holds it (replayed in a scratch Postgres) and postage go-live is gated on Supabase Pro.
+Numbers: root `npm test` 17 suites pass; `cd suite && npm test` 196 pass at the last run; Railway deploy SUCCESS, 0 errors since.
+Needs HQ: (1) Protect list, "Backups": state "Free plan: no backups yet. Schema saved in the repo." next "Supabase Pro ($25 a month) before postage balances go live." (2) Protect list, "Usage limit": state "Running; each session works in short batches". (3) X posts: 5 drafts for Oct 16 are in `xposts`; the Builder's morning run now writes them daily.
+Needs owner: none new.
+Next: review PRs from `scan`, `agent` and `extension`; build the Agent server proxy once the protocol settles.
+
 ### 2026-10-15 · agent · plan for "agent, not chat" · started
 Read `CONTEXT.md`. Plan (all in `suite/agent/`, offline, fake data): (1) goal and plan layer: a goal becomes a short
 visible plan, run step by step with result checks; when a result is empty or odd it says so and stops that branch.
