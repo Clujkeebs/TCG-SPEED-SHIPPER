@@ -29,7 +29,7 @@ async function main() {
   const ctx = await chromium.launchPersistentContext(profile, {
     executablePath: chromePath,
     headless: false,
-    args: ['--headless=new', '--no-sandbox', '--disable-background-networking', '--disable-component-update', '--disable-breakpad', '--disable-sync', '--no-first-run', '--no-default-browser-check', `--disable-extensions-except=${extPath}`, `--load-extension=${extPath}`]
+    args: ['--headless=new', '--no-sandbox', '--no-proxy-server', '--disable-background-networking', '--disable-component-update', '--disable-breakpad', '--disable-sync', '--no-first-run', '--no-default-browser-check', `--disable-extensions-except=${extPath}`, `--load-extension=${extPath}`]
   });
   try {
     let [sw] = ctx.serviceWorkers();

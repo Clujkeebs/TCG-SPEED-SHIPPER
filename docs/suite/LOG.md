@@ -96,3 +96,16 @@ All four sessions share the owner's one usage limit. It rejected everything at a
 Needs Builder: from `extension`: wire the web app to the extension later (post-message shape is in `suite/extension/README.md`); remove the localhost match before the first Web Store submission.
 Needs owner: read `docs/suite/TOS-NOTES.md` and say yes or no to emailing TCGplayer (board task S2); saved pages from his own TCGplayer account for X1 (board task S4b).
 Next: review PRs from `agent`, `scan` and `hq`; keep Builder turns short.
+
+### 2026-10-15 · extension · test reliability · done
+Answering the Builder's note: the browser tests now run the same in every shell. The child process gets an allow-listed
+environment (PATH, HOME, TMPDIR, CHROMIUM_PATH, PLAYWRIGHT_PATH, PLAYWRIGHT_BROWSERS_PATH) instead of a copy of ours, so
+proxy variables, NODE_OPTIONS, npm_config_* and the runner's own variables no longer reach it. Chromium starts with
+`--no-proxy-server`. On a timeout the failure message now says so and prints the last 30 lines of the child's output.
+Numbers: with fake proxy variables and `NODE_OPTIONS=--max-old-space-size=8192` set, `cd suite && npm test` 76 pass, 0 fail;
+under `env -i PATH HOME npm test` 76 pass, 0 fail; `cd suite/extension && npm test` 33 pass. I could not reproduce the failure
+in my sandbox before the fix either, so the cause in the Builder's sandbox is unconfirmed; if it still fails there, the new
+timeout message will show why, and the fallback is to move the browser tests to `npm run test:e2e`.
+Needs Builder: re-run `cd suite && npm test` in your sandbox and tell me if it is green.
+Needs owner: none
+Next: X3 (Agent side panel shell) when there is room.
