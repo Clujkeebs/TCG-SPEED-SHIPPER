@@ -46,8 +46,11 @@ const PAYLOADS = {
   'agent.suggestions': empty,
   'agent.undo': (p) => (isObj(p) && shortStr(p.approvalId) && Object.keys(p).length === 1 ? null : 'approvalId is required'),
 };
-export const MESSAGE_TYPES = Object.keys(PAYLOADS);
+// MESSAGE_TYPES is the original set and does not change: panels and hosts built against it keep working.
+// REQUEST_TYPES is everything this file can validate, including the types that need an agent.
+export const REQUEST_TYPES = Object.keys(PAYLOADS);
 const AGENT_ONLY = ['agent.memory.list', 'agent.memory.forget', 'agent.inbox.list', 'agent.suggestions', 'agent.undo'];
+export const MESSAGE_TYPES = REQUEST_TYPES.filter((t) => !AGENT_ONLY.includes(t));
 export const EVENT_TYPES = ['agent.progress', 'agent.approval-needed', 'agent.answer', 'agent.stopped', 'agent.plan', 'agent.memory'];
 
 // sender = what the browser reports (chrome.runtime MessageSender); never taken from the message.
@@ -63,7 +66,7 @@ export function validateRequest(msg, sender, extensionId) {
   if (msg.source !== PANEL_SOURCE) return { ok: false, error: 'wrong source' };
   if (msg.v !== PROTOCOL_VERSION) return { ok: false, error: 'unsupported version' };
   if (!shortStr(msg.id)) return { ok: false, error: 'id must be a short string' };
-  if (!MESSAGE_TYPES.includes(msg.type)) return { ok: false, error: 'unknown type' };
+  if (!REQUEST_TYPES.includes(msg.type)) return { ok: false, error: 'unknown type' };
   if (Object.keys(msg).some((k) => !['source', 'v', 'id', 'type', 'payload'].includes(k))) return { ok: false, error: 'unexpected field' };
   const problem = PAYLOADS[msg.type](msg.payload);
   return problem ? { ok: false, error: msg.type + ': ' + problem } : { ok: true };
@@ -134,7 +137,7 @@ export function createAgentService({ registry, model, extensionId, system, appro
   let busy = false;
   let counter = 0;
 
-  const availableRequests = () => MESSAGE_TYPES.filter((t) => agent || !AGENT_ONLY.includes(t));
+  const availableRequests = () => REQUEST_TYPES.filter((t) => agent || !AGENT_ONLY.includes(t));
   const availableEvents = () => EVENT_TYPES.filter((t) => agent || !['agent.plan', 'agent.memory'].includes(t));
   const memoryItems = () => agent.memory.list().map((f) => ({ id: f.id, text: f.text }));
   const emitMemory = (emit) => emit(makeEvent('agent.memory', { items: memoryItems() }));

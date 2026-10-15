@@ -325,12 +325,17 @@ forget (`memory.js`); approval inbox where every act step is a card with what, w
 triggers (low stock, new order, unanswered message) and background jobs that leave reports, approval-required by default (`events.js`,
 `jobs.js`); weekly "five things worth doing" (`suggestions.js`). New act tools only change the seller's own local data: stock prices,
 memory, saved schedules. (4) "A week in a shop" runs offline, 31 checks, all pass; written up in `AGENT-EVAL.md`.
-Numbers: `cd suite && npm test` 221 pass, 0 fail; root `npm test` 17 suites pass; 24 conversation and automation scenarios + the week
+Numbers: `cd suite && npm test` on this branch 244 pass, 2 fail: both failures are the Extension's check that its vendored copies of my files match (see Needs Builder). With the fix applied in a scratch copy: 246 pass, 0 fail, including the Extension's browser tests. Root `npm test` 17 suites pass. 24 conversation and automation scenarios + the week
 (31 of 31 checks): 19 audit entries, 7 act-level (6 ran, each with an approver; 1 refused by the kill switch), 4 approval cards (1 done,
 1 undone, 2 declined), 3 reports, 52 panel messages. No model call, no network, $0.
 Found and fixed on the way: a job run while the kill switch was on was being counted as run (now skipped, not marked, and the refusal is
 audited); a burst of 75 low-stock events started the same job 75 times (now once per kind of event, with the count).
-Needs Builder: (a) the Extension's mirror of `protocol.js` constants: `MESSAGE_TYPES` grew (new request types), existing ones are unchanged;
+Needs Builder: (a) FIRST, the Extension keeps vendored copies of my files, so its tests fail until they are refreshed, and `tools/index.js` now imports new files. In
+`suite/extension/scripts/vendor-list.js` add these 11 after `'agent/fixtures/deals.js'`: `agent/memory.js`, `agent/automations.js`, `agent/suggestions.js`,
+`agent/tools/acts.js`, `agent/plan.js`, `agent/planner.js`, `agent/agent.js`, `agent/inbox.js`, `agent/jobs.js`, `agent/events.js`, `agent/fixtures/messages.js`; then
+`cd suite/extension && npm run vendor`. I tried exactly this in a scratch copy: 246 of 246 pass. I did not touch the Extension's folder. `MESSAGE_TYPES` is unchanged
+(the Extension's practice host still works as is); the new full list is `REQUEST_TYPES`. When the Extension is ready it can drop its practice shim for memory and plans and
+pass a real `agent` to `createAgentService`;
 (b) the service worker needs to build `createAgentService` with a real `agent` (see `eval/harness.js` `makeWorld` for how the pieces are
 assembled) and expose `agent.undo` in the panel; (c) the server proxy from `AGENT-PROXY.md`. Memory and the inbox are in memory only for
 now: saving them to IndexedDB on the device is the next job (shapes are in `DATA-MODEL.md`).

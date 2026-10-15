@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createAgentService, validateEvent, summarizeCall, validateRequest, MESSAGE_TYPES, EVENT_TYPES, PANEL_SOURCE, AGENT_SOURCE } from './protocol.js';
+import { createAgentService, validateEvent, summarizeCall, validateRequest, MESSAGE_TYPES, REQUEST_TYPES, EVENT_TYPES, PANEL_SOURCE, AGENT_SOURCE } from './protocol.js';
 import { makeWorld } from './eval/harness.js';
 import { scriptedModel } from './loop.js';
 
@@ -29,7 +29,8 @@ test('hello announces the new types only when there is an agent (older panels se
   for (const t of ['agent.memory.list', 'agent.memory.forget', 'agent.plan', 'agent.memory', 'agent.progress', 'agent.approval-needed']) assert.ok(h.types.includes(t), t);
   assert.ok(h.events.includes('agent.plan') && h.requests.includes('agent.memory.forget'));
   assert.ok(!h.requests.includes('agent.plan'), 'events are not requests');
-  for (const t of MESSAGE_TYPES) assert.ok(!EVENT_TYPES.includes(t));
+  for (const t of REQUEST_TYPES) assert.ok(!EVENT_TYPES.includes(t));
+  assert.deepEqual(MESSAGE_TYPES, ['agent.hello', 'agent.ask', 'agent.approve', 'agent.stop', 'agent.resume', 'agent.limits', 'agent.audit'], 'the original set is unchanged');
 });
 
 test('a goal streams a plan whose steps move todo, doing, done; every event is well formed', async () => {
