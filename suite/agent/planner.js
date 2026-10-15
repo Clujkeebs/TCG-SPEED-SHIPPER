@@ -21,13 +21,26 @@ export function createRulePlanner({ registry, memory, now }) {
       if (!g) return { plan: null, reason: 'Tell me what you want done.' };
       const low = g.toLowerCase();
 
+      const rem = /^remember (?:that )?(.+)$/i.exec(g);
+      if (rem) {
+        const text = rem[1].replace(/[.!]+$/, '');
+        const th = /\brestock(?:\s+\w+){0,3}?\s+(?:at|when|below|under)\s+(\d+)\b/i.exec(text);
+        const args = th ? { text: g.replace(/^remember (that )?/i, '').replace(/[.!]+$/, ''), key: 'restock.threshold', value: th[1], category: 'setting' } : { text };
+        return { plan: build(g, [{ tool: 'memory.remember', args, why: 'Remember this about your shop for later plans' }]) };
+      }
+      if (/\b(unanswered|oldest) (buyer )?messages?\b|\breply to (the )?(oldest|unanswered)\b/.test(low)) {
+        return { plan: build(g, [
+          { tool: 'messages.unanswered', args: {}, why: 'Find buyer messages with no reply yet', check: { path: 'total', gt: 0, message: 'Every message has a reply.' } },
+          { tool: 'support.draftReply', args: { orderId: '$s1.messages.0.orderId', buyerMessage: '$s1.messages.0.text' }, why: 'Write a reply to the oldest one (a draft; you send it yourself)' },
+        ]) };
+      }
       const price = PRICE_AGAINST.exec(g);
       if (/\b(reprice|re-price|change my prices|adjust (my )?prices|price my)\b/.test(low) || (price && /price|reprice/.test(low))) {
         const percent = price ? Number(price[1]) : mem('price.percent', undefined);
         const basis = price ? price[2].toLowerCase() : 'market';
         if (percent === undefined) return { plan: null, needs: 'percent', reason: 'How far under market should I price? For example "reprice my foils 5% under market". I can remember your answer.' };
         const finish = /\bfoils?\b/.test(low) ? 'foil' : undefined;
-        const rule = { id: 'goal-rule', name: `${percent}% under ${basis}`, basis, percent: -Math.abs(percent), floorCents: mem('price.floorCents', 25), minListCents: mem('price.minListCents', 25), rounding: mem('price.rounding', 'ends-99') };
+        const rule = { id: 'goal-rule', name: `${percent}% under ${basis}`, basis, percent: -Math.abs(percent), floorCents: mem('price.floor_cents', 25), minListCents: mem('price.min_list_cents', 25), rounding: mem('price.rounding', 'ends-99') };
         return { plan: build(g, [
           { tool: 'pricing.suggestBatch', args: { rule, onlyChanged: true, limit: 100, ...(finish ? { finish } : {}) }, why: `Work out new prices${finish ? ' for foils' : ''}: ${percent}% under ${basis}, nothing below ${'$' + (rule.floorCents / 100).toFixed(2)}`, check: { path: 'rows', nonEmpty: true, message: 'No prices would change under that rule, so there is nothing to do.' } },
           { tool: 'inventory.setPrices', args: { changes: { $map: { from: 's1.rows', pick: { printingId: 'printingId', condition: 'condition', finish: 'finish', priceCents: 'suggestedCents' } } } }, why: 'Save the new prices in your stock list (you upload them yourself afterwards)' },

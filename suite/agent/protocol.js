@@ -1,13 +1,19 @@
-// A4 groundwork: messages between the extension side panel and the Agent. Same shape as the extension
-// bridge (suite/extension/src/bridge.js): { source, v, id, type, payload } in, { source, v, id, ok,
-// result | error } out. Pure rules plus a small service; no chrome.* calls, so the extension session can
-// wire it to chrome.runtime later and tests can run it here.
+// Messages between the extension side panel and the Agent. Same shape as the extension bridge
+// (suite/extension/src/bridge.js): { source, v, id, type, payload } in, { source, v, id, ok, result | error } out.
+// Pure rules plus a small service; no chrome.* calls, so the extension can wire it to chrome.runtime and tests
+// can run it here. Shapes are written up in docs/suite/DATA-MODEL.md ("Agent messages").
 //
-//   panel -> agent  (source 'tcgss-panel')   agent.hello, agent.ask, agent.approve, agent.stop, agent.resume, agent.limits, agent.audit
-//   agent -> panel  (source 'tcgss-agent')   responses, plus events: agent.progress, agent.approval-needed, agent.answer, agent.stopped
+//   panel -> agent  (source 'tcgss-panel')
+//     agent.hello, agent.ask, agent.approve, agent.stop, agent.resume, agent.limits, agent.audit
+//     agent.memory.list, agent.memory.forget {id}, agent.inbox.list, agent.suggestions, agent.undo {approvalId}   (only when the service has an agent)
+//   agent -> panel  (source 'tcgss-agent'): responses, plus events
+//     agent.progress {tool, ok, denied, summary}        agent.approval-needed {approvalId, tool, description, why, undo, expected?, args}
+//     agent.answer {status, text, calls?}               agent.stopped
+//     agent.plan {planId, steps:[{text, state: todo|doing|done|skipped}]}       agent.memory {items:[{id, text}]}
 //
+// `hello.types` lists every request type this service answers AND every event it may send, so a panel can decide what
+// to show. `hello.requests` and `hello.events` list them separately.
 // Trust: a message counts only if the browser says it came from our own extension (sender.id).
-// Nothing a web page posts can reach this: pages talk to the bridge, and the bridge has no agent types.
 import { runAgent } from './loop.js';
 
 export const PROTOCOL_VERSION = 1;
@@ -15,6 +21,7 @@ export const PANEL_SOURCE = 'tcgss-panel';
 export const AGENT_SOURCE = 'tcgss-agent';
 export const MAX_TEXT = 2000;
 export const MAX_ID = 80;
+export const PLAN_STATES = ['todo', 'doing', 'done', 'skipped'];
 
 const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const shortStr = (v) => typeof v === 'string' && v.length > 0 && v.length <= MAX_ID;
@@ -33,8 +40,15 @@ const PAYLOADS = {
   'agent.resume': empty,
   'agent.limits': empty,
   'agent.audit': (p) => (p === undefined || (isObj(p) && (p.limit === undefined || (Number.isInteger(p.limit) && p.limit >= 1 && p.limit <= 200))) ? null : 'limit must be 1 to 200'),
+  'agent.memory.list': empty,
+  'agent.memory.forget': (p) => (isObj(p) && shortStr(p.id) && Object.keys(p).length === 1 ? null : 'id is required'),
+  'agent.inbox.list': empty,
+  'agent.suggestions': empty,
+  'agent.undo': (p) => (isObj(p) && shortStr(p.approvalId) && Object.keys(p).length === 1 ? null : 'approvalId is required'),
 };
 export const MESSAGE_TYPES = Object.keys(PAYLOADS);
+const AGENT_ONLY = ['agent.memory.list', 'agent.memory.forget', 'agent.inbox.list', 'agent.suggestions', 'agent.undo'];
+export const EVENT_TYPES = ['agent.progress', 'agent.approval-needed', 'agent.answer', 'agent.stopped', 'agent.plan', 'agent.memory'];
 
 // sender = what the browser reports (chrome.runtime MessageSender); never taken from the message.
 export function isTrustedSender(sender, extensionId) {
@@ -59,20 +73,80 @@ export const makeResponse = (id, result) => ({ source: AGENT_SOURCE, v: PROTOCOL
 export const makeError = (id, error) => ({ source: AGENT_SOURCE, v: PROTOCOL_VERSION, id: typeof id === 'string' ? id.slice(0, MAX_ID) : null, ok: false, error: String(error) });
 export const makeEvent = (event, data = {}) => ({ source: AGENT_SOURCE, v: PROTOCOL_VERSION, event, ...data });
 
-// The service the side panel talks to. One conversation runs at a time.
+// Checks an event before it is sent or used. Returns null when fine, or a problem in words.
+export function validateEvent(e) {
+  if (!isObj(e) || e.source !== AGENT_SOURCE || e.v !== PROTOCOL_VERSION) return 'not an agent event';
+  if (!EVENT_TYPES.includes(e.event)) return 'unknown event';
+  const str = (v, max = 400) => typeof v === 'string' && v.length > 0 && v.length <= max;
+  switch (e.event) {
+    case 'agent.plan':
+      if (!Array.isArray(e.steps) || e.steps.length === 0 || e.steps.length > 8) return 'steps must be a list of 1 to 8';
+      return e.steps.every((s) => isObj(s) && str(s.text, 200) && PLAN_STATES.includes(s.state)) ? null : 'each step needs text and a state of ' + PLAN_STATES.join('|');
+    case 'agent.memory':
+      return Array.isArray(e.items) && e.items.every((i) => isObj(i) && shortStr(i.id) && str(i.text, 300)) ? null : 'items must be [{id, text}]';
+    case 'agent.progress':
+      return str(e.tool, 80) && typeof e.ok === 'boolean' && typeof e.denied === 'boolean' && str(e.summary, 200) ? null : 'progress needs tool, ok, denied and a summary';
+    case 'agent.approval-needed':
+      return shortStr(e.approvalId) && str(e.tool, 80) && str(e.description) && str(e.why) && str(e.undo) && isObj(e.args) ? null : 'approval needs approvalId, tool, description, why, undo, args';
+    case 'agent.answer':
+      return typeof e.status === 'string' && typeof e.text === 'string' ? null : 'answer needs status and text';
+    default:
+      return null;
+  }
+}
+
+const TOOL_SUMMARY = {
+  'report.repeatCustomers': 'Checked who orders more than once',
+  'report.shipping': 'Looked at how often and where you ship',
+  'report.weekly': 'Added up last week',
+  'report.weeklyDraft': 'Wrote the weekly summary (draft, not sent)',
+  'report.chart': 'Prepared chart numbers',
+  'inventory.restock': 'Looked for cards running low that sell',
+  'inventory.search': 'Searched your stock',
+  'orders.search': 'Searched your orders',
+  'pricing.suggestBatch': 'Worked out new prices (nothing changed yet)',
+  'pricing.suggest': 'Worked out a price',
+  'support.draftReply': 'Wrote a reply (draft, not sent)',
+  'messages.unanswered': 'Looked for buyer messages with no reply',
+  'deals.find': 'Looked for supply deals',
+  'suggestions.weekly': 'Picked the things most worth doing',
+  'inventory.setPrices': 'Saved new prices in your stock list',
+  'memory.remember': 'Remembered a fact about your shop',
+  'memory.forget': 'Forgot a fact',
+};
+// A short plain-words line for the panel. Never contains arguments or buyer details.
+export function summarizeCall({ tool, tier, ok, denied }) {
+  if (denied) return 'Not done: it was not allowed or not approved';
+  if (!ok) return 'That step did not work';
+  if (TOOL_SUMMARY[tool]) return TOOL_SUMMARY[tool];
+  return tier === 'act' ? 'Made a change you approved' : tier === 'draft' ? 'Wrote a draft (not sent)' : 'Looked something up';
+}
+
+const STATE_OF = { pending: 'todo', ok: 'done', 'waiting-approval': 'doing', skipped: 'skipped', failed: 'skipped', unexpected: 'skipped' };
+
+// The service the side panel talks to.
 //   handle(msg, sender, emit) -> response message. `emit(event)` pushes events to the panel.
-export function createAgentService({ registry, model, extensionId, system, approvalTimeoutMs = 5 * 60 * 1000, maxSteps = 8 }) {
-  const pending = new Map(); // approvalId -> resolve
+// With an `agent` (see agent.js) a question first becomes a visible plan; act steps become cards the panel approves
+// with agent.approve (approvalId = the card id). Without a plan, and with a model, it falls back to the chat loop.
+export function createAgentService({ registry, model, extensionId, system, approvalTimeoutMs = 5 * 60 * 1000, maxSteps = 8, agent }) {
+  const pending = new Map(); // chat-path approvals: approvalId -> resolve
+  const views = new Map(); // planId -> [{text, state, id}] for agent.plan events
   let busy = false;
   let counter = 0;
+
+  const availableRequests = () => MESSAGE_TYPES.filter((t) => agent || !AGENT_ONLY.includes(t));
+  const availableEvents = () => EVENT_TYPES.filter((t) => agent || !['agent.plan', 'agent.memory'].includes(t));
+  const memoryItems = () => agent.memory.list().map((f) => ({ id: f.id, text: f.text }));
+  const emitMemory = (emit) => emit(makeEvent('agent.memory', { items: memoryItems() }));
+  const emitPlan = (emit, planId) => emit(makeEvent('agent.plan', { planId, steps: views.get(planId).map(({ text, state }) => ({ text, state })) }));
 
   function denyAllPending() {
     for (const resolve of pending.values()) resolve(false);
     pending.clear();
   }
+  const announceCard = (emit, card) => emit(makeEvent('agent.approval-needed', { approvalId: card.id, tool: card.tool, description: card.what, why: card.why, undo: card.undoText, expected: card.expected, args: card.args }));
 
-  async function ask(text, emit) {
-    busy = true;
+  async function chat(text, emit) {
     const ctx = {
       actor: 'agent',
       run: registry.limits.newRun(),
@@ -81,12 +155,55 @@ export function createAgentService({ registry, model, extensionId, system, appro
         const timer = setTimeout(() => { if (pending.delete(approvalId)) resolve(false); }, approvalTimeoutMs);
         if (timer.unref) timer.unref();
         pending.set(approvalId, (ok) => { clearTimeout(timer); resolve(ok ? { approved: true, by: 'user' } : false); });
-        emit(makeEvent('agent.approval-needed', { approvalId, tool: req.tool, description: req.description, args: req.args }));
+        const t = registry.get(req.tool);
+        const d = (t && typeof t.describe === 'function' && t.describe(req.args)) || {};
+        emit(makeEvent('agent.approval-needed', { approvalId, tool: req.tool, description: d.what || req.description, why: 'You asked a question and the assistant wants to do this to answer it.', undo: d.undoText || 'This cannot be undone automatically.', args: req.args }));
       }),
     };
     try {
-      const out = await runAgent({ model, registry, messages: [{ role: 'user', content: text }], ctx, maxSteps, system, onCall: (c) => emit(makeEvent('agent.progress', c)) });
+      const out = await runAgent({
+        model, registry, messages: [{ role: 'user', content: text }], ctx, maxSteps, system,
+        onCall: (c) => emit(makeEvent('agent.progress', { ...c, summary: summarizeCall({ ...c, tier: (registry.get(c.tool) || {}).tier }) })),
+      });
       emit(makeEvent('agent.answer', { status: out.status, text: out.text, reason: out.reason, calls: out.calls.map((c) => c.name) }));
+    } catch (err) {
+      emit(makeEvent('agent.answer', { status: 'error', text: '', reason: String((err && err.message) || err) }));
+    }
+  }
+
+  async function goal(text, emit) {
+    const onEvent = (e) => {
+      if (e.event === 'plan') {
+        views.set(e.planId, e.steps.map((s) => ({ id: s.id, text: s.text, state: 'todo' })));
+        emitPlan(emit, e.planId);
+      } else if (e.event === 'step-start') {
+        const s = views.get(e.planId).find((x) => x.id === e.id);
+        s.state = 'doing';
+        emitPlan(emit, e.planId);
+      } else if (e.event === 'step') {
+        const s = views.get(e.planId).find((x) => x.id === e.id);
+        s.state = STATE_OF[e.status] || 'skipped';
+        emitPlan(emit, e.planId);
+        const tier = (registry.get(e.tool) || {}).tier;
+        if (e.status !== 'waiting-approval') emit(makeEvent('agent.progress', { tool: e.tool, ok: e.status === 'ok', denied: false, summary: e.status === 'ok' ? summarizeCall({ tool: e.tool, tier, ok: true, denied: false }) : (e.note || 'That step did not work').slice(0, 200) }));
+      }
+    };
+    const out = await agent.goal(text, { onEvent });
+    if (out.status === 'no-plan' || out.status === 'invalid') return out;
+    for (const s of out.steps) if (s.cardId) announceCard(emit, agent.inbox.get(s.cardId));
+    emit(makeEvent('agent.answer', { status: out.status, text: out.report, calls: out.steps.map((s) => s.tool) }));
+    return out;
+  }
+
+  async function ask(text, emit) {
+    busy = true;
+    try {
+      if (agent) {
+        const out = await goal(text, emit);
+        if (out.status !== 'no-plan' && out.status !== 'invalid') return;
+        if (!model) { emit(makeEvent('agent.answer', { status: out.status, text: out.reason || 'I could not make a plan for that.', reason: out.reason })); return; }
+      }
+      await chat(text, emit);
     } catch (err) {
       emit(makeEvent('agent.answer', { status: 'error', text: '', reason: String((err && err.message) || err) }));
     } finally {
@@ -99,20 +216,46 @@ export function createAgentService({ registry, model, extensionId, system, appro
     async handle(msg, sender, emit = () => {}) {
       const v = validateRequest(msg, sender, extensionId);
       if (!v.ok) return makeError(msg && msg.id, v.error);
+      if (!availableRequests().includes(msg.type)) return makeError(msg.id, msg.type + ' is not available here');
       switch (msg.type) {
         case 'agent.hello':
-          return makeResponse(msg.id, { v: PROTOCOL_VERSION, types: MESSAGE_TYPES, tools: registry.list().map((t) => ({ name: t.name, tier: t.tier })), killed: registry.limits.isKilled() });
+          return makeResponse(msg.id, {
+            v: PROTOCOL_VERSION,
+            types: [...availableRequests(), ...availableEvents()],
+            requests: availableRequests(),
+            events: availableEvents(),
+            tools: registry.list().map((t) => ({ name: t.name, tier: t.tier })),
+            killed: registry.limits.isKilled(),
+          });
         case 'agent.ask':
           if (busy) return makeError(msg.id, 'the agent is already working on something');
           if (registry.limits.isKilled()) return makeError(msg.id, 'the kill switch is on; send agent.resume first');
           ask(msg.payload.text, emit); // runs in the background; events follow
           return makeResponse(msg.id, { started: true });
         case 'agent.approve': {
-          const resolve = pending.get(msg.payload.approvalId);
-          if (!resolve) return makeError(msg.id, 'no such approval waiting');
-          pending.delete(msg.payload.approvalId);
-          resolve(msg.payload.approved);
-          return makeResponse(msg.id, { recorded: true });
+          const id = msg.payload.approvalId;
+          const resolve = pending.get(id);
+          if (resolve) {
+            pending.delete(id);
+            resolve(msg.payload.approved);
+            return makeResponse(msg.id, { recorded: true });
+          }
+          if (agent) {
+            let card;
+            try { card = agent.inbox.get(id); } catch { return makeError(msg.id, 'no such approval waiting'); }
+            let out;
+            try { out = await agent.decide(id, msg.payload.approved); } catch (err) { return makeError(msg.id, err.message); }
+            const done = out.card.status === 'done';
+            emit(makeEvent('agent.progress', { tool: card.tool, ok: done || out.card.status === 'declined', denied: out.card.status === 'declined', summary: done ? summarizeCall({ tool: card.tool, tier: 'act', ok: true, denied: false }) : out.card.status === 'declined' ? 'You declined this; nothing was changed' : 'That step did not work' }));
+            if (out.step && card.planId && views.has(card.planId)) {
+              const s = views.get(card.planId).find((x) => x.id === card.stepId);
+              if (s) { s.state = STATE_OF[out.step.status] || 'skipped'; emitPlan(emit, card.planId); }
+            }
+            if (/^memory\./.test(card.tool)) emitMemory(emit);
+            if (out.planStatus === 'done' || out.planStatus === 'stopped') emit(makeEvent('agent.answer', { status: out.planStatus, text: out.planStatus === 'done' ? 'All the steps are finished.' : 'Finished, but one step did not work.', calls: [card.tool] }));
+            return makeResponse(msg.id, { recorded: true, status: out.card.status });
+          }
+          return makeError(msg.id, 'no such approval waiting');
         }
         case 'agent.stop':
           registry.limits.kill('stopped from the side panel');
@@ -128,6 +271,24 @@ export function createAgentService({ registry, model, extensionId, system, appro
           const rows = await registry.audit.list();
           return makeResponse(msg.id, { entries: rows.slice(-(msg.payload && msg.payload.limit ? msg.payload.limit : 50)) });
         }
+        case 'agent.memory.list':
+          emitMemory(emit);
+          return makeResponse(msg.id, { items: memoryItems() });
+        case 'agent.memory.forget':
+          try { await agent.forgetMemory(msg.payload.id); } catch (err) { return makeError(msg.id, err.message); }
+          emitMemory(emit);
+          return makeResponse(msg.id, { forgotten: true });
+        case 'agent.inbox.list':
+          return makeResponse(msg.id, { cards: agent.inbox.list({ status: 'pending' }).map((c) => ({ approvalId: c.id, tool: c.tool, description: c.what, why: c.why, undo: c.undoText, expected: c.expected, args: c.args })) });
+        case 'agent.undo': {
+          let card;
+          try { card = await agent.undo(msg.payload.approvalId); } catch (err) { return makeError(msg.id, err.message); }
+          emit(makeEvent('agent.progress', { tool: card.tool, ok: true, denied: false, summary: 'Put things back as they were' }));
+          if (/^memory\./.test(card.tool)) emitMemory(emit);
+          return makeResponse(msg.id, { undone: true, status: card.status });
+        }
+        case 'agent.suggestions':
+          return makeResponse(msg.id, await agent.suggestions());
       }
       return makeError(msg.id, 'unhandled type');
     },

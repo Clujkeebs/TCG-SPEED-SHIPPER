@@ -116,13 +116,14 @@ export async function runPlan({ plan, registry, inbox, onEvent = () => {}, ctx =
   const results = {};
   const done = [];
   const text = renderPlan(plan, registry);
-  onEvent({ event: 'plan', planId: plan.id, text });
+  onEvent({ event: 'plan', planId: plan.id, text, steps: plan.steps.map((s) => ({ id: s.id, text: s.why, tool: s.tool })) });
   ctx.run = ctx.run || registry.limits.newRun();
   ctx.actor = actor;
 
   for (const step of plan.steps) {
     const rec = { id: step.id, tool: step.tool, why: step.why, status: 'pending' };
     done.push(rec);
+    onEvent({ event: 'step-start', planId: plan.id, id: step.id, tool: step.tool });
     const blocked = [...refsIn(step.args)].map((d) => done.find((x) => x.id === d)).find((x) => x && x.status !== 'ok');
     if (blocked) {
       rec.status = 'skipped';

@@ -60,9 +60,7 @@ records tokens and cost per run so these are real numbers after one week.
 
 ## Privacy
 - Orders and stock stay on the device. The proxy never sees them except as far as tool results are part of the conversation.
-- Tool results use `buyerKey`, not names or addresses. **One gap:** `support.draftReply` writes the buyer's
-  first name into the draft, so it would reach the model. Before the real model is used, change it to
-  write `{{first_name}}` and let the side panel fill the name in on the device. (Logged here, not yet done.)
+- Tool results use `buyerKey`, not names or addresses. `support.draftReply` returns `{{first_name}}` and the device fills the name in (fixed 2026-10-15, tested), so no buyer name reaches the model.
 - The server stores, per call: user id, time, token counts, cost, outcome. **Not** the conversation text.
 - Terms and privacy text need a sentence saying a question and tool results are sent to a model provider.
 

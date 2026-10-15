@@ -1,4 +1,4 @@
-# Speed Agent (A0 to A4 groundwork: engine, reports, drafts, sync, automations, side panel protocol)
+# Speed Agent (an agent, not a chat: goals, plans, memory, approval inbox, background jobs, suggestions)
 
 An assistant for a card seller, built as an engine plus tools. It works only on fixture data
 (made-up buyers) and runs offline. **It cannot send a message, change a listing or spend money:
@@ -7,7 +7,7 @@ no tool does any of that, and tests check it.**
 ## Try it
 ```
 cd suite && npm test                 # everything, offline
-node suite/agent/eval/run.js         # the 24 scenarios (conversations and automations)
+node suite/agent/eval/run.js         # 24 scenarios + the "week in a shop" (31 checks)
 node suite/agent/eval/run.js --write # also refresh docs/suite/AGENT-EVAL.md
 ```
 
@@ -62,4 +62,19 @@ Tools must not return buyer names or street addresses; use `buyerKey`.
   `tick({ store, registry, approve, now })` is meant to be called once a minute by whatever hosts the Agent.
 - Side panel messages are listed at the top of `protocol.js`. The extension session wires them to `chrome.runtime`.
 - Server proxy plan, limits and cost estimate: `docs/suite/AGENT-PROXY.md`.
-- Known gap before a real model is used: `support.draftReply` puts the buyer's first name in its result (see AGENT-PROXY.md, Privacy).
+- `support.draftReply` returns `{{first_name}}`; `fillPlaceholders()` puts the name in on the device.
+
+## Agent, not chat (how the pieces fit)
+| Need | File | In one line |
+|---|---|---|
+| Goal -> visible plan -> steps with result checks | `planner.js`, `plan.js`, `agent.js` | "Reprice my foils" becomes a short plan; read steps run, a step that finds nothing stops its branch and says so |
+| Memory the seller owns | `memory.js` | view, edit, delete; used by plans (restock level, price rule); agent-proposed facts need a card |
+| Approval inbox | `inbox.js`, `tools/acts.js` | every act step is a card (what, why, expected effect, undo); nothing runs until approved; kill switch keeps cards waiting |
+| Background jobs | `jobs.js`, `events.js`, `automations.js` | cron or event (low stock, new order, unanswered message); leave a report; approval-required by default; only the owner can set autopilot |
+| Proactive | `suggestions.js` | weekly "five things worth doing" from real numbers; each has a goal to start |
+| Side panel | `protocol.js` | plan, memory, approval (why + undo) and progress (summary) messages; see `DATA-MODEL.md` |
+| Proof | `eval/week-in-shop.js` | one scripted week from goals to approved actions with the audit trail checked |
+
+Act tools that exist: `inventory.setPrices` (the seller's own stock list on this device), `memory.remember`, `memory.forget`,
+`automation.save`, `automation.remove`. None touches a marketplace, sends a message or spends money. Steps after an approval-gated
+step that depend on its result wait for a new run (none of the recipes need that yet).

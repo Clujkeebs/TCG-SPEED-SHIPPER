@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { makeWorld } from './eval/harness.js';
 import { makeOrders, makeInventory, loadPrintings } from './fixtures/orders.js';
 import { validateOrder, validateInventoryItem } from '../shared/models.js';
-import { classify } from './support.js';
+import { classify, fillPlaceholders } from './support.js';
 import { importInventoryCsv, diffInventory, exportInventoryCsv, parseCsv, toCsv } from './sync/csv.js';
 
 const orders = makeOrders();
@@ -83,7 +83,10 @@ test('support drafts: classified, never sent, no promises', async () => {
   const shipped = orders.find((o) => o.shippedAt);
   const r = await call('support.draftReply', { orderId: shipped.id, buyerMessage: 'where is my package?', sellerName: 'Corner Cards' });
   assert.equal(r.sent, false);
-  assert.ok(r.draft.includes(shipped.trackingNumber) && r.draft.startsWith('Hi ' + shipped.shipTo.name.split(' ')[0]));
+  assert.ok(r.draft.includes(shipped.trackingNumber) && r.draft.startsWith('Hi {{first_name}},'));
+  assert.ok(!r.draft.includes(shipped.shipTo.name.split(' ')[0]) && !r.draft.includes(shipped.shipTo.name.split(' ')[1]));
+  assert.equal(fillPlaceholders(r.draft, { firstName: shipped.shipTo.name.split(' ')[0] }).startsWith('Hi ' + shipped.shipTo.name.split(' ')[0] + ','), true);
+  assert.deepEqual(r.placeholders, ['first_name']);
   const d = await call('support.draftReply', { orderId: shipped.id, buyerMessage: 'it arrived damaged' });
   assert.equal(d.needsHuman, true);
   assert.ok(!/refund(ed)? (is|has|will)|we will replace|i will replace/i.test(d.draft));
@@ -94,6 +97,13 @@ test('support drafts: classified, never sent, no promises', async () => {
 test('no registered tool can send, change listings or spend', () => {
   const w = makeWorld();
   for (const t of w.registry.list()) {
+    const ACTS = ['inventory.setPrices', 'memory.remember', 'memory.forget', 'automation.save', 'automation.remove'];
+    if (t.tier === 'act') {
+      assert.ok(ACTS.includes(t.name), 'unexpected act tool ' + t.name);
+      assert.equal(typeof t.describe, 'function', t.name + ' needs a card description');
+      assert.equal(typeof t.undo, 'function', t.name + ' needs an undo');
+      continue;
+    }
     assert.ok(['read', 'draft'].includes(t.tier), t.name);
     assert.ok(!/send|email|upload|publish|update|delete|buy|pay/i.test(t.name.split('.')[1].replace('draftReply', '').replace('draftExport', '')), t.name);
     assert.equal(t.costCents || 0, 0);

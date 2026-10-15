@@ -260,3 +260,26 @@ report, approval required by default. (5) weekly "five things worth doing". (6) 
 from goal to approved actions with a full audit trail, written up in `AGENT-EVAL.md`. The only act tools I add change
 the seller's own local stock prices, memory and saved schedules. Nothing touches TCGplayer, sends or spends.
 Needs Builder: none yet. Needs owner: none.
+
+### 2026-10-15 · agent · protocol additions, privacy fix, agent not chat, week in a shop · done
+Did the four items in order. (1) Protocol: everything the Extension proposed, announced in `hello.types` (plus `requests` and `events`
+lists) and only when the service has an agent, so an older panel sees no change: events `agent.plan` and `agent.memory`, requests
+`agent.memory.list` and `agent.memory.forget`, `agent.progress.summary`, and `why` / `undo` on `agent.approval-needed`. I also added
+`agent.undo`, `agent.inbox.list` and `agent.suggestions`. Shapes are in `DATA-MODEL.md` ("Agent messages and records") and checked by
+`validateEvent`. (2) `support.draftReply` now returns `{{first_name}}` (filled on the device by `fillPlaceholders`); a test checks no
+buyer name is in the draft. (3) Agent, not chat: goals become visible plans (`planner.js`, `plan.js`); shop memory with view, edit,
+forget (`memory.js`); approval inbox where every act step is a card with what, why, expected effect and undo (`inbox.js`); event
+triggers (low stock, new order, unanswered message) and background jobs that leave reports, approval-required by default (`events.js`,
+`jobs.js`); weekly "five things worth doing" (`suggestions.js`). New act tools only change the seller's own local data: stock prices,
+memory, saved schedules. (4) "A week in a shop" runs offline, 31 checks, all pass; written up in `AGENT-EVAL.md`.
+Numbers: `cd suite && npm test` 221 pass, 0 fail; root `npm test` 17 suites pass; 24 conversation and automation scenarios + the week
+(31 of 31 checks): 19 audit entries, 7 act-level (6 ran, each with an approver; 1 refused by the kill switch), 4 approval cards (1 done,
+1 undone, 2 declined), 3 reports, 52 panel messages. No model call, no network, $0.
+Found and fixed on the way: a job run while the kill switch was on was being counted as run (now skipped, not marked, and the refusal is
+audited); a burst of 75 low-stock events started the same job 75 times (now once per kind of event, with the count).
+Needs Builder: (a) the Extension's mirror of `protocol.js` constants: `MESSAGE_TYPES` grew (new request types), existing ones are unchanged;
+(b) the service worker needs to build `createAgentService` with a real `agent` (see `eval/harness.js` `makeWorld` for how the pieces are
+assembled) and expose `agent.undo` in the panel; (c) the server proxy from `AGENT-PROXY.md`. Memory and the inbox are in memory only for
+now: saving them to IndexedDB on the device is the next job (shapes are in `DATA-MODEL.md`).
+Needs owner: none new.
+Next: save memory, cards and reports in IndexedDB; a measured run with a real model (needs a key and a small budget from the owner).
