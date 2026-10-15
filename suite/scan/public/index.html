@@ -16,6 +16,7 @@
   <div class="nav-tabs" role="tablist">
     <button class="nav-tab active" role="tab" id="t-add" data-tab="add" aria-selected="true" aria-controls="tab-add">Add</button>
     <button class="nav-tab" role="tab" id="t-list" data-tab="list" aria-selected="false" aria-controls="tab-list">List <span id="navCount">0</span></button>
+    <button class="nav-tab" role="tab" id="t-check" data-tab="check" aria-selected="false" aria-controls="tab-check">CSV check</button>
     <button class="nav-tab" role="tab" id="t-rules" data-tab="rules" aria-selected="false" aria-controls="tab-rules">Price rule</button>
   </div>
 </nav>
@@ -50,7 +51,7 @@
 
     <div class="card">
       <h2>Scan</h2>
-      <p class="muted" id="scanNote">Live camera or photos. Everything stays on this device.</p>
+      <p class="muted" id="scanNote">Live camera or photos. Everything stays on this device. The first scan loads the text reader (about 11 MB), then it works offline.</p>
       <div class="stage" id="stage">
         <video id="video" playsinline muted hidden></video>
         <canvas id="overlay" hidden></canvas>
@@ -97,6 +98,17 @@
       <h2>Needs your help before upload</h2>
       <p class="muted">These rows are left out of the CSV. We never guess a TCGplayer product ID or a price.</p>
       <ul id="problemList" class="list"></ul>
+    </div>
+  </section>
+
+  <section id="tab-check" class="tab" role="tabpanel" hidden>
+    <div class="card">
+      <h2>Check against your TCGplayer export</h2>
+      <p class="muted">Paste the first line (the column names) of a real inventory export from TCGplayer. We tell you which of our columns differ.</p>
+      <label for="hdr">Header line</label>
+      <textarea id="hdr" rows="3" placeholder="TCGplayer Id,Product Line,Set Name,…"></textarea>
+      <div class="btn-row"><button id="hdrCheck" type="button" class="btn-dl">Check columns</button></div>
+      <ul id="hdrOut" class="list" aria-live="polite"></ul>
     </div>
   </section>
 

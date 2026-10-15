@@ -25,6 +25,11 @@ test('parse: reading slips inside numbers are repaired, names are left alone', (
   assert.equal(parseCardText(null).name, undefined);
 });
 
+test('parse: a bullet misread as another symbol still finds the set code', () => {
+  assert.equal(parseCardText('Lightning Bolt\n149/274 R\nM11 «EN', 'mtg').setCode, 'M11');
+  assert.equal(parseCardText('X\n267/274 R\nMH2 « EN', 'mtg').setCode, 'MH2');
+});
+
 test('similarity', () => {
   assert.equal(similarity('Nami', 'nami'), 1);
   assert.ok(similarity('Lightnng Bolt', 'Lightning Bolt') > 0.9);
@@ -77,4 +82,32 @@ test('identifyFrame: crops the card, reads two strips, resolves', async () => {
   assert.equal(r.decision.action, 'accept');
   const none = await identifyFrame({ width: W, height: H, data: new Uint8ClampedArray(W * H * 4).fill(50) }, { engine, index });
   assert.deepEqual([none.ok, none.reason], [false, 'no-card']);
+});
+
+// Invented but realistic reader output, including the usual noise (stray symbols, split lines, lower case).
+const SAMPLES = [
+  ['mtg', 'Llanowar Elves\n168/269 C\nDOM • EN', { setCode: 'DOM', number: '168', name: 'Llanowar Elves' }],
+  ['mtg', 'Birds of Paradise\n© 2011 Wizards\n165/249 R\nM12 ® EN', { setCode: 'M12', number: '165', name: 'Birds of Paradise' }],
+  ['mtg', 'Sol Ring\n259/361 U\nCMD «EN', { setCode: 'CMD', number: '259', name: 'Sol Ring' }],
+  ['pokemon', "Professor's Research\n189/198", { number: '189', name: "Professor's Research" }],
+  ['pokemon', 'Mew ex\n151/165 ex', { number: '151', name: 'Mew ex' }],
+  ['pokemon', 'Pikachu\nO58/1O2', { number: '058', name: 'Pikachu' }],
+  ['yugioh', 'Dark Magician\nLOB-EN005', { setCode: 'LOB', number: 'EN005', name: 'Dark Magician' }],
+  ['yugioh', 'Ash Blossom & Joyous Spring\nMACR-EN036', { setCode: 'MACR', number: 'EN036', name: 'Ash Blossom & Joyous Spring' }],
+  ['yugioh', 'Mirror Force\nMRD-1l8', { setCode: 'MRD', number: '118' }],
+  ['onepiece', 'Roronoa Zoro\nOP01-025 R', { setCode: 'OP01', number: '025', name: 'Roronoa Zoro' }],
+  ['onepiece', 'Monkey D. Luffy\nST01-001 L', { setCode: 'ST01', number: '001', name: 'Monkey D. Luffy' }],
+  ['onepiece', 'Nami\nOPOI-016', { setCode: 'OP01', number: '016', name: 'Nami' }],
+];
+test('parse: realistic samples for all four games', () => {
+  for (const [game, text, want] of SAMPLES) {
+    const got = parseCardText(text, game);
+    for (const [k, v] of Object.entries(want)) assert.equal(got[k], v, game + ' ' + k + ' in ' + JSON.stringify(text));
+  }
+});
+
+test('parse: with no game chosen, One Piece codes are not mistaken for Yu-Gi-Oh!', () => {
+  assert.equal(parseCardText('Nami\nOP01-016').game, 'onepiece');
+  assert.equal(parseCardText('Dark Magician\nLOB-EN005').game, 'yugioh');
+  assert.equal(parseCardText('Lightning Bolt\n149/274 R\nM11 • EN').setCode, 'M11');
 });
