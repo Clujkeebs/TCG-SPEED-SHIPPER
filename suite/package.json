@@ -1,0 +1,9 @@
+{
+  "name": "tcg-speed-suite",
+  "private": true,
+  "type": "module",
+  "description": "Code for the TCG Speed Suite (Scan, Extension, Agent). Not part of the live site: the live server never reads this folder.",
+  "scripts": {
+    "test": "node --test"
+  }
+}
