@@ -251,6 +251,23 @@ Needs Builder: (1) the Agents panel matches log lines by the `who` field: scan, 
 Needs owner: none
 Next: none
 
+### 2026-10-15 · scan · OCR engine, CSV check, demo · done (PR open for review)
+Vendored Tesseract.js 5.1.1 (Apache-2.0) with English model into `suite/scan/vendor/` (11 MB, `VENDOR.md` has versions,
+sources, hashes), self-hosted, loaded on first use, cached for offline. Plugged into the live camera and photo upload
+behind the same interface as the test stand-in. Parser: One Piece codes no longer mistaken for Yu-Gi-Oh!, tolerant of a
+bullet read as a symbol; unit tests on invented realistic samples for all four games. CSV column map moved to one file
+(`core/csv-format.js`) plus a "CSV check" tab that compares a pasted real export header and says what differs. Demo path:
+20 synthetic card pictures in `suite/scan/sample-photos/` work with no camera. Batch uploads now keep every "tap the
+right one" card on screen. Static build includes the reader.
+Numbers (SYNTHETIC cards, 96 sample cards, headless Chromium on the sandbox CPU): right card first 100% at 700 px card
+height, 100% at 450 px, 93.8% at 300 px; auto-accepted 64.6% with 0 wrong; median 117 ms and 90th percentile 158 ms per
+card. 20-photo demo through the app (no game chosen, about 7 s total): 12 added automatically, 8 asked for a tap, 0 failed. Scan tests 68 pass offline.
+Unverified: everything on real photos (accuracy, speed on a real phone, glare, foils, sleeves, tilt); TCGplayer CSV columns;
+provider response shapes; the English model's licence wording (Apache-2.0 per the Tesseract project, confirm).
+Needs Builder: review and merge. Root `npm test` and `cd suite && npm test` were green on my run.
+Needs owner: about 50 phone photos of real cards (list in SCAN-EVAL.md); one real TCGplayer export (paste its first line in the CSV check tab).
+Next: when the photos arrive, run the harness on them and report real numbers; then Yu-Gi-Oh!/One Piece tuning.
+
 ### 2026-10-15 · builder · evening restart and protect pass · done
 The weekly limit no longer blocks (every session shows "allowed" as of 23:10 UTC). `hq` was already running; I re-woke `scan`, `agent` and `extension` with next goals: Scan has the OCR engine approved (vendor Tesseract.js into `suite/scan/vendor/`); Agent adds the plan, memory, summary, why and undo messages the panel asked for, then the "week in a shop" scenario; Extension makes practice mode run the real Agent engine in the service worker (vendored copy with a drift test). Each runs a short batch, opens a PR titled "Suite: ...", logs here, and stops.
 Protect pass (all merged or applied, production healthy): visitors could fake `x-forwarded-for` to skip every per-IP limit, now fixed (`x-real-ip`, then `req.ip`); npm audit found 1 critical and 3 moderate (proxy-addr, qs, body-parser, express), fixed; `anon` and `authenticated` had full privileges on 6 tables (row level security blocked them), now revoked; the database schema was not in git and the Supabase free plan has no backups, so `docs/db/schema-2026-10-15.sql` now holds it (replayed in a scratch Postgres) and postage go-live is gated on Supabase Pro.

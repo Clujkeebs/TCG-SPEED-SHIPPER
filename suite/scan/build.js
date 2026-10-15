@@ -10,7 +10,7 @@ const out = process.argv[2] || join(suite, 'scan', 'dist');
 rmSync(out, { recursive: true, force: true });
 mkdirSync(join(out, 'scan'), { recursive: true });
 const keep = (src) => !/\.test\.js$/.test(src) && !/[\\/]data[\\/]cache/.test(src);
-for (const dir of ['public', 'core', 'data', 'vision', 'ocr']) cpSync(join(suite, 'scan', dir), join(out, 'scan', dir), { recursive: true, filter: keep });
+for (const dir of ['public', 'core', 'data', 'vision', 'ocr', 'vendor']) cpSync(join(suite, 'scan', dir), join(out, 'scan', dir), { recursive: true, filter: keep });
 cpSync(join(suite, 'shared', 'models.js'), join(out, 'shared', 'models.js'));
 writeFileSync(join(out, 'index.html'), '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=scan/public/"><title>TCG Speed Scan</title><a href="scan/public/">Open TCG Speed Scan</a>\n');
 let files = 0, bytes = 0;

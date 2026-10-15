@@ -7,7 +7,8 @@ TCGplayer Seller Portal import. Works offline after the first visit. No build st
 1. `node suite/scan/serve.js`, open <http://localhost:8080/scan/public/> (phone: same Wi-Fi, use the computer's address; the camera needs https or localhost).
 2. Pick **Quick price rule** (for example "5% under market"). Set condition, finish, language once.
 3. Type a name ("bolt"), press Enter to add the top match, or tap **Add**. Wrong card? **Undo**.
-4. **Start live camera**: hold a card steady and it is picked up when it stops moving (swap cards to keep going). Or **Upload photos** (pick or drop several). It finds the card and buzzes; it cannot read the text yet (no text reader installed), so add by search.
+3b. **No camera? Try 20 cards in a minute:** on the Add tab tap **Upload photos**, select every file in `suite/scan/sample-photos/` (20 synthetic card pictures). About 12 of 20 are added by themselves; the rest show likely matches to tap. Go to **List**, type a product ID where asked, **Download CSV**.
+4. **Start live camera**: hold a card steady and it is picked up when it stops moving (swap cards to keep going). Or **Upload photos** (pick or drop several). It finds the card, reads the name, set code and number with a self-hosted reader (first scan downloads about 11 MB, then it works offline), and adds it or shows the likely matches to tap.
 5. Type TCGplayer product IDs where asked, then **Download CSV**. Remember the columns are unverified.
 
 ## Host it on its own site
@@ -35,7 +36,8 @@ cd suite && npm test
 | Rows with no `tcgplayerProductId` | Never guessed. Left out of the CSV and shown for the seller to fill in by hand. |
 | Scryfall adapter | Tested on hand-written fixtures in the documented shape. Never run against the real service. `dev/fetch-scryfall.js` (not used by tests) can fetch a set, politely and cached. Check Scryfall's terms first. |
 | Sample data (`data/sample/`, 96 printings, 4 games) | Names and set codes are public facts; **collector numbers are best effort, not checked**. Prices are **made-up demo numbers**. No product IDs, no images. |
-| Camera, card detection, text parsing, lookup, accept-or-ask | Built and tested on synthetic data. **No text-reading engine is installed**, so the camera cannot yet name a card. No accuracy on real cards: see `docs/suite/SCAN-EVAL.md`. |
+| Camera, card detection, text reading (Tesseract.js in `vendor/`), parsing, lookup, accept-or-ask | Measured on synthetic cards only (see `docs/suite/SCAN-EVAL.md`). **No accuracy on real photos yet.** |
+| CSV columns | All in `core/csv-format.js`. The **CSV check** tab compares a pasted real export header with ours. Unverified until a real export arrives. |
 | Pokémon, Yu-Gi-Oh!, One Piece adapters | Written against assumed response shapes, tested on hand-written fixtures only. |
 | Phone layout | Checked at 390px and 1280px in a headless browser. Not yet tried on a real iPad or iPhone. |
 
