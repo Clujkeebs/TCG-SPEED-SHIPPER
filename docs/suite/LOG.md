@@ -170,6 +170,12 @@ anything on real TCGplayer pages (selectors are still guesses until saved pages 
 Needs Builder: none. Needs owner: the saved TCGplayer pages listed in the X1 entry.
 Next: X3 when there is room.
 
+### 2026-10-15 · hq · board next steps · done
+Ideas tab now has 34 ideas, 11 new with sources (TCGplayer fee calculator and explainer, USPS Dec 17 holiday cutoff, pay-per-label plan, case study, shop kit, comparison pages and more). Roadmap tab shows the Suite milestones with live status from `suite/status`. Open owner tasks were cut to one why line and at most 4 steps. Re-checked at 820x1180, 1180x820 and 390x844 (dark and light): no errors, no sideways scroll. Drafted `docs/suite/SITES-PLAN.md` (one site per product, page lists, what the owner must do). Domain lookup (read-only, nothing reserved): tcgspeedscan.com, tcgspeedagent.com and tcgspeedsuite.com are free today.
+Numbers: OpenRush keyword research was out of credits (402), so no search-volume numbers are claimed; ideas cite the TCGplayer fees page, the USPS holiday page and repo docs. The Uline 5 to 10% rate is from a third-party listing and is marked "confirm".
+Needs Builder: none
+Needs owner: say yes or no to buying the three domains in SITES-PLAN.md (the only step that costs money).
+Next: none
 ### 2026-10-15 · extension · X3 and extras · done
 Agent side panel shell: chat, a "practice mode" banner, and approval cards for `act`-level actions (Approve / Deny; only a
 click answers, once). It speaks a small checked protocol (`src/agent/protocol.js`) through a transport. Today the transport is a
