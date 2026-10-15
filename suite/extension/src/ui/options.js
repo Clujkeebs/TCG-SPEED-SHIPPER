@@ -1,9 +1,9 @@
 import { FLAG_DEFS, getFlags, setFlag, TOS_OK } from '../flags.js';
+import { FLAG_TEXT, LOCK_NOTE } from '../flags-text.js';
 
 const box = document.getElementById('flags');
-document.getElementById('gate').textContent = TOS_OK
-  ? 'TCGplayer modules are unlocked.'
-  : 'Modules that touch TCGplayer are locked: switching them on does nothing until the Builder records "TOS OK".';
+const gate = document.getElementById('gate');
+gate.textContent = TOS_OK ? 'TCGplayer helpers are unlocked.' : LOCK_NOTE;
 
 const flags = await getFlags();
 for (const [name, def] of Object.entries(FLAG_DEFS)) {
@@ -13,6 +13,10 @@ for (const [name, def] of Object.entries(FLAG_DEFS)) {
   input.checked = flags[name];
   input.dataset.flag = name;
   input.addEventListener('change', () => setFlag(name, input.checked));
-  label.append(input, ' ' + def.label + (def.touchesTcgplayer ? ' (TCGplayer, locked)' : ''));
-  box.append(label);
+  const locked = def.touchesTcgplayer && !TOS_OK;
+  label.append(input, ' ' + FLAG_TEXT[name].title + (locked ? ' (locked)' : ''));
+  const what = document.createElement('p');
+  what.className = 'what';
+  what.textContent = FLAG_TEXT[name].what;
+  box.append(label, what);
 }

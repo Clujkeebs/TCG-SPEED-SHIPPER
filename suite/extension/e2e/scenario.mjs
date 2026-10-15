@@ -100,6 +100,23 @@ async function main() {
       }
       await ui.close();
     }
+    // Side panel (agent flag is on from the step above): ask, get a card, approve once.
+    const panel = await ctx.newPage();
+    panel.on('pageerror', (e) => problems.push('sidepanel: ' + e.message));
+    await panel.goto(`chrome-extension://${extId}/src/ui/sidepanel.html`);
+    await panel.fill('#text', 'please lower the price');
+    await panel.click('#go');
+    await panel.waitForSelector('.card button[data-answer=approve]');
+    assert.match(await panel.textContent('.card'), /Old price:\s*\$1\.50/);
+    await panel.click('.card button[data-answer=approve]');
+    await panel.waitForSelector('text=You approved this.');
+    assert.equal(await panel.locator('.card button').count(), 0, 'buttons gone after answering');
+    await panel.close();
+    const pop = await ctx.newPage();
+    await pop.goto(`chrome-extension://${extId}/src/ui/popup.html`);
+    await pop.waitForSelector('#status li');
+    assert.match(await pop.textContent('#status'), /Paste tracking\s*Locked/);
+    await pop.close();
     assert.deepEqual(problems, [], 'extension pages must load without errors');
   } finally {
     await ctx.close();
