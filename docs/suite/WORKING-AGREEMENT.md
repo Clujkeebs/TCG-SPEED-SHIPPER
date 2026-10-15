@@ -66,6 +66,9 @@ Next: (one line)
   the log entry is written, and the PR is merged or waiting for the Builder.
 - Prefer boring and small: no build tools unless needed, pinned dependencies, no remote code.
 - Keep what you measure: accuracy, speed, test counts. The owner decides on numbers.
+- Keep going through your milestone list. Stop only at a gate that needs the owner or the Builder, or
+  when your list is done. Keep your context small (read big files in parts): you are far cheaper than
+  the Builder session, which is why the heavy work happens in these sessions.
 
 ## When you stop
 End with a summary for the owner in plain words, at most 8 lines: what works, what you measured,

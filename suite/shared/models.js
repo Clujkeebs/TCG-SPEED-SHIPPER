@@ -127,6 +127,7 @@ export function validateListingDraft(d) {
   check(e, Number.isInteger(d.quantity) && d.quantity >= 1, 'quantity must be a whole number of 1 or more');
   check(e, isCents(d.priceCents), 'priceCents must be whole cents');
   check(e, d.priceRuleId === undefined || isStr(d.priceRuleId), 'priceRuleId must be a string when present');
+  check(e, d.tcgplayerProductId === undefined || (Number.isInteger(d.tcgplayerProductId) && d.tcgplayerProductId > 0), 'tcgplayerProductId must be a positive integer when present (typed by the seller; never guessed)');
   check(e, oneOf(LISTING_SOURCES, d.source), 'source must be one of ' + LISTING_SOURCES.join(', '));
   check(e, isIso(d.createdAt), 'createdAt must be an ISO date');
   return done(e);

@@ -73,6 +73,9 @@ test('validateListingDraft', () => {
   assert.equal(validateListingDraft(Object.assign(draft(), { priceCents: 1.43 })).ok, false);
   assert.equal(validateListingDraft(Object.assign(draft(), { condition: 'Near Mint' })).ok, false);
   assert.equal(validateListingDraft(Object.assign(draft(), { createdAt: 'yesterday' })).ok, false);
+  assert.equal(validateListingDraft(Object.assign(draft(), { tcgplayerProductId: 123456 })).ok, true, 'a seller-typed product id is allowed');
+  assert.equal(validateListingDraft(Object.assign(draft(), { tcgplayerProductId: 'abc' })).ok, false);
+  assert.equal(validateListingDraft(Object.assign(draft(), { tcgplayerProductId: 0 })).ok, false);
 });
 
 test('validateScanRecord', () => {

@@ -24,3 +24,18 @@ Numbers: suite tests 43 pass (10 shared + 33 Scan) (offline); no console errors 
 Needs Builder: none. (Note: ListingDraft has no field for a seller-typed product ID, so Scan keeps those in a per-session map. Say if you want a field added.)
 Needs owner: send one real TCGplayer inventory export (CSV) so the column names can be verified; until then the CSV is a draft. Sample collector numbers are also unchecked.
 Next: S1 camera and OCR (needs about 50 phone photos of real cards to measure accuracy).
+
+### 2026-10-15 · builder · go-ahead · done
+The owner said to start everything ("get started on all the Chrome extensions, agents, all that stuff",
+then the sites). His test email from the hello@ address arrived, so the Resend domain works and
+sign-up codes (`SIGNUP_EMAIL_CODE=on`) are now on in production. Reviewed Scan S0 (PR #143): only
+`suite/` and the log changed; accepted. Shared model: `ListingDraft` now allows an optional
+`tcgplayerProductId` (answers Scan's question). Sessions now: `scan` (idle after S0, told to continue
+with S1), `extension` (X0 running), `agent` (A0, new), `hq` (new: redesigns the owner's board, see
+`kickoff/hq.md`). Sites (one per product plus the Suite) wait on domains (owner) and a working Scan
+and Agent.
+Needs Builder: none
+Needs owner: a real TCGplayer inventory export (board task S4); about 50 card photos (S5, when S1
+starts); Granola set up before the Pitney Bowes call (G12); test the sign-up code with a second email
+(B13).
+Next: review PRs; write the `suite` status document to the board each morning.
