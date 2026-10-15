@@ -19,6 +19,8 @@ process.env.PB_PILOT_EMAILS = 'Pilot@Example.com, other@example.com';
 process.env.PB_ACCESS = 'pilot';
 
 const ledger = [];
+// Plans decide the letter fee: the owner is lifetime-free (Premium rates), the pilot seller is on Base.
+const profiles = { u_owner: { plan: 'free', is_lifetime_free: true, free_until: null }, u_pilot: { plan: 'base', is_lifetime_free: false, free_until: null } };
 const stripeCreated = [];
 const pbCalls = [];
 function builder(table) {
@@ -26,7 +28,9 @@ function builder(table) {
   ['select', 'eq', 'order', 'limit'].forEach((m) => { q[m] = (k, v) => { if (m === 'eq') q.filters[k] = v; return q; }; });
   q.insert = async (p) => { if (table === 'tcgss_postage_labels') ledger.push(Object.assign({}, p)); return { error: null }; };
   q.update = (p) => { q.op = 'update'; q.payload = p; return q; };
-  q.maybeSingle = async () => ({ data: ledger.find((r) => r.shipment_id === q.filters.shipment_id) || null, error: null });
+  q.maybeSingle = async () => (table === 'tcgss_profiles'
+    ? { data: profiles[q.filters.id] || null, error: null }
+    : { data: ledger.find((r) => r.shipment_id === q.filters.shipment_id) || null, error: null });
   q.then = (resolve) => {
     if (q.op === 'update') ledger.filter((r) => r.shipment_id === q.filters.shipment_id).forEach((r) => Object.assign(r, q.payload));
     return Promise.resolve({ data: null, error: null }).then(resolve);
@@ -145,7 +149,7 @@ server.listen(0, async () => {
     r = await req('POST', '/api/postage/quote', { from: FROM, labels: [{ ref: 'Q1', to: TO, service: 'letter', weightOz: 1 }, { ref: 'Q2', to: TO, service: 'ground', weightOz: 3 }] }, 'pilot-token');
     check('quote prices the whole batch and buys nothing', r.status === 200 && r.body.items.length === 2 && r.body.items.every((x) => x.ok && x.price > 0) && Math.abs(r.body.total - (r.body.items[0].price + r.body.items[1].price)) < 0.001 && !pbCalls.slice(np).some((c) => /\/shipments(\?|$)/.test(String(c.url))) && pbCalls.slice(np).some((c) => /\/rates/.test(String(c.url))), JSON.stringify(r.body));
     r = await req('POST', '/api/postage/rates', { from: FROM, to: TO, service: 'letter', weightOz: 1 }, 'owner-token');
-    check('rate quote shows postage, our fee and the price', r.status === 200 && r.body.postage === 0.78 && r.body.fee === 0.21 && r.body.price === 0.99, JSON.stringify(r.body));
+    check('rate quote shows postage, our fee and the price (Premium-rate owner: 12 cents)', r.status === 200 && r.body.postage === 0.78 && r.body.fee === 0.12 && r.body.price === 0.9, JSON.stringify(r.body));
     r = await req('POST', '/api/postage/rates', { from: FROM, to: TO, service: 'letter', weightOz: 5 }, 'owner-token');
     check('letters over 3.5 oz are refused', r.status === 400);
     pbCalls.length = 0;
@@ -158,8 +162,8 @@ server.listen(0, async () => {
     check('a batch returns one result per label, in order', r.status === 200 && res3.map((x) => x.ref).join() === 'A1,A2,A3', JSON.stringify(r.body));
     check('a bad address fails alone; the others still print', res3[0].ok && !res3[1].ok && res3[2].ok && /Invalid address/.test(res3[1].error));
     check('labels come back with tracking and a PDF', res3[0].trackingNumber && res3[0].labelPdfBase64 === 'JVBERi0x');
-    check('total = postage + fees, purchased labels only', r.body.postage === 5.28 && r.body.fees === 0.71 && r.body.total === 5.99, JSON.stringify([r.body.postage, r.body.fees, r.body.total]));
-    check('each label carries its price', res3[0].price === 0.99 && res3[2].price === 5);
+    check('total = postage + fees, purchased labels only', r.body.postage === 5.28 && r.body.fees === 0.65 && r.body.total === 5.93, JSON.stringify([r.body.postage, r.body.fees, r.body.total]));
+    check('each label carries its price (Base: 15 cent letter fee, 50 cent package fee)', res3[0].price === 0.93 && res3[0].fee === 0.15 && res3[2].price === 5 && res3[2].fee === 0.5);
     const ships = pbCalls.filter((c) => c.url.endsWith('/shipping/api/v2/shipments')).map((c) => JSON.parse(c.init.body));
     check('letter → USPS FCM LETTER on a 4x6 PDF label', ships[0].byCarrier.carrier === 'USPS' && ships[0].byCarrier.service === 'FCM' && ships[0].parcels[0].parcelType === 'LETTER' && ships[0].labelSize === 'DOC_4X6' && ships[0].labelFormat === 'PDF');
     check('ground → USPS Ground Advantage package', ships[2].byCarrier.service === 'UGA' && ships[2].parcels[0].parcelType === 'PKG');
@@ -174,9 +178,22 @@ server.listen(0, async () => {
     check('the sender phone stands in for the buyer\'s missing phone', bs.toAddress.phone === '555-123-4567');
     check('street lines map to addressLine1/2', bs.toAddress.addressLine1 === '456 Oak Ave' && bs.toAddress.addressLine2 === 'Apt 2');
     check('purchased labels are in the ledger with the buyer', ledger.length === 2 && ledger.every((x) => x.user_id === 'u_pilot' && x.mode === 'sandbox' && x.status === 'purchased'));
-    check('the ledger records postage, fee and price separately', ledger[0].amount === 0.78 && ledger[0].fee === 0.21 && ledger[0].price === 0.99);
+    check('the ledger records postage, fee and price separately', ledger[0].amount === 0.78 && ledger[0].fee === 0.15 && ledger[0].price === 0.93);
     const { feeFor } = require(path.join(__dirname, '..', 'postage.js'));
-    check('fees can be changed with env vars', feeFor('ground', { PB_FEE_GROUND: '0.4' }) === 0.4 && feeFor('letter', { PB_FEE_LETTER: 'junk' }) === 0.21 && feeFor('letter', { PB_FEE_LETTER: '99' }) === 0.21);
+    check('fees can be changed with env vars', feeFor('ground', { PB_FEE_GROUND: '0.4' }) === 0.4 && feeFor('letter', { PB_FEE_LETTER: 'junk' }) === 0.15 && feeFor('letter', { PB_FEE_LETTER: '99' }) === 0.15);
+    const { effectivePlan } = require(path.join(__dirname, '..', 'postage.js'));
+    check('letter fee by plan: Free and Base 15c, Premium 12c, Pro 10c', ['free', 'base', 'premium', 'pro'].map((pl) => feeFor('letter', {}, pl)).join() === '0.15,0.15,0.12,0.1');
+    check('an unknown plan or none pays the Free/Base letter fee', feeFor('letter', {}, 'mystery') === 0.15 && feeFor('letter', {}) === 0.15);
+    check('package fee does not depend on the plan yet', ['free', 'base', 'premium', 'pro'].every((pl) => feeFor('ground', {}, pl) === 0.5));
+    check('an env override wins for every plan', ['free', 'premium', 'pro'].every((pl) => feeFor('letter', { PB_FEE_LETTER: '0.2' }, pl) === 0.2));
+    const now = Date.parse('2026-10-14T12:00:00Z');
+    check('effective plan: lifetime-free and a live free_until window count as Premium', effectivePlan({ plan: 'free', is_lifetime_free: true }, now) === 'premium' && effectivePlan({ plan: 'free', free_until: '2026-10-20T00:00:00Z' }, now) === 'premium');
+    check('effective plan: an expired window falls back to the paid plan; no profile is Free', effectivePlan({ plan: 'base', free_until: '2026-10-01T00:00:00Z' }, now) === 'base' && effectivePlan(null, now) === 'free' && effectivePlan({ plan: 'weird' }, now) === 'free');
+    r = await req('GET', '/api/postage/status', undefined, 'pilot-token');
+    const feesFor = (rr) => Object.fromEntries((rr.body.services || []).map((x) => [x.id, x.fee]));
+    check('the postage panel shows the fees for the seller\'s own plan', r.status === 200 && feesFor(r).letter === 0.15 && feesFor(r).ground === 0.5, JSON.stringify(r.body));
+    r = await req('GET', '/api/postage/status', undefined, 'owner-token');
+    check('the owner (Premium rates) sees 12 cents on letters', r.status === 200 && feesFor(r).letter === 0.12, JSON.stringify(r.body));
     r = await req('POST', '/api/postage/labels', { from: FROM, labels: new Array(51).fill({ to: TO, service: 'letter' }) }, 'owner-token');
     check('more than 50 labels at once is refused', r.status === 400);
 
@@ -235,11 +252,11 @@ server.listen(0, async () => {
       { ref: 'C3', to: TO, service: 'letter' },
     ] }, 'pilot-token');
     const rb = r.body.results || [];
-    check('labels draw down the balance with no checkout', rb[0].ok && rb[1].ok && r.body.balanceCents === 600 - 500 - 99, JSON.stringify(r.body));
+    check('labels draw down the balance with no checkout', rb[0].ok && rb[1].ok && r.body.balanceCents === 600 - 500 - 93, JSON.stringify(r.body));
     check('when the balance runs out, the next label is quoted and never bought', !rb[2].ok && /balance/.test(rb[2].error) && pbCalls.filter((c) => c.url.endsWith('/shipping/api/v2/shipments')).length === 2);
     check('balance never goes negative', bal('u_pilot') >= 0);
     r = await req('POST', '/api/postage/labels/' + rb[0].shipmentId + '/refund', {}, 'pilot-token');
-    check('a refund puts the label price back', r.status === 200 && bal('u_pilot') === 600 - 99, String(bal('u_pilot')));
+    check('a refund puts the label price back', r.status === 200 && bal('u_pilot') === 600 - 93, String(bal('u_pilot')));
     r = await req('GET', '/api/postage/balance', undefined, 'stranger-token');
     check('balance is pilot-only', r.status === 403);
     delete process.env.PB_BALANCE;

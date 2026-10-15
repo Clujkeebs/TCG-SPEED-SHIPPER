@@ -35,8 +35,9 @@ keep the subscription as the cheap entry ticket.
   It runs in sandbox until the owner adds Pitney Bowes keys and
   switches production on.
 - Pricing model (owner's call): postage passes through at cost, plus our
-  fee per label. Defaults: **$0.21 per letter** (a tracked letter totals
-  $0.99) and **$0.30 per Ground Advantage label**. Change them with
+  fee per label. Defaults (updated Oct 14): a letter fee by plan, **15¢ Free/Base, 12¢
+  Premium, 10¢ Pro** (a tracked letter totals about $0.88-0.93), and **50¢
+  per Ground Advantage label**. Change them with
   `PB_FEE_LETTER` / `PB_FEE_GROUND`.
 - **Validation:** Rob pays **$30/mo to rent a postage meter** and said he'd
   drop it, and accept a higher subscription, for postage in the app.
@@ -52,9 +53,10 @@ payment fees on top-ups: card about 3.5% on $50, bank/ACH 0.8%):
 | Ground | $0.50 | $5.00 | $0.28 | $0.41 |
 | Ground | $1.00 | $5.50 | $0.76 | $0.91 |
 
-Recommendation: keep letters under $1 ($0.21), raise ground to $0.50, and
-push bank top-ups. About 44k labels/mo (70% letters, 30% ground) reaches
-$10k/mo from fees alone, roughly 90 sellers like Rob.
+Recommendation: keep letters under $1, ground at $0.50, and push bank
+top-ups. At the Oct 14 letter fees, about 65-70k labels/mo (70% letters, 30%
+ground, roughly 15¢ kept per label) reaches $10k/mo from fees alone, roughly
+135 sellers like Rob. The table above shows the earlier 21¢ numbers.
 
 ## What $10k/month actually takes
 

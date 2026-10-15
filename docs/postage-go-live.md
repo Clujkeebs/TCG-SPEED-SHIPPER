@@ -14,8 +14,10 @@ this file, ever: names of variables only.
   `PB_PILOT_EMAILS`) → `all`.
 - Sellers prepay a balance through Stripe Checkout; each label draws it down
   (`tcgss_postage_ledger`). Every label is saved in `tcgss_postage_labels`.
-- Fees today: letter 21¢, Ground Advantage 50¢ (`PB_FEE_LETTER`,
-  `PB_FEE_GROUND`). The pricing decision (C6) may change these.
+- Fees today: letters 15¢ on Free and Base, 12¢ on Premium, 10¢ on Pro
+  (decided Oct 14, `LETTER_FEE_BY_PLAN`); Ground Advantage 50¢ for everyone.
+  `PB_FEE_LETTER` / `PB_FEE_GROUND` override a fee for every plan. Revisit
+  after Pitney Bowes' rate sheet.
 
 ## Ask Pitney Bowes on the call
 

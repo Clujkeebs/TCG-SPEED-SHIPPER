@@ -23,18 +23,32 @@ const MAX_LABELS_PER_REQUEST = 50;
 // Below this balance, each label is quoted before it's bought (see below).
 const LOW_BALANCE_CENTS = 1500;
 
-// Our fee per label, on top of postage passed through at cost. A tracked
-// letter at $0.78 postage + $0.21 lands at $0.99, under a dollar and close
-// to a plain $0.82 stamp. Ground Advantage stays cheap enough that sellers
-// don't leave for free tools. Override with PB_FEE_LETTER / PB_FEE_GROUND.
-const DEFAULT_FEES = { letter: 0.21, ground: 0.50 };
-function feeFor(service, env = process.env) {
+// Our fee per label, on top of postage passed through at cost.
+// Letters: the owner set the rule on Oct 6 (keep 5-10 cents on every label)
+// and left the letter price to Claude on Oct 14. Decision: 15 cents on Free and
+// Base, 12 on Premium, 10 on Pro, so a tracked 1 oz letter lands around
+// $0.88-0.93 (the stamp is $0.82) and still keeps 6-11 cents after card fees
+// (docs/pricing-plan.md). Package labels stay at one fee until pricing v2 is
+// built. Override with PB_FEE_LETTER / PB_FEE_GROUND (wins for every plan).
+const LETTER_FEE_BY_PLAN = { free: 0.15, base: 0.15, premium: 0.12, pro: 0.10 };
+const DEFAULT_FEES = { letter: 0.15, ground: 0.50 };
+function feeFor(service, env = process.env, plan) {
   const v = Number(env['PB_FEE_' + String(service).toUpperCase()]);
-  return Number.isFinite(v) && v >= 0 && v <= 5 ? Math.round(v * 100) / 100 : DEFAULT_FEES[service];
+  if (Number.isFinite(v) && v >= 0 && v <= 5) return Math.round(v * 100) / 100;
+  if (service === 'letter' && LETTER_FEE_BY_PLAN[plan] != null) return LETTER_FEE_BY_PLAN[plan];
+  return DEFAULT_FEES[service];
 }
-function priced(service, postage, env) {
-  const fee = feeFor(service, env);
+function priced(service, postage, env, plan) {
+  const fee = feeFor(service, env, plan);
   return { postage, fee, price: postage == null ? null : Math.round((postage + fee) * 100) / 100 };
+}
+// The plan that sets a seller's fee. Mirrors tcgss_get_status: lifetime-free
+// accounts and anyone inside a free_until window count as Premium.
+function effectivePlan(profile, now = Date.now()) {
+  if (!profile) return 'free';
+  if (profile.is_lifetime_free) return 'premium';
+  if (profile.free_until && new Date(profile.free_until).getTime() > now) return 'premium';
+  return LETTER_FEE_BY_PLAN[profile.plan] != null ? profile.plan : 'free';
 }
 
 // Shipping 360 v2 ids: byCarrier.service + parcels[].parcelType.
@@ -168,6 +182,18 @@ module.exports = function mountPostageRoutes(router, d) {
   const { supabaseAdmin, requireUser, requireSupabase, OWNER_EMAIL, logError } = d;
   const stripe = d.stripe || (() => null);
   const SITE_URL = d.SITE_URL || 'https://tcgspeedshipper.com';
+  // A seller's plan sets the letter fee. If the lookup fails, fall back to the
+  // Free/Base fee rather than blocking the purchase.
+  async function planOf(userId) {
+    try {
+      const { data, error } = await supabaseAdmin().from('tcgss_profiles').select('plan, is_lifetime_free, free_until').eq('id', userId).maybeSingle();
+      if (error) throw error;
+      return effectivePlan(data);
+    } catch (e) {
+      if (logError) logError('postage', 'plan lookup failed:', e);
+      return 'free';
+    }
+  }
   async function balanceOf(userId) {
     const { data, error } = await supabaseAdmin().rpc('tcgss_postage_balance', { p_user: userId });
     if (error) throw error;
@@ -207,11 +233,12 @@ module.exports = function mountPostageRoutes(router, d) {
   }
 
   // What the app needs to decide whether to show the postage panel.
-  router.get('/postage/status', requireSupabase, requireUser, (req, res) => {
+  router.get('/postage/status', requireSupabase, requireUser, async (req, res) => {
     const cfg = pbConfig(env);
     // Not in the rollout yet: say it's coming, nothing more.
     if (!allowed(req.user)) return res.json({ allowed: false, comingSoon: true });
-    res.json({ allowed: true, configured: cfg.configured, mode: cfg.mode, balance: cfg.balance, topupAmounts: TOPUP_AMOUNTS, topupMin: TOPUP_MIN, topupMax: TOPUP_MAX, services: Object.keys(SERVICES).map((k) => ({ id: k, label: SERVICES[k].label, maxOz: SERVICES[k].maxOz, fee: feeFor(k, env) })) });
+    const plan = await planOf(req.user.id);
+    res.json({ allowed: true, configured: cfg.configured, mode: cfg.mode, balance: cfg.balance, topupAmounts: TOPUP_AMOUNTS, topupMin: TOPUP_MIN, topupMax: TOPUP_MAX, services: Object.keys(SERVICES).map((k) => ({ id: k, label: SERVICES[k].label, maxOz: SERVICES[k].maxOz, fee: feeFor(k, env, plan) })) });
   });
 
   // Quote one shipment: { from, to, service, weightOz } → { amount }.
@@ -229,7 +256,7 @@ module.exports = function mountPostageRoutes(router, d) {
       const shipment = buildShipment({ from: from.address, to: to.address, service: b.service, weightOz: oz, phone: env.PB_DEFAULT_PHONE });
       const r = await pb().rate(shipment);
       const rate = r && (Array.isArray(r.rate) ? r.rate[0] : r.rate || (r.rates && r.rates[0]));
-      res.json(Object.assign({ service: b.service, mode: pbConfig(env).mode }, priced(b.service, money(rate), env)));
+      res.json(Object.assign({ service: b.service, mode: pbConfig(env).mode }, priced(b.service, money(rate), env, await planOf(req.user.id))));
     } catch (err) { pbFail(res, err, 'Rate quote'); }
   });
 
@@ -244,6 +271,7 @@ module.exports = function mountPostageRoutes(router, d) {
     const from = pbAddress(b.from);
     if (from.missing.length) return res.status(400).json({ error: 'Return address needs: ' + from.missing.join(', ') });
     if (!senderPhone(from.address, env)) return res.status(400).json(PHONE_NEEDED);
+    const plan = await planOf(req.user.id);
     const quoteOne = async (item) => {
       const ref = clean(item && item.ref, 40);
       const s = SERVICES[item && item.service];
@@ -254,7 +282,7 @@ module.exports = function mountPostageRoutes(router, d) {
       if (oz < s.minOz || oz > s.maxOz) return { ref, ok: false, error: s.label + ' allows up to ' + s.maxOz + ' oz' };
       try {
         const q = await pb().rate(buildShipment({ from: from.address, to: to.address, service: item.service, weightOz: oz, phone: env.PB_DEFAULT_PHONE }));
-        const p = priced(item.service, money(q && (Array.isArray(q.rate) ? q.rate[0] : q.rate)), env);
+        const p = priced(item.service, money(q && (Array.isArray(q.rate) ? q.rate[0] : q.rate)), env, plan);
         return p.price == null ? { ref, ok: false, error: 'No price came back' } : Object.assign({ ref, ok: true }, p);
       } catch (err) {
         return { ref, ok: false, error: err instanceof PbError ? err.message : 'Quote failed, please retry' };
@@ -285,6 +313,7 @@ module.exports = function mountPostageRoutes(router, d) {
     if (!senderPhone(from.address, env)) return res.status(400).json(PHONE_NEEDED);
     const mode = pbConfig(env).mode;
     const useBalance = pbConfig(env).balance;
+    const plan = await planOf(req.user.id);
     if (useBalance) {
       let bal;
       try { bal = await balanceOf(req.user.id); } catch (e) { return res.status(500).json({ error: 'Could not read your postage balance' }); }
@@ -309,7 +338,7 @@ module.exports = function mountPostageRoutes(router, d) {
         // quote first and stop before buying a label nobody can pay for.
         if (useBalance && known != null && known < LOW_BALANCE_CENTS) {
           const q = await pb().rate(shipment);
-          const est = priced(item.service, money(q && (Array.isArray(q.rate) ? q.rate[0] : q.rate)), env).price;
+          const est = priced(item.service, money(q && (Array.isArray(q.rate) ? q.rate[0] : q.rate)), env, plan).price;
           if (est == null || cents(est) > known) {
             outOfFunds = true;
             results.push({ ref, ok: false, error: 'Not bought: balance too low' });
@@ -322,7 +351,7 @@ module.exports = function mountPostageRoutes(router, d) {
           shipmentId: l.shipmentId, trackingNumber: l.trackingNumber,
           labelPdfBase64: l.labelPdfBase64,
         };
-        Object.assign(out, priced(item.service, money(l.rate), env));
+        Object.assign(out, priced(item.service, money(l.rate), env, plan));
         if (useBalance) {
           // Pay for it from the balance; if that fails, void the label at once
           // so we never hand out postage nobody paid for.
@@ -454,5 +483,7 @@ module.exports.pbAddress = pbAddress;
 module.exports.buildShipment = buildShipment;
 module.exports.SERVICES = SERVICES;
 module.exports.feeFor = feeFor;
+module.exports.effectivePlan = effectivePlan;
+module.exports.LETTER_FEE_BY_PLAN = LETTER_FEE_BY_PLAN;
 module.exports.handleTopupSession = handleTopupSession;
 module.exports.TOPUP_AMOUNTS = TOPUP_AMOUNTS;
