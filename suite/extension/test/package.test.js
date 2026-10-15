@@ -43,3 +43,14 @@ test('no remote code, analytics or model names in the sources', () => {
     assert.ok(!/analytics|gtag|sentry/i.test(text), f);
   }
 });
+
+test('the side-panel protocol mirror matches suite/agent/protocol.js', () => {
+  const upstream = readFileSync(join(root, '..', 'agent', 'protocol.js'), 'utf8');
+  const mine = readFileSync(join(root, 'src/agent/protocol.js'), 'utf8');
+  for (const [name, expected] of [['PROTOCOL_VERSION', '1'], ['PANEL_SOURCE', "'tcgss-panel'"], ['AGENT_SOURCE', "'tcgss-agent'"], ['MAX_TEXT', '2000'], ['MAX_ID', '80']]) {
+    const re = new RegExp(`export const ${name} = ([^;]+);`);
+    assert.equal(upstream.match(re)?.[1], expected, 'upstream ' + name + ' changed');
+    assert.equal(mine.match(re)?.[1], expected, 'mirror ' + name + ' out of date');
+  }
+  for (const event of ['agent.progress', 'agent.approval-needed', 'agent.answer', 'agent.stopped']) assert.ok(upstream.includes(`'${event}'`) && mine.includes(`'${event}'`), event);
+});

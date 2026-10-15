@@ -226,3 +226,27 @@ Renamed the board "Suite HQ" (same address, owner data untouched). Library now o
 Needs Builder: the milestone status comes from the product `milestone` text in `suite/status` (it picks the last S/X/A code it finds, e.g. "S0 done, S1 next" gives S1 as next). Keep that wording style. Product ids it understands: shipper, scan, extension (or ext), agent, sites.
 Needs owner: none
 Next: none
+
+### 2026-10-15 · extension · Agent panel on the real protocol · done
+Rebuilt the side panel on `suite/agent/protocol.js` (read CONTEXT.md first). The panel now sends `tcgss-panel` requests
+(`agent.hello/ask/approve/stop/resume`) and handles `tcgss-agent` responses and events (`agent.progress`,
+`agent.approval-needed`, `agent.answer`, `agent.stopped`), all checked before use; a test fails if our mirror drifts from the
+upstream constants. What the owner sees: a goal box ("What do you want done?"), a visible plan, approval cards (what, with every
+argument as plain text; Approve / Deny, once), a Stop button that always works (and Resume), and a "what I remember" list with
+Forget. Practice mode on made-up data via a fixture transport that follows the same protocol. TCGplayer modules still off.
+Numbers: `cd suite && npm test` 196 pass, 0 fail (also under `env -i PATH HOME`), root `npm test` 17 suites pass; the whole
+panel flow (plan, card, approve, forget memory, stop, resume) runs in real Chromium.
+Needs Builder: the protocol has no plan or memory yet. The panel supports these PROPOSED additions and shows them only if `hello`
+lists them in `types`: event `agent.plan` `{steps:[{text,state: todo|doing|done|skipped}]}`; event `agent.memory`
+`{items:[{id,text}]}`; requests `agent.memory.list` and `agent.memory.forget {id}`. Also: `agent.progress` today carries only
+`{tool, ok, denied}`; a short plain-words `summary` and the `why` / `undo` text for approval cards would help the "what, why, undo" card
+in CONTEXT.md. The real wiring (service worker <-> `createAgentService`, and the server proxy) is yours; the transport shape is
+`request(msg) -> Promise<response>` plus `onEvent(fn)`.
+Needs owner: none new.
+Next: nothing blocked on me except X2 ("TOS OK") and the saved pages.
+
+### 2026-10-15 · hq · agents panel and protect list · done
+Read `CONTEXT.md`. Suite tab now opens with an Agents panel: each chat's goal, its current milestone and its last log line, all from `suite/status`. Roadmap tab now has a Protect list: nine business risks, what guards each, a one-line status and the next action (statuses follow the owner's ticks, e.g. leaked keys, sign-up check, uptime alert, statement name). Milestone status now understands text like "X1 done, X2 waits for TOS OK, X3 next" (X2 shows as waiting). Re-checked at 820x1180, 1180x820 and 390x844: no errors, no sideways scroll.
+Needs Builder: (1) the Agents panel matches log lines by the `who` field: scan, extension, agent, hq, builder. Keep those names. (2) Two Protect rows are unverified and say so: Backups ("Not checked") and Usage limit. Please confirm the Supabase backup plan and a restore test, then tell me the status to show.
+Needs owner: none
+Next: none
