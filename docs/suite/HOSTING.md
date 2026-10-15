@@ -5,6 +5,7 @@ each address separate, so a Suite app can never read the Shipper's sign-in data,
 touch the other. The live Shipper server never imports `suite/` and does not serve it.
 
 ## Scan test copy (private preview)
+- Address: https://suite-scan-preview-production.up.railway.app/ (opens the app; Railway service `suite-scan-preview`, created Oct 15).
 - A second Railway service in the same project (name: `suite-scan-preview`), built from `main`.
 - Settings live on the service in Railway (set with `update-service`), not in a file, because the repo's root
   `railway.json` is shared by both services. That file now holds only the health check (`/api/health`, which
