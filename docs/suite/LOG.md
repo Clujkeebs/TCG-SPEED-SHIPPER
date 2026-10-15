@@ -157,3 +157,15 @@ Needs Builder: approve vendoring the WebAssembly OCR build (still the one thing 
 `cd suite && npm test` is green on main now (an extension e2e test timed out in my sandbox).
 Needs owner: about 50 phone photos of real cards (SCAN-EVAL.md); a real TCGplayer export.
 Next: when the engine is approved, plug it in and run the harness on the photos.
+### 2026-10-15 · extension · hardening · done
+Owner asked to make the extension bullet proof. Added: a 64 KB cap on any record sent through the bridge (and
+refusal of records that cannot be serialized); fuzz tests (junk of every type, and good messages with each field
+broken, never throw and are never accepted); browser checks that a page on a non-allow-listed origin gets no answer
+at all, that the popup, side panel and settings page load with zero errors, and that switching a TCGplayer flag on in
+Settings saves it but leaves the module locked.
+Numbers: `cd suite && npm test` 139 pass, 0 fail (also under `env -i PATH HOME`); root `npm test` 17 suites pass;
+the browser tests passed 10 of 10 repeated runs in a clean environment.
+Not covered (honest list): real Chrome with a real signed-in profile; Edge/Firefox; the side panel opening from a click;
+anything on real TCGplayer pages (selectors are still guesses until saved pages arrive).
+Needs Builder: none. Needs owner: the saved TCGplayer pages listed in the X1 entry.
+Next: X3 when there is room.

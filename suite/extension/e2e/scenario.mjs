@@ -66,6 +66,41 @@ async function main() {
     assert.equal(bad.ok, false);
     const unknown = await page.evaluate(() => window.tcgssSend('run.script', { code: '1' }));
     assert.equal(unknown.ok, false);
+
+    // A page on an origin that is NOT allow-listed (127.0.0.1) gets no bridge at all.
+    const stranger = await ctx.newPage();
+    await stranger.goto(`http://127.0.0.1:${port}/`);
+    const silent = await stranger.evaluate(() => Promise.race([
+      window.tcgssSend('hello').then(() => 'answered'),
+      new Promise((r) => setTimeout(() => r('silent'), 1500))
+    ]));
+    assert.equal(silent, 'silent', 'non-allow-listed origin must get no answer');
+    await stranger.close();
+
+    // The extension's own pages load without errors, and a TCGplayer flag stays inert.
+    const extId = new URL(sw.url()).host;
+    const problems = [];
+    for (const file of ['options.html', 'popup.html', 'sidepanel.html']) {
+      const ui = await ctx.newPage();
+      ui.on('pageerror', (e) => problems.push(file + ': ' + e.message));
+      ui.on('console', (m) => { if (m.type() === 'error') problems.push(file + ': ' + m.text()); });
+      await ui.goto(`chrome-extension://${extId}/src/ui/${file}`);
+      if (file === 'options.html') {
+        await ui.waitForSelector('input[data-flag]');
+        assert.equal(await ui.locator('input[data-flag]').count(), 4);
+        await ui.check('input[data-flag="pasteTracking"]');
+        await ui.check('input[data-flag="agentPanel"]');
+        const res = await ui.evaluate(async () => {
+          const f = await import('./../flags.js');
+          return { flags: await f.getFlags(), paste: await f.isEnabled('pasteTracking'), agent: await f.isEnabled('agentPanel') };
+        });
+        assert.equal(res.flags.pasteTracking, true, 'the switch is saved');
+        assert.equal(res.paste, false, 'but the TCGplayer module stays locked');
+        assert.equal(res.agent, true);
+      }
+      await ui.close();
+    }
+    assert.deepEqual(problems, [], 'extension pages must load without errors');
   } finally {
     await ctx.close();
     server.close();
