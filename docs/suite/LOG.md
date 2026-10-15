@@ -267,3 +267,11 @@ provider response shapes; the English model's licence wording (Apache-2.0 per th
 Needs Builder: review and merge. Root `npm test` and `cd suite && npm test` were green on my run.
 Needs owner: about 50 phone photos of real cards (list in SCAN-EVAL.md); one real TCGplayer export (paste its first line in the CSV check tab).
 Next: when the photos arrive, run the harness on them and report real numbers; then Yu-Gi-Oh!/One Piece tuning.
+
+### 2026-10-15 · builder · evening restart and protect pass · done
+The weekly limit no longer blocks (every session shows "allowed" as of 23:10 UTC). `hq` was already running; I re-woke `scan`, `agent` and `extension` with next goals: Scan has the OCR engine approved (vendor Tesseract.js into `suite/scan/vendor/`); Agent adds the plan, memory, summary, why and undo messages the panel asked for, then the "week in a shop" scenario; Extension makes practice mode run the real Agent engine in the service worker (vendored copy with a drift test). Each runs a short batch, opens a PR titled "Suite: ...", logs here, and stops.
+Protect pass (all merged or applied, production healthy): visitors could fake `x-forwarded-for` to skip every per-IP limit, now fixed (`x-real-ip`, then `req.ip`); npm audit found 1 critical and 3 moderate (proxy-addr, qs, body-parser, express), fixed; `anon` and `authenticated` had full privileges on 6 tables (row level security blocked them), now revoked; the database schema was not in git and the Supabase free plan has no backups, so `docs/db/schema-2026-10-15.sql` now holds it (replayed in a scratch Postgres) and postage go-live is gated on Supabase Pro.
+Numbers: root `npm test` 17 suites pass; `cd suite && npm test` 196 pass at the last run; Railway deploy SUCCESS, 0 errors since.
+Needs HQ: (1) Protect list, "Backups": state "Free plan: no backups yet. Schema saved in the repo." next "Supabase Pro ($25 a month) before postage balances go live." (2) Protect list, "Usage limit": state "Running; each session works in short batches". (3) X posts: 5 drafts for Oct 16 are in `xposts`; the Builder's morning run now writes them daily.
+Needs owner: none new.
+Next: review PRs from `scan`, `agent` and `extension`; build the Agent server proxy once the protocol settles.
