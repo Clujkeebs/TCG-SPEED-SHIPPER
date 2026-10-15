@@ -92,7 +92,7 @@ export function makeOrders({ seed = 7, count = 320, end = FIXTURE_NOW, days = 18
 // Stock levels for the sample printings: some plentiful, some low, some sold out.
 export function makeInventory({ seed = 11, printings = loadPrintings() } = {}) {
   const rand = seededRandom(seed);
-  return printings.map((p, i) => ({
+  const rows = printings.map((p, i) => ({
     printingId: p.id,
     condition: 'NM',
     finish: p.finishes[0],
@@ -102,4 +102,11 @@ export function makeInventory({ seed = 11, printings = loadPrintings() } = {}) {
     location: 'Box ' + (1 + (i % 6)),
     source: 'import',
   }));
+  // some foil copies too, listed a little high so a reprice has something to do
+  printings.forEach((p, i) => {
+    const foil = p.prices && p.prices.byFinish.foil && p.prices.byFinish.foil.market;
+    if (!p.finishes.includes('foil') || !foil || i % 3 !== 0) return;
+    rows.push({ printingId: p.id, condition: 'NM', finish: 'foil', language: p.language, quantity: 1 + Math.floor(rand() * 5), priceCents: Math.round(foil * 1.12), location: 'Box ' + (1 + (i % 6)), source: 'import' });
+  });
+  return rows;
 }

@@ -49,7 +49,7 @@ test('three tones give three different drafts, same facts, none promise anything
   const o = orders.find((x) => x.shippedAt);
   const drafts = TONES.map((tone) => draftReply(o, 'where is it', { tone, sellerName: 'Corner Cards' }));
   assert.equal(new Set(drafts.map((d) => d.draft)).size, 3);
-  for (const d of drafts) { assert.ok(d.draft.includes(o.trackingNumber)); assert.equal(d.sent, false); }
+  for (const d of drafts) { assert.ok(d.draft.includes(o.trackingNumber)); assert.equal(d.sent, false); assert.ok(d.draft.includes('{{first_name}}')); assert.ok(!d.draft.includes(o.shipTo.name.split(' ')[0])); }
   assert.ok(drafts[1].draft.startsWith('Dear '));
   assert.ok(drafts[2].draft.length < drafts[0].draft.length);
   for (const tone of TONES) for (const msg of ['arrived damaged', 'wrong card', 'cancel please', 'hello']) {

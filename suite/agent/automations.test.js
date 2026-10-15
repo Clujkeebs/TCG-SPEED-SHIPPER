@@ -31,7 +31,8 @@ test('cron parsing and matching', () => {
 test('saved shape is checked, including the cron text', () => {
   assert.equal(validateSaved(base).ok, true);
   assert.match(validateSaved({ ...base, trigger: { type: 'cron', value: 'soon' } }).errors.join(), /cron/);
-  assert.match(validateSaved({ ...base, trigger: { type: 'event', value: 'new-order' } }).errors.join(), /not supported/);
+  assert.equal(validateSaved({ ...base, trigger: { type: 'event', value: 'new-order' } }).ok, true);
+  assert.match(validateSaved({ ...base, trigger: { type: 'event', value: 'full-moon' } }).errors.join(), /event trigger/);
   assert.equal(validateSaved({ ...base, steps: [] }).ok, false);
   assert.equal(validateSaved({ ...base, approvalMode: 'sometimes' }).ok, false);
 });

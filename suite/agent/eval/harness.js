@@ -5,18 +5,37 @@ import { createLimits } from '../limits.js';
 import { runAgent, scriptedModel } from '../loop.js';
 import { registerAll } from '../tools/index.js';
 import { makeOrders, makeInventory, loadPrintings, FIXTURE_NOW } from '../fixtures/orders.js';
+import { makeMessages } from '../fixtures/messages.js';
+import { createShopMemory } from '../memory.js';
+import { createInbox } from '../inbox.js';
+import { createRulePlanner } from '../planner.js';
+import { createAgent } from '../agent.js';
+import { createAutomationStore } from '../automations.js';
+import { createReportStore } from '../jobs.js';
 import { TOOL_TIERS } from '../../shared/models.js';
 import { scenarios } from './scenarios.js';
 import { automationScenarios } from './automation-scenarios.js';
 
-export function makeWorld() {
+// A whole shop on made-up data. `clock` can be changed by a scenario to move through the week.
+export function makeWorld({ clockStart = FIXTURE_NOW } = {}) {
   const printings = loadPrintings();
-  const clock = () => new Date(FIXTURE_NOW);
+  const state = { now: clockStart };
+  const clock = () => new Date(state.now);
+  const nowIso = () => state.now;
   const audit = createAuditLog({ now: clock });
   const limits = createLimits({ now: clock });
   const registry = createRegistry({ audit, limits });
-  registerAll(registry, { orders: makeOrders({ printings }), inventory: makeInventory({ printings }), printings, now: FIXTURE_NOW });
-  return { registry, audit, limits };
+  const orders = makeOrders({ printings });
+  const inventory = makeInventory({ printings });
+  const messages = makeMessages();
+  const memory = createShopMemory({ now: clock });
+  const automations = createAutomationStore();
+  const reports = createReportStore({ now: clock });
+  registerAll(registry, { orders, inventory, printings, messages, memory, automations, now: nowIso });
+  const inbox = createInbox({ registry, now: clock });
+  const planner = createRulePlanner({ registry, memory, now: nowIso });
+  const agent = createAgent({ registry, memory, inbox, planner, reports, now: nowIso });
+  return { registry, audit, limits, memory, inbox, planner, agent, automations, reports, orders, inventory, printings, messages, state, nowIso };
 }
 
 export async function runScenario(sc) {
@@ -57,7 +76,7 @@ export async function runAll(list = scenarios) {
   return results;
 }
 
-export function toMarkdown(results, date) {
+export function toMarkdown(results, date, week) {
   const passed = results.filter((r) => r.pass).length;
   const lines = [
     '# Agent evaluation',
@@ -74,6 +93,22 @@ export function toMarkdown(results, date) {
     lines.push(`## ${heading}`, '', '| Scenario | What it checks | Tools used | Result |', '|---|---|---|---|');
     for (const r of rows) lines.push(`| ${r.id} | ${r.title} | ${r.calls.join(', ') || 'none'} | ${r.pass ? 'pass' : 'FAIL: ' + r.failures.join('; ')} |`);
     lines.push('');
+  }
+  if (week) {
+    lines.push('## A week in a shop (the done bar)', '',
+      `One scripted week on made-up data, offline, driven through the same checked messages the side panel uses. No model, no network, nothing real changed. **${week.measured.checksPassed} of ${week.measured.checks} checks pass.**`, '',
+      '| Day | What happened |', '|---|---|');
+    for (const d of week.days) lines.push(`| ${d.name}: ${d.title} | ${d.steps.join(' ')} |`);
+    lines.push('', '### Checks', '', '| Check | Result |', '|---|---|');
+    for (const c of week.checks) lines.push(`| ${c.name} | ${c.pass ? 'pass' : 'FAIL ' + c.detail} |`);
+    const m = week.measured;
+    lines.push('', '### Measured', '',
+      `- Audit trail: ${m.auditEntries} entries (${Object.entries(m.byTier).map(([k, v]) => v + ' ' + k).join(', ')}); ${m.byOutcome.ok} ok, ${m.byOutcome.denied || 0} refused.`,
+      `- Approval cards: ${m.cards} (${Object.entries(m.cardsByStatus).map(([k, v]) => v + ' ' + k).join(', ')}).`,
+      `- Plans: ${m.plans}. Background job reports: ${m.reports}. Shop facts at the end: ${m.memoryFacts}.`,
+      `- Messages to the side panel: ${m.panelEvents} (${Object.entries(m.eventsByType).map(([k, v]) => v + ' ' + k.replace('agent.', '')).join(', ')}).`,
+      `- Whole week ran in about ${m.milliseconds} ms. Same numbers on every run (a test checks that).`, '',
+      'The full audit trail is exportable as one JSON line per call (`audit.exportJsonl()`); arguments appear only as hashes.', '');
   }
   lines.push('Also covered by unit tests (not scenarios): tool limits and kill switch, audit log hashing, side-panel message protocol, CSV import and export, deal-finder allow-list.');
   lines.push('', 'Re-run: `node suite/agent/eval/run.js` (add `--write` to refresh this file).', '');
