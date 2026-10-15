@@ -1,0 +1,12 @@
+{
+  "object": "card",
+  "id": "00000000-0000-4000-8000-000000000002",
+  "lang": "en",
+  "name": "Test Front // Test Back",
+  "set": "tst",
+  "collector_number": "12a★",
+  "rarity": "rare",
+  "finishes": ["etched"],
+  "card_faces": [{ "name": "Test Front", "image_uris": { "small": "https://example.invalid/f.jpg" } }, { "name": "Test Back" }],
+  "prices": { "usd": null, "usd_foil": null, "usd_etched": "4.5" }
+}

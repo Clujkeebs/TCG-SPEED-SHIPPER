@@ -1,0 +1,14 @@
+{
+  "object": "card",
+  "id": "00000000-0000-4000-8000-000000000001",
+  "lang": "en",
+  "name": "Test Bolt",
+  "set": "tst",
+  "set_name": "Test Set",
+  "collector_number": "149",
+  "rarity": "common",
+  "finishes": ["nonfoil", "foil"],
+  "tcgplayer_id": 900001,
+  "image_uris": { "small": "https://example.invalid/small.jpg" },
+  "prices": { "usd": "0.35", "usd_foil": "1.20", "usd_etched": null }
+}

@@ -1,0 +1,2924 @@
+[
+ {
+  "id": "mtg:sample:m11-149-lightning-bolt",
+  "game": "mtg",
+  "name": "Lightning Bolt",
+  "setCode": "M11",
+  "setName": "Magic 2011",
+  "number": "149",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "common",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 150,
+     "low": 128,
+     "mid": 165
+    },
+    "foil": {
+     "market": 240,
+     "low": 204,
+     "mid": 264
+    }
+   }
+  }
+ },
+ {
+  "id": "mtg:sample:mh2-267-counterspell",
+  "game": "mtg",
+  "name": "Counterspell",
+  "setCode": "MH2",
+  "setName": "Modern Horizons 2",
+  "number": "267",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "uncommon",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 220,
+     "low": 187,
+     "mid": 242
+    },
+    "foil": {
+     "market": 352,
+     "low": 299,
+     "mid": 387
+    }
+   }
+  }
+ },
+ {
+  "id": "mtg:sample:cmd-259-sol-ring",
+  "game": "mtg",
+  "name": "Sol Ring",
+  "setCode": "CMD",
+  "setName": "Commander 2011",
+  "number": "259",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "uncommon",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 1400,
+     "low": 1190,
+     "mid": 1540
+    },
+    "foil": {
+     "market": 2240,
+     "low": 1904,
+     "mid": 2464
+    }
+   }
+  }
+ },
+ {
+  "id": "mtg:sample:dom-168-llanowar-elves",
+  "game": "mtg",
+  "name": "Llanowar Elves",
+  "setCode": "DOM",
+  "setName": "Dominaria",
+  "number": "168",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "common",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 40,
+     "low": 34,
+     "mid": 44
+    },
+    "foil": {
+     "market": 64,
+     "low": 54,
+     "mid": 70
+    }
+   }
+  }
+ },
+ {
+  "id": "mtg:sample:a25-82-dark-ritual",
+  "game": "mtg",
+  "name": "Dark Ritual",
+  "setCode": "A25",
+  "setName": "Masters 25",
+  "number": "82",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "common",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 180,
+     "low": 153,
+     "mid": 198
+    },
+    "foil": {
+     "market": 288,
+     "low": 245,
+     "mid": 317
+    }
+   }
+  }
+ },
+ {
+  "id": "mtg:sample:con-15-path-to-exile",
+  "game": "mtg",
+  "name": "Path to Exile",
+  "setCode": "CON",
+  "setName": "Conflux",
+  "number": "15",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "uncommon",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 1100,
+     "low": 935,
+     "mid": 1210
+    },
+    "foil": {
+     "market": 1760,
+     "low": 1496,
+     "mid": 1936
+    }
+   }
+  }
+ },
+ {
+  "id": "mtg:sample:m12-165-birds-of-paradise",
+  "game": "mtg",
+  "name": "Birds of Paradise",
+  "setCode": "M12",
+  "setName": "Magic 2012",
+  "number": "165",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 350,
+     "low": 298,
+     "mid": 385
+    },
+    "foil": {
+     "market": 560,
+     "low": 476,
+     "mid": 616
+    }
+   }
+  }
+ },
+ {
+  "id": "mtg:sample:lea-232-black-lotus",
+  "game": "mtg",
+  "name": "Black Lotus",
+  "setCode": "LEA",
+  "setName": "Limited Edition Alpha",
+  "number": "232",
+  "finishes": [
+   "nonfoil"
+  ],
+  "language": "en",
+  "rarity": "rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 4500000,
+     "low": 3825000,
+     "mid": 4950000
+    }
+   }
+  }
+ },
+ {
+  "id": "mtg:sample:m19-176-giant-growth",
+  "game": "mtg",
+  "name": "Giant Growth",
+  "setCode": "M19",
+  "setName": "Core Set 2019",
+  "number": "176",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "common",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 15,
+     "low": 13,
+     "mid": 17
+    },
+    "foil": {
+     "market": 24,
+     "low": 20,
+     "mid": 26
+    }
+   }
+  }
+ },
+ {
+  "id": "mtg:sample:dom-38-serra-angel",
+  "game": "mtg",
+  "name": "Serra Angel",
+  "setCode": "DOM",
+  "setName": "Dominaria",
+  "number": "38",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "uncommon",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 60,
+     "low": 51,
+     "mid": 66
+    },
+    "foil": {
+     "market": 96,
+     "low": 82,
+     "mid": 106
+    }
+   }
+  }
+ },
+ {
+  "id": "mtg:sample:m19-159-shivan-dragon",
+  "game": "mtg",
+  "name": "Shivan Dragon",
+  "setCode": "M19",
+  "setName": "Core Set 2019",
+  "number": "159",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 90,
+     "low": 77,
+     "mid": 99
+    },
+    "foil": {
+     "market": 144,
+     "low": 122,
+     "mid": 158
+    }
+   }
+  }
+ },
+ {
+  "id": "mtg:sample:a25-47-wrath-of-god",
+  "game": "mtg",
+  "name": "Wrath of God",
+  "setCode": "A25",
+  "setName": "Masters 25",
+  "number": "47",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 400,
+     "low": 340,
+     "mid": 440
+    },
+    "foil": {
+     "market": 640,
+     "low": 544,
+     "mid": 704
+    }
+   }
+  }
+ },
+ {
+  "id": "mtg:sample:m21-178-cultivate",
+  "game": "mtg",
+  "name": "Cultivate",
+  "setCode": "M21",
+  "setName": "Core Set 2021",
+  "number": "178",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "common",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 20,
+     "low": 17,
+     "mid": 22
+    },
+    "foil": {
+     "market": 32,
+     "low": 27,
+     "mid": 35
+    }
+   }
+  }
+ },
+ {
+  "id": "mtg:sample:pcy-45-rhystic-study",
+  "game": "mtg",
+  "name": "Rhystic Study",
+  "setCode": "PCY",
+  "setName": "Prophecy",
+  "number": "45",
+  "finishes": [
+   "nonfoil"
+  ],
+  "language": "en",
+  "rarity": "rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 4000,
+     "low": 3400,
+     "mid": 4400
+    }
+   }
+  }
+ },
+ {
+  "id": "mtg:sample:2xm-36-swords-to-plowshares",
+  "game": "mtg",
+  "name": "Swords to Plowshares",
+  "setCode": "2XM",
+  "setName": "Double Masters",
+  "number": "36",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "uncommon",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 2200,
+     "low": 1870,
+     "mid": 2420
+    },
+    "foil": {
+     "market": 3520,
+     "low": 2992,
+     "mid": 3872
+    }
+   }
+  }
+ },
+ {
+  "id": "mtg:sample:cmd-270-command-tower",
+  "game": "mtg",
+  "name": "Command Tower",
+  "setCode": "CMD",
+  "setName": "Commander 2011",
+  "number": "270",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "common",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 100,
+     "low": 85,
+     "mid": 110
+    },
+    "foil": {
+     "market": 160,
+     "low": 136,
+     "mid": 176
+    }
+   }
+  }
+ },
+ {
+  "id": "mtg:sample:eld-331-arcane-signet",
+  "game": "mtg",
+  "name": "Arcane Signet",
+  "setCode": "ELD",
+  "setName": "Throne of Eldraine",
+  "number": "331",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "common",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 120,
+     "low": 102,
+     "mid": 132
+    },
+    "foil": {
+     "market": 192,
+     "low": 163,
+     "mid": 211
+    }
+   }
+  }
+ },
+ {
+  "id": "mtg:sample:rtr-35-cyclonic-rift",
+  "game": "mtg",
+  "name": "Cyclonic Rift",
+  "setCode": "RTR",
+  "setName": "Return to Ravnica",
+  "number": "35",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 1300,
+     "low": 1105,
+     "mid": 1430
+    },
+    "foil": {
+     "market": 2080,
+     "low": 1768,
+     "mid": 2288
+    }
+   }
+  }
+ },
+ {
+  "id": "mtg:sample:uma-93-demonic-tutor",
+  "game": "mtg",
+  "name": "Demonic Tutor",
+  "setCode": "UMA",
+  "setName": "Ultimate Masters",
+  "number": "93",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "uncommon",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 1800,
+     "low": 1530,
+     "mid": 1980
+    },
+    "foil": {
+     "market": 2880,
+     "low": 2448,
+     "mid": 3168
+    }
+   }
+  }
+ },
+ {
+  "id": "mtg:sample:ema-38-brainstorm",
+  "game": "mtg",
+  "name": "Brainstorm",
+  "setCode": "EMA",
+  "setName": "Eternal Masters",
+  "number": "38",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "common",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 130,
+     "low": 111,
+     "mid": 143
+    },
+    "foil": {
+     "market": 208,
+     "low": 177,
+     "mid": 229
+    }
+   }
+  }
+ },
+ {
+  "id": "mtg:sample:rav-213-lightning-helix",
+  "game": "mtg",
+  "name": "Lightning Helix",
+  "setCode": "RAV",
+  "setName": "Ravnica: City of Guilds",
+  "number": "213",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "uncommon",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 200,
+     "low": 170,
+     "mid": 220
+    },
+    "foil": {
+     "market": 320,
+     "low": 272,
+     "mid": 352
+    }
+   }
+  }
+ },
+ {
+  "id": "mtg:sample:lrw-66-mulldrifter",
+  "game": "mtg",
+  "name": "Mulldrifter",
+  "setCode": "LRW",
+  "setName": "Lorwyn",
+  "number": "66",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "common",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 80,
+     "low": 68,
+     "mid": 88
+    },
+    "foil": {
+     "market": 128,
+     "low": 109,
+     "mid": 141
+    }
+   }
+  }
+ },
+ {
+  "id": "mtg:sample:m21-265-island",
+  "game": "mtg",
+  "name": "Island",
+  "setCode": "M21",
+  "setName": "Core Set 2021",
+  "number": "265",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "common",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 5,
+     "low": 4,
+     "mid": 6
+    },
+    "foil": {
+     "market": 8,
+     "low": 7,
+     "mid": 9
+    }
+   }
+  }
+ },
+ {
+  "id": "mtg:sample:m21-274-forest",
+  "game": "mtg",
+  "name": "Forest",
+  "setCode": "M21",
+  "setName": "Core Set 2021",
+  "number": "274",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "common",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 5,
+     "low": 4,
+     "mid": 6
+    },
+    "foil": {
+     "market": 8,
+     "low": 7,
+     "mid": 9
+    }
+   }
+  }
+ },
+ {
+  "id": "mtg:sample:zen-126-goblin-guide",
+  "game": "mtg",
+  "name": "Goblin Guide",
+  "setCode": "ZEN",
+  "setName": "Zendikar",
+  "number": "126",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 900,
+     "low": 765,
+     "mid": 990
+    },
+    "foil": {
+     "market": 1440,
+     "low": 1224,
+     "mid": 1584
+    }
+   }
+  }
+ },
+ {
+  "id": "mtg:sample:ths-107-thoughtseize",
+  "game": "mtg",
+  "name": "Thoughtseize",
+  "setCode": "THS",
+  "setName": "Theros",
+  "number": "107",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 1500,
+     "low": 1275,
+     "mid": 1650
+    },
+    "foil": {
+     "market": 2400,
+     "low": 2040,
+     "mid": 2640
+    }
+   }
+  }
+ },
+ {
+  "id": "mtg:sample:isd-78-snapcaster-mage",
+  "game": "mtg",
+  "name": "Snapcaster Mage",
+  "setCode": "ISD",
+  "setName": "Innistrad",
+  "number": "78",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 2500,
+     "low": 2125,
+     "mid": 2750
+    },
+    "foil": {
+     "market": 4000,
+     "low": 3400,
+     "mid": 4400
+    }
+   }
+  }
+ },
+ {
+  "id": "pokemon:sample:base1-4-charizard",
+  "game": "pokemon",
+  "name": "Charizard",
+  "setCode": "BASE1",
+  "setName": "Base Set",
+  "number": "4",
+  "finishes": [
+   "holo",
+   "reverse-holo",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "rare holo",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "holo": {
+     "market": 25000,
+     "low": 21250,
+     "mid": 27500
+    },
+    "reverse-holo": {
+     "market": 40000,
+     "low": 34000,
+     "mid": 44000
+    },
+    "first-edition": {
+     "market": 55000,
+     "low": 46750,
+     "mid": 60500
+    }
+   }
+  }
+ },
+ {
+  "id": "pokemon:sample:base1-2-blastoise",
+  "game": "pokemon",
+  "name": "Blastoise",
+  "setCode": "BASE1",
+  "setName": "Base Set",
+  "number": "2",
+  "finishes": [
+   "holo",
+   "reverse-holo",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "rare holo",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "holo": {
+     "market": 12000,
+     "low": 10200,
+     "mid": 13200
+    },
+    "reverse-holo": {
+     "market": 19200,
+     "low": 16320,
+     "mid": 21120
+    },
+    "first-edition": {
+     "market": 26400,
+     "low": 22440,
+     "mid": 29040
+    }
+   }
+  }
+ },
+ {
+  "id": "pokemon:sample:base1-15-venusaur",
+  "game": "pokemon",
+  "name": "Venusaur",
+  "setCode": "BASE1",
+  "setName": "Base Set",
+  "number": "15",
+  "finishes": [
+   "holo",
+   "reverse-holo",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "rare holo",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "holo": {
+     "market": 9000,
+     "low": 7650,
+     "mid": 9900
+    },
+    "reverse-holo": {
+     "market": 14400,
+     "low": 12240,
+     "mid": 15840
+    },
+    "first-edition": {
+     "market": 19800,
+     "low": 16830,
+     "mid": 21780
+    }
+   }
+  }
+ },
+ {
+  "id": "pokemon:sample:base1-58-pikachu",
+  "game": "pokemon",
+  "name": "Pikachu",
+  "setCode": "BASE1",
+  "setName": "Base Set",
+  "number": "58",
+  "finishes": [
+   "unlimited",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "common",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "unlimited": {
+     "market": 1500,
+     "low": 1275,
+     "mid": 1650
+    },
+    "first-edition": {
+     "market": 2400,
+     "low": 2040,
+     "mid": 2640
+    }
+   }
+  }
+ },
+ {
+  "id": "pokemon:sample:base1-10-mewtwo",
+  "game": "pokemon",
+  "name": "Mewtwo",
+  "setCode": "BASE1",
+  "setName": "Base Set",
+  "number": "10",
+  "finishes": [
+   "holo",
+   "reverse-holo",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "rare holo",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "holo": {
+     "market": 4000,
+     "low": 3400,
+     "mid": 4400
+    },
+    "reverse-holo": {
+     "market": 6400,
+     "low": 5440,
+     "mid": 7040
+    },
+    "first-edition": {
+     "market": 8800,
+     "low": 7480,
+     "mid": 9680
+    }
+   }
+  }
+ },
+ {
+  "id": "pokemon:sample:base1-1-alakazam",
+  "game": "pokemon",
+  "name": "Alakazam",
+  "setCode": "BASE1",
+  "setName": "Base Set",
+  "number": "1",
+  "finishes": [
+   "holo",
+   "reverse-holo",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "rare holo",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "holo": {
+     "market": 3000,
+     "low": 2550,
+     "mid": 3300
+    },
+    "reverse-holo": {
+     "market": 4800,
+     "low": 4080,
+     "mid": 5280
+    },
+    "first-edition": {
+     "market": 6600,
+     "low": 5610,
+     "mid": 7260
+    }
+   }
+  }
+ },
+ {
+  "id": "pokemon:sample:base1-46-charmander",
+  "game": "pokemon",
+  "name": "Charmander",
+  "setCode": "BASE1",
+  "setName": "Base Set",
+  "number": "46",
+  "finishes": [
+   "unlimited",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "common",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "unlimited": {
+     "market": 800,
+     "low": 680,
+     "mid": 880
+    },
+    "first-edition": {
+     "market": 1280,
+     "low": 1088,
+     "mid": 1408
+    }
+   }
+  }
+ },
+ {
+  "id": "pokemon:sample:base1-63-squirtle",
+  "game": "pokemon",
+  "name": "Squirtle",
+  "setCode": "BASE1",
+  "setName": "Base Set",
+  "number": "63",
+  "finishes": [
+   "unlimited",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "common",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "unlimited": {
+     "market": 700,
+     "low": 595,
+     "mid": 770
+    },
+    "first-edition": {
+     "market": 1120,
+     "low": 952,
+     "mid": 1232
+    }
+   }
+  }
+ },
+ {
+  "id": "pokemon:sample:base1-44-bulbasaur",
+  "game": "pokemon",
+  "name": "Bulbasaur",
+  "setCode": "BASE1",
+  "setName": "Base Set",
+  "number": "44",
+  "finishes": [
+   "unlimited",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "common",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "unlimited": {
+     "market": 600,
+     "low": 510,
+     "mid": 660
+    },
+    "first-edition": {
+     "market": 960,
+     "low": 816,
+     "mid": 1056
+    }
+   }
+  }
+ },
+ {
+  "id": "pokemon:sample:base1-14-raichu",
+  "game": "pokemon",
+  "name": "Raichu",
+  "setCode": "BASE1",
+  "setName": "Base Set",
+  "number": "14",
+  "finishes": [
+   "holo",
+   "reverse-holo",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "rare holo",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "holo": {
+     "market": 2500,
+     "low": 2125,
+     "mid": 2750
+    },
+    "reverse-holo": {
+     "market": 4000,
+     "low": 3400,
+     "mid": 4400
+    },
+    "first-edition": {
+     "market": 5500,
+     "low": 4675,
+     "mid": 6050
+    }
+   }
+  }
+ },
+ {
+  "id": "pokemon:sample:sv3-125-charizard-ex",
+  "game": "pokemon",
+  "name": "Charizard ex",
+  "setCode": "SV3",
+  "setName": "Obsidian Flames",
+  "number": "125",
+  "finishes": [
+   "holo",
+   "reverse-holo"
+  ],
+  "language": "en",
+  "rarity": "double rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "holo": {
+     "market": 600,
+     "low": 510,
+     "mid": 660
+    },
+    "reverse-holo": {
+     "market": 960,
+     "low": 816,
+     "mid": 1056
+    }
+   }
+  }
+ },
+ {
+  "id": "pokemon:sample:sv8-57-pikachu-ex",
+  "game": "pokemon",
+  "name": "Pikachu ex",
+  "setCode": "SV8",
+  "setName": "Surging Sparks",
+  "number": "57",
+  "finishes": [
+   "holo",
+   "reverse-holo"
+  ],
+  "language": "en",
+  "rarity": "double rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "holo": {
+     "market": 300,
+     "low": 255,
+     "mid": 330
+    },
+    "reverse-holo": {
+     "market": 480,
+     "low": 408,
+     "mid": 528
+    }
+   }
+  }
+ },
+ {
+  "id": "pokemon:sample:sv3pt5-151-mew-ex",
+  "game": "pokemon",
+  "name": "Mew ex",
+  "setCode": "SV3PT5",
+  "setName": "Scarlet & Violet 151",
+  "number": "151",
+  "finishes": [
+   "holo",
+   "reverse-holo"
+  ],
+  "language": "en",
+  "rarity": "double rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "holo": {
+     "market": 250,
+     "low": 213,
+     "mid": 275
+    },
+    "reverse-holo": {
+     "market": 400,
+     "low": 340,
+     "mid": 440
+    }
+   }
+  }
+ },
+ {
+  "id": "pokemon:sample:swsh7-215-umbreon-vmax",
+  "game": "pokemon",
+  "name": "Umbreon VMAX",
+  "setCode": "SWSH7",
+  "setName": "Evolving Skies",
+  "number": "215",
+  "finishes": [
+   "holo",
+   "reverse-holo"
+  ],
+  "language": "en",
+  "rarity": "secret rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "holo": {
+     "market": 70000,
+     "low": 59500,
+     "mid": 77000
+    },
+    "reverse-holo": {
+     "market": 112000,
+     "low": 95200,
+     "mid": 123200
+    }
+   }
+  }
+ },
+ {
+  "id": "pokemon:sample:swsh7-218-rayquaza-vmax",
+  "game": "pokemon",
+  "name": "Rayquaza VMAX",
+  "setCode": "SWSH7",
+  "setName": "Evolving Skies",
+  "number": "218",
+  "finishes": [
+   "holo",
+   "reverse-holo"
+  ],
+  "language": "en",
+  "rarity": "secret rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "holo": {
+     "market": 30000,
+     "low": 25500,
+     "mid": 33000
+    },
+    "reverse-holo": {
+     "market": 48000,
+     "low": 40800,
+     "mid": 52800
+    }
+   }
+  }
+ },
+ {
+  "id": "pokemon:sample:swsh12-186-lugia-v",
+  "game": "pokemon",
+  "name": "Lugia V",
+  "setCode": "SWSH12",
+  "setName": "Silver Tempest",
+  "number": "186",
+  "finishes": [
+   "holo",
+   "reverse-holo"
+  ],
+  "language": "en",
+  "rarity": "ultra rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "holo": {
+     "market": 4500,
+     "low": 3825,
+     "mid": 4950
+    },
+    "reverse-holo": {
+     "market": 7200,
+     "low": 6120,
+     "mid": 7920
+    }
+   }
+  }
+ },
+ {
+  "id": "pokemon:sample:svi-189-professor-s-research",
+  "game": "pokemon",
+  "name": "Professor's Research",
+  "setCode": "SVI",
+  "setName": "Scarlet & Violet",
+  "number": "189",
+  "finishes": [
+   "holo",
+   "reverse-holo"
+  ],
+  "language": "en",
+  "rarity": "uncommon",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "holo": {
+     "market": 20,
+     "low": 17,
+     "mid": 22
+    },
+    "reverse-holo": {
+     "market": 32,
+     "low": 27,
+     "mid": 35
+    }
+   }
+  }
+ },
+ {
+  "id": "pokemon:sample:sv2-185-iono",
+  "game": "pokemon",
+  "name": "Iono",
+  "setCode": "SV2",
+  "setName": "Paldea Evolved",
+  "number": "185",
+  "finishes": [
+   "holo",
+   "reverse-holo"
+  ],
+  "language": "en",
+  "rarity": "uncommon",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "holo": {
+     "market": 150,
+     "low": 128,
+     "mid": 165
+    },
+    "reverse-holo": {
+     "market": 240,
+     "low": 204,
+     "mid": 264
+    }
+   }
+  }
+ },
+ {
+  "id": "pokemon:sample:swsh9-123-arceus-vstar",
+  "game": "pokemon",
+  "name": "Arceus VSTAR",
+  "setCode": "SWSH9",
+  "setName": "Brilliant Stars",
+  "number": "123",
+  "finishes": [
+   "holo",
+   "reverse-holo"
+  ],
+  "language": "en",
+  "rarity": "ultra rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "holo": {
+     "market": 400,
+     "low": 340,
+     "mid": 440
+    },
+    "reverse-holo": {
+     "market": 640,
+     "low": 544,
+     "mid": 704
+    }
+   }
+  }
+ },
+ {
+  "id": "pokemon:sample:svi-86-gardevoir-ex",
+  "game": "pokemon",
+  "name": "Gardevoir ex",
+  "setCode": "SVI",
+  "setName": "Scarlet & Violet",
+  "number": "86",
+  "finishes": [
+   "holo",
+   "reverse-holo"
+  ],
+  "language": "en",
+  "rarity": "double rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "holo": {
+     "market": 200,
+     "low": 170,
+     "mid": 220
+    },
+    "reverse-holo": {
+     "market": 320,
+     "low": 272,
+     "mid": 352
+    }
+   }
+  }
+ },
+ {
+  "id": "pokemon:sample:svi-81-miraidon-ex",
+  "game": "pokemon",
+  "name": "Miraidon ex",
+  "setCode": "SVI",
+  "setName": "Scarlet & Violet",
+  "number": "81",
+  "finishes": [
+   "holo",
+   "reverse-holo"
+  ],
+  "language": "en",
+  "rarity": "double rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "holo": {
+     "market": 150,
+     "low": 128,
+     "mid": 165
+    },
+    "reverse-holo": {
+     "market": 240,
+     "low": 204,
+     "mid": 264
+    }
+   }
+  }
+ },
+ {
+  "id": "pokemon:sample:base1-5-gengar",
+  "game": "pokemon",
+  "name": "Gengar",
+  "setCode": "BASE1",
+  "setName": "Base Set",
+  "number": "5",
+  "finishes": [
+   "holo",
+   "reverse-holo",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "rare holo",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "holo": {
+     "market": 3500,
+     "low": 2975,
+     "mid": 3850
+    },
+    "reverse-holo": {
+     "market": 5600,
+     "low": 4760,
+     "mid": 6160
+    },
+    "first-edition": {
+     "market": 7700,
+     "low": 6545,
+     "mid": 8470
+    }
+   }
+  }
+ },
+ {
+  "id": "pokemon:sample:ju-51-eevee",
+  "game": "pokemon",
+  "name": "Eevee",
+  "setCode": "JU",
+  "setName": "Jungle",
+  "number": "51",
+  "finishes": [
+   "unlimited",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "common",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "unlimited": {
+     "market": 500,
+     "low": 425,
+     "mid": 550
+    },
+    "first-edition": {
+     "market": 800,
+     "low": 680,
+     "mid": 880
+    }
+   }
+  }
+ },
+ {
+  "id": "pokemon:sample:ju-11-snorlax",
+  "game": "pokemon",
+  "name": "Snorlax",
+  "setCode": "JU",
+  "setName": "Jungle",
+  "number": "11",
+  "finishes": [
+   "holo",
+   "reverse-holo",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "rare holo",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "holo": {
+     "market": 4000,
+     "low": 3400,
+     "mid": 4400
+    },
+    "reverse-holo": {
+     "market": 6400,
+     "low": 5440,
+     "mid": 7040
+    },
+    "first-edition": {
+     "market": 8800,
+     "low": 7480,
+     "mid": 9680
+    }
+   }
+  }
+ },
+ {
+  "id": "pokemon:sample:fo-4-dragonite",
+  "game": "pokemon",
+  "name": "Dragonite",
+  "setCode": "FO",
+  "setName": "Fossil",
+  "number": "4",
+  "finishes": [
+   "holo",
+   "reverse-holo",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "rare holo",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "holo": {
+     "market": 6000,
+     "low": 5100,
+     "mid": 6600
+    },
+    "reverse-holo": {
+     "market": 9600,
+     "low": 8160,
+     "mid": 10560
+    },
+    "first-edition": {
+     "market": 13200,
+     "low": 11220,
+     "mid": 14520
+    }
+   }
+  }
+ },
+ {
+  "id": "pokemon:sample:svp-085-pikachu",
+  "game": "pokemon",
+  "name": "Pikachu",
+  "setCode": "SVP",
+  "setName": "Scarlet & Violet Promos",
+  "number": "085",
+  "finishes": [
+   "holo",
+   "reverse-holo"
+  ],
+  "language": "en",
+  "rarity": "promo",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "holo": {
+     "market": 400,
+     "low": 340,
+     "mid": 440
+    },
+    "reverse-holo": {
+     "market": 640,
+     "low": 544,
+     "mid": 704
+    }
+   }
+  }
+ },
+ {
+  "id": "yugioh:sample:lob-en001-blue-eyes-white-dragon",
+  "game": "yugioh",
+  "name": "Blue-Eyes White Dragon",
+  "setCode": "LOB",
+  "setName": "Legend of Blue Eyes White Dragon",
+  "number": "EN001",
+  "finishes": [
+   "unlimited",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "ultra rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "unlimited": {
+     "market": 25000,
+     "low": 21250,
+     "mid": 27500
+    },
+    "first-edition": {
+     "market": 40000,
+     "low": 34000,
+     "mid": 44000
+    }
+   }
+  }
+ },
+ {
+  "id": "yugioh:sample:lob-en005-dark-magician",
+  "game": "yugioh",
+  "name": "Dark Magician",
+  "setCode": "LOB",
+  "setName": "Legend of Blue Eyes White Dragon",
+  "number": "EN005",
+  "finishes": [
+   "unlimited",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "ultra rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "unlimited": {
+     "market": 15000,
+     "low": 12750,
+     "mid": 16500
+    },
+    "first-edition": {
+     "market": 24000,
+     "low": 20400,
+     "mid": 26400
+    }
+   }
+  }
+ },
+ {
+  "id": "yugioh:sample:lob-en070-red-eyes-black-dragon",
+  "game": "yugioh",
+  "name": "Red-Eyes Black Dragon",
+  "setCode": "LOB",
+  "setName": "Legend of Blue Eyes White Dragon",
+  "number": "EN070",
+  "finishes": [
+   "unlimited",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "ultra rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "unlimited": {
+     "market": 6000,
+     "low": 5100,
+     "mid": 6600
+    },
+    "first-edition": {
+     "market": 9600,
+     "low": 8160,
+     "mid": 10560
+    }
+   }
+  }
+ },
+ {
+  "id": "yugioh:sample:lob-en124-exodia-the-forbidden-one",
+  "game": "yugioh",
+  "name": "Exodia the Forbidden One",
+  "setCode": "LOB",
+  "setName": "Legend of Blue Eyes White Dragon",
+  "number": "EN124",
+  "finishes": [
+   "unlimited",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "ultra rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "unlimited": {
+     "market": 9000,
+     "low": 7650,
+     "mid": 9900
+    },
+    "first-edition": {
+     "market": 14400,
+     "low": 12240,
+     "mid": 15840
+    }
+   }
+  }
+ },
+ {
+  "id": "yugioh:sample:lob-en119-pot-of-greed",
+  "game": "yugioh",
+  "name": "Pot of Greed",
+  "setCode": "LOB",
+  "setName": "Legend of Blue Eyes White Dragon",
+  "number": "EN119",
+  "finishes": [
+   "unlimited",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "unlimited": {
+     "market": 2000,
+     "low": 1700,
+     "mid": 2200
+    },
+    "first-edition": {
+     "market": 3200,
+     "low": 2720,
+     "mid": 3520
+    }
+   }
+  }
+ },
+ {
+  "id": "yugioh:sample:lob-en118-monster-reborn",
+  "game": "yugioh",
+  "name": "Monster Reborn",
+  "setCode": "LOB",
+  "setName": "Legend of Blue Eyes White Dragon",
+  "number": "EN118",
+  "finishes": [
+   "unlimited",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "ultra rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "unlimited": {
+     "market": 3500,
+     "low": 2975,
+     "mid": 3850
+    },
+    "first-edition": {
+     "market": 5600,
+     "low": 4760,
+     "mid": 6160
+    }
+   }
+  }
+ },
+ {
+  "id": "yugioh:sample:mrd-en138-mirror-force",
+  "game": "yugioh",
+  "name": "Mirror Force",
+  "setCode": "MRD",
+  "setName": "Metal Raiders",
+  "number": "EN138",
+  "finishes": [
+   "unlimited",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "super rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "unlimited": {
+     "market": 2000,
+     "low": 1700,
+     "mid": 2200
+    },
+    "first-edition": {
+     "market": 3200,
+     "low": 2720,
+     "mid": 3520
+    }
+   }
+  }
+ },
+ {
+  "id": "yugioh:sample:macr-en036-ash-blossom-joyous-spring",
+  "game": "yugioh",
+  "name": "Ash Blossom & Joyous Spring",
+  "setCode": "MACR",
+  "setName": "Maximum Crisis",
+  "number": "EN036",
+  "finishes": [
+   "unlimited",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "secret rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "unlimited": {
+     "market": 700,
+     "low": 595,
+     "mid": 770
+    },
+    "first-edition": {
+     "market": 1120,
+     "low": 952,
+     "mid": 1232
+    }
+   }
+  }
+ },
+ {
+  "id": "yugioh:sample:mfc-en000-dark-magician-girl",
+  "game": "yugioh",
+  "name": "Dark Magician Girl",
+  "setCode": "MFC",
+  "setName": "Magician's Force",
+  "number": "EN000",
+  "finishes": [
+   "unlimited",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "ultra rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "unlimited": {
+     "market": 12000,
+     "low": 10200,
+     "mid": 13200
+    },
+    "first-edition": {
+     "market": 19200,
+     "low": 16320,
+     "mid": 21120
+    }
+   }
+  }
+ },
+ {
+  "id": "yugioh:sample:lob-en065-time-wizard",
+  "game": "yugioh",
+  "name": "Time Wizard",
+  "setCode": "LOB",
+  "setName": "Legend of Blue Eyes White Dragon",
+  "number": "EN065",
+  "finishes": [
+   "unlimited",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "unlimited": {
+     "market": 2500,
+     "low": 2125,
+     "mid": 2750
+    },
+    "first-edition": {
+     "market": 4000,
+     "low": 3400,
+     "mid": 4400
+    }
+   }
+  }
+ },
+ {
+  "id": "yugioh:sample:lob-en053-raigeki",
+  "game": "yugioh",
+  "name": "Raigeki",
+  "setCode": "LOB",
+  "setName": "Legend of Blue Eyes White Dragon",
+  "number": "EN053",
+  "finishes": [
+   "unlimited",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "super rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "unlimited": {
+     "market": 3000,
+     "low": 2550,
+     "mid": 3300
+    },
+    "first-edition": {
+     "market": 4800,
+     "low": 4080,
+     "mid": 5280
+    }
+   }
+  }
+ },
+ {
+  "id": "yugioh:sample:lob-en051-change-of-heart",
+  "game": "yugioh",
+  "name": "Change of Heart",
+  "setCode": "LOB",
+  "setName": "Legend of Blue Eyes White Dragon",
+  "number": "EN051",
+  "finishes": [
+   "unlimited",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "super rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "unlimited": {
+     "market": 2500,
+     "low": 2125,
+     "mid": 2750
+    },
+    "first-edition": {
+     "market": 4000,
+     "low": 3400,
+     "mid": 4400
+    }
+   }
+  }
+ },
+ {
+  "id": "yugioh:sample:mrd-en056-swords-of-revealing-light",
+  "game": "yugioh",
+  "name": "Swords of Revealing Light",
+  "setCode": "MRD",
+  "setName": "Metal Raiders",
+  "number": "EN056",
+  "finishes": [
+   "unlimited",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "super rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "unlimited": {
+     "market": 1200,
+     "low": 1020,
+     "mid": 1320
+    },
+    "first-edition": {
+     "market": 1920,
+     "low": 1632,
+     "mid": 2112
+    }
+   }
+  }
+ },
+ {
+  "id": "yugioh:sample:psv-en000-jinzo",
+  "game": "yugioh",
+  "name": "Jinzo",
+  "setCode": "PSV",
+  "setName": "Pharaoh's Servant",
+  "number": "EN000",
+  "finishes": [
+   "unlimited",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "ultra rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "unlimited": {
+     "market": 2800,
+     "low": 2380,
+     "mid": 3080
+    },
+    "first-edition": {
+     "market": 4480,
+     "low": 3808,
+     "mid": 4928
+    }
+   }
+  }
+ },
+ {
+  "id": "yugioh:sample:lon-en048-call-of-the-haunted",
+  "game": "yugioh",
+  "name": "Call of the Haunted",
+  "setCode": "LON",
+  "setName": "Labyrinth of Nightmare",
+  "number": "EN048",
+  "finishes": [
+   "unlimited",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "ultra rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "unlimited": {
+     "market": 1500,
+     "low": 1275,
+     "mid": 1650
+    },
+    "first-edition": {
+     "market": 2400,
+     "low": 2040,
+     "mid": 2640
+    }
+   }
+  }
+ },
+ {
+  "id": "yugioh:sample:lon-en049-imperial-order",
+  "game": "yugioh",
+  "name": "Imperial Order",
+  "setCode": "LON",
+  "setName": "Labyrinth of Nightmare",
+  "number": "EN049",
+  "finishes": [
+   "unlimited",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "secret rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "unlimited": {
+     "market": 2200,
+     "low": 1870,
+     "mid": 2420
+    },
+    "first-edition": {
+     "market": 3520,
+     "low": 2992,
+     "mid": 3872
+    }
+   }
+  }
+ },
+ {
+  "id": "yugioh:sample:lon-en045-thousand-dragon",
+  "game": "yugioh",
+  "name": "Thousand Dragon",
+  "setCode": "LON",
+  "setName": "Labyrinth of Nightmare",
+  "number": "EN045",
+  "finishes": [
+   "unlimited",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "ultra rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "unlimited": {
+     "market": 1800,
+     "low": 1530,
+     "mid": 1980
+    },
+    "first-edition": {
+     "market": 2880,
+     "low": 2448,
+     "mid": 3168
+    }
+   }
+  }
+ },
+ {
+  "id": "yugioh:sample:mrd-en033-harpie-lady",
+  "game": "yugioh",
+  "name": "Harpie Lady",
+  "setCode": "MRD",
+  "setName": "Metal Raiders",
+  "number": "EN033",
+  "finishes": [
+   "unlimited",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "common",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "unlimited": {
+     "market": 300,
+     "low": 255,
+     "mid": 330
+    },
+    "first-edition": {
+     "market": 480,
+     "low": 408,
+     "mid": 528
+    }
+   }
+  }
+ },
+ {
+  "id": "yugioh:sample:mrd-en010-kuriboh",
+  "game": "yugioh",
+  "name": "Kuriboh",
+  "setCode": "MRD",
+  "setName": "Metal Raiders",
+  "number": "EN010",
+  "finishes": [
+   "unlimited",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "common",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "unlimited": {
+     "market": 250,
+     "low": 213,
+     "mid": 275
+    },
+    "first-edition": {
+     "market": 400,
+     "low": 340,
+     "mid": 440
+    }
+   }
+  }
+ },
+ {
+  "id": "yugioh:sample:lob-en062-gaia-the-fierce-knight",
+  "game": "yugioh",
+  "name": "Gaia The Fierce Knight",
+  "setCode": "LOB",
+  "setName": "Legend of Blue Eyes White Dragon",
+  "number": "EN062",
+  "finishes": [
+   "unlimited",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "common",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "unlimited": {
+     "market": 600,
+     "low": 510,
+     "mid": 660
+    },
+    "first-edition": {
+     "market": 960,
+     "low": 816,
+     "mid": 1056
+    }
+   }
+  }
+ },
+ {
+  "id": "yugioh:sample:lob-en121-left-arm-of-the-forbidden-one",
+  "game": "yugioh",
+  "name": "Left Arm of the Forbidden One",
+  "setCode": "LOB",
+  "setName": "Legend of Blue Eyes White Dragon",
+  "number": "EN121",
+  "finishes": [
+   "unlimited",
+   "first-edition"
+  ],
+  "language": "en",
+  "rarity": "ultra rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "unlimited": {
+     "market": 1500,
+     "low": 1275,
+     "mid": 1650
+    },
+    "first-edition": {
+     "market": 2400,
+     "low": 2040,
+     "mid": 2640
+    }
+   }
+  }
+ },
+ {
+  "id": "onepiece:sample:op01-001-roronoa-zoro",
+  "game": "onepiece",
+  "name": "Roronoa Zoro",
+  "setCode": "OP01",
+  "setName": "Romance Dawn",
+  "number": "001",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "leader",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 400,
+     "low": 340,
+     "mid": 440
+    },
+    "foil": {
+     "market": 640,
+     "low": 544,
+     "mid": 704
+    }
+   }
+  }
+ },
+ {
+  "id": "onepiece:sample:op01-003-monkey-d-luffy",
+  "game": "onepiece",
+  "name": "Monkey D. Luffy",
+  "setCode": "OP01",
+  "setName": "Romance Dawn",
+  "number": "003",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "leader",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 600,
+     "low": 510,
+     "mid": 660
+    },
+    "foil": {
+     "market": 960,
+     "low": 816,
+     "mid": 1056
+    }
+   }
+  }
+ },
+ {
+  "id": "onepiece:sample:op01-016-nami",
+  "game": "onepiece",
+  "name": "Nami",
+  "setCode": "OP01",
+  "setName": "Romance Dawn",
+  "number": "016",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 300,
+     "low": 255,
+     "mid": 330
+    },
+    "foil": {
+     "market": 480,
+     "low": 408,
+     "mid": 528
+    }
+   }
+  }
+ },
+ {
+  "id": "onepiece:sample:op01-025-roronoa-zoro",
+  "game": "onepiece",
+  "name": "Roronoa Zoro",
+  "setCode": "OP01",
+  "setName": "Romance Dawn",
+  "number": "025",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 800,
+     "low": 680,
+     "mid": 880
+    },
+    "foil": {
+     "market": 1280,
+     "low": 1088,
+     "mid": 1408
+    }
+   }
+  }
+ },
+ {
+  "id": "onepiece:sample:op01-060-donquixote-doflamingo",
+  "game": "onepiece",
+  "name": "Donquixote Doflamingo",
+  "setCode": "OP01",
+  "setName": "Romance Dawn",
+  "number": "060",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "leader",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 500,
+     "low": 425,
+     "mid": 550
+    },
+    "foil": {
+     "market": 800,
+     "low": 680,
+     "mid": 880
+    }
+   }
+  }
+ },
+ {
+  "id": "onepiece:sample:st01-001-monkey-d-luffy",
+  "game": "onepiece",
+  "name": "Monkey D. Luffy",
+  "setCode": "ST01",
+  "setName": "Starter Deck: Straw Hat Crew",
+  "number": "001",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "leader",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 200,
+     "low": 170,
+     "mid": 220
+    },
+    "foil": {
+     "market": 320,
+     "low": 272,
+     "mid": 352
+    }
+   }
+  }
+ },
+ {
+  "id": "onepiece:sample:st01-004-usopp",
+  "game": "onepiece",
+  "name": "Usopp",
+  "setCode": "ST01",
+  "setName": "Starter Deck: Straw Hat Crew",
+  "number": "004",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "common",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 20,
+     "low": 17,
+     "mid": 22
+    },
+    "foil": {
+     "market": 32,
+     "low": 27,
+     "mid": 35
+    }
+   }
+  }
+ },
+ {
+  "id": "onepiece:sample:st01-005-sanji",
+  "game": "onepiece",
+  "name": "Sanji",
+  "setCode": "ST01",
+  "setName": "Starter Deck: Straw Hat Crew",
+  "number": "005",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "common",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 25,
+     "low": 21,
+     "mid": 28
+    },
+    "foil": {
+     "market": 40,
+     "low": 34,
+     "mid": 44
+    }
+   }
+  }
+ },
+ {
+  "id": "onepiece:sample:st01-007-nami",
+  "game": "onepiece",
+  "name": "Nami",
+  "setCode": "ST01",
+  "setName": "Starter Deck: Straw Hat Crew",
+  "number": "007",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "common",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 25,
+     "low": 21,
+     "mid": 28
+    },
+    "foil": {
+     "market": 40,
+     "low": 34,
+     "mid": 44
+    }
+   }
+  }
+ },
+ {
+  "id": "onepiece:sample:st01-006-tony-tony-chopper",
+  "game": "onepiece",
+  "name": "Tony Tony.Chopper",
+  "setCode": "ST01",
+  "setName": "Starter Deck: Straw Hat Crew",
+  "number": "006",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "common",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 20,
+     "low": 17,
+     "mid": 22
+    },
+    "foil": {
+     "market": 32,
+     "low": 27,
+     "mid": 35
+    }
+   }
+  }
+ },
+ {
+  "id": "onepiece:sample:op02-013-portgas-d-ace",
+  "game": "onepiece",
+  "name": "Portgas.D.Ace",
+  "setCode": "OP02",
+  "setName": "Paramount War",
+  "number": "013",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "leader",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 700,
+     "low": 595,
+     "mid": 770
+    },
+    "foil": {
+     "market": 1120,
+     "low": 952,
+     "mid": 1232
+    }
+   }
+  }
+ },
+ {
+  "id": "onepiece:sample:op02-001-edward-newgate",
+  "game": "onepiece",
+  "name": "Edward.Newgate",
+  "setCode": "OP02",
+  "setName": "Paramount War",
+  "number": "001",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "leader",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 900,
+     "low": 765,
+     "mid": 990
+    },
+    "foil": {
+     "market": 1440,
+     "low": 1224,
+     "mid": 1584
+    }
+   }
+  }
+ },
+ {
+  "id": "onepiece:sample:op02-062-trafalgar-law",
+  "game": "onepiece",
+  "name": "Trafalgar Law",
+  "setCode": "OP02",
+  "setName": "Paramount War",
+  "number": "062",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "leader",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 500,
+     "low": 425,
+     "mid": 550
+    },
+    "foil": {
+     "market": 800,
+     "low": 680,
+     "mid": 880
+    }
+   }
+  }
+ },
+ {
+  "id": "onepiece:sample:op03-116-boa-hancock",
+  "game": "onepiece",
+  "name": "Boa Hancock",
+  "setCode": "OP03",
+  "setName": "Pillars of Strength",
+  "number": "116",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "secret rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 3500,
+     "low": 2975,
+     "mid": 3850
+    },
+    "foil": {
+     "market": 5600,
+     "low": 4760,
+     "mid": 6160
+    }
+   }
+  }
+ },
+ {
+  "id": "onepiece:sample:op04-044-kaido",
+  "game": "onepiece",
+  "name": "Kaido",
+  "setCode": "OP04",
+  "setName": "Kingdoms of Intrigue",
+  "number": "044",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "leader",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 600,
+     "low": 510,
+     "mid": 660
+    },
+    "foil": {
+     "market": 960,
+     "low": 816,
+     "mid": 1056
+    }
+   }
+  }
+ },
+ {
+  "id": "onepiece:sample:op05-060-monkey-d-luffy",
+  "game": "onepiece",
+  "name": "Monkey D. Luffy",
+  "setCode": "OP05",
+  "setName": "Awakening of the New Era",
+  "number": "060",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "leader",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 2500,
+     "low": 2125,
+     "mid": 2750
+    },
+    "foil": {
+     "market": 4000,
+     "low": 3400,
+     "mid": 4400
+    }
+   }
+  }
+ },
+ {
+  "id": "onepiece:sample:op05-098-enel",
+  "game": "onepiece",
+  "name": "Enel",
+  "setCode": "OP05",
+  "setName": "Awakening of the New Era",
+  "number": "098",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "leader",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 900,
+     "low": 765,
+     "mid": 990
+    },
+    "foil": {
+     "market": 1440,
+     "low": 1224,
+     "mid": 1584
+    }
+   }
+  }
+ },
+ {
+  "id": "onepiece:sample:op01-120-shanks",
+  "game": "onepiece",
+  "name": "Shanks",
+  "setCode": "OP01",
+  "setName": "Romance Dawn",
+  "number": "120",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "secret rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 6000,
+     "low": 5100,
+     "mid": 6600
+    },
+    "foil": {
+     "market": 9600,
+     "low": 8160,
+     "mid": 10560
+    }
+   }
+  }
+ },
+ {
+  "id": "onepiece:sample:op04-083-sabo",
+  "game": "onepiece",
+  "name": "Sabo",
+  "setCode": "OP04",
+  "setName": "Kingdoms of Intrigue",
+  "number": "083",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 350,
+     "low": 298,
+     "mid": 385
+    },
+    "foil": {
+     "market": 560,
+     "low": 476,
+     "mid": 616
+    }
+   }
+  }
+ },
+ {
+  "id": "onepiece:sample:op06-022-yamato",
+  "game": "onepiece",
+  "name": "Yamato",
+  "setCode": "OP06",
+  "setName": "Wings of the Captain",
+  "number": "022",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 300,
+     "low": 255,
+     "mid": 330
+    },
+    "foil": {
+     "market": 480,
+     "low": 408,
+     "mid": 528
+    }
+   }
+  }
+ },
+ {
+  "id": "onepiece:sample:op06-031-vinsmoke-reiju",
+  "game": "onepiece",
+  "name": "Vinsmoke Reiju",
+  "setCode": "OP06",
+  "setName": "Wings of the Captain",
+  "number": "031",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 150,
+     "low": 128,
+     "mid": 165
+    },
+    "foil": {
+     "market": 240,
+     "low": 204,
+     "mid": 264
+    }
+   }
+  }
+ },
+ {
+  "id": "onepiece:sample:op13-118-gol-d-roger",
+  "game": "onepiece",
+  "name": "Gol.D.Roger",
+  "setCode": "OP13",
+  "setName": "Carrying on His Will",
+  "number": "118",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "language": "en",
+  "rarity": "secret rare",
+  "prices": {
+   "asOf": "2026-10-15",
+   "source": "synthetic-demo",
+   "byFinish": {
+    "nonfoil": {
+     "market": 5000,
+     "low": 4250,
+     "mid": 5500
+    },
+    "foil": {
+     "market": 8000,
+     "low": 6800,
+     "mid": 8800
+    }
+   }
+  }
+ }
+]
