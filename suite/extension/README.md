@@ -1,4 +1,4 @@
-# TCG Speed Suite: Chrome extension (milestone X0)
+# TCG Speed Suite: Chrome extension (milestones X0 and X1)
 
 Manifest V3, plain JavaScript modules, no runtime dependencies, no build tools. **Nothing in it
 touches TCGplayer yet**: there is no TCGplayer content script, and a code gate (`TOS_OK` in
@@ -29,6 +29,8 @@ either is missing.
 | `src/content-bridge.js` | On tcgspeedshipper.com and localhost only: page <-> service worker. |
 | `src/background.js` | Service worker: re-checks every message, then reads or writes the store. |
 | `src/store.js` | IndexedDB (memory fallback), validated with `src/vendor/models.js`. |
+| `src/adapters/selectors.js` | Every page selector, in one file (synthetic placeholders for now). |
+| `src/adapters/index.js` | `detectPage`, `readOrders`, `fillTracking`, `openImport`, `attachFile`, `selfTest`. Dry run by default; never submits or uploads. |
 | `src/ui/` | Popup, side panel placeholder, options page. |
 | `PRIVACY.md`, `STORE-CHECKLIST.md` | Drafts for the Web Store. Not submitted. |
 
@@ -42,7 +44,15 @@ Post `{ source: 'tcgss-app', v: 1, id, type, payload }` to `window` and listen f
 I chose a content script with `postMessage` over `externally_connectable`: the page never gets a
 direct line to the service worker, and each message is checked twice (page side and worker side).
 
+## Adapters (X1, still off)
+`createAdapter(document, { dryRun })` works on a page you give it. In dry run (the default) it only
+records what it would do in `adapter.actions` (tracking numbers are never written to that log). With
+dry run off it fills fields and attaches the seller's CSV, but never clicks Save or Upload: the seller
+does. `selfTest()` lists selectors that no longer match, which is how we spot a changed page. Extension
+code must get adapters through `guardedAdapter(flag, ...)`, which refuses unless the flag is on and
+`TOS_OK` is true. The fixtures in `test/fixtures/` are invented pages, not copies of TCGplayer.
+
 ## Verified (2026-10-15)
-Unit tests for flags, bridge (accepted and rejected), store, handler and manifest; one browser test
-(fixture page -> content script -> service worker -> IndexedDB). Not verified: real Chrome UI clicks,
+Unit tests for flags, bridge (accepted and rejected), store, handler and manifest; two browser tests
+(fixture page -> content script -> service worker -> IndexedDB; adapters on synthetic pages). Not verified: real Chrome UI clicks,
 the side panel, anything on TCGplayer.

@@ -64,6 +64,27 @@ starts); Granola set up before the Pitney Bowes call (G12); test the sign-up cod
 (B13).
 Next: review PRs; write the `suite` status document to the board each morning.
 
+### 2026-10-15 · hq · board redesign · done
+Rebuilt the owner's board (`docs/shipper-hq.html`) with top tabs: Now, Roadmap, Suite, Library, Meetings, Ideas. Now shows the newest Claude posts, one Next up card and the open tasks in priority order (security first). Roadmap, Suite (product cards, milestones, upload box), Library (about 50 links), Meetings (call notes saved to `meetings`) and Ideas (24 ranked, Do this / Not now saved to `ideas`) are new. Added tasks B13, G12, S4, S5. The owner's ticks and notes (`progress`, `inbox`) are read and written as before; nothing was deleted.
+Numbers: no console errors and no sideways scroll at 820x1180, 1180x820 and 390x844, in dark and light.
+Needs Builder: write document `suite/status` in the board's database each morning: `{ updatedAt, products: [{ id: "scan"|"ext"|"agent"|"sites", name, state, milestone, line }], log: [{ at, who, line }] }`. Until then the Suite tab shows the Oct 15 starting facts.
+Needs owner: none beyond the new tasks B13 and G12 on the board.
+Next: none.
+### 2026-10-15 · extension · X1 · done
+Adapter framework in `suite/extension/src/adapters/`: one interface (`detectPage`, `readOrders`, `fillTracking`,
+`openImport`, `attachFile`) plus `selfTest()` that lists selectors that stopped matching. All selectors live in
+`selectors.js`. Dry run is the default and only logs; even with it off, nothing is submitted or uploaded (the seller
+clicks Save / Upload). `guardedAdapter` hands out nothing unless the flag is on and `TOS_OK` is true. Built and tested
+only on invented pages (`test/fixtures/`), run in real Chromium. Still off; nothing on TCGplayer.
+Also fixed a real race from X0: the page's first message could arrive before the bridge script finished loading
+and be lost; the loader now queues and replays early messages.
+Numbers: `cd suite && npm test` 76 pass, 0 fail; root `npm test` 17 suites pass; browser tests passed 3 of 3 runs.
+Needs Builder: none new.
+Needs owner: saved pages are the blocker for X2 (and X2 is blocked by "TOS OK" anyway). From a logged-in browser,
+File > Save Page As > "Webpage, Complete", for: Orders list, one order, "mark as shipped" form, Import CSV page,
+Export Shipping dialog. Blur or change buyer names and addresses first. Selectors are guesses until then.
+Next: X3 (Agent side panel shell) is allowed; X2 waits for "TOS OK". Stopping here to save the owner's weekly limit.
+
 ### 2026-10-15 · builder · morning check · done
 All four sessions share the owner's one usage limit. It rejected everything at about 8:40 PM PT (resets 6:50 AM UTC); `scan` and `hq` stopped before doing work and were re-started this morning. State at 6:35 AM PT: `extension` X0 merged (#145), now on X1; `agent` running A0 (nothing pushed yet); `scan` re-started on S1; `hq` re-started on the board redesign. Production is healthy (0 server errors in 24h; Extension X0 deployed with no effect on the site).
 Needs Builder: from `extension`: wire the web app to the extension later (post-message shape is in `suite/extension/README.md`); remove the localhost match before the first Web Store submission.
