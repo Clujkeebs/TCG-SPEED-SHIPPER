@@ -63,3 +63,18 @@ Needs owner: a real TCGplayer inventory export (board task S4); about 50 card ph
 starts); Granola set up before the Pitney Bowes call (G12); test the sign-up code with a second email
 (B13).
 Next: review PRs; write the `suite` status document to the board each morning.
+
+### 2026-10-15 · extension · X1 · done
+Adapter framework in `suite/extension/src/adapters/`: one interface (`detectPage`, `readOrders`, `fillTracking`,
+`openImport`, `attachFile`) plus `selfTest()` that lists selectors that stopped matching. All selectors live in
+`selectors.js`. Dry run is the default and only logs; even with it off, nothing is submitted or uploaded (the seller
+clicks Save / Upload). `guardedAdapter` hands out nothing unless the flag is on and `TOS_OK` is true. Built and tested
+only on invented pages (`test/fixtures/`), run in real Chromium. Still off; nothing on TCGplayer.
+Also fixed a real race from X0: the page's first message could arrive before the bridge script finished loading
+and be lost; the loader now queues and replays early messages.
+Numbers: `cd suite && npm test` 76 pass, 0 fail; root `npm test` 17 suites pass; browser tests passed 3 of 3 runs.
+Needs Builder: none new.
+Needs owner: saved pages are the blocker for X2 (and X2 is blocked by "TOS OK" anyway). From a logged-in browser,
+File > Save Page As > "Webpage, Complete", for: Orders list, one order, "mark as shipped" form, Import CSV page,
+Export Shipping dialog. Blur or change buyer names and addresses first. Selectors are guesses until then.
+Next: X3 (Agent side panel shell) is allowed; X2 waits for "TOS OK". Stopping here to save the owner's weekly limit.

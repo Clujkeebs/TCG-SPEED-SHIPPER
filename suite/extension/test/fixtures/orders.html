@@ -1,0 +1,24 @@
+<!doctype html><html><head><meta charset="utf-8"><title>SYNTHETIC orders page (not TCGplayer)</title></head><body>
+<nav><a class="nav-import" href="/import.html">Import CSV</a></nav>
+<table id="orders-table"><tbody>
+<tr class="order-row" data-order-id="SYN-1001">
+ <td><input type="checkbox"></td><td class="order-date">2026-10-14T09:30:00Z</td><td class="order-status">Paid</td>
+ <td><span class="buyer-name">Pat Example</span>
+  <span class="addr1">1 Sample Lane</span><span class="addr2">Apt 2</span>
+  <span class="city">Testville</span><span class="state">CA</span><span class="zip">90000</span><span class="country">US</span></td>
+ <td><ul class="items">
+   <li><span class="item-name">Sample Card A</span> <span class="item-qty">2</span> <span class="item-price">$1.50</span></li>
+   <li><span class="item-name">Sample Card B</span> <span class="item-qty">1</span> <span class="item-price">$4.25</span></li></ul></td>
+ <td class="items-total">$7.25</td><td class="shipping-paid">$0.99</td></tr>
+<tr class="order-row" data-order-id="SYN-1002">
+ <td><input type="checkbox"></td><td class="order-date">2026-10-14T11:00:00Z</td><td class="order-status">Paid</td>
+ <td><span class="buyer-name">Sam Placeholder</span>
+  <span class="addr1">22 Made Up Rd</span><span class="addr2"></span>
+  <span class="city">Faketown</span><span class="state">NY</span><span class="zip">10000</span><span class="country">US</span></td>
+ <td><ul class="items"><li><span class="item-name">Sample Card C</span> <span class="item-qty">1</span> <span class="item-price">$12.00</span></li></ul></td>
+ <td class="items-total">$12.00</td><td class="shipping-paid">$1.32</td></tr>
+<tr class="order-row" data-order-id="SYN-BAD">
+ <td><input type="checkbox"></td><td class="order-date">not a date</td><td class="order-status">Paid</td>
+ <td><span class="buyer-name">Broken Row</span><span class="addr1"></span><span class="city">X</span><span class="state">X</span><span class="zip">1</span><span class="country">US</span></td>
+ <td><ul class="items"></ul></td><td class="items-total">$0.00</td><td class="shipping-paid">$0.00</td></tr>
+</tbody></table></body></html>
