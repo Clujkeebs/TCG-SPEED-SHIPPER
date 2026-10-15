@@ -64,7 +64,7 @@ a{color:var(--accent)}
 .tabs::-webkit-scrollbar{display:none}
 .tab{flex:1 0 auto;min-height:46px;padding:0 12px;border:0;border-bottom:3px solid transparent;background:none;color:var(--muted);font-weight:600;font-size:15px;white-space:nowrap}
 .tab[aria-selected="true"]{color:var(--text);border-bottom-color:var(--accent)}
-@media (max-width:480px){.tab{padding:0 8px;font-size:13.5px}.brand{font-size:18px}}
+@media (max-width:480px){.tab{padding:0 7px;font-size:13px}.brand{font-size:18px}}
 
 .panel{display:grid;gap:30px;padding-top:26px}
 .sec{display:grid;gap:12px}
@@ -181,6 +181,13 @@ td.num{font-family:var(--mono);white-space:nowrap}
 .idea-act{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .idea .src{font-size:13px;color:var(--faint)}
 
+/* x posts */
+.post{display:grid;gap:12px;padding:16px;border-top:1px solid var(--line)}
+.post:first-child{border-top:0}
+.post-text{white-space:pre-wrap;overflow-wrap:anywhere;font-size:17px;line-height:1.5}
+.post-act{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+a.btn{display:inline-flex;align-items:center;text-decoration:none}
+.post.posted .post-text{color:var(--muted);font-size:15px}
 /* meetings */
 .qs{margin:0;padding-left:22px;display:grid;gap:8px}
 .saved{display:grid;gap:0}
@@ -221,6 +228,7 @@ td.num{font-family:var(--mono);white-space:nowrap}
       <button class="tab" role="tab" data-tab="library" aria-selected="false">Library</button>
       <button class="tab" role="tab" data-tab="meetings" aria-selected="false">Meetings</button>
       <button class="tab" role="tab" data-tab="ideas" aria-selected="false">Ideas</button>
+      <button class="tab" role="tab" data-tab="posts" aria-selected="false">X posts</button>
     </nav>
   </div></div>
 
@@ -242,6 +250,7 @@ td.num{font-family:var(--mono);white-space:nowrap}
     <div class="panel" id="tab-library" hidden></div>
     <div class="panel" id="tab-meetings" hidden></div>
     <div class="panel" id="tab-ideas" hidden></div>
+    <div class="panel" id="tab-posts" hidden></div>
   </main>
 </div>
 
@@ -726,12 +735,12 @@ const IDEAS = [
 /* ---------- State ---------- */
 const ALL = STAGES.flatMap(s => s.tasks.map(t => ({...t, stage:s.id})));
 const byId = Object.fromEntries(ALL.map(t=>[t.id,t]));
-let progress = {}, inbox = [], suiteDoc = null, meetings = [], ideaState = {}, uploads = [];
+let xposts = [], progress = {}, inbox = [], suiteDoc = null, meetings = [], ideaState = {}, uploads = [];
 let db = null, sample = null, assets = null, synced = false;
 const local = { get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}}, set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}} };
 progress = local.get("hq-progress") || {};
 const openSet = new Set();
-let showRest = false, showDone = false, showParked = false, showAllIdeas = false, curTab = "now";
+let showRest = false, showDone = false, showParked = false, showAllIdeas = false, showPosted = false, curTab = "now";
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s==null?"":s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -961,8 +970,38 @@ async function postInbox(text){
   catch(e){ toast("Could not send. Try again."); return false; }
 }
 
+/* ---------- X posts ---------- */
+function renderPosts(){
+  const byNew = (a,b)=>(b.date||"").localeCompare(a.date||"")||(a.order||0)-(b.order||0);
+  const drafts = xposts.filter(x=>x.status==="draft").sort(byNew);
+  const posted = xposts.filter(x=>x.status==="posted").sort((a,b)=>(b.postedAt||"").localeCompare(a.postedAt||""));
+  const weekAgo = Date.now()-7*864e5, thisWeek = posted.filter(x=>new Date(x.postedAt||0).getTime()>weekAgo).length;
+  const card = x => { const n=[...(x.text||"")].length; return `<div class="post"><div class="post-text">${esc(x.text||"")}</div>
+    <div class="post-act"><span class="pill ${n>280?"warn":""}">${n}/280</span>
+    <button class="btn small" data-copy="${esc(x.text||"")}">Copy</button>
+    <a class="btn small" href="https://x.com/intent/post?text=${encodeURIComponent(x.text||"")}" target="_blank" rel="noopener">Open in X</a>
+    <button class="btn primary small" data-post-done="${esc(x.id)}">Mark posted</button>
+    <button class="link-btn" data-post-skip="${esc(x.id)}">Skip</button></div>
+    ${x.note?`<div class="muted small">${esc(x.note)}</div>`:""}</div>`; };
+  let last="", html="";
+  drafts.forEach(x=>{ if (x.date!==last){ last=x.date; html+=`<div class="label" style="padding:12px 16px 0">${esc(x.date||"")}</div>`; } html+=card(x); });
+  $("#tab-posts").innerHTML = `
+  <section class="sec"><div class="sec-head"><h2>X posts</h2><span class="muted small">Posted this week: ${thisWeek}</span></div>
+    <p class="lede">Claude writes new posts each morning. Post one or two, then tap Mark posted. Claude never posts for you.</p></section>
+  <section class="sec"><div class="list">${html||`<div class="empty">No drafts right now. Claude writes the next ones tomorrow morning.</div>`}</div>
+    <div><button class="ghost" id="moreXposts">Ask Claude for more</button></div></section>
+  ${posted.length?`<section class="sec"><button class="ghost" id="postedBtn" aria-expanded="${showPosted}">${showPosted?"Hide":"Show"} posted (${posted.length})</button>
+    ${showPosted?`<div class="list">${posted.slice(0,30).map(x=>`<div class="post posted"><div class="label">${esc(fmtDate(x.postedAt))}</div><div class="post-text">${esc(x.text||"")}</div><div class="post-act"><button class="link-btn" data-post-undo="${esc(x.id)}">Undo</button></div></div>`).join("")}</div>`:""}</section>`:""}`;
+}
+async function postSet(id, patch){
+  const x = xposts.find(p=>p.id===id); if (x) Object.assign(x, patch);
+  renderPosts();
+  if (db){ try{ await db.doc("xposts/"+id).update(patch); }catch(e){ toast("Could not save. Try again."); } }
+  else toast("Saving needs sync, which is off in this view");
+}
+
 /* ---------- Tabs ---------- */
-const RENDER = {now:renderTodo, roadmap:renderRoadmap, suite:renderSuite, library:renderLibrary, meetings:renderMeetings, ideas:renderIdeas};
+const RENDER = {now:renderTodo, roadmap:renderRoadmap, suite:renderSuite, library:renderLibrary, meetings:renderMeetings, ideas:renderIdeas, posts:renderPosts};
 function showTab(name, noScroll){
   if (!RENDER[name]) name="now";
   curTab = name;
@@ -1000,6 +1039,11 @@ document.addEventListener("click", e=>{
   if ((el=g("[data-idea-no]"))){ ideaSet(el.dataset.ideaNo,"not_now"); return; }
   if ((el=g("[data-idea-back]"))){ ideaSet(el.dataset.ideaBack,"open"); return; }
   if (g("#moreIdeas")){ showAllIdeas=!showAllIdeas; renderIdeas(); return; }
+  if ((el=g("[data-post-done]"))){ postSet(el.dataset.postDone,{status:"posted", postedAt:new Date().toISOString()}); toast("Marked posted"); return; }
+  if ((el=g("[data-post-skip]"))){ postSet(el.dataset.postSkip,{status:"skipped"}); return; }
+  if ((el=g("[data-post-undo]"))){ postSet(el.dataset.postUndo,{status:"draft", postedAt:null}); return; }
+  if (g("#postedBtn")){ showPosted=!showPosted; renderPosts(); return; }
+  if (g("#moreXposts")){ postInbox("more x posts").then(ok=>ok&&toast("Asked Claude")); return; }
   if (g("#parkBtn")){ showParked=!showParked; renderIdeas(); return; }
   if ((el=g("[data-upload]"))){ $(el.dataset.upload==="csv"?"#upCsv":"#upPhotos").click(); return; }
   if (g("#saveMeet")){
@@ -1051,6 +1095,7 @@ function setSync(on, text){ $("#syncDot").className = "dot "+(on?"on":"off"); $(
   }, ()=>{});
   db.doc("suite/status").onSnapshot(s=>{ suiteDoc = s.exists ? s.data() : null; if (curTab==="suite"||curTab==="roadmap") RENDER[curTab](); }, ()=>{});
   db.collection("meetings").orderBy("at","desc").limit(50).onSnapshot(snap=>{ meetings = snap.docs.map(d=>d.data()||{}); if (curTab==="meetings" && !(document.activeElement&&/^meet/.test(document.activeElement.id||""))) renderMeetings(); }, ()=>{});
+  db.collection("xposts").onSnapshot(snap=>{ xposts = snap.docs.map(d=>({id:d.id, ...(d.data()||{})})); if (curTab==="posts") renderPosts(); }, ()=>{});
   db.collection("ideas").onSnapshot(snap=>{ ideaState={}; snap.docs.forEach(d=>{ ideaState[d.id]=d.data()||{}; }); if (curTab==="ideas") renderIdeas(); }, ()=>{});
   db.collection("uploads").orderBy("at","desc").limit(200).onSnapshot(snap=>{ uploads = snap.docs.map(d=>d.data()||{}); if (curTab==="suite") renderSuite(); }, ()=>{});
 })();
@@ -1093,7 +1138,7 @@ function context(){
     const p=progress[t.id]||{};
     return `- ${t.id} [${p.done?"DONE":"todo"}] ${t.title}. Why: ${strip(t.why)} Steps: ${t.steps.map(strip).join(" | ")}${t.copy?" Values: "+t.copy.join(", "):""}${p.note?" Owner note: "+p.note:""}`;
   }).join("\n")).join("\n\n");
-  return `You are the helper inside "Shipper HQ", the owner's board for TCG Speed Shipper (tcgspeedshipper.com), a web app that turns TCGplayer order CSVs into shipping labels, envelopes and packing slips, now adding Pitney Bowes postage with a per-label fee and a prepaid balance (Stripe). The owner is not technical and uses an iPad. Answer in 1-4 short sentences, plainly, with exact click paths. Never ask for or repeat secret keys. The board has tabs Now, Roadmap, Suite, Library, Meetings and Ideas. The Pitney Bowes account is Shipping 360 (360.pitneybowes.com); the Merchants page being empty is normal and Invite Merchant should not be used yet. No date is set yet for the Pitney Bowes call; we are waiting on Linda.\n\n${FACTS}\n\nCurrent tasks and progress:\n${lines}`;
+  return `You are the helper inside "Shipper HQ", the owner's board for TCG Speed Shipper (tcgspeedshipper.com), a web app that turns TCGplayer order CSVs into shipping labels, envelopes and packing slips, now adding Pitney Bowes postage with a per-label fee and a prepaid balance (Stripe). The owner is not technical and uses an iPad. Answer in 1-4 short sentences, plainly, with exact click paths. Never ask for or repeat secret keys. The board has tabs Now, Roadmap, Suite, Library, Meetings, Ideas and X posts (daily post drafts the owner posts himself). The Pitney Bowes account is Shipping 360 (360.pitneybowes.com); the Merchants page being empty is normal and Invite Merchant should not be used yet. No date is set yet for the Pitney Bowes call; we are waiting on Linda.\n\n${FACTS}\n\nCurrent tasks and progress:\n${lines}`;
 }
 async function send(){
   const text = $("#composer").value.trim();
