@@ -100,17 +100,30 @@ async function main() {
       }
       await ui.close();
     }
-    // Side panel (agent flag is on from the step above): ask, get a card, approve once.
+    // Side panel (agent flag is on from the step above): goal, plan, approval card, memory, stop.
     const panel = await ctx.newPage();
     panel.on('pageerror', (e) => problems.push('sidepanel: ' + e.message));
     await panel.goto(`chrome-extension://${extId}/src/ui/sidepanel.html`);
-    await panel.fill('#text', 'please lower the price');
+    await panel.waitForSelector('#memlist li');
+    assert.equal(await panel.locator('#memlist li').count(), 2);
+    await panel.fill('#goal', 'please lower the price');
     await panel.click('#go');
     await panel.waitForSelector('.card button[data-answer=approve]');
-    assert.match(await panel.textContent('.card'), /Old price:\s*\$1\.50/);
+    assert.match(await panel.textContent('.card'), /oldPriceCents:\s*150/);
+    assert.match(await panel.textContent('#planlist'), /Ask you before changing anything/);
     await panel.click('.card button[data-answer=approve]');
     await panel.waitForSelector('text=You approved this.');
     assert.equal(await panel.locator('.card button').count(), 0, 'buttons gone after answering');
+    await panel.click('button[data-forget=m1]');
+    await panel.waitForFunction(() => document.querySelectorAll('#memlist li').length === 1);
+    await panel.fill('#goal', 'lower the price again');
+    await panel.click('#go');
+    await panel.waitForSelector('.card button[data-answer=deny]');
+    await panel.click('#stop');
+    await panel.waitForSelector('#resume:not([hidden])');
+    assert.equal(await panel.isDisabled('#go'), true, 'no new goal while stopped');
+    await panel.click('#resume');
+    await panel.waitForSelector('#stop:not([hidden])');
     await panel.close();
     const pop = await ctx.newPage();
     await pop.goto(`chrome-extension://${extId}/src/ui/popup.html`);

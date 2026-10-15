@@ -31,7 +31,7 @@ either is missing.
 | `src/store.js` | IndexedDB (memory fallback), validated with `src/vendor/models.js`. |
 | `src/adapters/selectors.js` | Every page selector, in one file (synthetic placeholders for now). |
 | `src/adapters/index.js` | `detectPage`, `readOrders`, `fillTracking`, `openImport`, `attachFile`, `selfTest`. Dry run by default; never submits or uploads. |
-| `src/agent/` | Side-panel protocol (checked messages), practice transport (made-up data), and the panel's DOM-free controller. Approval cards for `act` actions: only a click answers one, once. |
+| `src/agent/` | The side panel's side of the Agent protocol (`suite/agent/protocol.js`, mirrored and checked by a test), a practice transport on made-up data, and the DOM-free panel controller. Goal box, plan, approval cards (only a click answers one, once), Stop/Resume, memory list with Forget. |
 | `src/modules/scan-uploader.js` | Puts the Scan CSV in an import page's file box. Never presses Upload. Off. |
 | `src/flags-text.js` | Plain-words text for Settings and the popup. |
 | `src/ui/` | Popup, side panel placeholder, options page. |
