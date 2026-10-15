@@ -128,23 +128,24 @@
 @media (max-width: 380px) { .sf-grid { grid-template-columns: 1fr 1fr; gap: 24px 16px; } }
 
 /* ── Cookie notice ── */
+/* A slim, quiet strip along the bottom edge. It used to be a large dark card that covered the page. */
 .cc {
-  position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 1000; max-width: 560px; margin: 0 auto;
-  background: #262521; color: rgba(255,255,255,.8); border: 1px solid rgba(255,255,255,.16); border-radius: 14px; padding: 16px 18px;
-  box-shadow: 0 12px 40px rgba(0,0,0,.3); font: 14px/1.55 'Source Serif 4', Georgia, serif;
-  display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
-  transform: translateY(20px); opacity: 0; transition: transform .35s var(--ease-out), opacity .35s var(--ease-out);
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 1000; margin: 0;
+  background: #fff; color: #5b574c; border-top: 1px solid #e4e0d4; padding: 8px 14px calc(8px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -6px 18px rgba(0,0,0,.05); font: 13px/1.45 'Source Serif 4', Georgia, serif;
+  display: flex; gap: 10px 14px; align-items: center; justify-content: center;
+  transform: translateY(100%); opacity: 0; transition: transform .35s var(--ease-out), opacity .35s var(--ease-out);
 }
 .cc.show { transform: none; opacity: 1; }
-.cc p { margin: 0 !important; flex: 1 1 280px; color: rgba(255,255,255,.86) !important; font-size: 14px !important; line-height: 1.55 !important; max-width: none !important; }
-.cc a { color: #fff !important; }
-.cc .cc-btns { display: flex; gap: 8px; margin-left: auto; }
+.cc p { margin: 0 !important; flex: 0 1 auto; color: #5b574c !important; font-size: 13px !important; line-height: 1.45 !important; max-width: none !important; }
+.cc a { color: #1a1a17 !important; text-underline-offset: 2px; }
+.cc .cc-btns { display: flex; gap: 8px; flex: none; }
 .cc button {
-  font: 600 13px 'Source Serif 4', Georgia, serif; border-radius: 999px; padding: 8px 16px; cursor: pointer; border: 1px solid rgba(255,255,255,.25);
-  background: transparent; color: #fff; transition: background .15s, transform .15s var(--ease-out);
+  font: 600 12.5px 'Source Serif 4', Georgia, serif; border-radius: 999px; padding: 6px 14px; cursor: pointer; border: 1px solid #d9d4c6;
+  background: transparent; color: #1a1a17; transition: background .15s, transform .15s var(--ease-out);
 }
-.cc button.primary { background: #2d6a4f; border-color: #2d6a4f; }
-.cc button:hover { background: rgba(255,255,255,.1); }
+.cc button.primary { background: #2d6a4f; border-color: #2d6a4f; color: #fff; }
+.cc button:hover { background: #f1eee4; }
 .cc button.primary:hover { background: #40916c; }
 .cc button:active { transform: scale(.97); }
 

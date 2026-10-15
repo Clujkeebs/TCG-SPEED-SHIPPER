@@ -41,7 +41,7 @@
     banner.setAttribute('role', 'region');
     banner.setAttribute('aria-label', 'Cookie notice');
     var p = document.createElement('p');
-    p.appendChild(document.createTextNode('No ads and no tracking cookies here. We only use your browser’s storage to keep you signed in and remember your settings. '));
+    p.appendChild(document.createTextNode('No ads or tracking cookies. We only keep your sign-in and settings in your browser. '));
     var a = document.createElement('a');
     a.href = '/privacy.html#cookies';
     a.textContent = 'Details';
