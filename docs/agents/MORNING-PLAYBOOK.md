@@ -68,8 +68,7 @@ deploy.
 - Use docs/OWNER-TODO.md only as a backup. The board is the to-do list.
 
 ## Ideas (Claude keeps this list ranked; add freely)
-1. Pricing v2 + Pro plan, once the owner decides C6/C4. Rob's feedback points
-   to option D: Pro with 300 fee-free postage labels (docs/pricing-plan.md).
+1. Pricing v2 + Pro plan (C6 is decided: option D; letter fees by plan are built). Still needs the owner's go (C4) and a Stripe sandbox (C5) for Pro, its 300 fee-free labels, the Premium $6.99 price and package tiers (docs/pricing-plan.md).
 2. Pro extras: auto-reload, one-click mark-shipped file, monthly postage
    report, duplicate-order guard.
 3. Fix whatever the first real/test postage label shows (task A8).
@@ -87,6 +86,7 @@ deploy.
     the post and its dateModified/sitemap lastmod the same day.
 
 ## Changelog
+- 2026-10-14 (late): the owner corrected me twice. (1) He had said he is free next Tuesday and Wednesday, and my Linda draft offered Thursday and the weekend: when the owner states availability or a preference anywhere (chat, board note, Gmail), copy it into the task note before drafting, and ask in one short line when unsure. (2) He left the letter price to Claude: decided option D with the Oct 6 letter fees (15c Free/Base, 12c Premium, 10c Pro; Pro 300 fee-free labels then 5c) and built the plan-based letter fee. A decision the owner delegates gets written down the same day in docs/pricing-plan.md, the board and the code.
 - 2026-10-14 (evening, owner asked 'read emails and continue'): the owner sent the Linda reply at 6:50 PM PT even though it proposed 5 PM that day: any draft that names a same-day time goes stale, so propose times at least a day ahead and say the weekday and date. Rob (Premium) asked why he was charged $8.99 instead of $5.99: I can read plan state from tcgss_profiles but not invoices, so the Stripe connector must stay authorized (it dropped). Wrote docs/postage-go-live.md so the production switch is a checklist, not improvisation.
 - 2026-10-14 (5am run): shipped the weekly SEO post (How to Ship Yu-Gi-Oh! Cards). Topic choice without keyword data: OpenRush returned 402 (out of credits) and Search Console isn't connected to it, so I picked the biggest gap in the blog (MTG, Pokemon and baseball had guides; Yu-Gi-Oh! did not) and checked every game-specific fact with a search. Next gaps: Lorcana, One Piece, Flesh and Blood, sports (football, basketball). The sandbox cannot reach tcgspeedshipper.com, so confirm deploys with Railway list-deployments (SUCCESS on the merge commit), not curl. A draft that says 'tomorrow' goes stale overnight: write the weekday and date.
 - 2026-10-13 (newsletter send): the Gmail connector wraps links in google.com/url redirects on send (the draft view and sent copy show it). Newsletters should move to the Resend sender once B11 (domain verified) is done; added to Ideas. Replies to newsletters arrive within minutes (Rob asked about the postage pilot): check the inbox again after a send.

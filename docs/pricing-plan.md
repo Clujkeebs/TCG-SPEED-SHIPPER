@@ -1,7 +1,7 @@
 # Pricing plan v2 (draft for the owner's decision)
 
-Claude, 2026-10-06. Status: **plan only.** Nothing here is built, priced in
-Stripe, or announced until the owner says go. Owner decisions so far are
+Claude, 2026-10-06. Status: **plan; letter fees by plan are built (Oct 14).**
+The rest is not built, priced in Stripe, or announced until the owner says go. Owner decisions so far are
 marked ✅; Claude's pushback is marked ⚠️.
 
 ## The plans
@@ -53,6 +53,25 @@ Letters get USPS in-transit scans but **no delivery scan**. Sell them as
 "stamp price + tracking scans", never as "delivery confirmation". Packages
 (Ground Advantage) include full tracking and delivery confirmation.
 
+**✅ Decided Oct 14 (the owner left the letter price to Claude): Option D, with
+the Oct 6 letter fees.** Letters cost the seller postage plus **15¢ on Free and
+Base, 12¢ on Premium, 10¢ on Pro**, and Pro ($14.99) includes **300 fee-free
+postage labels a month, then 5¢ each** (below). Why:
+- It keeps the owner's rule: 5–10¢ kept on every label. Free, Base and
+  Premium keep about 8–11¢ per letter after card fees; Pro keeps about 5¢.
+- A tracked letter is about $0.88–0.93 against an $0.82 stamp with no
+  tracking. That is the price point Rob said sellers will accept.
+- Heavy shippers are the real prize. At Rob's rough 500 labels a month, Pro
+  costs $14.99 + 200 × 5¢ = $24.99 in fees, under his $30 meter, and the
+  per-label fee stops being the objection.
+- Built now: the letter fee follows the seller's plan (`postage.js`,
+  `LETTER_FEE_BY_PLAN`; lifetime-free and free-month accounts get the
+  Premium fee). Package labels stay at one 50¢ fee until pricing v2 is built.
+  Pro, its 300 included labels and the Stripe prices wait for a Stripe sandbox
+  or the owner's go (nothing is created in live Stripe).
+- Revisit when Pitney Bowes' rate sheet is in (call pending) and Rob sends
+  his real monthly volume.
+
 #### ⚠️ Rob's second reply (Oct 6, evening): flat fee beats per-label
 Rob's math against his $30/month Pitney Bowes meter: at 10¢ a label we
 stop being cheaper at about 300 labels a month, and at 15¢ at about 150. His
@@ -60,7 +79,7 @@ suggestion is to put postage in its own slightly higher tier with **no
 per-label fee** (Stamps.com-style), or to lower the fee after the first 100
 (he thinks that one is confusing).
 
-**Option D (Claude's pick, owner to decide): Pro includes fee-free postage.**
+**Option D (decided Oct 14, see above): Pro includes fee-free postage.**
 - Pro is $14.99/mo. It includes **300 postage labels a month with no
   per-label fee**, then 5¢ each after that.
 - At 300 labels, $14.99 works out to 5¢ a label, which matches the owner's
