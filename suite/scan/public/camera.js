@@ -15,3 +15,17 @@ export function grabFrame(video, canvas) {
   const { width, height, data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
   return { width, height, data };
 }
+
+// A photo the seller picked (or dropped) -> the same frame shape the camera gives. Downscaled so big phone
+// photos stay fast. Nothing is uploaded anywhere.
+export async function frameFromFile(file, canvas, maxSide = 1280) {
+  const bmp = await createImageBitmap(file);
+  const scale = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
+  canvas.width = Math.round(bmp.width * scale);
+  canvas.height = Math.round(bmp.height * scale);
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+  bmp.close?.();
+  const { width, height, data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  return { width, height, data };
+}

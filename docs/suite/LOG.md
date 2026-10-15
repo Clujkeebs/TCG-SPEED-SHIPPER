@@ -169,3 +169,15 @@ Not covered (honest list): real Chrome with a real signed-in profile; Edge/Firef
 anything on real TCGplayer pages (selectors are still guesses until saved pages arrive).
 Needs Builder: none. Needs owner: the saved TCGplayer pages listed in the X1 entry.
 Next: X3 when there is room.
+
+### 2026-10-15 · scan · look and live scan · done
+Owner asked for the same design as TCG Speed Shipper, live camera streaming, and photo upload. Done: dark top bar with
+mono tabs (Add / List / Price rule), cream page, serif headings, green gradient buttons, same fonts (own copy, OFL) and
+tokens; live camera that watches frames, waits for a card to hold still, reads it once, then waits for the next card
+(`core/live.js`, tested); photo upload with drag-and-drop, several at once; box drawn over the live video. Checked at 390px
+and 1280px with a fake camera and a synthetic photo; no console errors. Reading text still needs the OCR engine, so live
+and upload find the card but cannot yet name it (with a stand-in reader they add the card correctly).
+Numbers: Scan tests 64 pass offline.
+Needs Builder: approve the WebAssembly OCR build (still the blocker for naming cards).
+Needs owner: about 50 phone photos of real cards; a real TCGplayer export.
+Next: OCR engine, then measure on the photos.
