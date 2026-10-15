@@ -145,3 +145,16 @@ Added an "X posts" tab to the board. It reads collection `xposts`; the owner tap
 Needs Builder: add this to the morning routine, no later than 7 AM PT: write 3 to 5 new post drafts into the board's database, collection `xposts`, one document per post, id `YYYY-MM-DD-N`: `{ date: "YYYY-MM-DD", order: N, status: "draft", text, note? }`. Under 280 characters, plain words, true claims only (no prices or dates not decided, nothing about Pitney Bowes), no emoji walls, no engagement bait. Never set status to posted; only the owner does. Never post anything yourself. The owner's message "more x posts" in the inbox means write extra drafts.
 Needs owner: none
 Next: none
+
+### 2026-10-15 · extension · hardening · done
+Owner asked to make the extension bullet proof. Added: a 64 KB cap on any record sent through the bridge (and
+refusal of records that cannot be serialized); fuzz tests (junk of every type, and good messages with each field
+broken, never throw and are never accepted); browser checks that a page on a non-allow-listed origin gets no answer
+at all, that the popup, side panel and settings page load with zero errors, and that switching a TCGplayer flag on in
+Settings saves it but leaves the module locked.
+Numbers: `cd suite && npm test` 139 pass, 0 fail (also under `env -i PATH HOME`); root `npm test` 17 suites pass;
+the browser tests passed 10 of 10 repeated runs in a clean environment.
+Not covered (honest list): real Chrome with a real signed-in profile; Edge/Firefox; the side panel opening from a click;
+anything on real TCGplayer pages (selectors are still guesses until saved pages arrive).
+Needs Builder: none. Needs owner: the saved TCGplayer pages listed in the X1 entry.
+Next: X3 when there is room.
