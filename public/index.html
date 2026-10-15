@@ -1387,7 +1387,7 @@ Chicago, IL 60601</div>
     <div class="section fade-in-up" id="account-panel">
       <div id="account-signed-out">
         <div class="section-label">Log in or create a free account</div>
-        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;line-height:1.6;">
+        <p id="auth-intro" style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;line-height:1.6;">
           The Free plan works with no account at all. You only need an account to upgrade, or to see your plan and usage on any device. New here? Type an email and a password, then tap <strong>Create Account</strong>.
         </p>
         <form id="auth-form" novalidate>
@@ -1410,6 +1410,18 @@ Chicago, IL 60601</div>
         </div>
         </form>
         <div id="auth-captcha" style="margin-top:10px;" hidden></div>
+        <div id="auth-code-step" hidden>
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;line-height:1.6;">We emailed a 6-digit code to <strong id="auth-code-email"></strong>. It works for 10 minutes. Check your spam folder if you don't see it.</p>
+          <div class="field" style="max-width:220px;">
+            <label for="auth-code">6-digit code</label>
+            <input type="text" id="auth-code" name="code" placeholder="123456" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]*" />
+          </div>
+          <div class="btn-row" style="margin-top:10px;">
+            <button class="btn-dl" id="auth-code-btn" type="button">Verify and finish</button>
+            <button class="btn-ghost" id="auth-code-resend" type="button">Send a new code</button>
+          </div>
+          <p class="tip"><a href="#" id="auth-code-back" style="color:inherit;">Use a different email</a></p>
+        </div>
         <div id="auth-msg"></div>
         <p class="tip" style="margin-top:8px;">By creating an account you agree to the <a href="/terms.html" style="color:inherit;">Terms of Service</a> and <a href="/privacy.html" style="color:inherit;">Privacy Policy</a>.</p>
         <p class="tip"><a href="#" id="auth-forgot-link" style="color:inherit;">Forgot your password?</a></p>
@@ -4517,6 +4529,86 @@ document.getElementById('tracking-copy-all-btn').addEventListener('click', funct
     return json;
   }
 
+  /* Sign-up email code. The server answers /api/signup with { needsCode: true }
+     only when codes are switched on; then nothing exists yet, and the account
+     is created by /api/signup/verify once the emailed 6-digit code is right.
+     The password stays in this variable for that one step. */
+  var authForm = document.getElementById('auth-form');
+  var captchaBox = document.getElementById('auth-captcha');
+  var codeStep = document.getElementById('auth-code-step');
+  var codeField = document.getElementById('auth-code');
+  var codeBtn = document.getElementById('auth-code-btn');
+  var codeResend = document.getElementById('auth-code-resend');
+  var pendingSignup = null; // { email, password } while we wait for the code
+  function showCodeStep(email, password) {
+    pendingSignup = { email: email, password: password };
+    document.getElementById('auth-code-email').textContent = email;
+    authForm.hidden = true; captchaBox.hidden = true; codeStep.hidden = false;
+    document.getElementById('auth-intro').hidden = true;
+    codeField.value = '';
+    setMsg('', null);
+    setTimeout(function () { try { codeField.focus(); } catch (e) {} }, 50);
+  }
+  function hideCodeStep() {
+    pendingSignup = null;
+    codeStep.hidden = true; authForm.hidden = false;
+    document.getElementById('auth-intro').hidden = false;
+    if (captcha.widget != null) captchaBox.hidden = false;
+  }
+  // Same steps whether the account was just created directly or after a code.
+  async function finishSignup(email, password) {
+    trackEvent('signup');
+    var signInRes = await sb.auth.signInWithPassword({ email: email, password: password });
+    if (signInRes.error) throw signInRes.error;
+    // Harmless to call on a repaired legacy account too — the database
+    // side refuses anything but a genuinely brand-new profile, so this
+    // never re-attaches a referral to an old account.
+    await applyPendingReferralCode();
+    await applyPendingAffiliateCode();
+    setMsg('', null);
+  }
+  async function postCodeStep(path, body) {
+    var res = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    var json = {};
+    try { json = await res.json(); } catch (parseErr) { throw new Error('The server returned an unexpected response (HTTP ' + res.status + '). Please try again.'); }
+    if (!res.ok) throw new Error(json.error || 'That did not work. Please try again.');
+    return json;
+  }
+  codeField.addEventListener('input', function () { codeField.value = codeField.value.replace(/\D/g, '').slice(0, 6); });
+  codeField.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); codeBtn.click(); } });
+  codeBtn.addEventListener('click', async function () {
+    if (!pendingSignup) return;
+    var code = codeField.value.replace(/\D/g, '');
+    if (code.length !== 6) { setMsg('Enter the 6-digit code from the email.', 'err'); return; }
+    codeBtn.disabled = true; var orig = codeBtn.textContent; codeBtn.textContent = 'Checking...';
+    try {
+      var who = pendingSignup;
+      await postCodeStep('/api/signup/verify', { email: who.email, password: who.password, code: code });
+      hideCodeStep();
+      await finishSignup(who.email, who.password);
+    } catch (e) {
+      setMsg(friendlyAuthError(e), 'err');
+      // An expired or burnt code needs a fresh start from the form.
+      if (/Create Account/i.test((e && e.message) || '')) hideCodeStep();
+    }
+    codeBtn.disabled = false; codeBtn.textContent = orig;
+  });
+  codeResend.addEventListener('click', async function () {
+    if (!pendingSignup) return;
+    codeResend.disabled = true;
+    try {
+      await postCodeStep('/api/signup/resend', { email: pendingSignup.email });
+      setMsg('A new code is on its way. Use the newest one.', 'ok');
+    } catch (e) {
+      setMsg(friendlyAuthError(e), 'err');
+      if (/Create Account/i.test((e && e.message) || '')) hideCodeStep();
+    }
+    setTimeout(function () { codeResend.disabled = false; }, 4000);
+  });
+  document.getElementById('auth-code-back').addEventListener('click', function (e) {
+    e.preventDefault(); hideCodeStep(); setMsg('', null);
+  });
+
   document.getElementById('auth-form').addEventListener('submit', function (e) {
     e.preventDefault();
     if (!passwordField.value) { passwordField.focus(); return; }
@@ -4559,16 +4651,9 @@ document.getElementById('tracking-copy-all-btn').addEventListener('click', funct
     try {
       // Always go through our own endpoint — see the comment on serverSignup
       // for why a direct sb.auth.signUp() fast path was removed from here.
-      await serverSignup(c.email, c.password);
-      trackEvent('signup');
-      var signInRes = await sb.auth.signInWithPassword({ email: c.email, password: c.password });
-      if (signInRes.error) throw signInRes.error;
-      // Harmless to call on a repaired legacy account too — the database
-      // side refuses anything but a genuinely brand-new profile, so this
-      // never re-attaches a referral to an old account.
-      await applyPendingReferralCode();
-      await applyPendingAffiliateCode();
-      setMsg('', null);
+      var started = await serverSignup(c.email, c.password);
+      if (started && started.needsCode) showCodeStep(c.email, c.password);
+      else await finishSignup(c.email, c.password);
     } catch (e) {
       setMsg(friendlyAuthError(e), 'err');
     }
