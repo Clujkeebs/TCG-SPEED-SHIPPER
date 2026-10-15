@@ -3,8 +3,10 @@
 // Approval modes: 'always' asks for every act step, 'first-run' asks until the automation has run once,
 // 'never' means the owner pre-approved its act steps. Disabled automations never run. Every step goes
 // through the registry, so tiers, limits, the kill switch and the audit log all still apply.
-// No event triggers run yet: only cron is scheduled here.
+// Triggers: cron (a schedule) or event (low-stock, new-order, unanswered-message; see events.js).
 import { validateAutomation } from '../shared/models.js';
+
+export const EVENT_TRIGGERS = ['low-stock', 'new-order', 'unanswered-message'];
 
 const RANGES = [[0, 59], [0, 23], [1, 31], [1, 12], [0, 6]]; // minute hour day-of-month month day-of-week
 
@@ -44,7 +46,7 @@ export function validateSaved(a) {
   const v = validateAutomation(a);
   const errors = [...v.errors];
   if (v.ok && a.trigger.type === 'cron' && !parseCron(a.trigger.value)) errors.push('trigger.value is not a valid 5-field cron expression');
-  if (v.ok && a.trigger.type === 'event') errors.push('event triggers are not supported yet');
+  if (v.ok && a.trigger.type === 'event' && !EVENT_TRIGGERS.includes(a.trigger.value)) errors.push('event trigger must be one of ' + EVENT_TRIGGERS.join(', '));
   return { ok: errors.length === 0, errors };
 }
 
@@ -59,6 +61,7 @@ export function createAutomationStore() {
     get: (id) => (rows.has(id) ? structuredClone(rows.get(id)) : undefined),
     list: () => [...rows.values()].map((a) => structuredClone(a)),
     setEnabled(id, enabled) { const a = rows.get(id); if (!a) throw new Error('unknown automation ' + id); a.enabled = !!enabled; },
+    remove(id) { rows.delete(id); },
     markRun(id, at) { const a = rows.get(id); if (a) a.lastRunAt = at; },
   };
 }

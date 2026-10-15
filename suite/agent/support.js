@@ -15,7 +15,13 @@ export function classify(message) {
   return 'other';
 }
 
-const firstName = (order) => (order.shipTo.name || '').split(' ')[0] || 'there';
+// The draft never holds a buyer's name. It carries {{first_name}}, filled in on the seller's device by
+// fillPlaceholders() after the model (or the panel) has seen the draft.
+export const FIRST_NAME = '{{first_name}}';
+export const firstNameOf = (order) => (order.shipTo.name || '').split(' ')[0] || 'there';
+export function fillPlaceholders(text, { firstName }) {
+  return String(text).split(FIRST_NAME).join(firstName || 'there');
+}
 const days = (a, b) => Math.floor((Date.parse(b) - Date.parse(a)) / 86400000);
 
 const FRAME = {
@@ -91,5 +97,5 @@ export function draftReply(order, message, { sellerName = 'the shop', now, tone 
   } else key = 'other';
 
   const f = FRAME[tone];
-  return { orderId: order.id, category, tone, draft: f.hi(firstName(order)) + BODY[key](order)[i] + f.bye(sellerName), needsHuman, notes, sent: false };
+  return { orderId: order.id, category, tone, draft: f.hi(FIRST_NAME) + BODY[key](order)[i] + f.bye(sellerName), needsHuman, notes, sent: false, placeholders: ['first_name'] };
 }

@@ -64,5 +64,7 @@ export function createAuditLog({ store = createMemoryStore(), now = () => new Da
       return entry;
     },
     list: () => store.list(),
+    // One JSON object per line: what ran, when, by whom, who approved. Arguments are hashes only.
+    async exportJsonl() { return (await store.list()).map((e) => JSON.stringify(e)).join('\n') + '\n'; },
   };
 }

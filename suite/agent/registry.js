@@ -3,6 +3,8 @@
 //   draft     prepares something for a human; never sends or changes anything
 //   act       changes something; needs an approval callback, every time
 //   autopilot runs by itself, only inside an automation the owner switched on
+// An act tool may also give `describe(args) -> { what, expected, undoText }` (used for its approval card)
+// and `undo(args, result) -> { tool, args } | null` (how to reverse it).
 import { TOOL_TIERS } from '../shared/models.js';
 import { createAuditLog } from './audit.js';
 import { createLimits } from './limits.js';
