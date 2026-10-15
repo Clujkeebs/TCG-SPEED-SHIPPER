@@ -341,3 +341,9 @@ assembled) and expose `agent.undo` in the panel; (c) the server proxy from `AGEN
 now: saving them to IndexedDB on the device is the next job (shapes are in `DATA-MODEL.md`).
 Needs owner: none new.
 Next: save memory, cards and reports in IndexedDB; a measured run with a real model (needs a key and a small budget from the owner).
+
+### 2026-10-15 · hq · protect rows, Scan tasks, six ideas · done
+Protect list is now 10 rows. Backups says "Free plan: no backups yet", next "Supabase Pro ($25 a month) before postage balances go live". Usage limit says "Running". New row for what the Builder fixed and checks daily (faked addresses, old packages, open table access). No "unverified" flags are left. Task S4 is now "Paste the first line of your TCGplayer export into Scan" (CSV check tab, Header line box, Check columns), waiting on the Scan link. New task S6 "Try Scan on your iPad" (link arrives in the board inbox today), shown under S1. Six new sourced ideas: paywall preview at the free limit, yearly price first, Suite bundle price test (revenue); chargeback evidence kit, public status page, "delete my data" flow (protect). Now tab shows three things: while you were away (2), Next up, Do now (2); everything else is under "Show the rest". Re-checked at 820x1180, 1180x820 and 390x844 in dark: no errors, no sideways scroll.
+Needs Builder: post the Scan test address in the board inbox (as a Claude message) and tell me, so S4 and S6 can lose their "waiting" labels. Two sources are summaries (Stripe deadlines, California rules); both are marked to confirm.
+Needs owner: none
+Next: none
