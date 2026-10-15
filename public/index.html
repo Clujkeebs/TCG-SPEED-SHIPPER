@@ -377,10 +377,11 @@ body.has-orders .sticky-bar,
 body.has-orders .sample-row { display: none !important; }
 .reload-csv { display: none; margin: 0 0 6px; }
 body.has-orders #tab-home.active { display: flex; flex-direction: column; }
-body.has-orders #csv-section { order: -3; }
-body.has-orders .ready-card { order: -2; }
+body.has-orders .ready-card { order: -3; }
+body.has-orders #csv-section { order: -2; }
 body.has-orders #preview-area { order: -1; }
 body.has-orders .reload-csv { display: inline-block; }
+body.has-orders #tab-home.active { padding-top: 20px; }
 .opt-group { display: flex; align-items: center; gap: 8px; }
 .opt-label { font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; white-space: nowrap; font-weight: 500; text-transform: uppercase; letter-spacing: .04em; }
 .opt-select {
@@ -497,6 +498,8 @@ body.has-orders .reload-csv { display: inline-block; }
 .tcg-import-opt input { margin-top: 3px; }
 .tcg-import code { font-size: 12px; background: #fff; padding: 1px 5px; border-radius: 4px; }
 .ship-plan { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; margin: 0 0 12px; }
+.fold.ship-plan { padding: 0 1.1rem; border-radius: var(--radius); margin: 0 0 10px; }
+.fold.ship-plan[open] { padding-bottom: 1rem; }
 .ship-plan-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .ship-plan-title { font-size: 11px; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
 .ship-plan-filter { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); }
@@ -2339,6 +2342,7 @@ function addLocalUsage(n) {
    add up to the same total as printing it all at once. Keys are scoped to
    the loaded batch, so a different file starts fresh. */
 var paidOrderKeys = {};
+var sampleLoaded = false; // true while the loaded orders are the built-in sample
 function paidKey(o, i) { return batchKey() + '#' + orderKey(o, i); }
 function unpaidCount(list) {
   return list.filter(function (e) { return !paidOrderKeys[paidKey(e.o, e.i)]; }).length;
@@ -2947,7 +2951,7 @@ function renderPreviews() {
   var left = remainingLabels();
   var quota = '';
   if (n && !unpaidCount(toPrint)) {
-    quota = ' · already counted';
+    quota = sampleLoaded ? ' · sample, free' : ' · already counted';
   } else if (left !== null && left !== Infinity) {
     quota = ' · ' + left + ' left this month';
   }
@@ -3460,6 +3464,7 @@ function loadCsvText(text, fileName, eventName, afterLoad, loadedMessage) {
   if(!result||!result.length){ document.getElementById('error-msg').innerHTML='<div class="error-box">No valid orders found.</div>'; return false; }
   orders=result;
   lastCsvText=text;
+  sampleLoaded=(eventName==='sample_loaded');
   if(afterLoad) afterLoad();
   trackEvent(eventName);
   resetTracking();
