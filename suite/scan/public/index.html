@@ -22,6 +22,7 @@
 </nav>
 
 <main>
+  <p class="notice" role="note"><strong>Privacy.</strong> Looking up a card sends what you type, or the text read from a card, to Scryfall, the Pokémon TCG API and YGOPRODeck. Photos never leave this device.</p>
   <p class="notice" role="note"><strong>Draft.</strong> The CSV columns are <strong>unverified</strong>: we have not checked them against a real TCGplayer export yet, so check the file before you upload it. Sample prices are made-up demo numbers.</p>
 
   <section id="tab-add" class="tab" role="tabpanel" aria-labelledby="t-add">
@@ -79,6 +80,9 @@
       <input id="q" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="e.g. bolt m11, charizard base1, nami op01">
       <p id="status" class="status" role="status" aria-live="polite"></p>
       <ul id="results" class="list"></ul>
+      <p id="lastLookup" class="muted">Last lookup: none yet.</p>
+      <div class="btn-row"><button id="report" type="button" class="btn-ghost">Report a problem (copies a short note)</button></div>
+      <textarea id="reportOut" rows="8" hidden aria-label="Problem report text"></textarea>
     </div>
   </section>
 

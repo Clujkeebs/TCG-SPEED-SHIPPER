@@ -17,6 +17,9 @@ TCGplayer Seller Portal import. Works offline after the first visit. No build st
 ## Finding any card
 The built-in list is only 96 sample cards. With **Look up any card online** ticked (default), a search that finds nothing locally asks Scryfall / Pokémon TCG / YGOPRODeck from your browser and remembers the result on the device. Tested with simulated responses only.
 
+## Prices, links and problems
+Prices from the card sites carry the time they were fetched; older than 24 hours means a refetch, or a red warning on the row. For a card with no TCGplayer product id, paste its TCGplayer page address (only the number is read from the text; the page is never opened). **Report a problem** copies a short plain-text note for the board inbox.
+
 ## Host it on its own site
 `node suite/scan/build.js` writes a plain static folder to `suite/scan/dist/` (about 130 KB). Upload that folder to any
 static host (Netlify, Cloudflare Pages, GitHub Pages) with https. Nothing runs on a server. The folder is not committed.
