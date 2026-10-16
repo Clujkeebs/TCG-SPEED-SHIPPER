@@ -481,3 +481,9 @@ Needs Builder: next release set AUTO_ACTIVATE to false in sw.js. Ask Sam to tap 
 problem note: it now includes the device lines.
 Needs owner: same; one real TCGplayer export.
 Next: whatever the iPad report shows.
+
+### 2026-10-16 · hq · Scan link, A8 retest, domains, call notes · done
+Board updated. S4 and S6 no longer say "waiting"; S6 has the Scan test link (opens in a new tab, Copy button) and the four steps: open the link, tap "Check my device", point the camera at one card or upload a photo, "Report a problem" and paste into the inbox. A8 now starts "Try the 8 sample orders again" and explains "pilot" in one line (the owner's note, with the Builder's reply, is untouched). New task S7 "Say buy domains" (a yes plus where: Porkbun or through Claude on Vercel; $11.25 a year each). G12 is now "Record the Pitney Bowes call": easiest is Voice Memos on an iPad or iPhone, paste the text; Zoom and Meet built-in notes noted; Granola is optional. Now tab top three today: A8, S6, then A16 (see below).
+Needs Builder: A16 (Rob's reply) is already ticked done on the owner's side (Oct 15), so it does not show on Now; today's third item is the next open task (B13, the sign-up code test). Tell me if A16 should be reopened or replaced with something else.
+Needs owner: none new.
+Next: none
