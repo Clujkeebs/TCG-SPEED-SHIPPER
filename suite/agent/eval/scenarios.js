@@ -9,7 +9,8 @@ const say = (text) => ({ type: 'text', text });
 // The result of the nth tool call so far, parsed.
 export const result = (messages, n = -1) => {
   const all = messages.filter((m) => m.role === 'user' && Array.isArray(m.content)).flatMap((m) => m.content).filter((b) => b.type === 'tool_result');
-  return JSON.parse(all.at(n).content);
+  const parsed = JSON.parse(all.at(n).content);
+  return parsed && parsed.notice && parsed.data !== undefined ? parsed.data : parsed; // untrusted results come wrapped with a notice
 };
 const usd = (c) => '$' + (c / 100).toFixed(2);
 

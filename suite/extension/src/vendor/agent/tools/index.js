@@ -2,13 +2,16 @@
 import { DEFAULT_RULE, applyPriceRule } from '../../scan/core/pricing.js';
 import { CONDITIONS, FINISHES } from '../../shared/models.js';
 import * as A from '../analytics.js';
-import { importInventoryCsv, diffInventory, exportInventoryCsv, TARGETS } from '../sync/csv.js';
+import { unitsSold, inRange } from '../analytics.js';
+import { importInventoryCsv, diffInventory, exportInventoryCsv, analyzeExport, TARGETS } from '../sync/csv.js';
 import { draftReply, TONES } from '../support.js';
 import { CHART_KINDS, chartSeries, weeklyText, weekly } from '../analytics.js';
 import { findDeals, defaultFeed, CATEGORIES as DEAL_CATEGORIES, ALLOWED_SOURCES } from '../deals.js';
 import { validatePriceRule } from '../../shared/models.js';
 import { weeklySuggestions } from '../suggestions.js';
 import { createActTools } from './acts.js';
+import { sanitizeUntrusted } from '../untrusted.js';
+import { POLICIES, getPolicy, searchPolicies, citation, POLICY_IDS } from '../policies.js';
 
 const str = { type: 'string' };
 const int = { type: 'integer', minimum: 0 };
@@ -175,32 +178,62 @@ export function createTools(data) {
       },
     },
     {
-      name: 'deals.find', tier: 'read',
+      name: 'deals.find', tier: 'read', untrusted: true,
       description: 'Find supply deals (sleeves, toploaders, boxes, shelving, monitors, scanners) in the allow-listed sources. Reads a saved feed; never browses, never buys.',
       inputSchema: { type: 'object', properties: { category: { type: 'string', enum: DEAL_CATEGORIES }, maxPriceCents: int, minDiscountPct: { type: 'number', minimum: 0, maximum: 100 }, limit: { type: 'integer', minimum: 1, maximum: 50 } } },
       handler: (a) => ({ ...findDeals(dealFeed(), a), allowedSources: ALLOWED_SOURCES.map((s) => s.name) }),
     },
     {
-      name: 'messages.unanswered', tier: 'read',
+      name: 'policy.lookup', tier: 'read',
+      description: 'Look up a cited TCGplayer seller rule (shipping tiers, lost package, returns, seller levels). Give an id like LOST-1, or words to search. Rules change: always tell the seller to check TCGplayer\'s current article.',
+      inputSchema: { type: 'object', properties: { id: { type: 'string', enum: POLICY_IDS }, text: str } },
+      handler: (a) => {
+        const list = a.id ? [getPolicy(a.id)] : searchPolicies(a.text).slice(0, 5);
+        return { entries: list.map((p) => ({ id: p.id, title: p.title, summary: p.summary, asOf: p.asOf, source: p.source, cite: citation(p) })), total: POLICIES.length };
+      },
+    },
+    {
+      name: 'messages.unanswered', tier: 'read', untrusted: true,
       description: 'Buyer messages that have no reply yet and are older than a number of hours (default 24).',
       inputSchema: { type: 'object', properties: { hours: { type: 'integer', minimum: 0, maximum: 720 } } },
       handler: (a) => {
         const hours = a.hours ?? 24;
         const list = messages.filter((m) => !m.answered && Date.parse(nowIso()) - Date.parse(m.receivedAt) > hours * 3600000).sort((x, y) => x.receivedAt.localeCompare(y.receivedAt));
-        return { total: list.length, messages: list.map((m) => ({ id: m.id, orderId: m.orderId, receivedAt: m.receivedAt, text: m.text })) };
+        return { total: list.length, messages: list.map((m) => ({ id: m.id, orderId: m.orderId, receivedAt: m.receivedAt, text: sanitizeUntrusted(m.text, 500) })) };
       },
     },
     {
-      name: 'sync.previewImport', tier: 'read',
+      name: 'sync.previewImport', tier: 'read', untrusted: true,
       description: 'Read pasted inventory CSV text (a marketplace export) and show what was understood and what was not. Changes nothing.',
       inputSchema: { type: 'object', required: ['csv'], properties: { csv: str } },
       handler: (a) => {
         const r = importInventoryCsv(a.csv, printings);
-        return { understood: r.items.length, unitsTotal: r.items.reduce((s, i) => s + i.quantity, 0), unmatched: r.unmatched, problems: r.problems };
+        return { understood: r.items.length, unitsTotal: r.items.reduce((s, i) => s + i.quantity, 0), unmatched: r.unmatched.slice(0, 20).map((u) => ({ line: u.line, reason: u.reason, name: sanitizeUntrusted(u.name, 80) })), problems: r.problems };
       },
     },
     {
-      name: 'sync.compare', tier: 'read',
+      name: 'sync.analyzeExport', tier: 'read', untrusted: true,
+      description: 'Read a pasted or dropped Seller Portal inventory export and suggest the five most useful things to fix: price drift against the market column, low stock, duplicates, rows that could not be read. Only suggests; changes nothing.',
+      inputSchema: { type: 'object', required: ['csv'], properties: { csv: str } },
+      handler: (a) => {
+        if (a.csv.length > 400000) throw new Error('that file is too big (limit 400,000 characters)');
+        const sold = unitsSold(inRange(orders, new Date(Date.parse(nowIso()) - 60 * 86400000).toISOString(), new Date(Date.parse(nowIso()) + 1).toISOString()));
+        const pct = memory ? memory.get('price.percent') : undefined;
+        const rule = typeof pct === 'number' ? { ...DEFAULT_RULE, id: 'sync-rule', name: `${pct}% under market`, percent: -Math.abs(pct) } : rules[0];
+        const out = analyzeExport(a.csv, printings, { rule, threshold: memory && typeof memory.get('restock.threshold') === 'number' ? memory.get('restock.threshold') : 2, soldByName: sold });
+        const local = new Set(inventory.map((i) => [i.printingId, i.condition, i.finish].join('|')));
+        for (const f of out.fixes || []) {
+          if (!f.action) continue;
+          const keep = f.action.args.changes.filter((c) => local.has([c.printingId, c.condition, c.finish].join('|')));
+          f.notInLocalStock = f.action.args.changes.length - keep.length;
+          f.action = keep.length ? { tool: f.action.tool, args: { changes: keep } } : null;
+        }
+        const clean = (list) => (list || []).map((u) => ({ ...u, name: sanitizeUntrusted(u.name, 80) }));
+        return { ...out, unmatched: clean(out.unmatched), duplicates: clean(out.duplicates) };
+      },
+    },
+    {
+      name: 'sync.compare', tier: 'read', untrusted: true,
       description: 'Compare pasted marketplace inventory CSV text with the inventory we hold: missing, extra, quantity and price differences.',
       inputSchema: { type: 'object', required: ['csv'], properties: { csv: str } },
       handler: (a) => {

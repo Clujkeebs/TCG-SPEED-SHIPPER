@@ -19,6 +19,8 @@ export function createLimits({
     kill(reason = 'stopped by the owner') { killed = true; killReason = reason; },
     resume() { killed = false; killReason = ''; },
     isKilled: () => killed,
+    // A copy of the caps, so a test (or the panel) can show nothing changed them.
+    caps: () => structuredClone({ perRun, perDay }),
     newRun() { return { calls: 0, spendCents: 0 }; },
     // Can one more call costing `costCents` go ahead? Does not change any counter.
     check(run, costCents = 0) {

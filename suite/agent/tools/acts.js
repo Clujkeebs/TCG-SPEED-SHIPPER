@@ -28,11 +28,17 @@ export function createActTools({ inventory, printings, memory, automations }) {
       inputSchema: { type: 'object', required: ['changes'], properties: { changes: { type: 'array' } } },
       describe(args) {
         const ch = (args.changes || []).filter((c) => !checkChange(c));
-        let before = 0, after = 0;
-        for (const c of ch) { const i = find(c); if (i) { before += (i.priceCents || 0) * i.quantity; after += c.priceCents * i.quantity; } }
+        let before = 0, after = 0, big = 0;
+        for (const c of ch) {
+          const i = find(c);
+          if (!i) continue;
+          before += (i.priceCents || 0) * i.quantity; after += c.priceCents * i.quantity;
+          if (i.priceCents && Math.abs(c.priceCents - i.priceCents) / i.priceCents > 0.5) big += 1;
+        }
+        const warn = big ? ` WARNING: ${big} of these prices move by more than half.` : '';
         return {
           what: `Change the saved price of ${ch.length} cards in your stock list (on this device only; nothing is listed or changed on TCGplayer)`,
-          expected: `Total list value of those cards goes from ${usd(before)} to ${usd(after)} (${after >= before ? '+' : '-'}${usd(Math.abs(after - before))})`,
+          expected: `Total list value of those cards goes from ${usd(before)} to ${usd(after)} (${after >= before ? '+' : '-'}${usd(Math.abs(after - before))}).${warn}`,
           undoText: 'Undo puts every price back as it was.',
         };
       },
@@ -55,13 +61,13 @@ export function createActTools({ inventory, printings, memory, automations }) {
       },
     },
     {
-      name: 'memory.search', tier: 'read',
+      name: 'memory.search', tier: 'read', blockedAfterUntrusted: true,
       description: 'Look up facts remembered about the shop (settings, preferences, past decisions).',
       inputSchema: { type: 'object', properties: { text: { type: 'string' } } },
       handler: (a) => ({ facts: memory.search(a.text).map((f) => ({ id: f.id, text: f.text, category: f.category, key: f.key })) }),
     },
     {
-      name: 'memory.remember', tier: 'act',
+      name: 'memory.remember', tier: 'act', blockedAfterUntrusted: true,
       description: 'Remember a fact about the shop for later runs. Needs approval; the seller can edit or delete it any time.',
       inputSchema: { type: 'object', required: ['text'], properties: { text: { type: 'string' }, key: { type: 'string' }, value: { type: 'string' }, category: { type: 'string', enum: CATEGORIES } } },
       describe: (a) => ({ what: `Remember: "${a.text}"`, expected: 'Later plans will use this fact. You can see, edit or delete it under shop memory.', undoText: 'Undo forgets it again.' }),
@@ -73,7 +79,7 @@ export function createActTools({ inventory, printings, memory, automations }) {
       undo: (args, result) => ({ tool: 'memory.forget', args: { id: result.id } }),
     },
     {
-      name: 'memory.forget', tier: 'act',
+      name: 'memory.forget', tier: 'act', blockedAfterUntrusted: true,
       description: 'Forget one remembered fact. Needs approval.',
       inputSchema: { type: 'object', required: ['id'], properties: { id: { type: 'string' } } },
       describe(a) { const f = memory.find(a.id); return { what: `Forget: "${f ? f.text : a.id}"`, expected: 'Later plans will not use this fact.', undoText: 'Undo remembers it again.' }; },
@@ -85,7 +91,7 @@ export function createActTools({ inventory, printings, memory, automations }) {
   if (automations) {
     tools.push(
       {
-        name: 'automation.save', tier: 'act',
+        name: 'automation.save', tier: 'act', blockedAfterUntrusted: true,
         description: 'Save a scheduled job that runs on a timer and leaves a report. Jobs the agent saves always ask before acting; only the owner can switch a job to autopilot.',
         inputSchema: { type: 'object', required: ['automation'], properties: { automation: { type: 'object' } } },
         describe: (a) => ({ what: `Save the schedule "${a.automation && a.automation.name}" (${a.automation && a.automation.trigger && a.automation.trigger.value})`, expected: 'It runs on that schedule and leaves a report. Any change it wants to make still comes to you as a card.', undoText: 'Undo removes the schedule.' }),
@@ -100,7 +106,7 @@ export function createActTools({ inventory, printings, memory, automations }) {
         undo: (args, result) => ({ tool: 'automation.remove', args: { id: result.id } }),
       },
       {
-        name: 'automation.remove', tier: 'act',
+        name: 'automation.remove', tier: 'act', blockedAfterUntrusted: true,
         description: 'Remove a saved schedule. Needs approval.',
         inputSchema: { type: 'object', required: ['id'], properties: { id: { type: 'string' } } },
         describe: (a) => ({ what: `Remove the schedule ${a.id}`, expected: 'It stops running.', undoText: 'Undo saves it again.' }),

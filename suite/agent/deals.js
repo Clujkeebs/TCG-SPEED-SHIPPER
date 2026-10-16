@@ -1,6 +1,7 @@
 // Deal finder for supplies, from an allow-list of sources. It only reads a feed it is handed (fixtures
 // for now) and never makes a network call or scrapes a page. Items from a source that is not on the
 // allow-list are dropped and counted, so the seller can see something was ignored.
+import { sanitizeUntrusted } from './untrusted.js';
 import { ALLOWED_SOURCES, CATEGORIES, DEAL_FEED } from './fixtures/deals.js';
 
 export { ALLOWED_SOURCES, CATEGORIES };
@@ -19,7 +20,7 @@ export function findDeals(feed, { category, source, maxPriceCents, minDiscountPc
     if (maxPriceCents !== undefined && d.priceCents > maxPriceCents) continue;
     const discountPct = Math.round(((d.listPriceCents - d.priceCents) / d.listPriceCents) * 1000) / 10;
     if (discountPct < minDiscountPct) continue;
-    const row = { id: d.id, title: d.title, category: d.category, source: d.source, priceCents: d.priceCents, listPriceCents: d.listPriceCents, discountPct, seenAt: d.seenAt, url: d.url };
+    const row = { id: d.id, title: sanitizeUntrusted(d.title, 120), category: d.category, source: d.source, priceCents: d.priceCents, listPriceCents: d.listPriceCents, discountPct, seenAt: d.seenAt, url: /^https:\/\/[^\s]{1,200}$/.test(String(d.url)) ? d.url : undefined };
     if (Number.isInteger(d.units) && d.units > 0) row.perUnitCents = Math.round((d.priceCents / d.units) * 100) / 100;
     ok.push(row);
   }
