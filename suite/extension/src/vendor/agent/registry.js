@@ -3,6 +3,8 @@
 //   draft     prepares something for a human; never sends or changes anything
 //   act       changes something; needs an approval callback, every time
 //   autopilot runs by itself, only inside an automation the owner switched on
+// Flags: `untrusted` (the result holds text written by others: the run becomes tainted) and
+// `blockedAfterUntrusted` (refused once the run is tainted). See untrusted.js.
 // An act tool may also give `describe(args) -> { what, expected, undoText }` (used for its approval card)
 // and `undo(args, result) -> { tool, args } | null` (how to reverse it).
 import { TOOL_TIERS } from '../shared/models.js';
@@ -70,13 +72,15 @@ export function createRegistry({ audit = createAuditLog(), limits = createLimits
     const gate = limits.check(runCounters, cost);
     if (!gate.ok) return deny(gate.reason);
 
+    if (t.blockedAfterUntrusted && ctx.tainted) return deny('not allowed after reading text written by someone else in this run');
+
     const problems = validateArgs(t.inputSchema, args);
     if (problems.length) { await log(t.tier, 'error'); return { ok: false, error: 'bad arguments: ' + problems.join('; ') }; }
 
     let approvedBy;
     if (t.tier === 'act') {
       if (typeof ctx.approve !== 'function') return deny('this tool changes things and needs an approval step; none was given');
-      const answer = await ctx.approve({ tool: name, tier: t.tier, description: t.description, args });
+      const answer = await ctx.approve({ tool: name, tier: t.tier, description: t.description, args, tainted: !!ctx.tainted });
       const approved = answer === true || (answer && answer.approved === true);
       if (!approved) return deny('the owner did not approve this');
       approvedBy = (answer && answer.by) || 'user';
@@ -88,7 +92,8 @@ export function createRegistry({ audit = createAuditLog(), limits = createLimits
     try {
       const result = await t.handler(args, ctx);
       await log(t.tier, 'ok', approvedBy);
-      return { ok: true, result };
+      if (t.untrusted) ctx.tainted = true;
+      return { ok: true, result, ...(t.untrusted ? { untrusted: true } : {}) };
     } catch (err) {
       await log(t.tier, 'error', approvedBy);
       return { ok: false, error: String((err && err.message) || err) };

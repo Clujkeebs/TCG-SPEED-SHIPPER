@@ -55,6 +55,24 @@ export function createAgent({ registry, memory, inbox, planner, reports, jobs, n
     async editMemory(id, patch) { const f = memory.edit(id, patch); await audit('memory.edit', { id }, 'user'); return f; },
     async forgetMemory(id) { const f = memory.delete(id); await audit('memory.delete', { id }, 'user'); return f; },
 
+    // A pasted or dropped Seller Portal export. The analysis is read-only; each fix that changes something
+    // becomes an approval card. Nothing is applied here.
+    async syncExport(csv, { onEvent = () => {} } = {}) {
+      const out = await registry.run('sync.analyzeExport', { csv }, { actor: 'agent' });
+      if (!out.ok) return { status: 'failed', reason: out.error };
+      const analysis = out.result;
+      if (!analysis.ok) return { status: 'unreadable', problems: analysis.problems, analysis };
+      const cards = [];
+      for (const f of analysis.fixes) {
+        if (!f.action) continue;
+        const card = inbox.propose({ tool: f.action.tool, args: f.action.args, why: f.why, actor: 'agent' });
+        f.cardId = card.id;
+        cards.push(card);
+        onEvent({ event: 'card', cardId: card.id });
+      }
+      return { status: 'ok', analysis, cards };
+    },
+
     suggestions: async () => {
       const out = await registry.run('suggestions.weekly', {}, { actor: 'agent' });
       if (!out.ok) throw new Error(out.error);
