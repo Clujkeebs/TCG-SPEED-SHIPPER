@@ -126,7 +126,9 @@ async function main() {
     await panel.waitForSelector('#tour', { state: 'hidden' });
     assert.equal(await panel.evaluate(() => document.activeElement.id), 'goal', 'focus returns to the question box');
     // Keyboard only: Enter sends; the new card takes focus; Tab reaches Approve; Enter approves.
-    await panel.fill('#goal', 'please lower the price');
+    await panel.waitForSelector('#suglist li');
+    assert.ok((await panel.locator('#suglist li').count()) >= 2, 'weekly suggestions are shown');
+    await panel.fill('#goal', 'Reprice my cards 5% under market');
     await panel.press('#goal', 'Enter');
     await panel.waitForSelector('.card button[data-answer=approve]');
     assert.equal(await panel.evaluate(() => document.activeElement.className), 'card', 'the approval card takes keyboard focus');
@@ -135,24 +137,32 @@ async function main() {
     assert.deepEqual(overflow, { doc: 0, main: 0 }, 'no sideways scrolling at 360 px');
     await panel.keyboard.press('Tab');
     assert.equal(await panel.evaluate(() => document.activeElement.dataset.answer), 'approve');
-    assert.match(await panel.textContent('.card'), /newPriceCents:\s*70/);
-    assert.match(await panel.textContent('#planlist'), /Ask you before changing anything/);
+    const cardText = await panel.textContent('.card');
+    assert.match(cardText, /Why:/);
+    assert.match(cardText, /Undo:/);
+    assert.match(cardText, /What will change:/);
+    assert.match(await panel.textContent('#planlist'), /Save the new prices/);
     assert.equal(await panel.locator('#memlist li').count(), 2);
     await panel.keyboard.press('Enter');
     await panel.waitForSelector('text=You approved this.');
-    await panel.waitForSelector('text=Done, in practice data only');
+    await panel.click('button[data-undo]');
+    await panel.waitForSelector('text=Put back as it was.');
+    // Memory: the assistant proposes, the seller approves, then can forget it.
     await panel.fill('#goal', 'remember that I close on Sundays');
-    await panel.click('#go');
+    await panel.press('#goal', 'Enter');
+    await panel.waitForSelector('.card button[data-answer=approve]');
+    await panel.click('.card button[data-answer=approve]');
     await panel.waitForFunction(() => document.querySelectorAll('#memlist li').length === 3);
-    await panel.click('button[data-forget=m1]');
-    assert.equal(await panel.locator('.card button').count(), 0, 'buttons gone after answering');
+    await panel.click('#memlist li:last-child button[data-forget]');
     await panel.waitForFunction(() => document.querySelectorAll('#memlist li').length === 2);
-    await panel.fill('#goal', 'lower the price again');
-    await panel.click('#go');
+    // Stop keeps a waiting card waiting.
+    await panel.fill('#goal', 'Reprice my cards 5% under market');
+    await panel.press('#goal', 'Enter');
     await panel.waitForSelector('.card button[data-answer=deny]');
     await panel.click('#stop');
     await panel.waitForSelector('#resume:not([hidden])');
     assert.equal(await panel.isDisabled('#go'), true, 'no new goal while stopped');
+    assert.equal(await panel.locator('.card button[data-answer=approve]').count(), 1, 'the card is still waiting');
     await panel.click('#resume');
     await panel.waitForSelector('#stop:not([hidden])');
     await panel.close();

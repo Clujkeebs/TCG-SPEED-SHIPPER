@@ -65,11 +65,20 @@ export function makeInventory(printings) {
   }));
 }
 
+export function makeMessages(orders) {
+  const o = (i) => orders[Math.min(i, orders.length - 1)].id;
+  return [
+    { id: 'msg-1', orderId: o(2), receivedAt: '2026-10-10T09:00:00Z', text: 'Hi, where is my order? It has been a week.', answered: false },
+    { id: 'msg-2', orderId: o(5), receivedAt: '2026-10-11T15:30:00Z', text: 'The card arrived creased.', answered: true },
+    { id: 'msg-3', orderId: o(9), receivedAt: '2026-10-14T20:00:00Z', text: 'When will my order arrive?', answered: false }
+  ];
+}
+
 export function makeShop() {
   const printings = makePrintings();
   const orders = makeOrders(printings);
   const inventory = makeInventory(printings);
   for (const p of printings) if (!validatePrinting(p).ok) throw new Error('bad practice printing ' + p.id);
   for (const o of orders) if (!validateOrder(o).ok) throw new Error('bad practice order ' + o.id);
-  return { printings, orders, inventory, now: SHOP_NOW };
+  return { printings, orders, inventory, messages: makeMessages(orders), now: SHOP_NOW };
 }

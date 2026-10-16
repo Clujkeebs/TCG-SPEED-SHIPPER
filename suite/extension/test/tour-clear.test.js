@@ -50,5 +50,6 @@ test('Clear everything erases settings, records, audit and the practice Agent, a
   assert.equal(res.ok, true);
   assert.deepEqual(Object.keys(data), [], 'all settings and saved state are gone');
   assert.deepEqual(await store.list('trackingBatches'), []);
-  assert.deepEqual(host.snapshot().memory, []);
+  assert.deepEqual(JSON.parse(host.snapshot().memory), [], 'the practice Agent forgot everything');
+  assert.deepEqual(host.snapshot().ledger, []);
 });

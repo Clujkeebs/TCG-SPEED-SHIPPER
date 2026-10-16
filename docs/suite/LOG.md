@@ -426,6 +426,18 @@ the browser error. Batch 2 (PR 173) is still unmerged and this branch builds on 
 Needs owner: say which cards failed (name and game) so I can check them first.
 Next: One Piece source; real catalog files; real photos.
 
+### 2026-10-16 · extension · batch 3: new Agent core in the host, jobs, badge, listing · done
+1) Host on `suite/agent/agent.js`. The service worker now hosts the real Agent core (rule planner, visible plans, approval inbox, shop memory, weekly suggestions, jobs) over a made-up shop; the old keyword stand-in is gone. The panel shows the plan, approval cards (what, why, what will change, undo, with an Undo button after approving), the memory list with Forget, "Five things worth doing this week" with a "Do this" button on each, and a Background jobs section with reports. Restart-safe: memory, waiting cards (same ids), the last plan, the stop switch, saved jobs and reports, and the shop's prices are saved; the audit trail stays in IndexedDB. A card restored after a sleep finishes its plan when approved, and Undo still works for a change approved before a sleep. Since the Agent's inbox cannot export itself, the host keeps a small ledger of cards and re-files waiting ones on wake (ids are kept stable by a layer in `src/agent-host/host.js`); if you add save/restore to `inbox.js`, tell me and I will drop the layer.
+2) Background jobs with `chrome.alarms` (new permission `alarms`, documented in `docs/suite/EXTENSION-PERMISSIONS.md`; the test that compares the manifest with that page passes). The alarm runs `tickJobs` once a minute on practice data: a due job leaves a report and queues cards; nothing acts without approval (checked: price unchanged until Approve). Stop pauses jobs (recorded as denied in the audit trail). Real Chromium: the worker is killed, then the alarm wakes it, the saved job fires, a report appears and a second card is waiting.
+3) Toolbar badge: a number = approvals waiting, cleared when answered; restored by itself when the worker wakes. No `notifications` permission, no pop-ups (a test bans it).
+4) `docs/suite/WEBSTORE-LISTING.md` (names, short and long description, one line per permission, data that stays on the device, screenshots to take later). Nothing submitted.
+5) `docs/suite/HOW-TO-TRY-EXTENSION.md` for Sam: 199 words, desktop Chrome only, load unpacked in 5 steps.
+Also: Clear everything's confirm text now says the history of what the assistant did (the audit trail) is erased too (your note b). The tracking.put bridge stays ready and tested, nothing more (note a). Files the Agent session also edits: none by hand; `src/vendor/agent/*` are copies (now 37 vendored files, refreshed with `npm run vendor`), plus Scan's new csv-format.js you added earlier.
+Found on the way: Playwright's `waitForFunction` does not wait for an async predicate (it returns at once), so my earlier badge waits were no-ops until I replaced them with a polling helper.
+Numbers: `cd suite && npm test` 288 pass, 0 fail (also under `env -i PATH HOME`); root `npm test` 17 suites pass; the full-panel and the kill-worker/alarm/badge browser scenarios pass repeatedly.
+Needs Builder: none new. Needs owner: try it with HOW-TO-TRY-EXTENSION.md on a desktop; the saved pages are still the blocker for X2.
+Next: nothing blocked on me except X2 ("TOS OK").
+
 ### 2026-10-16 · scan · batch 3: problem report, price freshness, product id links, One Piece · done (PR open)
 1) "Report a problem" button copies a short plain-text note (time, app version, online yes/no, browser string, game, what was
 typed or read, service, address asked, cards found, exact error text, last text read from a card). No photos, list or names.

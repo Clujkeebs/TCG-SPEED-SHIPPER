@@ -48,68 +48,96 @@ async function ready() {
   return p;
 }
 
-test('connect learns what the agent supports; memory view fills', async () => {
+test('connect learns what the agent supports and fills memory, suggestions and jobs', async () => {
   const p = await ready();
-  assert.equal(p.state.canMemory, true);
+  assert.deepEqual([p.state.canMemory, p.state.canInbox, p.state.canSuggest, p.state.canUndo, p.state.canJobs], [true, true, true, true, true]);
   assert.equal(p.state.memory.length, 2);
+  assert.ok(p.state.suggestions.length >= 2 && p.state.suggestions.length <= 5);
+  assert.deepEqual(p.state.jobs, []);
 });
 
 test('a plain goal shows a plan, progress and an answer, then is free again', async () => {
   const p = await ready();
-  assert.equal(await p.start('how many orders?'), true);
+  assert.equal(await p.start('Who are my repeat customers?'), true);
   assert.equal(await p.start('second at once'), false, 'one goal at a time');
   await tick();
   assert.equal(p.state.busy, false);
-  assert.deepEqual(p.state.plan.map((s) => s.state), ['done', 'done']);
-  assert.deepEqual(p.state.items.map((i) => i.kind), ['user', 'progress', 'answer']);
+  assert.ok(p.state.plan.length >= 2 && p.state.plan.every((s) => s.state === 'done'));
+  assert.deepEqual([...new Set(p.state.items.map((i) => i.kind))].sort(), ['answer', 'progress', 'user']);
 });
 
-test('an action waits for a click, can be answered once, and nothing changes in practice mode', async () => {
+test('an action waits as a card (what, why, undo), is answered once by a click, can be undone', async () => {
   const p = await ready();
-  await p.start('please lower the price');
+  await p.start('Reprice my cards 5% under market');
   await tick();
   assert.equal(p.waitingForApproval, true);
-  assert.equal(p.state.busy, true);
   const card = p.state.items.find((i) => i.kind === 'approval');
-  assert.deepEqual(card.rows.map((r) => r.label), ['printingId', 'newPriceCents']);
+  assert.ok(card.why && card.undo && card.expected && card.rows.length >= 1);
   assert.equal(await p.answer('wrong-id', true), false);
   assert.equal(await p.answer(card.id, true), true);
   assert.equal(await p.answer(card.id, false), false, 'cannot answer twice');
   await tick();
   assert.equal(card.state, 'approved');
-  assert.match(p.state.items.at(-1).text, /^Done, in practice data only/);
-  assert.equal(p.state.busy, false);
+  assert.equal(p.waitingForApproval, false);
+  assert.equal(await p.undo(card.id), true);
+  assert.equal(card.state, 'undone');
 });
 
 test('denying works and the plan marks the step skipped', async () => {
   const p = await ready();
-  await p.start('reprice it');
+  await p.start('Reprice my cards 5% under market');
   await tick();
   await p.answer(p.state.items.find((i) => i.kind === 'approval').id, false);
   await tick();
-  assert.match(p.state.items.at(-1).text, /did not change anything/);
   assert.equal(p.state.plan.at(-1).state, 'skipped');
 });
 
-test('Stop works while an approval is waiting, blocks new goals, and Resume frees it', async () => {
+test('Stop keeps a waiting card waiting; approving while stopped fails kindly and Resume fixes it', async () => {
   const p = await ready();
-  await p.start('lower the price');
+  await p.start('Reprice my cards 5% under market');
   await tick();
+  const card = p.state.items.find((i) => i.kind === 'approval');
   await p.stop();
   await tick();
   assert.equal(p.state.killed, true);
-  assert.equal(p.state.busy, false);
-  assert.equal(p.state.items.find((i) => i.kind === 'approval').state, 'expired');
   assert.equal(await p.start('again'), false);
+  assert.equal(await p.answer(card.id, true), false);
+  assert.equal(card.state, 'waiting', 'the card is still waiting');
+  assert.match(p.state.items.at(-1).text, /stopped|Resume/i);
   assert.equal(await p.resume(), true);
-  assert.equal(await p.start('how many orders?'), true);
+  assert.equal(await p.answer(card.id, true), true);
 });
 
-test('Forget removes a memory', async () => {
+test('Forget removes a memory; a suggestion can be started with its goal', async () => {
   const p = await ready();
-  await p.forget('m1');
+  await p.forget('mem-1');
   await tick();
-  assert.deepEqual(p.state.memory.map((m) => m.id), ['m2']);
+  assert.deepEqual(p.state.memory.map((m) => m.id), ['mem-2']);
+  const withGoal = p.state.suggestions.find((x) => x.goal);
+  assert.equal(await p.start(withGoal.goal), true);
+});
+
+test('jobs: add a demo job, see it listed, turn it off and remove it', async () => {
+  const p = await ready();
+  assert.equal(await p.addJob('minute'), true);
+  assert.equal(p.state.jobs.length, 1);
+  const id = p.state.jobs[0].id;
+  assert.equal(await p.toggleJob(id, false), true);
+  assert.equal(p.state.jobs[0].enabled, false);
+  assert.equal(await p.removeJob(id), true);
+  assert.equal(p.state.jobs.length, 0);
+});
+
+test('cards that appear later (from a background job) show up once, even if announced twice', async () => {
+  const t = hostTransport();
+  const p = createPanel(t);
+  await p.connect();
+  await p.addJob('minute');
+  await t.host.tick((e) => t.push(e));
+  await t.host.tick((e) => t.push(e)); // same minute: no second run
+  await tick();
+  await p.refresh();
+  assert.equal(p.state.items.filter((i) => i.kind === 'approval').length, 1);
 });
 
 test('bad events and bad responses become notices and never create a card', async () => {

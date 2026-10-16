@@ -46,11 +46,15 @@ and the whole Agent engine), because an extension cannot load files outside its 
 `scripts/vendor-list.js`. A test fails if any copy is stale. Refresh with `cd suite/extension && npm run vendor`
 (one command, copies them all).
 
-**Practice Agent.** The service worker (`src/background.js`) hosts the real Agent engine over a made-up shop
-(`src/agent-host/`): real tool registry, real approvals, audit and limits; only the "model" is a keyword stand-in,
-so practice mode needs no key, no network and costs nothing. Its one `act` tool changes made-up data only.
-Plan and memory (and the card's why/undo text) are proposed protocol additions: the panel shows them only when
-the agent's `hello` lists them. The service worker may go to sleep, which resets the practice shop; that is fine.
+**Practice Agent.** The service worker (`src/background.js`) hosts the real Agent core over a made-up shop
+(`src/agent-host/`): the planner, visible plans, the approval inbox (what, why, undo), shop memory, weekly suggestions,
+background jobs, tool registry, audit and limits. There is no model in practice mode: goals the rule planner knows
+(repeat buyers, restock, reprice, replies, remember...) work; anything else says so honestly. No key, no network, no cost.
+**Background jobs:** `chrome.alarms` wakes the extension once a minute; a saved job whose schedule has come runs on the
+practice data, leaves a report and queues approval cards (it never acts on its own). The toolbar icon shows how many
+approvals are waiting (a number, no pop-ups). Jobs, cards (same ids), plan, memory and the stop switch are saved, so a
+worker that went to sleep wakes up where it left off. Requests beginning `ext.` (jobs list/add/toggle/remove) are
+extension-only, not part of the Agent protocol.
 **Server address** (Settings, advanced): off by default, nothing uses it yet.
 
 **Permissions.** Every one is listed in `docs/suite/EXTENSION-PERMISSIONS.md`; a test fails if the manifest and
