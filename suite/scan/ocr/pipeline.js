@@ -17,7 +17,7 @@ export async function identifyFrame(frame, { engine, index, game, now = () => Da
   const text = parts.join('\n');
   const clues = parseCardText(text, game);
   const candidates = resolveClues(clues, index);
-  return { ok: true, box, text, clues, candidates, decision: decide(candidates, thresholds), ms: now() - t0 };
+  return { ok: true, box, text, parts: { title: parts[0] || '', bottom: parts[1] || '' }, clues, candidates, decision: decide(candidates, thresholds), ms: now() - t0 };
 }
 
 // Same, starting from text that was read already (used by the evaluation harness).

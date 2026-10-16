@@ -98,3 +98,20 @@ test('change listeners fire; the IndexedDB store falls back to memory in Node', 
   const st = createIndexedDbStore();
   assert.equal(st.kind, 'memory');
 });
+
+test('editMany changes several rows in one undo step and skips rows the change function declines', async () => {
+  const s = await fresh();
+  const a = s.add(card({ printingId: 'a' })); const b = s.add(card({ printingId: 'b' })); const c = s.add(card({ printingId: 'c' }));
+  const n = s.editMany([a.id, b.id], (row) => (row.printingId === 'a' ? { condition: 'LP', priceCents: 90 } : undefined));
+  assert.equal(n, 1);
+  assert.deepEqual([s.items[0].condition, s.items[0].priceCents, s.items[1].condition, s.items[2].condition], ['LP', 90, 'NM', 'NM']);
+  s.editMany([a.id, b.id, c.id], () => ({ finish: 'foil' }));
+  assert.ok(s.items.every((r) => r.finish === 'foil'));
+  assert.ok(s.undo()); assert.ok(s.items.every((r) => r.finish === 'nonfoil')); // the whole bulk change undone at once
+  assert.ok(s.undo()); assert.equal(s.items[0].condition, 'NM');
+  assert.equal(s.editMany(['nope'], () => ({ condition: 'LP' })), 0);
+  assert.throws(() => s.editMany([a.id], () => ({ condition: 'XX' })));
+  assert.equal(s.items[0].condition, 'NM'); // a bad change leaves rows untouched
+  assert.throws(() => s.editMany([a.id, b.id], (row) => (row.id === b.id ? { condition: 'XX' } : { condition: 'HP' })));
+  assert.equal(s.items[0].condition, 'NM'); // even when only the second row was bad
+});

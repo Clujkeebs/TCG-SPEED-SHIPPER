@@ -1,0 +1,15 @@
+#speed-scan-results v1
+#app scan fixture
+#date 2026-10-16
+#rows 10
+{"g":"mtg","t":"Lightning Bolt","n":"149/274 R M11 • EN","m":"Lightning Bolt|M11|149","c":"Lightning Bolt|M11|149","h":"auto","s":1}
+{"g":"mtg","t":"Sol Ring","n":"259/361 U CMD «EN","m":"Sol Ring|CMD|259","c":"Sol Ring|CMD|259","h":"auto","s":1}
+{"g":"mtg","t":"Llanowar Elfs","n":"168/269 C DOM • EN","m":"Llanowar Elves|DOM|168","c":"Llanowar Elves|DOM|168","h":"tap","s":0.85}
+{"g":"pokemon","t":"Pikachu","n":"058/102","m":"Pikachu|BASE1|58","c":"Pikachu|BASE1|58","h":"tap","s":0.85}
+{"g":"pokemon","t":"Pikachu","n":"058/102","m":"Pikachu|BASE1|58","c":"Pikachu|JU|60","h":"fixed","s":0.85}
+{"g":"yugioh","t":"Dark Magician","n":"L0B-EN0O5","m":"Dark Magician|LOB|EN005","c":"Dark Magician|LOB|EN005","h":"fixed","s":0.7}
+{"g":"yugioh","t":"Mirror Force","n":"MRD-","m":"","c":"Mirror Force|MRD|EN138","h":"fixed","s":0}
+{"g":"onepiece","t":"","n":"","m":"","c":"","h":"none","s":0}
+{"g":"onepiece","t":"Nam1","n":"OP01-O16","m":"Nami|OP01|016","c":"Nami|OP01|016","h":"auto","s":0.95}
+{"g":"mtg","t":"Brds of Paradse","n":"M12","m":"","c":"Birds of Paradise|M12|165","h":"fixed","s":0}
+not a row

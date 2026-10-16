@@ -488,6 +488,58 @@ Needs Builder: A16 (Rob's reply) is already ticked done on the owner's side (Oct
 Needs owner: none new.
 Next: none
 
+### 2026-10-16 · scan · batch 5: real-use accuracy, share results, lists, bulk edit, update flow · done (PR open)
+1) Accuracy from real use: for every scanned card the app records HOW it got onto the list (counts only, on the device): added by
+itself, seller tapped the app's FIRST guess, or seller fixed it (tapped another guess, or searched after a scan asked for help);
+plus removed-after-auto-add and not-found. The List tab shows "Right first time: N of M" (N = added by itself and left alone, plus
+taps on the first guess; M = scanned cards added), labelled as measured from this device's use; the numbers are in the Report a
+problem text. 2) "Share my results" copies a compact anonymous text (`#speed-scan-results v1`, one JSON row per card: game, raw
+title-strip text, raw number-strip text, card matched, card finally chosen, how, score; newest 60; no images, names, prices).
+`eval/from-results.js <file>` prints accuracy and ranked failure patterns (reader saw nothing / no usable text / title misread /
+number misread / set code misread / ambiguous reprint) with examples; fixture + tests. 3) Lists: new, rename, open, copy, delete
+(with confirm), CSV per list, open one of our own CSVs to continue later (matched by product id; a card this device does not know
+shows as "TCGplayer product N"); newest 20 kept; the old single list becomes "My list". 4) Bulk edit: tick rows or select all, set
+condition, finish, or re-apply the price rule; one Undo reverses a whole bulk change; a bad value changes nothing. 5)
+`AUTO_ACTIVATE = false` in `public/sw.js`; update flow proven by `dev/sw-update-check.cjs` (bar hidden at first, appears for a new
+version, a tap switches). Also added a test that every element id the page code uses exists in the page.
+Checked in Chromium with a stand-in reader: auto, tap-first, tap-other and search-fix each counted correctly (2 of 4 right first
+in the scripted run), share text had 4 rows, lists/rename/duplicate/CSV round trip/open CSV/delete-cancel/delete worked, bulk
+condition + price rule + undo worked, everything survived a reload. Not verified: any of this on Safari; a real scan session.
+Numbers: Scan tests 132 pass offline.
+Extension vendoring: csv.js, csv-format.js, pricing.js unchanged.
+Needs Builder: when Sam pastes a "Share my results" text, run `node suite/scan/eval/from-results.js` on it and send me the output.
+Needs owner: use it for a real session, then tap Share my results on the List tab and paste it into the board inbox.
+Next: tune the parser on the real text.
+
+### 2026-10-16 · extension · batch 4: import my orders, Insights, quick actions · done
+1) Import my orders. The Insights tab takes the TCGplayer order export (drop it, or Enter on the drop area then pick it). It is read on the device (`src/orders/parser.js`; the Shipper's own sample file reads cleanly; real exports are unverified, so headers are matched loosely and a wrong file is explained in plain words), saved in IndexedDB in one all-or-nothing step, and the Agent is switched to it (`ext.orders.use`), so goals and the weekly list run on the seller's orders. Insights: repeat buyers (first name and last initial only), top states, busiest days, average order, latest week against the week before (the 7 days up to the newest order in the file). The parser sits behind a small interface (`src/orders/index.js`); the Agent session's faster parser can drop in. Nothing is sent anywhere. "Go back to the practice shop" removes it; Clear everything removes it and its confirm text says so (and still says the audit trail goes too). Rows that cannot be read are skipped and counted.
+2) Five big buttons on the Assistant tab: What should I do today? (the Agent's weekly list in plain words), Who are my repeat buyers?, Where do I ship most?, Write my weekly summary, Draft a reply. Each runs the matching goal; the plan shows, and the result is shown as plain bullets (the Agent's report with "Goal/Plan" and raw statuses is cleaned up; buyer keys become "Ada A.").
+3) Real Chromium (invented 2,000-row file): imported through the keyboard in about 0.3 s, heap +8 MB; all five buttons run; the worker is killed in the middle and the same repeat-buyer answer comes back from the stored orders; wrong file explained; Clear everything leaves no orders. Unit: 2,000 orders read and saved in under 1.5 s in Node; failed import leaves old orders alone; hostile cells stay plain text.
+4) HOW-TO-TRY-EXTENSION.md (still under 250 words) and WEBSTORE-LISTING.md updated for the new tabs. Nothing submitted.
+5) Accessibility, checked in the browser test: tabs move with the arrow keys, the whole import works by keyboard, focus rings, no sideways scroll at 360 px on both tabs and Settings, WCAG contrast of every visible text on both tabs (the checker is proven by catching a deliberately pale line). It found and fixed pale grey struck-through text and a `hidden` attribute that CSS was overriding.
+Shared with the Agent session: nothing edited by hand. I use their `analytics.js` (vendored copy). `src/vendor/` has not changed in this batch.
+Needs Builder: (a) When the Agent's faster order parser merges, tell me and I will vendor it and pass it as `parser`. (b) The Agent's report carries only one-line notes per step, so "Draft a reply" says a draft is ready but cannot show its text. If `agent.answer` (or the plan events) carried each draft step's result, the panel could show the reply to copy. (c) Imported orders have no stock or messages, so restock, repricing and replies still use the practice stock and messages; a stock-file import would be the next step.
+Needs owner: try it with a real TCGplayer order export on a desktop and say what looks wrong; the saved TCGplayer pages are still the blocker for X2.
+Next: nothing blocked on me except X2 ("TOS OK").
+
+### 2026-10-16 · builder · Agent proxy built (switched off) · done
+Built the server half of the Agent's model access: `POST /api/agent/messages` and `GET /api/agent/status` (`agent-proxy.js`), counters in
+Postgres (`docs/db/2026-10-16-agent-usage.sql`, applied and smoke-tested on production), 88 tests. It is OFF until the owner sets
+variables, so nothing changes today. Contract, settings and how the limits count: `docs/suite/AGENT-PROXY.md` (read "How to call it").
+For the Agent session: (1) BUG FOUND in `adapters/anthropic.js`: every one of our 27 tool names has a dot (`orders.search`) and the model
+provider only accepts letters, digits, `_` and `-`, so a direct call would be rejected on the first request. The proxy renames `.` to `__`
+and back for you, so send the registry specs as they are and do not rename anything yourself (a tool name that already contains `__` is
+refused). (2) Please build `suite/agent/adapters/proxy.js` next to the other adapter: post `{ messages, tools }` with the user's login
+token, return `{ content, costCents }`, keep `remaining` and the plain-words `error`/`code`/`resetsAt` for the panel. Do not send `system`
+or a model name (the server sets both and ignores yours). A conversation is ONE question and its tool steps, at most 8 model calls.
+Test against a stub, like the other adapter. `adapters/anthropic.js` stays for local experiments only.
+For the Extension session: the service worker needs the site login token (through the bridge) to call the proxy; no CORS setup is needed
+from an extension worker that has host permission for the site. The side panel can show `remaining` from `GET /api/agent/status`.
+Needs Builder: none.
+Needs owner: nothing now. When the Agent adapter is done (HQ: add the owner task then): "Turn on a real model (costs money)": a key made
+with its own spend limit, then five Railway variables. By default everyone together can spend at most 5 dollars a day, one person 25 cents.
+Next: review the Agent's proxy-adapter PR.
+
 ### 2026-10-16 · agent · batch 3: order file at scale, saved on the device, morning briefing, voice · done
 (1) `orderfile.js`: a streaming CSV parser and an aggregator that keeps counters and one small record per buyer, not the rows. It reads the Shipper's
 real columns (checked against `public/js/shipper-core.js` and `test/csv-parser.test.js`, read only; all rows invented) and answers: repeat buyers,
@@ -500,7 +552,7 @@ and about 9 MB (about 1 MB file). Same rows however the file is cut into chunks 
 writes only changes, reports a failed write and retries on the next change, leaves a record from a newer version untouched. Tested on a faithful
 fake IndexedDB (`fixtures/fake-idb.js`); ALSO checked once by hand in real Chromium with a throwaway script (not committed): a fact and an audit entry
 written in one page were back in a fresh page, and the fresh page wrote nothing. The Extension's own Chromium harness was not used.
-(3) `briefing.js`: plain-text morning briefing, 66 to 150 words (limit 150, enforced), deterministic: what to ship today, five things worth doing,
+(3) `briefing.js`: plain-text morning briefing, 69 words on the fixture shop (limit 150, enforced), deterministic: what to ship today, five things worth doing,
 low stock, what is waiting for approval or a reply. (4) `voice.js`: 3 to 5 of the seller's own replies become an editable style card (greeting,
 sign-off, length, formality, exclamation, emoji) kept in memory; only whitelisted words and settings are stored, nothing from the samples; drafts
 follow the card and still use `{{first_name}}` and the policy notes. (5) `AGENT-EVAL.md` has a new section with 19 checks and measured results;

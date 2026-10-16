@@ -26,6 +26,8 @@ is, adds it to a list with a price, and at the end gives you one file to upload 
 4. Made a mistake? Open the **List** tab and tap **Undo** or **Remove**. Change a price by typing in the box.
 5. Tap **Download CSV**. Open it and check a few rows. Upload it in your TCGplayer seller portal the way you normally import.
 
+**Several lists.** On the **List** tab you can keep more than one list (for example one per box), copy a list, download a file for any list, and open a file you downloaded earlier to carry on. Tick rows to change condition, foil or price for many cards at once; **Undo** puts it back.
+
 **Please tell us (short answers are perfect):**
 1. How many cards did you scan, and how long did it take?
 2. How many did it get right without you touching anything? How many needed a tap? How many failed?
@@ -37,5 +39,7 @@ is, adds it to a list with a price, and at the end gives you one file to upload 
 8. Can you send us a photo or two of cards it got wrong? (Optional.)
 
 **About the file:** the file we make uses the same columns that Mana Pool's importer says it reads from TCGplayer files (from Mana Pool's own help article). We have not yet checked it against a real TCGplayer file, so look at the first lines before you upload.
+
+If you can, tap **Share my results** on the List tab after a session and paste what it copies. It holds no photos, names or prices, only what the camera read and what card you ended up with, and it helps us fix the reading.
 
 Send answers to the person who gave you the link. Thank you.
