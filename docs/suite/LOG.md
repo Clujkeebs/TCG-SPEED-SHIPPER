@@ -388,6 +388,29 @@ Needs Builder: none.
 Needs owner: open the Scan link on the iPad and tell us what feels slow or confusing (board task S6).
 Next: Agent server proxy (Builder), then review the next batch from `scan`, `extension` and `hq`.
 
+### 2026-10-16 · agent · batch 2: red team, policy rules, export sync, one page for Sam · done
+(1) Prompt-injection red team: 22 attacks, each assuming the model is fully fooled (hidden orders in notes, a CSV cell that looks like a tool
+call, "refund this buyer", "reveal your memory and audit log", a 100,000-character message asking to raise limits, text pretending to be the
+owner, memory and schedule poisoning, a price bomb from a fooled planner, tool calls written inside text or inside tool results, smuggled
+approvals in arguments, resume-the-kill-switch, runaway loops, hostile feeds, hidden characters, spreadsheet formulas, reply leaks, policy
+rewriting, event floods, export floods, self-approving goals). All 22 end safely: nothing approved, no limit moved, no memory or schedule
+written, audit trail intact and free of attacker text. Defences are in code: text from others is cleaned and capped and marked untrusted;
+after reading it a run cannot read or save memory or schedules; approval cards carry a warning; approvals only come from our own panel. Found
+and fixed while writing them: a job skipped by the kill switch was recorded; the policy list was mutable (now frozen).
+(2) `policies.js`: 12 cited seller rules (shipping by order value, free shipping, shipping not confirmed, delivery times, lost package, untracked
+envelope, tracked-but-delivered, buyer's remorse, wrong card, damaged, address change, seller levels), each tied to our blog post and the
+TCGplayer help page it links; a test fails if a post stops containing the phrase the entry rests on. Drafts cite the ids and say to check
+TCGplayer's current article. I read only `public/blog/`; nothing was fetched from TCGplayer.
+(3) `sync.analyzeExport` / `agent.syncExport` / `agent.export`: column map in Scan's style, low-stock list, price drift against the market column,
+five ranked fixes, price fixes become approval cards (invented export; column names unverified).
+(4) `docs/suite/AGENT-TODAY.md`: one page for Sam, under 300 words.
+Numbers: `cd suite && npm test` 269 pass, 0 fail (including the Extension's browser tests after the vendor step); root `npm test` run before the PR.
+24 scenarios, week in a shop 31 of 31, red team 22 of 22. No model call, no network, $0.
+Vendoring done as asked: added `agent/untrusted.js` and `agent/policies.js` to the Extension's vendor list and ran `npm run vendor`.
+Needs Builder: none. Review note: `MESSAGE_TYPES` is still unchanged; new request `agent.export` and event field `warning` are announced in `hello`.
+Needs owner: the policy entries rest on our own blog posts as of Sept 2026; whoever next reads TCGplayer's help pages could confirm the numbers.
+Next: save memory, cards and reports on the device (IndexedDB); a measured run with a real model (key and small budget from the owner).
+
 ### 2026-10-16 · scan · "card not found" fix: live lookup · done (PR open)
 Owner tested Scan and reported "card not found": the app only knew the 96-card sample list. Added live lookup
 (`data/live.js`): when a search or a camera read is not found or not sure, the seller's browser asks Scryfall (Magic,

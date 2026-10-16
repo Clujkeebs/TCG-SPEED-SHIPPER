@@ -1,9 +1,11 @@
 // Support reply drafts. Pure text from templates: a draft for the seller to review, never sent.
 // The drafter makes no promises about refunds or replacements; those stay the seller's decision.
 // Tone: 'friendly' (default), 'formal' or 'brief'.
+import { CATEGORY_POLICIES, sellerNotes } from './policies.js';
 export const TONES = ['friendly', 'formal', 'brief'];
 
 const CATEGORIES = [
+  ['address', /\baddress\b/i],
   ['damaged', /\b(damag|bent|crease|creased|crushed|torn|scratch|wet|water)\w*/i],
   ['wrong-item', /\b(wrong|incorrect|different|not what i ordered|missing)\b/i],
   ['cancel', /\b(cancel|changed my mind|refund)\w*/i],
@@ -62,6 +64,11 @@ const BODY = {
     `I have received your request regarding order ${o.id}. I will check its status and reply shortly.`,
     `Got your request on ${o.id}. Checking its status and will reply shortly.`,
   ],
+  address: (o) => [
+    `Thanks for flagging the address on order ${o.id}. Once an order is placed I can't send it somewhere else. If it hasn't shipped, the way to fix it is to request a cancellation on TCGplayer and place a new order with the right address.`,
+    `Thank you for contacting me about the address on order ${o.id}. An order cannot be redirected once placed. If it has not shipped, please request a cancellation through TCGplayer and place a new order with the correct address.`,
+    `${o.id}: I can't change the address after the order is placed. If it hasn't shipped, request a cancellation on TCGplayer and reorder with the right address.`,
+  ],
   other: (o) => [
     `Thanks for your message about order ${o.id}. I'll take a look and reply properly soon.`,
     `Thank you for your message regarding order ${o.id}. I will review it and reply in due course.`,
@@ -85,6 +92,9 @@ export function draftReply(order, message, { sellerName = 'the shop', now, tone 
       const waited = now ? days(order.orderedAt, now) : null;
       if (waited !== null && waited >= 3) notes.push(`Order is ${waited} days old and unshipped: ship it or explain the delay.`);
     }
+  } else if (category === 'address') {
+    key = 'address';
+    notes.push('Do not ship to a different address than the one on the order.');
   } else if (category === 'damaged') {
     key = 'damaged';
     notes.push('Seller decides on refund or replacement. The draft promises neither.');
@@ -97,5 +107,8 @@ export function draftReply(order, message, { sellerName = 'the shop', now, tone 
   } else key = 'other';
 
   const f = FRAME[tone];
-  return { orderId: order.id, category, tone, draft: f.hi(FIRST_NAME) + BODY[key](order)[i] + f.bye(sellerName), needsHuman, notes, sent: false, placeholders: ['first_name'] };
+  const policies = key === 'notShipped' ? CATEGORY_POLICIES['not-shipped'] : CATEGORY_POLICIES[category] || [];
+  const reply = f.hi(FIRST_NAME) + BODY[key](order)[i] + f.bye(sellerName);
+  // `message` is for the buyer; `draft` adds a seller-only block that cites the policy entries it relied on.
+  return { orderId: order.id, category, tone, message: reply, draft: reply + sellerNotes(policies), policies, needsHuman, notes, sent: false, placeholders: ['first_name'] };
 }

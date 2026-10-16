@@ -5,9 +5,9 @@
 //
 //   panel -> agent  (source 'tcgss-panel')
 //     agent.hello, agent.ask, agent.approve, agent.stop, agent.resume, agent.limits, agent.audit
-//     agent.memory.list, agent.memory.forget {id}, agent.inbox.list, agent.suggestions, agent.undo {approvalId}   (only when the service has an agent)
+//     agent.memory.list, agent.memory.forget {id}, agent.inbox.list, agent.suggestions, agent.undo {approvalId}, agent.export {csv}   (only when the service has an agent)
 //   agent -> panel  (source 'tcgss-agent'): responses, plus events
-//     agent.progress {tool, ok, denied, summary}        agent.approval-needed {approvalId, tool, description, why, undo, expected?, args}
+//     agent.progress {tool, ok, denied, summary}        agent.approval-needed {approvalId, tool, description, why, undo, expected?, warning?, args}
 //     agent.answer {status, text, calls?}               agent.stopped
 //     agent.plan {planId, steps:[{text, state: todo|doing|done|skipped}]}       agent.memory {items:[{id, text}]}
 //
@@ -15,6 +15,7 @@
 // to show. `hello.requests` and `hello.events` list them separately.
 // Trust: a message counts only if the browser says it came from our own extension (sender.id).
 import { runAgent } from './loop.js';
+import { TAINT_WARNING } from './untrusted.js';
 
 export const PROTOCOL_VERSION = 1;
 export const PANEL_SOURCE = 'tcgss-panel';
@@ -44,12 +45,13 @@ const PAYLOADS = {
   'agent.memory.forget': (p) => (isObj(p) && shortStr(p.id) && Object.keys(p).length === 1 ? null : 'id is required'),
   'agent.inbox.list': empty,
   'agent.suggestions': empty,
+  'agent.export': (p) => (isObj(p) && typeof p.csv === 'string' && p.csv.trim() && p.csv.length <= 400000 && Object.keys(p).length === 1 ? null : 'csv (text, at most 400,000 characters) is required'),
   'agent.undo': (p) => (isObj(p) && shortStr(p.approvalId) && Object.keys(p).length === 1 ? null : 'approvalId is required'),
 };
 // MESSAGE_TYPES is the original set and does not change: panels and hosts built against it keep working.
 // REQUEST_TYPES is everything this file can validate, including the types that need an agent.
 export const REQUEST_TYPES = Object.keys(PAYLOADS);
-const AGENT_ONLY = ['agent.memory.list', 'agent.memory.forget', 'agent.inbox.list', 'agent.suggestions', 'agent.undo'];
+const AGENT_ONLY = ['agent.memory.list', 'agent.memory.forget', 'agent.inbox.list', 'agent.suggestions', 'agent.undo', 'agent.export'];
 export const MESSAGE_TYPES = REQUEST_TYPES.filter((t) => !AGENT_ONLY.includes(t));
 export const EVENT_TYPES = ['agent.progress', 'agent.approval-needed', 'agent.answer', 'agent.stopped', 'agent.plan', 'agent.memory'];
 
@@ -90,6 +92,7 @@ export function validateEvent(e) {
     case 'agent.progress':
       return str(e.tool, 80) && typeof e.ok === 'boolean' && typeof e.denied === 'boolean' && str(e.summary, 200) ? null : 'progress needs tool, ok, denied and a summary';
     case 'agent.approval-needed':
+      if (e.warning !== undefined && !str(e.warning)) return 'warning must be a short text';
       return shortStr(e.approvalId) && str(e.tool, 80) && str(e.description) && str(e.why) && str(e.undo) && isObj(e.args) ? null : 'approval needs approvalId, tool, description, why, undo, args';
     case 'agent.answer':
       return typeof e.status === 'string' && typeof e.text === 'string' ? null : 'answer needs status and text';
@@ -147,7 +150,7 @@ export function createAgentService({ registry, model, extensionId, system, appro
     for (const resolve of pending.values()) resolve(false);
     pending.clear();
   }
-  const announceCard = (emit, card) => emit(makeEvent('agent.approval-needed', { approvalId: card.id, tool: card.tool, description: card.what, why: card.why, undo: card.undoText, expected: card.expected, args: card.args }));
+  const announceCard = (emit, card) => emit(makeEvent('agent.approval-needed', { approvalId: card.id, tool: card.tool, description: card.what, why: card.why, undo: card.undoText, expected: card.expected, args: card.args, ...(card.warning ? { warning: card.warning } : {}) }));
 
   async function chat(text, emit) {
     const ctx = {
@@ -160,7 +163,7 @@ export function createAgentService({ registry, model, extensionId, system, appro
         pending.set(approvalId, (ok) => { clearTimeout(timer); resolve(ok ? { approved: true, by: 'user' } : false); });
         const t = registry.get(req.tool);
         const d = (t && typeof t.describe === 'function' && t.describe(req.args)) || {};
-        emit(makeEvent('agent.approval-needed', { approvalId, tool: req.tool, description: d.what || req.description, why: 'You asked a question and the assistant wants to do this to answer it.', undo: d.undoText || 'This cannot be undone automatically.', args: req.args }));
+        emit(makeEvent('agent.approval-needed', { approvalId, tool: req.tool, description: d.what || req.description, why: 'You asked a question and the assistant wants to do this to answer it.', undo: d.undoText || 'This cannot be undone automatically.', args: req.args, ...(req.tainted ? { warning: TAINT_WARNING } : {}) }));
       }),
     };
     try {
@@ -289,6 +292,13 @@ export function createAgentService({ registry, model, extensionId, system, appro
           emit(makeEvent('agent.progress', { tool: card.tool, ok: true, denied: false, summary: 'Put things back as they were' }));
           if (/^memory\./.test(card.tool)) emitMemory(emit);
           return makeResponse(msg.id, { undone: true, status: card.status });
+        }
+        case 'agent.export': {
+          if (registry.limits.isKilled()) return makeError(msg.id, 'the kill switch is on; send agent.resume first');
+          const out = await agent.syncExport(msg.payload.csv);
+          if (out.status !== 'ok') return makeError(msg.id, out.reason || (out.problems || ['could not read that file']).join(' '));
+          for (const c of out.cards) announceCard(emit, c);
+          return makeResponse(msg.id, { rows: out.analysis.rows, units: out.analysis.units, columns: out.analysis.columns.notes, fixes: out.analysis.fixes.map((f) => ({ rank: f.rank, title: f.title, why: f.why, ...(f.cardId ? { approvalId: f.cardId } : {}) })) });
         }
         case 'agent.suggestions':
           return makeResponse(msg.id, await agent.suggestions());

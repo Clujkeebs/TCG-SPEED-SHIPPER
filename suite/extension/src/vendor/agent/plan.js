@@ -136,9 +136,10 @@ export async function runPlan({ plan, registry, inbox, onEvent = () => {}, ctx =
     const tool = registry.get(step.tool);
     if (tool.tier === 'act') {
       const problems = validateArgs(tool.inputSchema, args);
-      if (problems.length) { rec.status = 'failed'; rec.note = 'bad arguments: ' + problems.join('; '); }
+      if (tool.blockedAfterUntrusted && ctx.tainted) { rec.status = 'failed'; rec.note = 'not allowed after reading text written by someone else'; }
+      else if (problems.length) { rec.status = 'failed'; rec.note = 'bad arguments: ' + problems.join('; '); }
       else {
-        const card = inbox.propose({ tool: step.tool, args, why: step.why, actor, planId: plan.id, stepId: step.id });
+        const card = inbox.propose({ tool: step.tool, args, why: step.why, actor, planId: plan.id, stepId: step.id, tainted: !!ctx.tainted });
         rec.status = 'waiting-approval'; rec.cardId = card.id; rec.note = 'waiting for your OK (card ' + card.id + ')';
       }
       onEvent({ event: 'step', planId: plan.id, ...rec });

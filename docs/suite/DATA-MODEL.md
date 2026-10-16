@@ -89,11 +89,12 @@ types appear only when the service has an agent, so an older panel sees no chang
 | request `agent.memory.forget` | `{ id }`. Response `{ forgotten: true }` |
 | request `agent.undo` | `{ approvalId }`. Response `{ undone: true, status }` |
 | request `agent.inbox.list` | no payload. Response `{ cards: [{ approvalId, tool, description, why, undo, expected, args }] }` |
+| request `agent.export` | `{ csv }` (a pasted or dropped Seller Portal export, at most 400,000 characters). Response `{ rows, units, columns, fixes: [{ rank, title, why, approvalId? }] }` (at most 5 fixes); each fix that changes something also arrives as an `agent.approval-needed` event |
 | request `agent.suggestions` | no payload. Response `{ weekEnding, suggestions: [{ rank, id, title, why, goal }] }` (at most 5) |
 | event `agent.plan` | `{ planId, steps: [{ text, state: todo\|doing\|done\|skipped }] }` (1 to 8 steps) |
 | event `agent.memory` | `{ items: [{ id, text }] }` |
 | event `agent.progress` | `{ tool, ok, denied, summary }`; `summary` is a short plain-words line, never arguments |
-| event `agent.approval-needed` | `{ approvalId, tool, description, why, undo, expected?, args }` |
+| event `agent.approval-needed` | `{ approvalId, tool, description, why, undo, expected?, warning?, args }`; `warning` is present when the request came after the assistant read text written by someone else |
 
 Other records (all local to the device):
 - **Fact** (shop memory): `{ id, text, category: setting\|preference\|decision\|fact, source: user\|agent, key?, value?, createdAt, updatedAt }`. No emails, phone numbers or street addresses.
@@ -102,3 +103,6 @@ Other records (all local to the device):
 - **Report** (background job): `{ id, jobId, title, text, steps, cardIds, drafts?, event?, ranAt }`.
 - **Automation** is unchanged; `trigger` may now be `{ type: 'event', value: 'low-stock' | 'new-order' | 'unanswered-message' }`. Jobs the agent saves are always `approvalMode: 'always'`.
 - Buyer drafts carry `{{first_name}}`; the name is filled in on the device only.
+
+**Untrusted text (2026-10-16).** Buyer messages, files, order notes and shop feeds are data, never instructions. Tools that return such text are flagged `untrusted` (the run becomes "tainted", the result reaches the model wrapped with a notice, and text is cleaned and capped); once tainted, a run cannot read or save memory or schedules (`blockedAfterUntrusted`). A Card made in a tainted run has `warning`. See `docs/suite/AGENT-EVAL.md`, "Prompt-injection red team".
+- **Policy entry** (`policies.js`): `{ id: 'LOST-1', topic, title, summary, asOf, source: { blog, blogUrl, official? }, check }`. Our own words, cited to our blog post (and the TCGplayer help article it links). Drafts cite entry ids in a seller-only block that says to check TCGplayer's current article.

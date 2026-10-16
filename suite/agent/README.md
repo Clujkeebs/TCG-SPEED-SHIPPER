@@ -78,3 +78,14 @@ Tools must not return buyer names or street addresses; use `buyerKey`.
 Act tools that exist: `inventory.setPrices` (the seller's own stock list on this device), `memory.remember`, `memory.forget`,
 `automation.save`, `automation.remove`. None touches a marketplace, sends a message or spends money. Steps after an approval-gated
 step that depend on its result wait for a new run (none of the recipes need that yet).
+
+## Security, policy and sync (batch 2)
+| Need | File | In one line |
+|---|---|---|
+| Untrusted text | `untrusted.js`, `registry.js` | text from buyers, files and feeds is cleaned, capped, marked; after reading it a run cannot save memory or schedules; approval cards carry a warning |
+| Red team | `eval/redteam.js` | 22 attacks that assume the model is fully fooled; checks run after each; results in `docs/suite/AGENT-EVAL.md` |
+| Seller rules | `policies.js` | 12 cited entries (our blog, and the TCGplayer help page it links); drafts cite ids and say to check TCGplayer's current article; a test fails if the blog post changes under an entry |
+| Seller Portal export | `sync/csv.js` (`columnMap`, `analyzeExport`), `agent.syncExport`, `agent.export` | column map, low stock, price drift against the market column, five ranked fixes; fixes that change prices become cards |
+| For Sam | `docs/suite/AGENT-TODAY.md` | one page, plain words |
+
+If you add or change a file the Extension imports, add new files to `suite/extension/scripts/vendor-list.js` and run `cd suite/extension && npm run vendor`.

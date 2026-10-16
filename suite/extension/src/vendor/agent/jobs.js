@@ -39,7 +39,8 @@ export async function runJob(job, { registry, inbox, reports, store, now, event 
     const tool = registry.get(s.tool);
     if (!tool) { steps.push({ tool: s.tool, status: 'failed', note: 'unknown tool' }); continue; }
     if (tool.tier === 'act' && !ownerPreApproved) {
-      const card = inbox.propose({ tool: s.tool, args: s.args || {}, why: `Scheduled job "${job.name}" wants this.`, actor: 'automation' });
+      if (tool.blockedAfterUntrusted && ctx.tainted) { steps.push({ tool: s.tool, status: 'failed', note: 'not allowed after reading text written by someone else' }); continue; }
+      const card = inbox.propose({ tool: s.tool, args: s.args || {}, why: `Scheduled job "${job.name}" wants this.`, actor: 'automation', tainted: !!ctx.tainted });
       cardIds.push(card.id);
       steps.push({ tool: s.tool, status: 'waiting-approval', note: 'waiting for your OK (card ' + card.id + ')' });
       continue;

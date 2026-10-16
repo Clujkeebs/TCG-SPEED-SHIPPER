@@ -163,3 +163,37 @@ test('suggestions request and the validators reject malformed events', async () 
   assert.equal(summarizeCall({ tool: 'x', tier: 'read', ok: false, denied: false }), 'That step did not work');
   assert.match(summarizeCall({ tool: 'x', tier: 'act', ok: false, denied: true }), /not approved/);
 });
+
+test('agent.export: a dropped file becomes at most a few cards, announced like any approval; bad files are refused', async () => {
+  const { makeSellerExport } = await import('./fixtures/export.js');
+  const s = shop();
+  const csv = makeSellerExport({ printings: s.w.printings, inventory: s.w.inventory });
+  const before = JSON.stringify(s.w.inventory);
+  const r = await s.send('agent.export', { csv });
+  assert.equal(r.ok, true);
+  assert.ok(r.result.fixes.length >= 3 && r.result.fixes.length <= 5);
+  assert.ok(r.result.fixes.some((f) => f.approvalId));
+  const asks = s.of('agent.approval-needed');
+  assert.ok(asks.length >= 1 && asks.every((e) => validateEvent(e) === null));
+  assert.equal(JSON.stringify(s.w.inventory), before, 'nothing applied until approved');
+  assert.equal((await s.send('agent.approve', { approvalId: asks[0].approvalId, approved: true })).ok, true);
+  assert.notEqual(JSON.stringify(s.w.inventory), before);
+  assert.equal((await s.send('agent.export', { csv: 'nonsense' })).ok, false);
+  assert.equal(validateRequest(msg('agent.export', { csv: 'x'.repeat(400001) }), sender, EXT).ok, false);
+  assert.equal(validateRequest(msg('agent.export', { csv: 'a', extra: 1 }), sender, EXT).ok, false);
+  const old = shop({ noAgent: true });
+  assert.match((await old.send('agent.export', { csv })).error, /not available/);
+  await s.send('agent.stop');
+  assert.match((await s.send('agent.export', { csv })).error, /kill switch/);
+});
+
+test('an approval asked for after reading untrusted text carries a warning', async () => {
+  const s = shop({ noAgent: true, model: scriptedModel([[{ type: 'tool_use', id: 'a', name: 'messages.unanswered', input: {} }], [{ type: 'tool_use', id: 'b', name: 'inventory.setPrices', input: { changes: [{ printingId: 'x', condition: 'NM', finish: 'foil', priceCents: 5 }] } }], [{ type: 'text', text: 'ok' }]]) });
+  await s.send('agent.ask', { text: 'check messages' });
+  await waitFor(() => s.of('agent.approval-needed').length > 0);
+  const e = s.of('agent.approval-needed')[0];
+  assert.equal(validateEvent(e), null);
+  assert.match(e.warning, /text written by someone else/);
+  await s.send('agent.approve', { approvalId: e.approvalId, approved: false });
+  await waitFor(() => s.of('agent.answer').length > 0);
+});

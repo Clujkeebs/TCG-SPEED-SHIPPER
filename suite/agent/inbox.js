@@ -3,6 +3,7 @@
 //   status: pending -> approved -> done | failed ; pending -> declined | expired ; done -> undone
 // Approving runs the tool through the registry (limits, kill switch and audit log all apply), so the audit
 // entry carries who approved. Undo runs the reverse change, also through the registry and the audit log.
+import { TAINT_WARNING } from './untrusted.js';
 export const EXPIRE_DAYS = 7;
 
 export function createInbox({ registry, now = () => new Date() }) {
@@ -23,7 +24,7 @@ export function createInbox({ registry, now = () => new Date() }) {
 
   return {
     // Describe the change in plain words and file it. Nothing runs.
-    propose({ tool, args, why, actor = 'agent', planId, stepId }) {
+    propose({ tool, args, why, actor = 'agent', planId, stepId, tainted = false }) {
       const t = registry.get(tool);
       if (!t) throw new Error('unknown tool ' + tool);
       if (t.tier !== 'act') throw new Error('only act-level tools go through the inbox');
@@ -36,6 +37,7 @@ export function createInbox({ registry, now = () => new Date() }) {
         undoText: d.undoText || 'This cannot be undone automatically.',
         actor, createdAt: iso(),
       };
+      if (tainted) card.warning = TAINT_WARNING;
       if (planId) card.planId = planId;
       if (stepId) card.stepId = stepId;
       cards.set(card.id, card);
