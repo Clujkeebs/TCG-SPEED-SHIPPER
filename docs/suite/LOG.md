@@ -402,3 +402,23 @@ Needs Builder: please test live lookup on the private copy from a real network; 
 the browser error. Batch 2 (PR 173) is still unmerged and this branch builds on it.
 Needs owner: say which cards failed (name and game) so I can check them first.
 Next: One Piece source; real catalog files; real photos.
+
+### 2026-10-16 · scan · batch 3: problem report, price freshness, product id links, One Piece · done (PR open)
+1) "Report a problem" button copies a short plain-text note (time, app version, online yes/no, browser string, game, what was
+typed or read, service, address asked, cards found, exact error text, last text read from a card). No photos, list or names.
+A "last lookup" line on the Add tab shows the same facts. 2) Prices: market fields from each service were already used; each
+printing now stores the time fetched; older than 24 h and online = refetch (price replaced, not duplicated); otherwise the row
+is added with a red "price from <date>" warning. 3) Product id from a pasted TCGplayer address (`core/tcgurl.js`, text parsing
+only, never fetched, only tcgplayer.com, tests on invented links); it fills the CSV row. 4) One Piece: best free candidate is
+optcgapi.com (says free, no key, GET only, modest volume; terms, fields and browser access UNCONFIRMED, its pages could not
+be opened from the sandbox). The other candidates need keys or are gated. Importer stays on an assumed-shape fixture; One Piece is
+NOT in live lookup; it means the 22 sample cards with ids and prices typed by hand. Details in SCAN-COVERAGE.md. 5) Privacy line
+on the first screen and in SCAN-BETA.md.
+Checked in a browser with simulated service replies: stale price + service down gave the warning; a pasted link cleared the
+"needs help" row; the report text came out as intended. Real services still untested.
+Numbers: Scan tests 95 pass offline.
+Extension vendoring: csv.js, csv-format.js, pricing.js not changed; ran `npm run vendor` anyway (see below).
+Needs Builder: someone with open internet should read optcgapi.com's terms and save a sample card response; test live lookup
+on the preview copy and paste a "Report a problem" note if anything fails.
+Needs owner: paste a "Report a problem" note into the board inbox if a card is not found.
+Next: real error texts from those notes; One Piece once terms are known.

@@ -8,6 +8,8 @@ is, adds it to a list with a price, and at the end gives you one file to upload 
 - The file layout for TCGplayer has not been checked against a real TCGplayer file yet. Look at the first lines of the file before you upload it.
 - For now the card list inside the page is small (a sample). If a card is missing, tell us which one.
 - Your photos stay on your phone. Nothing is uploaded to us.
+- **What is sent out:** looking up a card sends what you type, or the text the camera read from the card, to Scryfall, the Pokémon TCG API and YGOPRODeck (free card sites). Never the photo. You can turn this off with the tickbox on the first screen, but then only the small sample list works.
+- If something goes wrong, tap **Report a problem**. It copies a short note (what you typed, which site, the error, the time). Paste it where we told you. It has no photos or names.
 
 **Five minutes:**
 1. Open the link we sent you. Allow the camera when it asks. (You can also use **Upload photos**.)
