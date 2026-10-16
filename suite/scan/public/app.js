@@ -2,6 +2,10 @@ import { applyPriceRule, DEFAULT_CONDITION_MULTIPLIERS } from '../core/pricing.j
 import { PRESETS, presetToFields } from '../core/presets.js';
 import { buildCsv, checkHeader } from '../core/csv.js';
 import { openSession, createIndexedDbStore } from '../core/session.js';
+import { openLists } from '../core/lists.js';
+import { emptyStats, recordScan, summarize } from '../core/stats.js';
+import { addEntry, buildResultsText } from '../core/scanlog.js';
+import { readOurCsv } from '../core/csv-import.js';
 import { resolveClues } from '../ocr/resolve.js';
 import { decide } from '../core/rapid.js';
 import { loadIndex } from '../data/load.js';
@@ -30,15 +34,25 @@ const live = createLiveLookup({
   fetchJson: async (url) => { const r = await fetch(url, { headers: { Accept: 'application/json' } }); if (!r.ok) throw new Error(String(r.status)); return r.json(); },
   index, store: createIndexedDbStore('tcg-speed-scan-cache', 'cards'),
 });
-const session = await openSession({ store: createIndexedDbStore() });
+// Device-wide things (settings, counts, results log) live under one key; each list's rows under its own.
+const deviceStore = createIndexedDbStore('tcg-speed-scan', 'device');
+const device = (await deviceStore.load()) || {};
+const legacy = await createIndexedDbStore().load(); // the single list from before lists existed
+const lists = await openLists({ store: createIndexedDbStore('tcg-speed-scan', 'lists'), legacy });
+let stats = { ...emptyStats(), ...(device.stats || {}) };
+let scanLog = Array.isArray(device.scanLog) ? device.scanLog : [];
+let savedDefaults = device.defaults || (legacy && legacy.defaults) || {};
+const saveDevice = () => { deviceStore.save({ stats, scanLog, defaults: savedDefaults }).catch(() => {}); };
+let session = await openSession({ store: lists.sessionStore(lists.activeId) });
 
 // Restore saved defaults into the form.
-const saved = session.defaults;
+const saved = savedDefaults;
 for (const f of FIELDS) {
   if (saved[f] === undefined) continue;
   if ($(f).type === 'checkbox') $(f).checked = saved[f]; else $(f).value = saved[f];
 }
 
+function saveDefaults() { savedDefaults = readDefaults(); saveDevice(); }
 function readDefaults() {
   const d = {};
   for (const f of FIELDS) d[f] = $(f).type === 'checkbox' ? $(f).checked : $(f).value;
@@ -64,10 +78,12 @@ function currentRule() {
   return rule;
 }
 // "Foil / holo" picks the foil-like finish this printing really has; if it has none, the card is added regular.
-function finishFor(p) {
-  if ($('finish').value !== 'foil') return p.finishes.includes('nonfoil') ? 'nonfoil' : p.finishes.find((f) => !['foil', 'holo', 'reverse-holo'].includes(f)) || p.finishes[0];
-  return p.finishes.includes(FOIL_FOR[p.game]) ? FOIL_FOR[p.game] : p.finishes.find((f) => ['foil', 'holo', 'reverse-holo', 'etched'].includes(f)) || p.finishes[0];
+function finishChoice(p, foil) {
+  const FOILY = ['foil', 'holo', 'reverse-holo', 'etched'];
+  if (!foil) return p.finishes.includes('nonfoil') ? 'nonfoil' : p.finishes.find((f) => !FOILY.includes(f)) || p.finishes[0];
+  return p.finishes.includes(FOIL_FOR[p.game]) ? FOIL_FOR[p.game] : p.finishes.find((f) => FOILY.includes(f)) || p.finishes[0];
 }
+function finishFor(p) { return finishChoice(p, $('finish').value === 'foil'); }
 const say = (msg) => { $('status').textContent = msg; };
 const el = (tag, attrs = {}, ...kids) => {
   const n = document.createElement(tag);
@@ -80,7 +96,17 @@ const el = (tag, attrs = {}, ...kids) => {
 const label = (p) => p.name + ' (' + p.setCode + ' ' + p.number + ')';
 
 // Prices older than 24 hours are fetched again when we can; if not, the row says how old the price is.
-async function addCard(p0) {
+const labelKey = (p) => p.name + '|' + p.setCode + '|' + p.number;
+let unresolved = []; // scans that asked for a tap or found nothing and are still waiting for the seller
+function finishScan(scan, how, chosen) { // how: auto | tap | fixed | none (counts and anonymous text only)
+  unresolved = unresolved.filter((s) => s !== scan);
+  scanLog = addEntry(scanLog, { g: scan.g, t: scan.t, n: scan.n, m: scan.m, c: chosen, h: how, s: scan.s });
+  stats = recordScan(stats, how === 'none' ? 'notFound' : how);
+  saveDevice(); renderStats();
+}
+const expireScans = () => { for (const s of unresolved.filter((x) => Date.now() - x.at > 300000)) finishScan(s, 'none', ''); };
+
+async function addCard(p0, opts = {}) {
   let p = p0;
   const condition = $('condition').value;
   const finish = finishFor(p);
@@ -99,6 +125,13 @@ async function addCard(p0) {
     priceCents: out.status === 'priced' ? out.priceCents : 0, priceRuleId: 'rule-1', source: 'manual',
   };
   if (fresh.state === 'stale') row.priceAsOf = formatAsOf(fresh.asOf);
+  row.how = opts.how || 'search';
+  if (opts.scan) finishScan(opts.scan, opts.how, labelKey(p));
+  else { // added by search: if a scan was waiting for help, the seller just fixed it
+    expireScans();
+    const waiting = unresolved[unresolved.length - 1];
+    if (waiting) { row.how = 'fixed'; finishScan(waiting, 'fixed', labelKey(p)); }
+  }
   session.add(row);
   const old = fresh.state === 'stale' ? ' WARNING: price is from ' + formatAsOf(fresh.asOf) + ' (older than a day).' : '';
   say((out.status === 'priced' ? 'Added ' + label(p) + ' at ' + formatUsd(out.priceCents) : 'Added ' + label(p) + ' with no price. Type one in your list.') + old);
@@ -135,6 +168,7 @@ function reportText() {
   const l = live.lastLookup;
   let t = buildReport({ last: l, version: APP_VERSION, userAgent: navigator.userAgent, online: navigator.onLine });
   t += '\ndevice check:\n' + (deviceChecks ? checksToText(deviceChecks) : 'not run yet');
+  { const sm = summarize(stats); t += '\n' + sm.text + '\ncounts: auto=' + sm.auto + ' tap=' + sm.tap + ' fixed=' + sm.fixed + ' autoUndone=' + sm.autoUndone + ' notFound=' + sm.notFound; }
   if (lastRead) t += '\nlast text read from a card: ' + lastRead.replace(/\s+/g, ' ').slice(0, 200);
   return t;
 }
@@ -183,21 +217,27 @@ function renderResults() {
   }
 }
 
+const selected = new Set(); // rows ticked for a bulk change
 function renderQueue() {
+  for (const id of [...selected]) if (!session.items.some((i) => i.id === id)) selected.delete(id);
   const ul = $('queue');
   ul.replaceChildren();
   const items = session.items;
   $('empty').hidden = items.length > 0;
   for (const it of items) {
     const p = index.get(it.printingId);
-    const name = p ? label(p) : it.printingId;
+    const name = p ? label(p) : it.printingId.startsWith('product:tcgplayer:') ? 'TCGplayer product ' + it.tcgplayerProductId : it.printingId;
     const priceInput = el('input', { type: 'number', inputmode: 'decimal', min: '0', step: '0.01', value: (it.priceCents / 100).toFixed(2), 'aria-label': 'Price in dollars for ' + name });
     priceInput.addEventListener('change', () => {
       const c = dollarsToCents(priceInput.value);
       if (Number.isFinite(c) && c >= 0) session.edit(it.id, { priceCents: c, priceAsOf: undefined });
     });
     const step = (d) => { if (it.quantity + d >= 1) session.setQuantity(it.id, it.quantity + d); };
-    ul.append(el('li', { class: 'item' },
+    const pick = el('input', { type: 'checkbox', 'aria-label': 'Choose ' + name });
+    pick.checked = selected.has(it.id);
+    pick.addEventListener('change', () => { if (pick.checked) selected.add(it.id); else selected.delete(it.id); renderBulk(); });
+    ul.append(el('li', { class: 'item' + (selected.has(it.id) ? ' chosen' : ''), 'data-id': it.id },
+      el('label', { class: 'pick' }, pick, 'Choose'),
       el('div', { class: 'title' }, name),
       el('div', { class: 'meta' }, it.condition + ' · ' + it.finish + ' · ' + it.language),
       ...(it.priceAsOf ? [el('div', { class: 'meta danger' }, '⚠ price from ' + it.priceAsOf + ', older than a day. Check it.')] : []),
@@ -206,7 +246,7 @@ function renderQueue() {
         el('strong', { 'aria-label': 'Quantity' }, '× ' + it.quantity),
         el('button', { type: 'button', 'aria-label': 'One more ' + name, onclick: () => step(1) }, '+'),
         el('label', {}, '$', priceInput),
-        el('button', { type: 'button', class: 'btn-ghost', 'aria-label': 'Remove ' + name, onclick: () => session.remove(it.id) }, 'Remove'))));
+        el('button', { type: 'button', class: 'btn-ghost', 'aria-label': 'Remove ' + name, onclick: () => { if (it.how === 'auto') { stats = recordScan(stats, 'autoUndone'); saveDevice(); } session.remove(it.id); } }, 'Remove'))));
   }
 }
 
@@ -258,10 +298,11 @@ function renderAll() {
   $('download').disabled = result.listed === 0;
   $('undo').disabled = !session.canUndo();
   $('navCount').textContent = String(t.cards);
+  renderStats(); renderLists(); renderBulk();
   $('fixedWrap').hidden = $('basis').value !== 'fixed';
 }
 
-for (const f of FIELDS) $(f).addEventListener('change', () => { session.setDefaults(readDefaults()); render(); renderResults(); });
+for (const f of FIELDS) $(f).addEventListener('change', () => { saveDefaults(); render(); renderResults(); });
 $('q').addEventListener('input', () => { renderResults(); scheduleLive(); });
 $('q').addEventListener('keydown', (e) => {
   if (e.key !== 'Enter') return;
@@ -271,12 +312,18 @@ $('q').addEventListener('keydown', (e) => {
 $('undo').addEventListener('click', () => session.undo());
 $('clear').addEventListener('click', () => { if (session.items.length && confirm('Remove every card from the list? You can still undo.')) session.clear(); });
 $('merge').addEventListener('click', () => { const n = session.mergeDuplicates(); say(n ? 'Merged ' + n + ' duplicate row' + (n === 1 ? '' : 's') : 'No duplicates.'); });
-$('download').addEventListener('click', () => {
-  const r = currentCsv();
+const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'list';
+function downloadCsvFile(items, listName) {
+  const r = buildCsv(items, (id) => index.get(id));
   const url = URL.createObjectURL(new Blob([r.csv], { type: 'text/csv' }));
-  const a = el('a', { href: url, download: 'speed-scan-' + new Date().toISOString().slice(0, 10) + '.csv' });
+  const a = el('a', { href: url, download: 'speed-scan-' + slug(listName) + '-' + new Date().toISOString().slice(0, 10) + '.csv' });
   document.body.append(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return r;
+}
+const activeName = () => (lists.meta().find((m) => m.active) || { name: 'list' }).name;
+$('download').addEventListener('click', () => {
+  const r = downloadCsvFile(session.items, activeName());
   say('Downloaded ' + r.listed + ' rows (format unverified).' + (r.missingId.length + r.missingPrice.length ? ' Some rows were left out.' : ''));
 });
 for (const p of PRESETS) $('preset').append(el('option', { value: p.key }, p.label));
@@ -284,7 +331,7 @@ $('preset').addEventListener('change', () => {
   const p = PRESETS.find((x) => x.key === $('preset').value);
   if (!p) return;
   for (const [k, v] of Object.entries(presetToFields(p))) $(k).value = v;
-  session.setDefaults(readDefaults()); render(); renderResults();
+  saveDefaults(); render(); renderResults();
   say('Rule set: ' + p.label);
 });
 
@@ -297,16 +344,16 @@ let liveTimer = null;
 let scanner = null;
 
 // Cards that need a tap stay on screen, one group per card, until the seller picks or dismisses them.
-function showChoices(options, title = '') {
+function showChoices(options, title = '', scan = null) {
   const ul = $('choices');
   const group = el('li', { class: 'item' });
   if (title) group.append(el('div', { class: 'meta' }, title));
   for (const o of options) {
     group.append(el('div', { class: 'controls' },
       el('span', { class: 'title' }, label(o.printing)),
-      el('button', { type: 'button', class: 'btn-dl', 'aria-label': 'Add ' + label(o.printing), onclick: () => { addCard(o.printing); group.remove(); } }, 'This one')));
+      el('button', { type: 'button', class: 'btn-dl', 'aria-label': 'Add ' + label(o.printing), onclick: () => { addCard(o.printing, scan ? { how: o.printing.id === scan.topId ? 'tap' : 'fixed', scan } : {}); group.remove(); } }, 'This one')));
   }
-  group.append(el('div', { class: 'controls' }, el('button', { type: 'button', class: 'btn-ghost', onclick: () => group.remove() }, 'Skip')));
+  group.append(el('div', { class: 'controls' }, el('button', { type: 'button', class: 'btn-ghost', onclick: () => { if (scan) finishScan(scan, 'none', ''); group.remove(); } }, 'Skip')));
   ul.append(group);
 }
 
@@ -336,11 +383,17 @@ async function handleFrame(frame, name = '') {
     noteLast();
     if (got.printings.length) { r.candidates = resolveClues(r.clues, index); r.decision = decide(r.candidates); }
   }
+  expireScans();
+  let scan = null;
+  if (r.ok) {
+    const top = r.candidates && r.candidates[0];
+    scan = { g: (r.clues && r.clues.game) || $('game').value || '', t: (r.parts && r.parts.title) || '', n: (r.parts && r.parts.bottom) || '', m: top ? labelKey(top.printing) : '', topId: top ? top.printing.id : '', s: top ? top.score : 0, at: Date.now() };
+  }
   let msg;
   if (!r.ok) { feedback.miss(); msg = 'no card found.'; }
-  else if (r.decision.action === 'accept') { feedback.accepted(); addCard(r.decision.pick); msg = 'added ' + label(r.decision.pick) + ' (' + Math.round(r.ms) + ' ms)'; }
-  else if (r.decision.action === 'choose') { feedback.needsTap(); showChoices(r.decision.options, name); msg = 'tap the right one.'; }
-  else { feedback.miss(); msg = 'could not tell which card. Add it by search.'; }
+  else if (r.decision.action === 'accept') { feedback.accepted(); addCard(r.decision.pick, { how: 'auto', scan }); msg = 'added ' + label(r.decision.pick) + ' (' + Math.round(r.ms) + ' ms)'; }
+  else if (r.decision.action === 'choose') { feedback.needsTap(); showChoices(r.decision.options, name, scan); unresolved.push(scan); msg = 'tap the right one.'; }
+  else { feedback.miss(); unresolved.push(scan); msg = 'could not tell which card. Add it by search.'; }
   scanSay(prefix + msg);
   return msg;
 }
@@ -433,7 +486,105 @@ for (const t of document.querySelectorAll('.nav-tab')) {
   });
 }
 
-session.onChange(render);
+let unbind = session.onChange(render);
+async function useList(id) { // switch to another saved list
+  lists.switchTo(id);
+  await session.flush();
+  session = await openSession({ store: lists.sessionStore(id) });
+  unbind(); unbind = session.onChange(render);
+  selected.clear(); $('choices').replaceChildren();
+  render();
+}
+
+// ---- stats and sharing
+function renderStats() { $('rightFirst').textContent = summarize(stats).text; }
+async function copyText(text, box, okMessage, setMsg) {
+  try { await navigator.clipboard.writeText(text); box.hidden = true; box.value = ''; setMsg(okMessage); }
+  catch { box.hidden = false; box.value = text; box.focus(); box.select(); setMsg('Could not copy by itself. Select the text below, copy it, and paste it into the board inbox.'); }
+}
+$('shareResults').addEventListener('click', () => {
+  const t = buildResultsText(scanLog, { version: APP_VERSION });
+  copyText(t, $('shareOut'), 'Copied ' + Math.min(scanLog.length, 60) + ' rows. No photos, names or prices are in it. Paste it into the board inbox.', (m) => { $('rightFirst').textContent = summarize(stats).text + ' ' + m; });
+});
+
+// ---- lists
+function renderLists() {
+  const ul = $('listsOut'); ul.replaceChildren();
+  const metas = lists.meta();
+  $('activeListName').textContent = 'Now working on: ' + (metas.find((m) => m.active) || {}).name + '. Your newest ' + 20 + ' lists are kept on this device.';
+  for (const m of metas) {
+    ul.append(el('li', { class: 'item' + (m.active ? ' chosen' : '') },
+      el('div', { class: 'title' }, m.name + (m.active ? ' (open)' : '')),
+      el('div', { class: 'meta' }, m.cards + ' cards · ' + m.rows + ' rows · changed ' + m.updatedAt.slice(0, 16).replace('T', ' ')),
+      el('div', { class: 'controls' },
+        ...(m.active ? [] : [el('button', { type: 'button', class: 'btn-dl', 'aria-label': 'Open ' + m.name, onclick: () => useList(m.id) }, 'Open')]),
+        el('button', { type: 'button', class: 'btn-ghost', 'aria-label': 'Make a copy of ' + m.name, onclick: async () => { await session.flush(); await useList(lists.duplicate(m.id)); } }, 'Copy'),
+        el('button', { type: 'button', class: 'btn-ghost', 'aria-label': 'Download CSV for ' + m.name, onclick: async () => { await session.flush(); const r = downloadCsvFile(lists.items(m.id), m.name); $('listMsg').textContent = 'Downloaded ' + r.listed + ' rows from "' + m.name + '".'; } }, 'CSV'),
+        el('button', { type: 'button', class: 'btn-ghost danger', 'aria-label': 'Delete ' + m.name, onclick: async () => {
+          if (!confirm('Delete the list "' + m.name + '" with its ' + m.cards + ' cards? This cannot be undone.')) return;
+          const wasOpen = m.active; const next = lists.remove(m.id);
+          if (wasOpen) await useList(next); else renderLists();
+        } }, 'Delete'))));
+  }
+}
+$('listNew').addEventListener('click', async () => { const n = prompt('Name for the new list (you can leave it blank):', ''); if (n === null) return; await session.flush(); await useList(lists.create(n)); });
+$('listRename').addEventListener('click', () => { const n = prompt('New name for this list:', activeName()); if (n && n.trim()) { lists.rename(lists.activeId, n); renderLists(); } });
+$('listImport').addEventListener('click', () => $('importFile').click());
+$('importFile').addEventListener('change', async (e) => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  const r = readOurCsv(await f.text());
+  if (!r.rows.length) { $('listMsg').textContent = r.problems[0] || 'No rows to open.'; return; }
+  const byProduct = new Map(); for (const p of index.all()) if (p.tcgplayerProductId) byProduct.set(p.tcgplayerProductId, p);
+  const typed = new Map(); for (const m of lists.meta()) for (const it of lists.items(m.id)) if (it.tcgplayerProductId) typed.set(it.tcgplayerProductId, it.printingId);
+  await session.flush();
+  await useList(lists.create('Opened ' + f.name.replace(/\.csv$/i, '')));
+  let unknown = 0;
+  for (const row of r.rows) {
+    const printingId = (byProduct.get(row.productId) || {}).id || typed.get(row.productId) || 'product:tcgplayer:' + row.productId;
+    const p = index.get(printingId); if (!p) unknown += 1;
+    session.add({ printingId, condition: row.condition, finish: p ? finishChoice(p, row.foil) : row.foil ? 'foil' : 'nonfoil', language: 'en', quantity: row.quantity, priceCents: row.priceCents, tcgplayerProductId: row.productId, source: 'import', how: 'search' });
+  }
+  $('listMsg').textContent = 'Opened ' + r.rows.length + ' rows' + (unknown ? ' (' + unknown + ' show as "TCGplayer product" because this device does not know the card name)' : '') + (r.problems.length ? '. Skipped ' + r.problems.length + ': ' + r.problems[0] : '') + '.';
+});
+
+// ---- bulk edit
+function renderBulk() {
+  const n = session.items.length;
+  $('bulk').hidden = n === 0;
+  $('selCount').textContent = String(selected.size);
+  $('selAll').checked = n > 0 && selected.size === n;
+  for (const li of $('queue').children) li.classList.toggle('chosen', selected.has(li.dataset.id));
+}
+const chosenIds = () => [...selected];
+function bulkSay(m) { $('bulkMsg').textContent = m; }
+$('selAll').addEventListener('change', () => {
+  selected.clear(); if ($('selAll').checked) for (const i of session.items) selected.add(i.id);
+  for (const box of $('queue').querySelectorAll('.pick input')) box.checked = $('selAll').checked;
+  renderBulk();
+});
+$('bulkCondGo').addEventListener('click', () => {
+  if (!selected.size) return bulkSay('Choose some rows first.');
+  const n = session.editMany(chosenIds(), () => ({ condition: $('bulkCond').value }));
+  bulkSay('Condition set on ' + n + ' row' + (n === 1 ? '' : 's') + '. Tap "Apply my price rule" to update prices. Undo reverses this.');
+});
+$('bulkFinGo').addEventListener('click', () => {
+  if (!selected.size) return bulkSay('Choose some rows first.');
+  let skipped = 0;
+  const n = session.editMany(chosenIds(), (row) => { const p = index.get(row.printingId); if (!p) { skipped += 1; return undefined; } return { finish: finishChoice(p, $('bulkFin').value === 'foil') }; });
+  bulkSay('Finish set on ' + n + ' row' + (n === 1 ? '' : 's') + (skipped ? ' (' + skipped + ' left alone: card not known on this device)' : '') + '. Tap "Apply my price rule" to update prices. Undo reverses this.');
+});
+$('bulkPrice').addEventListener('click', () => {
+  if (!selected.size) return bulkSay('Choose some rows first.');
+  let left = 0;
+  const n = session.editMany(chosenIds(), (row) => {
+    const p = index.get(row.printingId);
+    const out = p ? applyPriceRule(currentRule(), p, { condition: row.condition, finish: row.finish }) : { status: 'missing' };
+    if (out.status !== 'priced') { left += 1; return undefined; }
+    return { priceCents: out.priceCents, priceAsOf: undefined };
+  });
+  bulkSay('Price rule applied to ' + n + ' row' + (n === 1 ? '' : 's') + (left ? '; ' + left + ' left as they were (no price known, or under your minimum)' : '') + '. Undo reverses this.');
+});
 render();
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {

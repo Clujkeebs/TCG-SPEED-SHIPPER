@@ -488,6 +488,29 @@ Needs Builder: A16 (Rob's reply) is already ticked done on the owner's side (Oct
 Needs owner: none new.
 Next: none
 
+### 2026-10-16 · scan · batch 5: real-use accuracy, share results, lists, bulk edit, update flow · done (PR open)
+1) Accuracy from real use: for every scanned card the app records HOW it got onto the list (counts only, on the device): added by
+itself, seller tapped the app's FIRST guess, or seller fixed it (tapped another guess, or searched after a scan asked for help);
+plus removed-after-auto-add and not-found. The List tab shows "Right first time: N of M" (N = added by itself and left alone, plus
+taps on the first guess; M = scanned cards added), labelled as measured from this device's use; the numbers are in the Report a
+problem text. 2) "Share my results" copies a compact anonymous text (`#speed-scan-results v1`, one JSON row per card: game, raw
+title-strip text, raw number-strip text, card matched, card finally chosen, how, score; newest 60; no images, names, prices).
+`eval/from-results.js <file>` prints accuracy and ranked failure patterns (reader saw nothing / no usable text / title misread /
+number misread / set code misread / ambiguous reprint) with examples; fixture + tests. 3) Lists: new, rename, open, copy, delete
+(with confirm), CSV per list, open one of our own CSVs to continue later (matched by product id; a card this device does not know
+shows as "TCGplayer product N"); newest 20 kept; the old single list becomes "My list". 4) Bulk edit: tick rows or select all, set
+condition, finish, or re-apply the price rule; one Undo reverses a whole bulk change; a bad value changes nothing. 5)
+`AUTO_ACTIVATE = false` in `public/sw.js`; update flow proven by `dev/sw-update-check.cjs` (bar hidden at first, appears for a new
+version, a tap switches). Also added a test that every element id the page code uses exists in the page.
+Checked in Chromium with a stand-in reader: auto, tap-first, tap-other and search-fix each counted correctly (2 of 4 right first
+in the scripted run), share text had 4 rows, lists/rename/duplicate/CSV round trip/open CSV/delete-cancel/delete worked, bulk
+condition + price rule + undo worked, everything survived a reload. Not verified: any of this on Safari; a real scan session.
+Numbers: Scan tests 132 pass offline.
+Extension vendoring: csv.js, csv-format.js, pricing.js unchanged.
+Needs Builder: when Sam pastes a "Share my results" text, run `node suite/scan/eval/from-results.js` on it and send me the output.
+Needs owner: use it for a real session, then tap Share my results on the List tab and paste it into the board inbox.
+Next: tune the parser on the real text.
+
 ### 2026-10-16 · extension · batch 4: import my orders, Insights, quick actions · done
 1) Import my orders. The Insights tab takes the TCGplayer order export (drop it, or Enter on the drop area then pick it). It is read on the device (`src/orders/parser.js`; the Shipper's own sample file reads cleanly; real exports are unverified, so headers are matched loosely and a wrong file is explained in plain words), saved in IndexedDB in one all-or-nothing step, and the Agent is switched to it (`ext.orders.use`), so goals and the weekly list run on the seller's orders. Insights: repeat buyers (first name and last initial only), top states, busiest days, average order, latest week against the week before (the 7 days up to the newest order in the file). The parser sits behind a small interface (`src/orders/index.js`); the Agent session's faster parser can drop in. Nothing is sent anywhere. "Go back to the practice shop" removes it; Clear everything removes it and its confirm text says so (and still says the audit trail goes too). Rows that cannot be read are skipped and counted.
 2) Five big buttons on the Assistant tab: What should I do today? (the Agent's weekly list in plain words), Who are my repeat buyers?, Where do I ship most?, Write my weekly summary, Draft a reply. Each runs the matching goal; the plan shows, and the result is shown as plain bullets (the Agent's report with "Goal/Plan" and raw statuses is cleaned up; buyer keys become "Ada A.").

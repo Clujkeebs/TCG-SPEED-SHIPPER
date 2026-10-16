@@ -19,7 +19,7 @@ test('every file the service worker caches exists (a missing one breaks the whol
 
 test('the service worker can wait for a tap and has one switch for auto-activation', () => {
   const sw = read('sw.js');
-  assert.match(sw, /const AUTO_ACTIVATE = (true|false);/);
+  assert.match(sw, /const AUTO_ACTIVATE = false;/); // a new version waits for the seller's tap
   assert.match(sw, /SKIP_WAITING/);
   assert.match(sw, /AUTO_ACTIVATE \? self\.skipWaiting\(\)/);
   assert.doesNotMatch(sw, /\.then\(\(\) => self\.skipWaiting\(\)\)/); // never unconditional
@@ -44,4 +44,11 @@ test('the video is inline and muted, and form fields are 16px or more (no zoom o
   assert.match(css, /safe-area-inset-top/); assert.match(css, /safe-area-inset-bottom/);
   assert.doesNotMatch(css, /:hover\s*\{[^}]*display:\s*none/); // nothing that only appears on hover
   assert.match(read('camera.js'), /playsinline/);
+});
+
+test('every element the page code looks up by id exists in the page (a missing one stops the whole app)', () => {
+  const html = read('index.html');
+  const ids = new Set([...read('app.js').matchAll(/\$\('([A-Za-z0-9_-]+)'\)/g)].map((m) => m[1]));
+  assert.ok(ids.size > 50);
+  for (const id of ids) assert.ok(html.includes('id="' + id + '"'), 'no element with id ' + id);
 });

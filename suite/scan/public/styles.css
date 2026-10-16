@@ -75,3 +75,7 @@ textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3
 .update-bar { position: fixed; left: 0; right: 0; top: env(safe-area-inset-top); z-index: 400; display: flex; gap: 10px; align-items: center; justify-content: center; padding: 8px 16px; background: var(--accent-bg); border-bottom: 1px solid var(--accent-border); font-weight: 600; }
 .update-bar[hidden] { display: none; }
 .ok { color: var(--accent); font-weight: 600; }
+.bulk { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px; margin: 8px 0; background: var(--bg); }
+.pick { display: flex; align-items: center; gap: 10px; font: 16px 'Source Serif 4', serif; text-transform: none; letter-spacing: 0; color: var(--text); }
+.pick input { width: 28px; height: 28px; min-height: 0; flex: none; }
+.item.chosen { border-color: var(--accent); background: var(--accent-bg); }

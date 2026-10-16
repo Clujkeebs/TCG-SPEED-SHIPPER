@@ -83,12 +83,13 @@ export async function openSession({ store = createMemoryStore(), now = () => new
     },
 
     // Adds a row, or adds to the quantity of an identical row. Returns the row.
-    add({ printingId, condition, finish, language = 'en', quantity = 1, priceCents = 0, priceRuleId, source = 'manual', tcgplayerProductId, priceAsOf }) {
+    add({ printingId, condition, finish, language = 'en', quantity = 1, priceCents = 0, priceRuleId, source = 'manual', tcgplayerProductId, priceAsOf, how }) {
       mustBeInt(quantity);
       const draft = { printingId, condition, finish, language, quantity, priceCents, source };
       if (priceRuleId) draft.priceRuleId = priceRuleId;
       if (tcgplayerProductId) draft.tcgplayerProductId = tcgplayerProductId;
       if (priceAsOf) draft.priceAsOf = priceAsOf;
+      if (how) draft.how = how; // 'auto' | 'tap' | 'fixed' | 'search': how the card got onto the list (counts only, see stats.js)
       const before = snapshot();
       const twin = items.find((it) => sameKey(it, draft));
       if (twin) {
@@ -123,6 +124,26 @@ export async function openSession({ store = createMemoryStore(), now = () => new
       Object.assign(row, next);
       commit(before);
       return row;
+    },
+    // Change several rows in ONE step (one Undo). change(row) returns { condition?, finish?, priceCents? } or undefined to leave a row.
+    editMany(ids, change) {
+      const want = new Set(ids);
+      const before = snapshot();
+      const updates = []; // check every row first so a bad change never leaves some rows changed and others not
+      for (const row of items) {
+        if (!want.has(row.id)) continue;
+        const c = change({ ...row });
+        if (!c) continue;
+        const next = { ...row };
+        for (const k of ['condition', 'finish', 'priceCents', 'priceAsOf']) if (k in c) next[k] = c[k];
+        const v = validateListingDraft(next);
+        if (!v.ok) throw new Error(v.errors.join('; '));
+        updates.push([row, next]);
+      }
+      for (const [row, next] of updates) Object.assign(row, next);
+      const n = updates.length;
+      if (n) commit(before);
+      return n;
     },
     remove(id) {
       if (!items.some((it) => it.id === id)) return false;
