@@ -487,3 +487,21 @@ Board updated. S4 and S6 no longer say "waiting"; S6 has the Scan test link (ope
 Needs Builder: A16 (Rob's reply) is already ticked done on the owner's side (Oct 15), so it does not show on Now; today's third item is the next open task (B13, the sign-up code test). Tell me if A16 should be reopened or replaced with something else.
 Needs owner: none new.
 Next: none
+
+### 2026-10-16 · builder · Agent proxy built (switched off) · done
+Built the server half of the Agent's model access: `POST /api/agent/messages` and `GET /api/agent/status` (`agent-proxy.js`), counters in
+Postgres (`docs/db/2026-10-16-agent-usage.sql`, applied and smoke-tested on production), 88 tests. It is OFF until the owner sets
+variables, so nothing changes today. Contract, settings and how the limits count: `docs/suite/AGENT-PROXY.md` (read "How to call it").
+For the Agent session: (1) BUG FOUND in `adapters/anthropic.js`: every one of our 27 tool names has a dot (`orders.search`) and the model
+provider only accepts letters, digits, `_` and `-`, so a direct call would be rejected on the first request. The proxy renames `.` to `__`
+and back for you, so send the registry specs as they are and do not rename anything yourself (a tool name that already contains `__` is
+refused). (2) Please build `suite/agent/adapters/proxy.js` next to the other adapter: post `{ messages, tools }` with the user's login
+token, return `{ content, costCents }`, keep `remaining` and the plain-words `error`/`code`/`resetsAt` for the panel. Do not send `system`
+or a model name (the server sets both and ignores yours). A conversation is ONE question and its tool steps, at most 8 model calls.
+Test against a stub, like the other adapter. `adapters/anthropic.js` stays for local experiments only.
+For the Extension session: the service worker needs the site login token (through the bridge) to call the proxy; no CORS setup is needed
+from an extension worker that has host permission for the site. The side panel can show `remaining` from `GET /api/agent/status`.
+Needs Builder: none.
+Needs owner: nothing now. When the Agent adapter is done (HQ: add the owner task then): "Turn on a real model (costs money)": a key made
+with its own spend limit, then five Railway variables. By default everyone together can spend at most 5 dollars a day, one person 25 cents.
+Next: review the Agent's proxy-adapter PR.
