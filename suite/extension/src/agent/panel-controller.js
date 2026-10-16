@@ -4,17 +4,19 @@
 //  - the Stop button always works, even while waiting for an approval;
 //  - plan, memory, inbox, suggestions and undo appear only if the agent says (in hello) that it supports them;
 //  - waiting cards stay waiting until the seller answers them (Stop and new answers do not cancel them).
-import { plainError } from './friendly.js';
+import { plainError, plainAnswer } from './friendly.js';
+import { QUICK_ACTIONS } from './quick.js';
 import { makeRequest, validateEvent, validateResponse, argRows, cleanSuggestions, cleanCards, cleanJobs, MAX_TEXT } from './protocol.js';
 
-export function createPanel(transport) {
+export function createPanel(transport, { labelFor = () => undefined } = {}) {
   const state = {
     connected: false, killed: false, busy: false, goal: '',
     items: [],       // { kind: 'progress'|'answer'|'notice'|'approval', ... } in order
     plan: [],        // [{ text, state }]
     memory: null,    // null = agent does not offer it; otherwise [{ id, text }]
     canPlan: true, canMemory: false, canInbox: false, canSuggest: false, canUndo: false, canJobs: false,
-    suggestions: [], jobs: [], reports: []
+    suggestions: [], jobs: [], reports: [],
+    orders: { mode: 'practice', count: 0 } // which orders the Agent is looking at
   };
   const addCard = (c) => { if (!state.items.some((i) => i.kind === 'approval' && i.id === c.approvalId)) state.items.push({ kind: 'approval', id: c.approvalId, tool: c.tool, description: c.description, rows: argRows(c.args), why: c.why, undo: c.undo, expected: c.expected, state: 'waiting' }); };
   const listeners = new Set();
@@ -33,7 +35,7 @@ export function createPanel(transport) {
         break;
       case 'agent.answer':
         state.busy = false;
-        state.items.push({ kind: 'answer', text: e.text || (e.status === 'error' ? plainError(e.reason) : e.status === 'stopped' ? 'Stopped. ' + plainError(e.reason) : 'Done.') });
+        state.items.push({ kind: 'answer', text: e.text ? plainAnswer(e.text, labelFor) : (e.status === 'error' ? plainError(e.reason) : e.status === 'stopped' ? 'Stopped. ' + plainError(e.reason) : 'Done.') });
         break;
       case 'agent.stopped':
         state.busy = false; state.killed = true;
@@ -78,6 +80,7 @@ export function createPanel(transport) {
       state.canUndo = has('agent.undo');
       if (state.canMemory) await call('agent.memory.list');
       if (state.canInbox) { const c = await call('agent.inbox.list'); for (const card of cleanCards(c)) addCard(card); }
+      await this.ordersStatus();
       await this.refresh();
       changed();
       return true;
@@ -89,6 +92,31 @@ export function createPanel(transport) {
       const j = await callQuiet('ext.jobs.list');
       if (j) { state.canJobs = true; Object.assign(state, cleanJobs(j)); }
       changed();
+    },
+    // Which orders the Agent uses: the made-up shop, or the seller's imported file (kept on this device).
+    async useOrders(mode) {
+      const r = await call('ext.orders.use', { mode });
+      if (r) { state.orders = { mode: r.mode, count: r.orders }; await this.refresh(); }
+      return !!r;
+    },
+    async ordersStatus() {
+      const r = await callQuiet('ext.orders.status');
+      if (r) { state.orders = { mode: r.mode, count: r.orders }; changed(); }
+      return r;
+    },
+    // The five big buttons.
+    async quick(id) {
+      const q = QUICK_ACTIONS.find((x) => x.id === id);
+      if (!q || state.busy || state.killed || !state.connected) return false;
+      if (q.goal) return this.start(q.goal);
+      // "What should I do today?": the Agent's weekly list, in plain words.
+      state.items.push({ kind: 'user', text: q.label });
+      const r = await call('agent.suggestions');
+      const list = r ? cleanSuggestions(r) : [];
+      state.suggestions = list.length ? list : state.suggestions;
+      state.items.push({ kind: 'answer', text: list.length ? list.slice(0, 3).map((x, i) => `${i + 1}. ${x.title}\n   ${x.why}`).join('\n') : 'Nothing stands out today. Check back after more orders come in.' });
+      changed();
+      return true;
     },
     async addJob(kind) { const r = await call('ext.jobs.add', { kind }); await this.refresh(); return !!r; },
     async toggleJob(id, enabled) { const r = await call('ext.jobs.toggle', { id, enabled }); await this.refresh(); return !!r; },

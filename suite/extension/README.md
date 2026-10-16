@@ -50,6 +50,11 @@ and the whole Agent engine), because an extension cannot load files outside its 
 (`src/agent-host/`): the planner, visible plans, the approval inbox (what, why, undo), shop memory, weekly suggestions,
 background jobs, tool registry, audit and limits. There is no model in practice mode: goals the rule planner knows
 (repeat buyers, restock, reprice, replies, remember...) work; anything else says so honestly. No key, no network, no cost.
+**Your own orders (Insights tab).** The seller picks or drops the TCGplayer order export; `src/orders/parser.js` reads it
+on the device (header names loosely matched; the Shipper's sample file works; real exports are unverified), saves the orders
+in IndexedDB (`orders`), and the host switches the Agent to them (`ext.orders.use`). The reader sits behind a tiny interface in
+`src/orders/index.js` (`parser.parse(text) -> { ok, orders, skipped, rows }`), so the Agent session's faster parser can replace it.
+Insights use the Agent's own `analytics.js`. Five quick-action buttons run goals the Agent already knows.
 **Background jobs:** `chrome.alarms` wakes the extension once a minute; a saved job whose schedule has come runs on the
 practice data, leaves a report and queues approval cards (it never acts on its own). The toolbar icon shows how many
 approvals are waiting (a number, no pop-ups). Jobs, cards (same ids), plan, memory and the stop switch are saved, so a

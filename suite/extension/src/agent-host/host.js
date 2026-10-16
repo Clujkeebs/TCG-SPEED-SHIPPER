@@ -33,7 +33,7 @@ const STEPS = [
   { tool: 'inventory.setPrices', args: { changes: [{ printingId: 'mtg:practice:p2', condition: 'NM', finish: 'nonfoil', priceCents: 70 }] } }
 ];
 
-export function createPracticeHost({ extensionId, shop = makeShop(), persist = memoryStatePersist(), auditStore, now = () => new Date(), onBadge = () => {} } = {}) {
+export function createPracticeHost({ extensionId, shop = makeShop(), persist = memoryStatePersist(), auditStore, now = () => new Date(), onBadge = () => {}, loadOrders } = {}) {
   const shopNow = () => shop.now; // the made-up shop lives on a fixed day so the numbers stay sensible
   const audit = createAuditLog(auditStore ? { store: auditStore, now } : { now });
   const limits = createLimits({ now });
@@ -105,6 +105,27 @@ export function createPracticeHost({ extensionId, shop = makeShop(), persist = m
   const agent = createAgent({ registry, memory, inbox, planner, reports, now: shopNow });
   const service = createAgentService({ registry, extensionId, agent });
 
+  // The shop's orders are made up until the seller imports their own file (kept on this device).
+  const practice = { orders: shop.orders.slice(), messages: shop.messages.slice(), now: shop.now };
+  let usingImported = false;
+  async function applyOrders(mode) {
+    if (mode === 'imported') {
+      const list = loadOrders ? await loadOrders() : [];
+      if (!list.length) return false;
+      shop.orders.splice(0, shop.orders.length, ...list);
+      shop.messages.splice(0, shop.messages.length); // buyer messages are not in an order file
+      // The Agent measures "this week" up to "now": use the newest order in the file, so an older file still makes sense.
+      shop.now = new Date(Math.max(...list.map((o) => Date.parse(o.orderedAt))) + 12 * 3600000).toISOString();
+      usingImported = true;
+    } else {
+      shop.orders.splice(0, shop.orders.length, ...practice.orders);
+      shop.messages.splice(0, shop.messages.length, ...practice.messages);
+      shop.now = practice.now;
+      usingImported = false;
+    }
+    return true;
+  }
+
   let lastPlan = null; // { planId, steps: [{ text, state }] }
   let jobCounter = 0;
 
@@ -113,7 +134,7 @@ export function createPracticeHost({ extensionId, shop = makeShop(), persist = m
     ledger: [...ledger.values()].map(({ xid, status, spec, undo }) => ({ xid, status, spec, ...(undo ? { undo } : {}) })),
     xCounter, plan: lastPlan, killed: limits.isKilled(),
     prices: Object.fromEntries(shop.inventory.map((i) => [`${i.printingId}|${i.condition}|${i.finish}`, i.priceCents])),
-    jobs: automations.list(), reports: reportLog, repCounter, jobCounter
+    jobs: automations.list(), reports: reportLog, repCounter, jobCounter, usingImported
   });
   const save = () => persist.save(snapshot());
   const badge = () => { try { onBadge(inbox.pendingCount()); } catch { /* the badge is a nicety */ } };
@@ -138,6 +159,7 @@ export function createPracticeHost({ extensionId, shop = makeShop(), persist = m
       ledger.set(e.xid, restored);
     }
     lastPlan = saved.plan;
+    if (saved.usingImported) { try { await applyOrders('imported'); } catch { /* fall back to the practice orders */ } }
     if (saved.killed) limits.kill('restored: stopped before the worker slept');
     for (const i of shop.inventory) { const p = saved.prices[`${i.printingId}|${i.condition}|${i.finish}`]; if (p) i.priceCents = p; }
     badge();
@@ -160,6 +182,16 @@ export function createPracticeHost({ extensionId, shop = makeShop(), persist = m
     const p = msg.payload;
     const isId = (v) => typeof v === 'string' && /^[a-zA-Z0-9._-]{1,80}$/.test(v);
     switch (msg.type) {
+      case 'ext.orders.use': {
+        const mode = p && p.mode;
+        if (mode !== 'imported' && mode !== 'practice') return makeError(msg.id, 'mode must be imported or practice');
+        if (!(await applyOrders(mode))) return makeError(msg.id, 'There are no imported orders to use.');
+        await audited('orders.use', { mode });
+        await save();
+        return makeResponse(msg.id, { mode, orders: shop.orders.length });
+      }
+      case 'ext.orders.status':
+        return makeResponse(msg.id, { mode: usingImported ? 'imported' : 'practice', orders: shop.orders.length });
       case 'ext.jobs.list':
         return makeResponse(msg.id, { jobs: automations.list().map(jobView), reports: reportLog.slice(-10).map(({ id, jobId, title, text, ranAt, cardIds }) => ({ id, jobId, title, text, ranAt, cardIds })) });
       case 'ext.jobs.add': {
@@ -240,6 +272,7 @@ export function createPracticeHost({ extensionId, shop = makeShop(), persist = m
     await ready;
     await persist.clear();
     ledger.clear(); xidOf.clear(); reportLog = [];
+    await applyOrders('practice');
     for (const f of memory.list()) memory.delete(f.id);
     for (const a of automations.list()) automations.remove(a.id);
     lastPlan = null;

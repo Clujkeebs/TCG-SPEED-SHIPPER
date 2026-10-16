@@ -30,6 +30,9 @@ function world() {
   return { boot, persist, auditStore, clock, badges };
 }
 const settle = () => new Promise((r) => setTimeout(r, 30));
+import { parseOrderExport } from '../src/orders/parser.js';
+import { repeatBuyers } from '../src/vendor/agent/analytics.js';
+import { makeOrderCsv } from './helpers/orders-csv.js';
 
 test('the made-up shop is valid and has no real data', () => {
   const shop = makeShop();
@@ -231,4 +234,54 @@ test('saved state that has been tampered with is cleaned or ignored', () => {
   assert.equal(c.killed, false);
   assert.deepEqual(c.jobs, []);
   assert.equal(c.reports.length, 1);
+});
+
+// ---- the seller's own orders
+function ordersWorld() {
+  const w = world();
+  const orders = parseOrderExport(makeOrderCsv(400)).orders;
+  const persist = w.persist, auditStore = w.auditStore;
+  const boot = () => {
+    const host = createPracticeHost({ extensionId: ID, persist, auditStore, now: () => new Date(w.clock.ms), loadOrders: async () => orders });
+    const events = [];
+    const emit = (e) => events.push(e);
+    const wait = async (event) => { for (let i = 0; i < 300; i++) { const e = events.find((x) => x.event === event); if (e) return e; await new Promise((r) => setTimeout(r, 5)); } throw new Error('timed out waiting for ' + event); };
+    return { host, events, wait, send: (t, p, sd = sender) => host.handle(req(t, p), sd, emit) };
+  };
+  return { boot, orders, w };
+}
+
+test('imported orders: the Agent answers from them, and the numbers match the analytics', async () => {
+  const { boot, orders } = ordersWorld();
+  const a = boot();
+  assert.deepEqual((await a.send('ext.orders.status')).result, { mode: 'practice', orders: 60 });
+  assert.equal((await a.send('ext.orders.use', { mode: 'imported' })).ok, true);
+  assert.deepEqual((await a.send('ext.orders.status')).result, { mode: 'imported', orders: 400 });
+  await a.send('agent.ask', { text: 'Who are my repeat buyers?' });
+  const answer = await a.wait('agent.answer');
+  const want = repeatBuyers(orders);
+  assert.match(answer.text, new RegExp(`${want.repeatBuyers} of ${want.buyers} buyers ordered more than once`));
+  assert.ok(!/Alder|Birch|Cobb/.test(JSON.stringify(a.events)), 'no buyer names in anything the Agent says');
+});
+
+test('imported orders: switching back, bad modes, strangers, and nothing to use', async () => {
+  const { boot } = ordersWorld();
+  const a = boot();
+  assert.equal((await a.send('ext.orders.use', { mode: 'both' })).ok, false);
+  assert.equal((await a.send('ext.orders.use', { mode: 'imported' }, stranger)).ok, false);
+  await a.send('ext.orders.use', { mode: 'imported' });
+  assert.equal((await a.send('ext.orders.use', { mode: 'practice' })).result.orders, 60);
+  const empty = createPracticeHost({ extensionId: ID, loadOrders: async () => [] });
+  assert.equal((await empty.handle(req('ext.orders.use', { mode: 'imported' }), sender, () => {})).ok, false);
+});
+
+test('imported orders survive a restart; Clear everything puts the practice shop back', async () => {
+  const { boot } = ordersWorld();
+  const a = boot();
+  await a.send('ext.orders.use', { mode: 'imported' });
+  const b = boot(); // the worker slept
+  assert.deepEqual((await b.send('ext.orders.status')).result, { mode: 'imported', orders: 400 });
+  await b.host.clearAll();
+  assert.deepEqual((await b.send('ext.orders.status')).result, { mode: 'practice', orders: 60 });
+  assert.deepEqual((await boot().send('ext.orders.status')).result, { mode: 'practice', orders: 60 }, 'and it stays cleared');
 });

@@ -56,6 +56,7 @@ function setBadge(count) {
 function getHost(extensionId) {
   hostInstance ??= createPracticeHost({
     extensionId, persist: chromeStatePersist(), onBadge: setBadge,
+    loadOrders: async () => (await getStore()).list('orders'),
     auditStore: globalThis.indexedDB ? createIdbStore(indexedDB, AUDIT_DB) : undefined
   });
   return hostInstance;
