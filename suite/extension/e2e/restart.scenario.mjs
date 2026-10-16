@@ -33,54 +33,79 @@ async function main() {
     await cdp.send('ServiceWorker.enable');
     await panel.goto(`chrome-extension://${extId}/src/ui/sidepanel.html`);
     await panel.waitForSelector('#memlist li');
+    await panel.click('#tourSkip');
+    const waitBadge = async (page, expected, timeout = 15000) => {
+      const end = Date.now() + timeout;
+      let seen;
+      while (Date.now() < end) {
+        seen = await page.evaluate(() => chrome.action.getBadgeText({}));
+        if (seen === expected) return;
+        await page.waitForTimeout(150);
+      }
+      assert.fail(`toolbar badge should be "${expected}" but is "${seen}"`);
+    };
+    const fire = (page) => page.evaluate(() => chrome.alarms.create('tcgss-tick', { when: Date.now() + 300, periodInMinutes: 1 }));
+    const stopWorker = async () => {
+      for (const v of [...versions.values()].filter((v) => v.runningStatus === 'running' && v.scriptURL.includes(extId))) await cdp.send('ServiceWorker.stopWorker', { versionId: v.versionId });
+      await panel.waitForTimeout(500);
+    };
 
-    await panel.fill('#goal', 'how many orders do I have?');
-    await panel.click('#go');
-    await panel.waitForSelector('text=Practice answer');
-    // 1. a memory, and a goal that stops at an approval card
-    await panel.fill('#goal', 'remember that I pack orders on Mondays');
-    await panel.click('#go');
-    await panel.waitForFunction(() => document.querySelectorAll('#memlist li').length === 3);
-    await panel.fill('#goal', 'please lower the price');
-    await panel.click('#go');
+    // 1. a background job, and a goal that stops at an approval card
+    await panel.click('#addMinute');
+    await panel.waitForSelector('#joblist li');
+    await panel.fill('#goal', 'Reprice my cards 5% under market');
+    await panel.press('#goal', 'Enter');
     await panel.waitForSelector('.card button[data-answer=approve]');
+    await waitBadge(panel, '1');
 
     // 2. kill the service worker for real (a marker in its memory proves the new one is a fresh instance)
     await sw.evaluate(() => { globalThis.__marker = 42; });
-    const running = [...versions.values()].filter((v) => v.runningStatus === 'running' && v.scriptURL.includes(extId));
-    assert.ok(running.length >= 1, 'found the running worker');
-    for (const v of running) await cdp.send('ServiceWorker.stopWorker', { versionId: v.versionId });
-    await panel.waitForTimeout(500);
+    await stopWorker();
 
-    // 3. the card is still on screen (the panel page lives on); a NEW panel opened now also shows it, memory and plan intact
+    // 3. a brand-new panel still shows the card, the plan, memory, suggestions and the job
     const fresh = await ctx.newPage();
     await fresh.goto(`chrome-extension://${extId}/src/ui/sidepanel.html`);
     await fresh.waitForSelector('#memlist li');
-    assert.equal(await fresh.locator('#memlist li').count(), 3, 'memory survived the restart');
     await fresh.waitForSelector('.card button[data-answer=approve]');
-    assert.match(await fresh.textContent('#planlist'), /Ask you before changing anything/, 'plan survived');
+    assert.equal(await fresh.locator('#memlist li').count(), 2, 'memory survived the restart');
+    assert.match(await fresh.textContent('#planlist'), /Save the new prices/, 'plan survived');
+    assert.ok((await fresh.locator('#suglist li').count()) >= 2, 'suggestions are back');
+    assert.equal(await fresh.locator('#joblist li').count(), 1, 'the saved job survived');
     const alive = ctx.serviceWorkers().filter((w) => w.url().includes(extId));
     const markers = await Promise.all(alive.map((w) => w.evaluate(() => globalThis.__marker).catch(() => 'dead')));
     assert.ok(markers.length >= 1 && markers.every((m) => m !== 42), 'the worker that answers is a fresh one: ' + JSON.stringify(markers));
+
+    // 4. the alarm wakes the worker and the saved job fires: a report, and a SECOND card waiting (nothing acted)
+    await stopWorker();
+    await fire(fresh);
+    await waitBadge(fresh, '2', 15000);
+    const jobs = await fresh.evaluate(async () => (await chrome.runtime.sendMessage({ source: 'tcgss-panel', v: 1, id: 'j1', type: 'ext.jobs.list' })).result);
+    assert.equal(jobs.reports.length, 1, 'the job left a report: ' + JSON.stringify(jobs).slice(0, 400));
+    assert.ok(jobs.jobs[0].lastRunAt, 'and was marked as run');
+    await panel.waitForFunction(() => document.querySelectorAll('.card button[data-answer=approve]').length === 2, null, { timeout: 15000 });
     await fresh.close();
 
-    // 4. approving in the ORIGINAL panel (talking to the newly woken worker) finishes the job
-    await panel.click('.card button[data-answer=approve]');
-    await panel.waitForSelector('text=Done, in practice data only', { timeout: 10000 });
+    // 5. approving in the ORIGINAL panel (talking to the woken worker) finishes the plan; the badge counts down
+    await panel.locator('.card button[data-answer=approve]').first().click();
+    await panel.waitForSelector('text=You approved this.', { timeout: 10000 });
+    await waitBadge(panel, '1');
 
-    // 5. restart again: the price change and the audit trail are still there
-    for (const v of [...versions.values()].filter((v) => v.runningStatus === 'running' && v.scriptURL.includes(extId))) await cdp.send('ServiceWorker.stopWorker', { versionId: v.versionId });
-    await panel.waitForTimeout(500);
-    await panel.reload();
-    await panel.waitForSelector('#memlist li');
+    // 6. restart again: the badge comes back by itself when the worker wakes, and approving the job's card works
+    await stopWorker();
+    await fire(panel);
+    await waitBadge(panel, '1', 15000);
     const probe = await panel.evaluate(async () => {
       const send = (type, payload) => chrome.runtime.sendMessage({ source: 'tcgss-panel', v: 1, id: 'probe-' + type, type, ...(payload ? { payload } : {}) });
-      return { audit: (await send('agent.audit')).result.entries.map((e) => `${e.tool}:${e.outcome}`) };
+      return { audit: (await send('agent.audit')).result.entries.map((e) => `${e.tool}:${e.outcome}`), cards: (await send('agent.inbox.list')).result.cards };
     });
-    assert.ok(probe.audit.includes('listing.setPrice:ok'), 'audit trail survived: ' + probe.audit.join(','));
-    assert.ok(probe.audit.includes('orders.stats:ok'), 'earlier read call is still in the trail');
-    const stored = await panel.evaluate(() => chrome.storage.local.get('tcgss_agent_state_v1'));
-    assert.equal(stored.tcgss_agent_state_v1.prices['mtg:practice:p2'], 70, 'the practice price change was saved');
+    assert.ok(probe.audit.includes('inventory.setPrices:ok'), 'the approved change is in the audit trail: ' + probe.audit.join(','));
+    assert.equal(probe.cards.length, 1, 'one card (the job\'s) is still waiting');
+    const res = await panel.evaluate((id) => chrome.runtime.sendMessage({ source: 'tcgss-panel', v: 1, id: 'ap1', type: 'agent.approve', payload: { approvalId: id, approved: true } }), probe.cards[0].approvalId);
+    assert.equal(res.ok, true);
+    await waitBadge(panel, '', 10000);
+    const stored = await panel.evaluate(() => chrome.storage.local.get('tcgss_agent_state_v2'));
+    assert.equal(stored.tcgss_agent_state_v2.prices['mtg:practice:p2|NM|nonfoil'], 70, 'the job\'s approved change was saved');
+
     // 6. Clear everything empties the audit database and the saved state too.
     const cleared = await panel.evaluate(async () => {
       const res = await chrome.runtime.sendMessage({ source: 'tcgss-admin', type: 'clear-everything' });
@@ -89,9 +114,9 @@ async function main() {
         open.onerror = () => reject(open.error);
         open.onsuccess = () => { const q = open.result.transaction('audit').objectStore('audit').count(); q.onsuccess = () => resolve(q.result); };
       });
-      return { ok: res.ok, count, storage: await chrome.storage.local.get(null) };
+      return { ok: res.ok, count, storage: await chrome.storage.local.get(null), badge: await chrome.action.getBadgeText({}) };
     });
-    assert.deepEqual([cleared.ok, cleared.count, cleared.storage], [true, 0, {}]);
+    assert.deepEqual([cleared.ok, cleared.count, cleared.storage, cleared.badge], [true, 0, {}, '']);
     console.log('restart scenario ok');
   } finally {
     await ctx.close();

@@ -7,5 +7,5 @@ export function hostTransport() {
   const host = createPracticeHost({ extensionId: id });
   let listener = () => {};
   const emit = (e) => setTimeout(() => listener(e), 0);
-  return { host, request: (msg) => host.handle(msg, sender, emit), onEvent: (fn) => { listener = fn; } };
+  return { host, push: emit, request: (msg) => host.handle(msg, sender, emit), onEvent: (fn) => { listener = fn; } };
 }

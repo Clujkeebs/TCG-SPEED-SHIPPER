@@ -14,12 +14,14 @@ stored on our servers.
   (order numbers and tracking numbers the Shipper site hands over). Orders can include buyer names and addresses; they stay in
   your browser, the same promise as the website.
 - **The side-panel assistant (practice mode)**: its current plan, the facts you ask it to remember about your shop (you can see
-  and remove each one), a question waiting for your approval, whether you pressed Stop, and the prices in its made-up practice
-  shop. It also keeps a **history of what it did**: which tool, when, whether it was approved, and a one-way fingerprint of the
+  and remove each one), the approval cards waiting for your answer (and recently finished ones, so you can undo them), saved
+  background jobs and the reports they leave, whether you pressed Stop, and the prices in its made-up practice shop. Background
+  jobs run on this computer only, on made-up data, and anything that would change something waits for your approval.
+- **The toolbar number**: a small badge on the extension icon counts the approvals waiting. There are no pop-up notifications. It also keeps a **history of what it did**: which tool, when, whether it was approved, and a one-way fingerprint of the
   details (never the details themselves). This is stored so the assistant picks up where it left off if your browser puts it to sleep.
 - **A flag that you have seen the first-run tour.**
 - **One button erases all of it.** Settings has **Clear everything**, which asks first, then erases all of the above from this
-  computer. Removing the extension does the same.
+  computer, including the history of what the assistant did. Removing the extension does the same.
 
 ## What it sends
 - **Nothing.** The extension makes no network requests of its own. It does not send data to us or to
