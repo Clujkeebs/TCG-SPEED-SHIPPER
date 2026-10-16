@@ -304,6 +304,28 @@ Needs HQ: (1) Protect list, "Backups": state "Free plan: no backups yet. Schema 
 Needs owner: none new.
 Next: review PRs from `scan`, `agent` and `extension`; build the Agent server proxy once the protocol settles.
 
+### 2026-10-15 · scan · batch 2: index, matching, crops, beta kit · done (PR open)
+1) Card index designed and built: per-game compact files (`data/compact.js`), importers for Scryfall, Pokémon TCG API,
+YGOPRODeck and One Piece rows (`data/import/build-index.js`, tests on tiny fixtures only, no downloads), a loader that
+adds any `data/index/<game>.json` to the sample, and a coverage report. `SCAN-COVERAGE.md` rewritten: index design,
+sources, terms (written from memory, unconfirmed), which sources give TCGplayer ids (only Magic, per the plan), and an idea
+for filling other games' ids from the seller's own export. The sandbox cannot reach Scryfall (test fetch refused), so no real
+catalog is loaded: the app still only knows the 96-card sample.
+2) Matching: set code + number first, fuzzy name second (already), now also tolerates a set code read with a slip (MII for
+M11); never auto-accepts that. Measured on the simulation: no change in numbers (same before and after), so no gain claimed.
+3) Crops benchmark (synthetic, 96 cards): at 450 px card height, separate strips 100% right-first at 113 ms median; whole
+card 99% at 253 ms; strips + black-and-white 97.9%. At 300 px: 93.8% / 91.7% / 92.7%. Strips stay the default; thresholding
+stays off. Details in SCAN-EVAL.md. All synthetic.
+4) Beta kit: `docs/suite/SCAN-BETA.md` (one page, plain words, 8 feedback questions). A test checks the built site has no
+root-relative paths, so it works from /scan/public/ on any host over https (service worker registers relative to the page).
+Extension vendoring: no vendored file changed (csv.js, csv-format.js, pricing.js untouched); `npm run vendor` produced no diff.
+New files the Extension does not need.
+Numbers: Scan tests 75 pass offline.
+Needs Builder: before Rob can list anything real, someone with open internet must run the importers on real data (Scryfall bulk
+for Magic at least) and drop `data/index/<game>.json` files into the private test copy, after reading each provider's terms.
+Also confirm terms in SCAN-COVERAGE.md.
+Needs owner: about 50 phone photos of real cards; one real TCGplayer export.
+Next: real catalog files; run the harness on real photos when they arrive.
 ### 2026-10-15 · agent · plan for "agent, not chat" · started
 Read `CONTEXT.md`. Plan (all in `suite/agent/`, offline, fake data): (1) goal and plan layer: a goal becomes a short
 visible plan, run step by step with result checks; when a result is empty or odd it says so and stops that branch.
@@ -355,3 +377,18 @@ Rule for everyone: the Extension vendors copies of Scan and Agent files (`cd sui
 Needs Builder: none.
 Needs owner: open the Scan link on the iPad and tell us what feels slow or confusing (board task S6).
 Next: Agent server proxy (Builder), then review the next batch from `scan`, `extension` and `hq`.
+
+### 2026-10-16 · scan · "card not found" fix: live lookup · done (PR open)
+Owner tested Scan and reported "card not found": the app only knew the 96-card sample list. Added live lookup
+(`data/live.js`): when a search or a camera read is not found or not sure, the seller's browser asks Scryfall (Magic,
+exact set + number or name), Pokémon TCG API or YGOPRODeck, adds what it finds to the search list and saves it on the
+device for offline use. One request at a time, 120 ms apart; checkbox to turn it off; the page says what is sent. Service
+worker no longer touches cross-origin requests. Also found and fixed a bug the unit tests could not see (a duplicate
+variable that stopped the whole page from loading) by driving the page in a browser with simulated Scryfall replies:
+"mox opal" (not in the sample) was found, added, priced, kept its TCGplayer id, and still found after reload while offline.
+Numbers: Scan tests 83 pass; suite 268 pass. Not verified: the real services (sandbox cannot reach them), Pokémon and
+YGOPRODeck request shapes and browser-access rules, One Piece (no source), real-photo accuracy.
+Needs Builder: please test live lookup on the private copy from a real network; if Pokémon or YGOPRODeck calls fail, tell me
+the browser error. Batch 2 (PR 173) is still unmerged and this branch builds on it.
+Needs owner: say which cards failed (name and game) so I can check them first.
+Next: One Piece source; real catalog files; real photos.

@@ -44,6 +44,24 @@ reprints are never accepted without a tap. What this shows: the pipeline works e
 point. What it does **not** show: any accuracy on real photos, on a real phone, in real light, or on foils and sleeves.
 Real numbers need the photos below. Targets from the plan (95% top-1, 98% top-3, under 3 s) are therefore **unverified**.
 
+## Measured: whole-card read vs separate strips (SYNTHETIC)
+Same 96 synthetic cards, game chosen. "Split" reads the name strip and the number/set strip separately (current).
+"Whole" reads the whole card once. "Split + black-and-white" adds a threshold before reading.
+
+| Card height | Method | Right first | In top 3 | Auto-accepted | Median ms per card |
+|---|---|---|---|---|---|
+| 450 px | split | 100% | 100% | 55.2% | 113 |
+| 450 px | whole card | 99% | 100% | 46.9% | 253 |
+| 450 px | split + black-and-white | 97.9% | 100% | 19.8% | 109 |
+| 300 px | split | 93.8% | 99% | 5.2% | not recorded |
+| 300 px | whole card | 91.7% | 96.9% | 4.2% | not recorded |
+| 300 px | split + black-and-white | 92.7% | 96.9% | 0% | not recorded |
+
+Splitting wins: better and about 2x faster. Black-and-white thresholding made reading worse on these clean cards, so it
+stays off (it may help on real photos with shadows; unmeasured). Matching also tolerates a set code read with one slip
+(MII for M11): it adds no measurable gain on the simulation (same numbers before and after) but is unit-tested and only ever
+asks for a tap, never auto-accepts. All synthetic: real photos are still needed.
+
 ## Simulated results (lookup only, NOT real OCR accuracy)
 `node scan/eval/run-simulated.js` (from `suite/`) builds the text a perfect reader would see for each of the 96
 sample cards, damages some characters at random, and checks the lookup. It tests how forgiving the lookup is on a

@@ -2,7 +2,10 @@ import { applyPriceRule, DEFAULT_CONDITION_MULTIPLIERS } from '../core/pricing.j
 import { PRESETS, presetToFields } from '../core/presets.js';
 import { buildCsv, checkHeader } from '../core/csv.js';
 import { openSession, createIndexedDbStore } from '../core/session.js';
-import { createIndex } from '../data/index.js';
+import { resolveClues } from '../ocr/resolve.js';
+import { decide } from '../core/rapid.js';
+import { loadIndex } from '../data/load.js';
+import { createLiveLookup } from '../data/live.js';
 import { formatUsd, dollarsToCents } from '../../shared/models.js';
 import { startCamera, grabFrame, frameFromFile } from './camera.js';
 import { detectCard } from '../vision/detect.js';
@@ -13,9 +16,13 @@ import { createBrowserEngine } from '../ocr/engine-browser.js';
 
 const $ = (id) => document.getElementById(id);
 const FOIL_FOR = { mtg: 'foil', pokemon: 'holo', yugioh: 'first-edition', onepiece: 'foil' };
-const FIELDS = ['game', 'condition', 'finish', 'language', 'quantity', 'basis', 'percent', 'fixed', 'rounding', 'floor', 'ceiling', 'minList', 'byCondition'];
+const FIELDS = ['game', 'condition', 'finish', 'language', 'quantity', 'onlineLookup', 'basis', 'percent', 'fixed', 'rounding', 'floor', 'ceiling', 'minList', 'byCondition'];
 
-const index = createIndex(await (await fetch('../data/sample/printings.json')).json());
+const { index } = await loadIndex(async (u) => { const r = await fetch(u); if (!r.ok) throw new Error(String(r.status)); return r.json(); }, { base: '../data/' });
+const live = createLiveLookup({
+  fetchJson: async (url) => { const r = await fetch(url, { headers: { Accept: 'application/json' } }); if (!r.ok) throw new Error(String(r.status)); return r.json(); },
+  index, store: createIndexedDbStore('tcg-speed-scan-cache', 'cards'),
+});
 const session = await openSession({ store: createIndexedDbStore() });
 
 // Restore saved defaults into the form.
@@ -76,6 +83,36 @@ function addCard(p) {
     priceCents: out.status === 'priced' ? out.priceCents : 0, priceRuleId: 'rule-1', source: 'manual',
   });
   say(out.status === 'priced' ? 'Added ' + label(p) + ' at ' + formatUsd(out.priceCents) : 'Added ' + label(p) + ' with no price. Type one in your list.');
+}
+
+// "bolt m11 149" -> name + set code + number. The word next to the number, if it looks like a set code, is the set.
+function clueFromQuery(q) {
+  const toks = q.trim().split(/\s+/).filter(Boolean);
+  const numIdx = toks.findIndex((t) => /^\d{1,4}[a-z★]?$/i.test(t));
+  const clue = {};
+  let setIdx = -1;
+  if (numIdx >= 0) {
+    clue.number = toks[numIdx];
+    for (const k of [numIdx - 1, numIdx + 1]) if (k >= 0 && k < toks.length && /^[a-z0-9]{2,5}$/i.test(toks[k]) && toks.length > 1) { setIdx = k; break; }
+    if (setIdx >= 0) clue.setCode = toks[setIdx];
+  }
+  clue.name = toks.filter((_, k) => k !== numIdx && k !== setIdx).join(' ');
+  return clue;
+}
+let lookupTimer = null; let lookupSeq = 0;
+function scheduleLive() {
+  clearTimeout(lookupTimer);
+  const q = $('q').value.trim();
+  live.enabled = $('onlineLookup').checked;
+  if (!live.enabled || q.length < 3) return;
+  const seq = (lookupSeq += 1);
+  lookupTimer = setTimeout(async () => {
+    say('Searching online…');
+    const r = await live.findAny($('game').value || '', clueFromQuery(q));
+    if (seq !== lookupSeq) return; // the seller kept typing
+    renderResults();
+    say(r.errors[0] || (r.printings.length ? r.printings.length + ' found online' : $('results').children.length ? '' : 'No match, even online. Check the spelling or try the set code and number.'));
+  }, 450);
 }
 
 function renderResults() {
@@ -172,7 +209,7 @@ function renderAll() {
 }
 
 for (const f of FIELDS) $(f).addEventListener('change', () => { session.setDefaults(readDefaults()); render(); renderResults(); });
-$('q').addEventListener('input', renderResults);
+$('q').addEventListener('input', () => { renderResults(); scheduleLive(); });
 $('q').addEventListener('keydown', (e) => {
   if (e.key !== 'Enter') return;
   const first = index.search($('q').value, { game: $('game').value || undefined, limit: 1 })[0];
@@ -237,6 +274,12 @@ async function handleFrame(frame, name = '') {
     return msg;
   }
   const r = await identifyFrame(frame, { engine, index, game: $('game').value || undefined });
+  if (r.ok && r.decision.action !== 'accept' && $('onlineLookup').checked) {
+    // Not sure from the saved list: ask the online sources for this exact card, then decide again.
+    live.enabled = true;
+    const got = await live.findAny($('game').value || r.clues.game || '', r.clues);
+    if (got.printings.length) { r.candidates = resolveClues(r.clues, index); r.decision = decide(r.candidates); }
+  }
   let msg;
   if (!r.ok) { feedback.miss(); msg = 'no card found.'; }
   else if (r.decision.action === 'accept') { feedback.accepted(); addCard(r.decision.pick); msg = 'added ' + label(r.decision.pick) + ' (' + Math.round(r.ms) + ' ms)'; }
