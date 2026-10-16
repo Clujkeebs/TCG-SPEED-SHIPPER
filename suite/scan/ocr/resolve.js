@@ -24,6 +24,18 @@ export function resolveClues(clues, index, { limit = 5 } = {}) {
   if (clues.setCode && clues.number) {
     for (const p of index.findBySetNumber(clues.setCode, clues.number, game)) bump(p, 0.9 + 0.1 * nameSim(p));
   }
+  if (clues.setCode && clues.number) {
+    // Set code read with a slip (M11 read as MII, OP01 as OPO1): same number and a similar code still counts, just less sure.
+    const num = fold(clues.number).replace(/^0+/, '');
+    for (const p of index.all()) {
+      if (game && p.game !== game) continue;
+      if (fold(p.number).replace(/^0+/, '') !== num) continue;
+      const ss = similarity(clues.setCode, p.setCode);
+      if (ss < 0.6 || ss === 1) continue;
+      const ns = clues.name ? nameSim(p) : 0.5;
+      if (ns >= 0.6) bump(p, 0.7 + 0.1 * ss + 0.1 * ns);
+    }
+  }
   if (clues.number) {
     // Set code unreadable or spelled differently by the provider: number plus a similar name still pins it down.
     for (const p of index.all()) {
