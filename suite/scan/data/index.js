@@ -10,10 +10,14 @@ export function createIndex(printings = []) {
   const byId = new Map();
   const entries = [];
 
-  function add(p) {
+  function add(p, { replace = false } = {}) {
     const v = validatePrinting(p);
     if (!v.ok) throw new Error('bad printing ' + (p && p.id) + ': ' + v.errors.join('; '));
-    if (byId.has(p.id)) return;
+    if (byId.has(p.id)) {
+      if (!replace) return;
+      const i = entries.findIndex((e) => e.p.id === p.id); // a fresher copy of the same printing (new prices)
+      if (i >= 0) entries.splice(i, 1);
+    }
     byId.set(p.id, p);
     entries.push({
       p,

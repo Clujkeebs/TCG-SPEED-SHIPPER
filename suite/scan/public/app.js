@@ -6,6 +6,10 @@ import { resolveClues } from '../ocr/resolve.js';
 import { decide } from '../core/rapid.js';
 import { loadIndex } from '../data/load.js';
 import { createLiveLookup } from '../data/live.js';
+import { priceFreshness, formatAsOf } from '../core/freshness.js';
+import { productIdFromLink } from '../core/tcgurl.js';
+import { buildReport, describeLast } from '../core/report.js';
+import { APP_VERSION } from '../core/version.js';
 import { formatUsd, dollarsToCents } from '../../shared/models.js';
 import { startCamera, grabFrame, frameFromFile } from './camera.js';
 import { detectCard } from '../vision/detect.js';
@@ -72,17 +76,29 @@ const el = (tag, attrs = {}, ...kids) => {
 };
 const label = (p) => p.name + ' (' + p.setCode + ' ' + p.number + ')';
 
-function addCard(p) {
+// Prices older than 24 hours are fetched again when we can; if not, the row says how old the price is.
+async function addCard(p0) {
+  let p = p0;
   const condition = $('condition').value;
   const finish = finishFor(p);
+  let fresh = priceFreshness(p, finish);
+  if (fresh.state === 'stale' && $('onlineLookup').checked && navigator.onLine !== false) {
+    live.enabled = true;
+    const again = await live.refresh(p);
+    if (again) { p = again; fresh = priceFreshness(p, finish); }
+    noteLast();
+  }
   const out = applyPriceRule(currentRule(), p, { condition, finish });
   const qty = Math.max(1, parseInt($('quantity').value, 10) || 1);
   if (out.status === 'skip') { say('Skipped ' + p.name + ': ' + out.reason); return; }
-  session.add({
+  const row = {
     printingId: p.id, condition, finish, language: $('language').value, quantity: qty,
     priceCents: out.status === 'priced' ? out.priceCents : 0, priceRuleId: 'rule-1', source: 'manual',
-  });
-  say(out.status === 'priced' ? 'Added ' + label(p) + ' at ' + formatUsd(out.priceCents) : 'Added ' + label(p) + ' with no price. Type one in your list.');
+  };
+  if (fresh.state === 'stale') row.priceAsOf = formatAsOf(fresh.asOf);
+  session.add(row);
+  const old = fresh.state === 'stale' ? ' WARNING: price is from ' + formatAsOf(fresh.asOf) + ' (older than a day).' : '';
+  say((out.status === 'priced' ? 'Added ' + label(p) + ' at ' + formatUsd(out.priceCents) : 'Added ' + label(p) + ' with no price. Type one in your list.') + old);
 }
 
 // "bolt m11 149" -> name + set code + number. The word next to the number, if it looks like a set code, is the set.
@@ -99,6 +115,22 @@ function clueFromQuery(q) {
   clue.name = toks.filter((_, k) => k !== numIdx && k !== setIdx).join(' ');
   return clue;
 }
+let lastRead = '';
+function noteLast(extra) {
+  const l = extra || live.lastLookup;
+  $('lastLookup').textContent = describeLast(l);
+}
+function reportText() {
+  const l = live.lastLookup;
+  let t = buildReport({ last: l, version: APP_VERSION, userAgent: navigator.userAgent, online: navigator.onLine });
+  if (lastRead) t += '\nlast text read from a card: ' + lastRead.replace(/\s+/g, ' ').slice(0, 200);
+  return t;
+}
+$('report').addEventListener('click', async () => {
+  const t = reportText();
+  try { await navigator.clipboard.writeText(t); $('reportOut').value = ''; $('reportOut').hidden = true; say('Copied. Paste it into the board inbox.'); }
+  catch { $('reportOut').hidden = false; $('reportOut').value = t; $('reportOut').focus(); $('reportOut').select(); say('Could not copy by itself. Select the text below, copy it, and paste it into the board inbox.'); }
+});
 let lookupTimer = null; let lookupSeq = 0;
 function scheduleLive() {
   clearTimeout(lookupTimer);
@@ -111,6 +143,8 @@ function scheduleLive() {
     const r = await live.findAny($('game').value || '', clueFromQuery(q));
     if (seq !== lookupSeq) return; // the seller kept typing
     renderResults();
+    noteLast();
+    if ($('game').value === 'onepiece' && !$('results').children.length) { say('One Piece cards outside the small sample list cannot be looked up online yet.'); return; }
     say(r.errors[0] || (r.printings.length ? r.printings.length + ' found online' : $('results').children.length ? '' : 'No match, even online. Check the spelling or try the set code and number.'));
   }, 450);
 }
@@ -126,7 +160,8 @@ function renderResults() {
   for (const p of hits) {
     const finish = finishFor(p);
     const out = applyPriceRule(currentRule(), p, { condition: $('condition').value, finish });
-    const priceText = out.status === 'priced' ? formatUsd(out.priceCents) : out.status === 'skip' ? 'skip' : 'no price';
+    const fr = priceFreshness(p, finish);
+    const priceText = (out.status === 'priced' ? formatUsd(out.priceCents) : out.status === 'skip' ? 'skip' : 'no price') + (fr.state === 'stale' ? ' (old price)' : fr.state === 'demo' ? ' (demo)' : '');
     ul.append(el('li', { class: 'item' },
       el('div', { class: 'title' }, p.name),
       el('div', { class: 'meta' }, (p.setName || p.setCode) + ' · ' + p.setCode + ' ' + p.number + ' · ' + finish),
@@ -147,12 +182,13 @@ function renderQueue() {
     const priceInput = el('input', { type: 'number', inputmode: 'decimal', min: '0', step: '0.01', value: (it.priceCents / 100).toFixed(2), 'aria-label': 'Price in dollars for ' + name });
     priceInput.addEventListener('change', () => {
       const c = dollarsToCents(priceInput.value);
-      if (Number.isFinite(c) && c >= 0) session.edit(it.id, { priceCents: c });
+      if (Number.isFinite(c) && c >= 0) session.edit(it.id, { priceCents: c, priceAsOf: undefined });
     });
     const step = (d) => { if (it.quantity + d >= 1) session.setQuantity(it.id, it.quantity + d); };
     ul.append(el('li', { class: 'item' },
       el('div', { class: 'title' }, name),
       el('div', { class: 'meta' }, it.condition + ' · ' + it.finish + ' · ' + it.language),
+      ...(it.priceAsOf ? [el('div', { class: 'meta danger' }, '⚠ price from ' + it.priceAsOf + ', older than a day. Check it.')] : []),
       el('div', { class: 'controls' },
         el('button', { type: 'button', 'aria-label': 'One fewer ' + name, onclick: () => step(-1) }, '−'),
         el('strong', { 'aria-label': 'Quantity' }, '× ' + it.quantity),
@@ -179,10 +215,15 @@ function renderProblems(result) {
     if (r.kind === 'id') {
       if (seen.has(r.printingId)) continue;
       seen.add(r.printingId);
-      const input = el('input', { type: 'number', inputmode: 'numeric', min: '1', step: '1', placeholder: 'TCGplayer product ID', 'aria-label': 'TCGplayer product ID for ' + r.label });
-      input.addEventListener('change', () => { const n = parseInt(input.value, 10); if (n > 0) session.setProductId(r.printingId, n); });
+      const input = el('input', { type: 'text', inputmode: 'url', autocomplete: 'off', autocapitalize: 'off', placeholder: 'Paste the TCGplayer page link or the number', 'aria-label': 'TCGplayer link or product ID for ' + r.label });
+      const warn = el('div', { class: 'meta danger', role: 'alert' });
+      input.addEventListener('change', () => {
+        const n = productIdFromLink(input.value);
+        if (n) session.setProductId(r.printingId, n);
+        else if (input.value.trim()) warn.textContent = 'That is not a TCGplayer product link or number. It looks like https://www.tcgplayer.com/product/123456/…';
+      });
       ul.append(el('li', { class: 'item' }, el('div', { class: 'title' }, r.label),
-        el('div', { class: 'meta' }, 'We do not know this card’s TCGplayer product ID. Paste it from the product page on TCGplayer.'), input));
+        el('div', { class: 'meta' }, 'We do not know this card’s TCGplayer product ID. Open the card on TCGplayer, copy the page address, and paste it here. We only read the number out of the text; the page is not opened by us.'), input, warn));
     } else {
       ul.append(el('li', { class: 'item' }, el('div', { class: 'title' }, r.label), el('div', { class: 'meta danger' }, 'No price yet. Type one in your list above.')));
     }
@@ -274,10 +315,12 @@ async function handleFrame(frame, name = '') {
     return msg;
   }
   const r = await identifyFrame(frame, { engine, index, game: $('game').value || undefined });
+  if (r.text) lastRead = r.text;
   if (r.ok && r.decision.action !== 'accept' && $('onlineLookup').checked) {
     // Not sure from the saved list: ask the online sources for this exact card, then decide again.
     live.enabled = true;
     const got = await live.findAny($('game').value || r.clues.game || '', r.clues);
+    noteLast();
     if (got.printings.length) { r.candidates = resolveClues(r.clues, index); r.decision = decide(r.candidates); }
   }
   let msg;

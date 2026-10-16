@@ -85,3 +85,42 @@ test('the cache is capped, oldest first', async () => {
   await live.find('mtg', { name: 'x' });
   assert.equal(live.cachedCount(), 1);
 });
+
+test('prices carry the time they were fetched; a refetch replaces an older price', async () => {
+  let t = Date.parse('2026-10-15T10:00:00Z');
+  let usd = '0.40';
+  const index = createIndex([]);
+  const fetchJson = async () => ({ object: 'list', data: [{ ...read('scryfall-search.json').data[0], prices: { usd } }] });
+  const live = createLiveLookup({ fetchJson, index, store: createMemoryStore(), sleep: noSleep, minGapMs: 0, now: () => t });
+  await live.find('mtg', { name: 'x' });
+  const first = index.search('test bolt')[0];
+  assert.equal(first.prices.asOf, '2026-10-15T10:00:00.000Z');
+  assert.equal(first.prices.byFinish.nonfoil.market, 40);
+  t = Date.parse('2026-10-16T12:00:00Z'); usd = '0.55';
+  const fresh = await live.refresh(first);
+  assert.equal(fresh.prices.byFinish.nonfoil.market, 55);
+  assert.equal(index.get(first.id).prices.byFinish.nonfoil.market, 55);
+  assert.equal(index.search('test bolt').length, 1); // replaced, not duplicated
+});
+
+test('the last lookup is recorded with service, address, count and the exact error', async () => {
+  const ok = setup({ 'cards/search': read('scryfall-search.json') });
+  await ok.live.find('mtg', { name: 'test bolt' });
+  assert.equal(ok.live.lastLookup.service, 'Scryfall');
+  assert.equal(ok.live.lastLookup.count, 2);
+  assert.equal(ok.live.lastLookup.error, '');
+  assert.match(ok.live.lastLookup.url, /api\.scryfall\.com/);
+  const down = setup({ 'pokemontcg': new Error('Failed to fetch') });
+  await down.live.find('pokemon', { name: 'charizard' });
+  assert.equal(down.live.lastLookup.error, 'Failed to fetch');
+  assert.equal(down.live.lastLookup.service, 'Pokémon TCG API');
+  const nf = setup({}); await nf.live.find('mtg', { name: 'zzz' });
+  assert.equal(nf.live.lastLookup.error, ''); // "not found" is not an error
+});
+
+test('after asking several services, the last lookup is the one that failed or found cards', async () => {
+  const s = setup({ 'scryfall': read('scryfall-search.json') });
+  await s.live.findAny('', { name: 'test bolt' });
+  assert.equal(s.live.lastLookup.service, 'Scryfall');
+  assert.equal(s.live.lastLookup.count, 2);
+});

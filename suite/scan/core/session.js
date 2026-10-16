@@ -83,11 +83,12 @@ export async function openSession({ store = createMemoryStore(), now = () => new
     },
 
     // Adds a row, or adds to the quantity of an identical row. Returns the row.
-    add({ printingId, condition, finish, language = 'en', quantity = 1, priceCents = 0, priceRuleId, source = 'manual', tcgplayerProductId }) {
+    add({ printingId, condition, finish, language = 'en', quantity = 1, priceCents = 0, priceRuleId, source = 'manual', tcgplayerProductId, priceAsOf }) {
       mustBeInt(quantity);
       const draft = { printingId, condition, finish, language, quantity, priceCents, source };
       if (priceRuleId) draft.priceRuleId = priceRuleId;
       if (tcgplayerProductId) draft.tcgplayerProductId = tcgplayerProductId;
+      if (priceAsOf) draft.priceAsOf = priceAsOf;
       const before = snapshot();
       const twin = items.find((it) => sameKey(it, draft));
       if (twin) {
@@ -112,7 +113,7 @@ export async function openSession({ store = createMemoryStore(), now = () => new
     edit(id, changes) {
       const row = items.find((it) => it.id === id);
       if (!row) throw new Error('no such row: ' + id);
-      const allowed = ['condition', 'finish', 'language', 'quantity', 'priceCents', 'tcgplayerProductId'];
+      const allowed = ['condition', 'finish', 'language', 'quantity', 'priceCents', 'tcgplayerProductId', 'priceAsOf'];
       const next = { ...row };
       for (const k of allowed) if (k in changes) next[k] = changes[k];
       if (!CONDITIONS.includes(next.condition) && 'condition' in changes) throw new Error('unknown condition');

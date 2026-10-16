@@ -40,5 +40,7 @@ export const VENDORED = [
   'agent/inbox.js',
   'agent/jobs.js',
   'agent/events.js',
-  'agent/fixtures/messages.js'
+  'agent/fixtures/messages.js',
+  'agent/untrusted.js',
+  'agent/policies.js'
 ];

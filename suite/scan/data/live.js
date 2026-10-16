@@ -30,18 +30,19 @@ export function liveUrls(game, { name, setCode, number } = {}) {
   return [];
 }
 
-function parse(game, json) {
+function parse(game, json, asOf) {
   if (!json) return [];
-  if (game === 'mtg') return (json.object === 'list' ? json.data : json.object === 'card' ? [json] : []).map((c) => normalizeScryfallCard(c, { asOf: today() }));
-  if (game === 'pokemon') return (json.data || []).map((c) => normalizePokemonCard(c, { asOf: today() }));
-  if (game === 'yugioh') return (json.data || []).flatMap((c) => normalizeYgoCard(c, { asOf: today() }));
+  if (game === 'mtg') return (json.object === 'list' ? json.data : json.object === 'card' ? [json] : []).map((c) => normalizeScryfallCard(c, { asOf }));
+  if (game === 'pokemon') return (json.data || []).map((c) => normalizePokemonCard(c, { asOf }));
+  if (game === 'yugioh') return (json.data || []).flatMap((c) => normalizeYgoCard(c, { asOf }));
   return [];
 }
-const today = () => new Date().toISOString().slice(0, 10);
 
 // fetchJson(url) -> parsed JSON, or throws. store: { load(), save(state) } for the on-device cache. index: createIndex() result.
+const SERVICE = { mtg: 'Scryfall', pokemon: 'Pokémon TCG API', yugioh: 'YGOPRODeck' };
+
 export function createLiveLookup({ fetchJson, index, store, minGapMs = 120, maxCached = 5000, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), now = () => Date.now() }) {
-  let cache = {}; let last = -Infinity; let chain = Promise.resolve(); let enabled = true;
+  let lastLookup = null; let cache = {}; let last = -Infinity; let chain = Promise.resolve(); let enabled = true;
   const ready = (async () => {
     try { cache = (store && (await store.load())) || {}; } catch { cache = {}; }
     for (const p of Object.values(cache)) { try { index.add(p); } catch { /* skip a bad cached row */ } }
@@ -55,8 +56,10 @@ export function createLiveLookup({ fetchJson, index, store, minGapMs = 120, maxC
   async function remember(printings) {
     let added = 0;
     for (const p of printings) {
-      try { index.add(p); } catch { continue; }
-      if (!cache[p.id]) { cache[p.id] = p; added += 1; }
+      const old = cache[p.id];
+      const fresher = !old || (p.prices && (!old.prices || Date.parse(p.prices.asOf) > Date.parse(old.prices.asOf)));
+      try { index.add(p, { replace: Boolean(fresher) }); } catch { continue; }
+      if (fresher) { cache[p.id] = p; added += 1; }
     }
     const ids = Object.keys(cache);
     for (const id of ids.slice(0, Math.max(0, ids.length - maxCached))) delete cache[id]; // oldest first
@@ -72,14 +75,19 @@ export function createLiveLookup({ fetchJson, index, store, minGapMs = 120, maxC
       await ready;
       const out = []; const errors = [];
       if (!enabled) return { printings: out, errors };
+      const rec = { at: new Date(now()).toISOString(), game, kind: clue.kind || 'search', query: [clue.name, clue.setCode, clue.number].filter(Boolean).join(' '), service: SERVICE[game], url: '', count: 0, error: '' };
       for (const url of liveUrls(game, clue)) {
+        rec.url = url;
         try {
           const json = await polite(() => fetchJson(url));
-          out.push(...parse(game, json));
+          out.push(...parse(game, json, new Date(now()).toISOString()));
         } catch (e) {
-          if (!/404|400/.test(String(e && e.message))) errors.push('Could not reach the ' + ({ mtg: 'Scryfall', pokemon: 'Pokémon TCG', yugioh: 'YGOPRODeck' })[game] + ' lookup (' + (e && e.message ? e.message : 'offline') + ').');
+          const msg = e && e.message ? e.message : 'offline';
+          if (!/^(404|400)$/.test(msg)) { errors.push('Could not reach the ' + SERVICE[game] + ' lookup (' + msg + ').'); rec.error = msg; }
         }
       }
+      rec.count = out.length;
+      lastLookup = rec;
       await remember(out);
       return { printings: out, errors };
     },
@@ -87,9 +95,26 @@ export function createLiveLookup({ fetchJson, index, store, minGapMs = 120, maxC
     async findAny(game, clue) {
       const games = game ? (LIVE_GAMES.includes(game) ? [game] : []) : LIVE_GAMES;
       const printings = []; const errors = [];
-      for (const g of games) { const r = await this.find(g, clue); printings.push(...r.printings); errors.push(...r.errors); }
+      const recs = [];
+      for (const g of games) { const r = await this.find(g, clue); printings.push(...r.printings); errors.push(...r.errors); if (lastLookup) recs.push(lastLookup); }
+      // Several services were asked: keep the most telling record (a failure first, then one that found cards).
+      if (recs.length) lastLookup = recs.find((x) => x.error) || recs.find((x) => x.count > 0) || recs[recs.length - 1];
       return { printings, errors: [...new Set(errors)] };
     },
     cachedCount: () => Object.keys(cache).length,
+    // The facts of the most recent online lookup (for the "last lookup" line and the problem report).
+    get lastLookup() { return lastLookup; },
+    // Ask again for one printing so its price is current. Returns the fresh printing, or null if it could not be had.
+    async refresh(printing) {
+      const r = await this.find(printing.game, { setCode: printing.setCode, number: printing.number, name: printing.name, kind: 'price refresh' });
+      return r.printings.find((p) => p.id === printing.id) || null;
+    },
+    // The facts of the most recent online lookup (for the "last lookup" line and the problem report).
+    get lastLookup() { return lastLookup; },
+    // Ask again for one printing so its price is current. Returns the fresh printing, or null if it could not be had.
+    async refresh(printing) {
+      const r = await this.find(printing.game, { setCode: printing.setCode, number: printing.number, name: printing.name, kind: 'price refresh' });
+      return r.printings.find((p) => p.id === printing.id) || null;
+    },
   };
 }
