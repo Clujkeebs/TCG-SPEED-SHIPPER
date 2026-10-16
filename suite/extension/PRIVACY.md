@@ -13,6 +13,7 @@ stored on our servers.
 - **Records you send it from tcgspeedshipper.com**: orders, listings, inventory, scan records, and **tracking batches**
   (order numbers and tracking numbers the Shipper site hands over). Orders can include buyer names and addresses; they stay in
   your browser, the same promise as the website.
+- **Your order file, if you import one**: the orders in the TCGplayer export you choose (including buyer names and addresses, as in the file) are read in your browser and kept in your browser's storage so the Insights tab and the assistant can use them. The file is never uploaded. **Remove it** with "Go back to the practice shop" in the Insights tab, or with Clear everything. The Insights tab shows buyers as first name and last initial only.
 - **The side-panel assistant (practice mode)**: its current plan, the facts you ask it to remember about your shop (you can see
   and remove each one), the approval cards waiting for your answer (and recently finished ones, so you can undo them), saved
   background jobs and the reports they leave, whether you pressed Stop, and the prices in its made-up practice shop. Background

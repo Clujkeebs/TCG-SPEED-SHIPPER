@@ -21,3 +21,23 @@ export function plainError(text) {
   if (t.length > 0 && t.length <= 140 && /^[A-Z][^{}<>_\[\]|\\]*[.!?]$/.test(t)) return t;
   return GENERAL;
 }
+
+// Makes the Agent's report readable for a shop owner: drops the "Goal / Plan" preface, turns
+// "1. done: ..." lines into plain bullets, and swaps buyer keys for "Ada A." when we know the name.
+// `labelFor(key)` returns a label or undefined. Everything stays text.
+export function plainAnswer(text, labelFor = () => undefined) {
+  let t = String(text ?? '');
+  const at = t.indexOf('What happened:');
+  if (at !== -1) t = t.slice(at + 'What happened:'.length);
+  const lines = t.split('\n').map((l) => l.trim()).filter(Boolean).map((l) => {
+    const m = /^\d+\.\s*(done|waiting-approval|skipped|failed|unexpected|denied):?\s*(.*)$/i.exec(l);
+    if (!m) return l;
+    const [, status, note] = m;
+    if (/^done$/i.test(status)) return '✓ ' + (note || 'Done');
+    if (/waiting-approval/i.test(status)) return '⏳ Waiting for your OK (see the card below)';
+    if (/unexpected/i.test(status)) return note || 'Nothing to report.'; // a check the plan made, already in plain words
+    return (/skipped/i.test(status) ? 'Skipped: ' : 'Did not work: ') + (note || 'no reason given');
+  });
+  const out = lines.join('\n').replace(/\bb-[a-z0-9]{3,12}\b/g, (k) => labelFor(k) ?? 'a buyer').replace(/\bbuyer-\d{3}\b/g, (k) => labelFor(k) ?? 'a buyer');
+  return out || 'Done.';
+}
