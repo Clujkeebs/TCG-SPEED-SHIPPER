@@ -11,7 +11,10 @@ import { productIdFromLink } from '../core/tcgurl.js';
 import { buildReport, describeLast } from '../core/report.js';
 import { APP_VERSION } from '../core/version.js';
 import { formatUsd, dollarsToCents } from '../../shared/models.js';
-import { startCamera, grabFrame, frameFromFile } from './camera.js';
+import { startCamera, grabFrame, frameFromFile, CameraError } from './camera.js';
+import { checkDevice, checksToText, browserEnv } from '../core/device.js';
+import { createWakeLock } from '../core/wakelock.js';
+import { describeCameraError } from '../core/camera-errors.js';
 import { detectCard } from '../vision/detect.js';
 import { createLiveScanner } from '../core/live.js';
 import { identifyFrame } from '../ocr/pipeline.js';
@@ -120,9 +123,18 @@ function noteLast(extra) {
   const l = extra || live.lastLookup;
   $('lastLookup').textContent = describeLast(l);
 }
+let deviceChecks = null;
+async function runDeviceCheck() { deviceChecks = await checkDevice(browserEnv()); return deviceChecks; }
+runDeviceCheck();
+$('devCheck').addEventListener('click', async () => {
+  const cs = await runDeviceCheck();
+  const ul = $('devOut'); ul.replaceChildren();
+  for (const c of cs) ul.append(el('li', { class: 'item' }, el('div', { class: c.ok ? 'title ok' : 'title danger' }, (c.ok ? '✓ ' : '✗ ') + c.label), el('div', { class: 'meta' }, c.text)));
+});
 function reportText() {
   const l = live.lastLookup;
   let t = buildReport({ last: l, version: APP_VERSION, userAgent: navigator.userAgent, online: navigator.onLine });
+  t += '\ndevice check:\n' + (deviceChecks ? checksToText(deviceChecks) : 'not run yet');
   if (lastRead) t += '\nlast text read from a card: ' + lastRead.replace(/\s+/g, ' ').slice(0, 200);
   return t;
 }
@@ -280,6 +292,7 @@ $('preset').addEventListener('change', () => {
 const feedback = browserFeedback();
 const scanSay = (m) => { $('scanStatus').textContent = m; };
 let stopCamera = null;
+const wake = createWakeLock({ nav: navigator, doc: document }); // keeps the screen on while scanning (quietly does nothing if unsupported)
 let liveTimer = null;
 let scanner = null;
 
@@ -350,6 +363,7 @@ function setCameraUi(on) {
 function stopLive() {
   clearInterval(liveTimer); liveTimer = null;
   stopCamera?.(); stopCamera = null; scanner = null;
+  wake.off();
   setCameraUi(false);
 }
 
@@ -357,6 +371,8 @@ $('camStart').addEventListener('click', async () => {
   try {
     $('preview').hidden = true;
     stopCamera = await startCamera($('video'));
+    wake.on();
+    $('video').addEventListener('cameralost', () => { if (stopCamera) { stopLive(); scanSay('The camera stopped (another app took it, or the screen went to sleep). Tap Start camera again.'); } }, { once: true });
     setCameraUi(true);
     scanner = createLiveScanner({
       detect: (f) => detectCard(f),
@@ -369,7 +385,7 @@ $('camStart').addEventListener('click', async () => {
       const ev = await scanner.step(frame);
       drawOverlay(ev.box, frame);
     }, 400);
-  } catch (e) { scanSay('Could not start the camera: ' + e.message + ' You can still upload photos.'); }
+  } catch (e) { scanSay((e instanceof CameraError ? e.message : describeCameraError(e)) + ' You can also upload photos.'); }
 });
 $('camStop').addEventListener('click', stopLive);
 $('camShot').addEventListener('click', () => handleFrame(grabFrame($('video'), $('canvas'))));
@@ -402,6 +418,11 @@ $('hdrCheck').addEventListener('click', () => {
   for (const n of r.notes) ul.append(el('li', { class: 'item' }, el('div', { class: r.ok ? 'title' : 'title danger' }, n)));
 });
 
+// Safari switches the camera off when the page is hidden; say so instead of showing a frozen picture.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && stopCamera) { stopLive(); scanSay('Camera paused because you left the page. Tap Start camera to continue.'); }
+});
+
 // Tabs.
 for (const t of document.querySelectorAll('.nav-tab')) {
   t.addEventListener('click', () => {
@@ -415,4 +436,18 @@ for (const t of document.querySelectorAll('.nav-tab')) {
 session.onChange(render);
 render();
 
-if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  const hadController = Boolean(navigator.serviceWorker.controller);
+  navigator.serviceWorker.register('sw.js').then((reg) => {
+    // A new version waiting: say so, and switch only when the seller taps (never silently swap files under them).
+    const offer = (w) => { $('updateBar').hidden = false; $('updateBtn').onclick = () => w.postMessage({ type: 'SKIP_WAITING' }); };
+    if (reg.waiting && navigator.serviceWorker.controller) offer(reg.waiting);
+    reg.addEventListener('updatefound', () => {
+      const w = reg.installing;
+      if (w) w.addEventListener('statechange', () => { if (w.state === 'installed' && navigator.serviceWorker.controller) offer(w); });
+    });
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
+  }).catch(() => {});
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadController && !reloading) { reloading = true; location.reload(); } });
+}

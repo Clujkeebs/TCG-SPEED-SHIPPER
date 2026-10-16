@@ -86,3 +86,16 @@ with what the card is, for example `mtg-m11-149.jpg`, or send a list.
 1. (Done) Tesseract.js vendored, approved by the Builder.
 2. Run the harness on the photos: top-1, top-3, auto-accept error rate, median seconds per card, on a named phone.
 3. Targets from the plan: 95% top-1, 98% top-3, median under 3 s. Report plainly if missed.
+
+## Measured: shrinking big pictures before reading (SYNTHETIC)
+Phone photos are big (12 million pixels and more). The app now shrinks every camera frame and photo so the long side is at
+most 1600 px before anything else happens. Test: the 96 sample cards drawn very large (card 1800 px tall, picture about
+2000 x 1900), game chosen, separate strips:
+
+| Picture size given to the reader | Right first | In top 3 | Auto-accepted | Median / 90th pct ms per card |
+|---|---|---|---|---|
+| As drawn (about 2000 px) | 97.9% | 100% | 49% | 167 / 223 |
+| Shrunk to 1600 px | 100% | 100% | 56.3% | 126 / 169 |
+
+Shrinking was both faster and no worse here. Synthetic cards only; real photos are untested, and memory use on an iPad was not
+measured (no iPad here).

@@ -20,6 +20,14 @@ The built-in list is only 96 sample cards. With **Look up any card online** tick
 ## Prices, links and problems
 Prices from the card sites carry the time they were fetched; older than 24 hours means a refetch, or a red warning on the row. For a card with no TCGplayer product id, paste its TCGplayer page address (only the number is read from the text; the page is never opened). **Report a problem** copies a short plain-text note for the board inbox.
 
+## iPad / iPhone (Safari) notes
+Camera starts only from a tap, video is inline and muted, constraints are "ideal" only; plain-words messages for blocked,
+missing, busy camera and non-https pages; screen stays awake while scanning (quietly skipped if the browser has no Wake Lock);
+pictures are shrunk to 1600 px before reading; the card reader is shut down after a minute idle; **Check my device** on the first
+screen (its result is included in **Report a problem**); home-screen icon, full-screen mode, notch and home-bar spacing; fields
+are 16 px so Safari does not zoom. A new version waits and shows "New version ready, tap to refresh" (see `AUTO_ACTIVATE` in
+`public/sw.js`). Only tested in Chromium here; Safari-specific behaviour is untested.
+
 ## Host it on its own site
 `node suite/scan/build.js` writes a plain static folder to `suite/scan/dist/` (about 130 KB). Upload that folder to any
 static host (Netlify, Cloudflare Pages, GitHub Pages) with https. Nothing runs on a server. The folder is not committed.
