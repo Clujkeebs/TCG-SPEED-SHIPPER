@@ -1,9 +1,13 @@
-# Agent proxy: design (nothing built on the server yet)
+# Agent proxy: built, switched off
 
 Why: the Agent needs a model API key. A key inside the extension or a web page can be copied by anyone.
 So the key lives on our server only, and the extension talks to a small proxy that checks who is asking,
-enforces limits, and forwards the request. This page is the plan for the Builder. The Agent code in
-`suite/agent/` already has the other half: `adapters/anthropic.js` (the model call), `limits.js`
+enforces limits, and forwards the request.
+
+**Status (2026-10-16): built and tested, OFF.** Code: `agent-proxy.js` (mounted in `server.js`), tables and
+functions: `docs/db/2026-10-16-agent-usage.sql` (applied), tests: `test/agent-proxy.test.js`. It does nothing until
+the owner sets the variables in "Settings" below. Until then the Agent runs on its scripted test model.
+The Agent code in `suite/agent/` has the other half: `adapters/anthropic.js` (the model call), `limits.js`
 (per-run and per-day caps) and `protocol.js` (side panel messages).
 
 ## Flow
@@ -15,12 +19,73 @@ side panel  --(agent.ask)-->  Agent engine in the extension  --(HTTPS + login to
 ```
 Tools run on the seller's device. Only the conversation (questions, tool results) goes to the proxy.
 
-## One endpoint
-`POST /api/agent/messages`, logged-in users only (the same session the site already uses).
-- In: `{ messages, tools }` (the same shape the adapter sends). The **model name, token cap and system
-  prompt are set by the server**, never taken from the request.
-- Out: the model's reply plus `{ usage: { inputTokens, outputTokens }, costCents, remaining: { runsToday, centsToday } }`.
-- Errors: 401 not logged in · 402 plan does not include the Agent · 429 over a limit (body says which and when it resets) · 503 kill switch on.
+## How to call it (Agent and Extension sessions)
+```
+POST /api/agent/messages        Authorization: Bearer <the user's site login token>
+{ "messages": [...], "tools": [...] }          JSON, at most 60 KB
+```
+- **A conversation is one question** and what the Agent did to answer it:
+  `[user question, assistant (with tool_use), user (tool_results), assistant, user (tool_results), ...]`, always ending
+  on a user message. The first message is plain text. Each set of tool results answers exactly the tools the assistant
+  used. A request with one message starts a run; the message count says which step it is (at most 8).
+- `tools` are the registry's specs as they are (`name`, `description`, `input_schema`). Names with dots
+  (`orders.search`) are fine: the provider only accepts letters, digits, `_` and `-`, so the server renames `.` to `__`
+  on the way out and back on the way in. A tool name that already contains `__` is refused.
+- Do **not** send `model`, `max_tokens` or `system`. The server sets all three and ignores yours. Anything else not
+  listed here (`cache_control`, `tool_choice`, images, ...) is dropped.
+- Reply (200): `{ content: [text | tool_use blocks], stopReason, usage: { inputTokens, outputTokens },
+  costCents (whole cents, rounded up), costMillicents, remaining: { runsToday, centsToday, centsMonth } }`.
+- Errors are `{ error: "plain words for the seller", code }`:
+
+| Status | code | Meaning |
+|---|---|---|
+| 400 | `bad_request` | the request is not shaped as above |
+| 401 | | not logged in |
+| 402 | `plan` | the plan does not include the Agent |
+| 403 | `blocked` | switched off for this account |
+| 413 | `too_big` | over 60 KB |
+| 429 | `runs` `calls` `day` `month` `global` `steps` `busy` | over a limit; `resetsAt` (UTC) says when it comes back; `busy` = one request at a time per user |
+| 502 | `model_error` | the model could not answer (nothing from the provider is passed on) |
+| 503 | `off` `try_again` | switched off or not configured; or a temporary problem |
+
+`GET /api/agent/status` (logged in, spends nothing) returns `{ available, code?, limits, remaining }`, so the panel can say
+"3 runs left" before asking. From an extension service worker with host permission for the site no CORS setup is needed;
+a web page on another origin would need an allowlist added first.
+
+## Settings (Railway variables; only the key is a secret)
+| Variable | Default | Meaning |
+|---|---|---|
+| `AGENT_PROXY` | off | `on` switches it on. Anything else is off. **This is the kill switch** (Railway redeploys in about a minute). |
+| `ANTHROPIC_API_KEY` | none | the key (owner only, never in the repo or a log) |
+| `ANTHROPIC_MODEL` | none | the model id |
+| `AGENT_CENTS_PER_MILLION_IN` / `_OUT` | none | the provider's current price, in cents per million tokens, input and output (check the price list; $3 is 300). Both are required: a missing price would make every call look free, so it stays off |
+| `AGENT_PLANS` | `premium,pro` | plans that get the Agent |
+| `AGENT_RUNS_PER_DAY` | 5 | questions per user per UTC day |
+| `AGENT_CENTS_PER_DAY` / `_PER_MONTH` | 25 / 150 | spend per user |
+| `AGENT_GLOBAL_CENTS_PER_DAY` | 500 | spend for everyone together: **the most a day can ever cost** |
+| `AGENT_STEPS_PER_RUN` | 8 | model calls per question |
+| `AGENT_MAX_TOKENS` | 1024 | answer length cap per call |
+| `AGENT_MAX_INFLIGHT` | 20 | requests being answered at once |
+| `AGENT_TIMEOUT_MS` | 40000 | give up on the provider after this long |
+
+A bad value falls back to the default shown, never to "unlimited". `/api/health` shows `agent_proxy` as `off`, `on` or
+`on_not_configured` (a variable is missing) and never a value.
+
+## How it counts
+- Money is kept in millicents (1/1000 cent). Before each model call the server **reserves the worst case** (one token per 3
+  bytes in, `AGENT_MAX_TOKENS` out) and after the call **settles to the real cost** from the provider's own token counts.
+  Both happen under one database lock, so two requests at once, or two copies of the server during a deploy, cannot both
+  pass a limit that has room for one. Tested on a real Postgres with 12 requests at once against room for one: exactly one won.
+- The provider refuses the call (error, busy): nothing was produced, so the call, the run and the money are taken back.
+  The call is lost (timeout, unreadable answer): it may have been billed, so the worst case stays charged. A crash between
+  reserve and settle also leaves it charged. Every failure leans toward the owner's money.
+- Limits are per UTC day (runs, calls = runs x steps, spend), per month (spend) and for everyone per day (spend).
+  Honest caveat: a client that lies about its history can dodge the *run* count, never the *money*: calls and spend are
+  counted on every request, so the worst a forged client can do is the same 25 cents a day.
+- Only counts and cost are stored. Never the conversation, never the buyer's words. Nothing from a request is logged, and the
+  key is never logged or returned; a provider error shows the seller a plain sentence and the log gets the HTTP status and
+  error type only.
+- Switch one person off: add a row to `tcgss_agent_blocks` (user id, reason). Switch everyone off: `AGENT_PROXY` to `off`.
 
 ## Key handling
 - The key is one environment variable on the server (owner sets it; secrets are owner-only per `docs/agents/PERMISSIONS.md`).
@@ -64,9 +129,14 @@ records tokens and cost per run so these are real numbers after one week.
 - The server stores, per call: user id, time, token counts, cost, outcome. **Not** the conversation text.
 - Terms and privacy text need a sentence saying a question and tool results are sent to a model provider.
 
-## What the Builder needs to do (the Agent session cannot touch these)
-1. `server.js`: add the route above, behind login, with the checks and the kill switch.
-2. Supabase: additive table `tcgss_agent_usage` (user id, day, runs, cents, input and output tokens), RLS on, server-only writes.
-3. Owner: set the provider key and the model name as environment variables (secret values are owner-only).
-4. Owner: decide the limits table, and whether the Agent is Premium only.
-5. Extension session: wire `protocol.js` to `chrome.runtime` messaging and the side panel UI.
+## What is left
+1. **Agent session:** a `proxy` adapter next to `adapters/anthropic.js` that posts `{ messages, tools }` to the endpoint with the
+   login token and returns `{ content, costCents }` like the other adapter; show `remaining` and the plain-words errors (`code`,
+   `resetsAt`). Do not send `system` or a model name. Tests against a stub, like the others. Keep `adapters/anthropic.js` for
+   local experiments only: the real model must go through the proxy.
+2. **Extension session:** get the site login token to the service worker (through the bridge) and use the proxy adapter; the side
+   panel shows what is left.
+3. **Owner, later, when the Agent is ready for a real-model test (costs money, bounded by the numbers above):** make a key in the
+   provider's console with its own spend limit, then put `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, the two prices and
+   `AGENT_PROXY=on` into Railway. Decide the limits table above (the defaults are the proposal).
+4. Terms and privacy text need one sentence: a question and tool results are sent to a model provider.

@@ -498,3 +498,21 @@ Shared with the Agent session: nothing edited by hand. I use their `analytics.js
 Needs Builder: (a) When the Agent's faster order parser merges, tell me and I will vendor it and pass it as `parser`. (b) The Agent's report carries only one-line notes per step, so "Draft a reply" says a draft is ready but cannot show its text. If `agent.answer` (or the plan events) carried each draft step's result, the panel could show the reply to copy. (c) Imported orders have no stock or messages, so restock, repricing and replies still use the practice stock and messages; a stock-file import would be the next step.
 Needs owner: try it with a real TCGplayer order export on a desktop and say what looks wrong; the saved TCGplayer pages are still the blocker for X2.
 Next: nothing blocked on me except X2 ("TOS OK").
+
+### 2026-10-16 · builder · Agent proxy built (switched off) · done
+Built the server half of the Agent's model access: `POST /api/agent/messages` and `GET /api/agent/status` (`agent-proxy.js`), counters in
+Postgres (`docs/db/2026-10-16-agent-usage.sql`, applied and smoke-tested on production), 88 tests. It is OFF until the owner sets
+variables, so nothing changes today. Contract, settings and how the limits count: `docs/suite/AGENT-PROXY.md` (read "How to call it").
+For the Agent session: (1) BUG FOUND in `adapters/anthropic.js`: every one of our 27 tool names has a dot (`orders.search`) and the model
+provider only accepts letters, digits, `_` and `-`, so a direct call would be rejected on the first request. The proxy renames `.` to `__`
+and back for you, so send the registry specs as they are and do not rename anything yourself (a tool name that already contains `__` is
+refused). (2) Please build `suite/agent/adapters/proxy.js` next to the other adapter: post `{ messages, tools }` with the user's login
+token, return `{ content, costCents }`, keep `remaining` and the plain-words `error`/`code`/`resetsAt` for the panel. Do not send `system`
+or a model name (the server sets both and ignores yours). A conversation is ONE question and its tool steps, at most 8 model calls.
+Test against a stub, like the other adapter. `adapters/anthropic.js` stays for local experiments only.
+For the Extension session: the service worker needs the site login token (through the bridge) to call the proxy; no CORS setup is needed
+from an extension worker that has host permission for the site. The side panel can show `remaining` from `GET /api/agent/status`.
+Needs Builder: none.
+Needs owner: nothing now. When the Agent adapter is done (HQ: add the owner task then): "Turn on a real model (costs money)": a key made
+with its own spend limit, then five Railway variables. By default everyone together can spend at most 5 dollars a day, one person 25 cents.
+Next: review the Agent's proxy-adapter PR.

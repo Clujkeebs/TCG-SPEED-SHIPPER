@@ -527,6 +527,8 @@ router.get('/health', (req, res) => {
     email_key: require('./email').emailConfig().configured,
     // Sign-up email codes: off | on | on_default_sender | on_no_email_key.
     signup_code: require('./signup-code').mode(),
+    // Agent proxy (docs/suite/AGENT-PROXY.md): off | on | on_not_configured (key, model or prices missing).
+    agent_proxy: (() => { const a = require('./agent-proxy').agentConfig(); return !a.on ? 'off' : a.configured ? 'on' : 'on_not_configured'; })(),
   };
   // Yearly prices and postage are optional, so their absence doesn't mark the deploy unhealthy.
   const missing = Object.keys(config).filter((k) => config[k] === false && !/_annual$|^pb_|^email_/.test(k));
@@ -1344,6 +1346,9 @@ router.post('/newsletter/unsubscribe', express.urlencoded({ extended: false, lim
 require('./postage')(router, {
   supabaseAdmin: () => supabaseAdmin, stripe: () => stripe, requireUser, requireSupabase, OWNER_EMAIL, logError, SITE_URL,
 });
+
+// The Suite's Agent talks to a model through here so the key never leaves the server. Off unless AGENT_PROXY=on.
+require('./agent-proxy')(router, { supabaseAdmin: () => supabaseAdmin, requireUser, requireSupabase, logError });
 
 require('./admin')(router, {
   supabaseAdmin: () => supabaseAdmin, stripe: () => stripe,
