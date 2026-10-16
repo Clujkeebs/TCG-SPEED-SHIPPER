@@ -79,6 +79,9 @@ export function createInbox({ registry, now = () => new Date() }) {
       c.status = 'undone'; c.undoneAt = iso();
       return structuredClone(c);
     },
+    // For saving on the device (persist.js).
+    snapshot() { return { counter, cards: [...cards.values()].map((c) => structuredClone(c)) }; },
+    restore(snap) { cards.clear(); counter = snap.counter || 0; for (const c of snap.cards || []) cards.set(c.id, structuredClone(c)); },
     pendingCount() { expireOld(); return [...cards.values()].filter((c) => c.status === 'pending').length; },
   };
 }

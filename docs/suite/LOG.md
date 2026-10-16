@@ -487,3 +487,30 @@ Board updated. S4 and S6 no longer say "waiting"; S6 has the Scan test link (ope
 Needs Builder: A16 (Rob's reply) is already ticked done on the owner's side (Oct 15), so it does not show on Now; today's third item is the next open task (B13, the sign-up code test). Tell me if A16 should be reopened or replaced with something else.
 Needs owner: none new.
 Next: none
+
+### 2026-10-16 · agent · batch 3: order file at scale, saved on the device, morning briefing, voice · done
+(1) `orderfile.js`: a streaming CSV parser and an aggregator that keeps counters and one small record per buyer, not the rows. It reads the Shipper's
+real columns (checked against `public/js/shipper-core.js` and `test/csv-parser.test.js`, read only; all rows invented) and answers: repeat buyers,
+top states and first-3-digit ZIP areas, weekday and hour pattern (only when "Order Date" has a time; otherwise it says so), average order, orders at
+$49.99 and $250 (policy SHIP-1), this week vs last week. Output: weekly summary draft plus chart-ready numbers. Buyer names never appear in the
+summary, draft or charts: buyers are keys, the draft holds `{{buyer:KEY}}`, and the device fills in "Ada L." (first name and initial) from a table that
+is never saved. Budget written down: 10,000 invented rows under 1,500 ms and under 100 MB growth. Measured on the build machine: about 60 to 130 ms
+and about 9 MB (about 1 MB file). Same rows however the file is cut into chunks (tested with random splits, including inside a quote pair or CRLF).
+(2) `persist.js`: memory, plans, approval cards, job reports and schedules are saved on the device behind the same in-memory interfaces; loads on open,
+writes only changes, reports a failed write and retries on the next change, leaves a record from a newer version untouched. Tested on a faithful
+fake IndexedDB (`fixtures/fake-idb.js`); ALSO checked once by hand in real Chromium with a throwaway script (not committed): a fact and an audit entry
+written in one page were back in a fresh page, and the fresh page wrote nothing. The Extension's own Chromium harness was not used.
+(3) `briefing.js`: plain-text morning briefing, 66 to 150 words (limit 150, enforced), deterministic: what to ship today, five things worth doing,
+low stock, what is waiting for approval or a reply. (4) `voice.js`: 3 to 5 of the seller's own replies become an editable style card (greeting,
+sign-off, length, formality, exclamation, emoji) kept in memory; only whitelisted words and settings are stored, nothing from the samples; drafts
+follow the card and still use `{{first_name}}` and the policy notes. (5) `AGENT-EVAL.md` has a new section with 19 checks and measured results;
+`AGENT-TODAY.md` updated (under 300 words).
+New protocol requests (announced in `hello`, need an agent): `agent.orders`, `agent.briefing`, `agent.voice`, `agent.voice.set`. Shapes in `DATA-MODEL.md`.
+Numbers: `cd suite && npm test` 365 pass, 0 fail (one run flaked once: the Extension's `restart.e2e` test failed under full-suite load, passed alone
+and on the next full run, so it is not from this change but it is worth knowing); root `npm test` run before the PR. 24 scenarios, week 31 of 31,
+red team 22 of 22, batch 3 19 of 19. No model, no network, $0.
+Vendoring done: added `agent/orderfile.js`, `voice.js`, `briefing.js`, `persist.js` to the Extension's vendor list and ran `npm run vendor` (43 files).
+Needs Builder: for the Extension to keep memory and cards between sessions, call `persistShop(world, indexedDB)` from `agent/persist.js` when it builds
+its agent (see `openWorld` in `eval/harness.js`); the Extension's own copy of the stores must have `snapshot()`/`restore()` (the vendored ones do).
+Needs owner: none.
+Next: a measured run with a real model (needs a key and a small budget from the owner); event triggers on a real timer inside the Extension.

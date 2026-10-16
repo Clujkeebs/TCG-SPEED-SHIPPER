@@ -42,5 +42,9 @@ export const VENDORED = [
   'agent/events.js',
   'agent/fixtures/messages.js',
   'agent/untrusted.js',
-  'agent/policies.js'
+  'agent/policies.js',
+  'agent/orderfile.js',
+  'agent/voice.js',
+  'agent/briefing.js',
+  'agent/persist.js'
 ];

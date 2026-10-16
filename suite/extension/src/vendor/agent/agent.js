@@ -3,7 +3,10 @@
 // Everything the seller does directly (adding, editing or forgetting a fact; approving a card) is audited too.
 import { runPlan, renderPlan, validatePlan } from './plan.js';
 
-export function createAgent({ registry, memory, inbox, planner, reports, jobs, now }) {
+import { fillBuyerNames } from './orderfile.js';
+import { VOICE_KEY, deriveVoiceCard, describeVoice, voiceFromMemory, editVoiceCard, DEFAULT_CARD } from './voice.js';
+
+export function createAgent({ registry, memory, inbox, planner, reports, jobs, now, names = new Map() }) {
   const runs = new Map(); // planId -> { plan, status, steps, text }
   const iso = () => (typeof now === 'function' ? now() : now);
 
@@ -71,6 +74,41 @@ export function createAgent({ registry, memory, inbox, planner, reports, jobs, n
         onEvent({ event: 'card', cardId: card.id });
       }
       return { status: 'ok', analysis, cards };
+    },
+
+    // Voice profile: derived on the device from the seller's own replies, kept as an editable card in shop memory.
+    getVoice: () => voiceFromMemory(memory),
+    async learnVoice(samples) {
+      const card = deriveVoiceCard(samples);
+      const old = memory.list().find((f) => f.key === VOICE_KEY);
+      const fact = { text: describeVoice(card), key: VOICE_KEY, value: JSON.stringify(card), category: 'preference' };
+      const saved = old ? memory.edit(old.id, fact) : memory.add({ ...fact, source: 'user' });
+      await audit(old ? 'memory.edit' : 'memory.add', { id: saved.id }, 'user');
+      return { card, text: saved.text, memoryId: saved.id };
+    },
+    async setVoice(patch) {
+      const old = memory.list().find((f) => f.key === VOICE_KEY);
+      const card = editVoiceCard(voiceFromMemory(memory) || DEFAULT_CARD, patch);
+      const fact = { text: describeVoice(card), key: VOICE_KEY, value: JSON.stringify(card), category: 'preference' };
+      const saved = old ? memory.edit(old.id, fact) : memory.add({ ...fact, source: 'user' });
+      await audit(old ? 'memory.edit' : 'memory.add', { id: saved.id }, 'user');
+      return { card, text: saved.text, memoryId: saved.id };
+    },
+
+    // On this device only: put "Ada L." in place of {{buyer:KEY}} in a draft.
+    fillNames: (text) => fillBuyerNames(text, names),
+
+    // A pasted or dropped order/shipping export. Read-only: returns the summary, a weekly draft and chart numbers.
+    async orderFile(csv, { weekEnding } = {}) {
+      const out = await registry.run('orders.fileInsights', { csv, ...(weekEnding ? { weekEnding } : {}) }, { actor: 'agent' });
+      if (!out.ok) return { status: 'failed', reason: out.error };
+      return { status: out.result.summary.ok ? 'ok' : 'unreadable', ...out.result };
+    },
+
+    async briefing() {
+      const out = await registry.run('briefing.morning', {}, { actor: 'agent' });
+      if (!out.ok) throw new Error(out.error);
+      return out.result;
     },
 
     suggestions: async () => {

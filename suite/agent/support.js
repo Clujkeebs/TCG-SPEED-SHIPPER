@@ -76,10 +76,12 @@ const BODY = {
   ],
 };
 
-export function draftReply(order, message, { sellerName = 'the shop', now, tone = 'friendly' } = {}) {
+export function draftReply(order, message, { sellerName = 'the shop', now, tone = 'friendly', voice = null } = {}) {
   if (!TONES.includes(tone)) throw new Error('tone must be one of ' + TONES.join(', '));
   const category = classify(message);
-  const i = TONES.indexOf(tone);
+  // A voice card (voice.js) picks the body wording from its formality and length; the greeting and sign-off are its own.
+  const bodyTone = voice ? (voice.formality === 'formal' ? 'formal' : voice.length === 'short' ? 'brief' : 'friendly') : tone;
+  const i = TONES.indexOf(bodyTone);
   const notes = [];
   let key;
   let needsHuman = true;
@@ -106,9 +108,18 @@ export function draftReply(order, message, { sellerName = 'the shop', now, tone 
     notes.push('Cancellations and refunds are the seller\'s call.');
   } else key = 'other';
 
-  const f = FRAME[tone];
+  const f = voice
+    ? { hi: (n) => `${voice.greeting ? voice.greeting + ' ' : ''}${n},\n\n`, bye: (sn) => `\n\n${voice.signOff}\n${sn}` }
+    : FRAME[tone];
+  let body = BODY[key](order)[i];
+  if (voice) {
+    const calm = ['shipped', 'notShipped', 'other'].includes(key); // never add cheer to a problem report
+    if (voice.length === 'long') body += voice.formality === 'formal' ? ' Please do not hesitate to contact me if you require anything further.' : " Let me know if there's anything else I can help with.";
+    if (voice.exclamation && calm && voice.formality !== 'formal') body = body.replace(/\.$/, '!');
+    if (voice.emoji && key === 'shipped') body += ' 📦';
+  }
   const policies = key === 'notShipped' ? CATEGORY_POLICIES['not-shipped'] : CATEGORY_POLICIES[category] || [];
-  const reply = f.hi(FIRST_NAME) + BODY[key](order)[i] + f.bye(sellerName);
+  const reply = f.hi(FIRST_NAME) + body + f.bye(sellerName);
   // `message` is for the buyer; `draft` adds a seller-only block that cites the policy entries it relied on.
-  return { orderId: order.id, category, tone, message: reply, draft: reply + sellerNotes(policies), policies, needsHuman, notes, sent: false, placeholders: ['first_name'] };
+  return { orderId: order.id, category, tone: voice ? 'voice' : tone, message: reply, draft: reply + sellerNotes(policies), policies, needsHuman, notes, sent: false, placeholders: ['first_name'] };
 }

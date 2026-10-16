@@ -10,6 +10,8 @@ export function createReportStore({ now = () => new Date() } = {}) {
   return {
     add(r) { const row = { id: 'rep-' + (rows.length + 1), ranAt: now().toISOString ? now().toISOString() : now(), ...r }; rows.push(row); return structuredClone(row); },
     list: () => rows.map((r) => structuredClone(r)),
+    snapshot: () => rows.map((r) => structuredClone(r)),
+    restore(snap) { rows.length = 0; for (const r of snap || []) rows.push(structuredClone(r)); },
     get: (id) => { const r = rows.find((x) => x.id === id); return r ? structuredClone(r) : undefined; },
   };
 }
