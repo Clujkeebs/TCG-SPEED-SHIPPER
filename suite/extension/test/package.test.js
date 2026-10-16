@@ -53,7 +53,7 @@ test('no remote code, analytics or model names in the sources', () => {
   for (const f of walk(join(root, 'src')).filter((p) => /\.(js|html)$/.test(p) && !p.includes('vendor'))) {
     const text = readFileSync(f, 'utf8');
     assert.ok(!/https?:\/\/(?!tcgspeedshipper\.com|localhost|seller\.tcgplayer\.com)[a-z]/i.test(text.replace(/https?:\/\/www\.w3\.org/g, '')), f + ' mentions an unexpected host');
-    assert.ok(!/analytics|gtag|sentry/i.test(text), f);
+    assert.ok(!/google-analytics|googletagmanager|gtag|sentry|mixpanel|segment\.(io|com)|telemetry/i.test(text), f + ' mentions an analytics or tracking service');
   }
 });
 

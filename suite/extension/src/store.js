@@ -43,6 +43,10 @@ function memoryBackend() {
     },
     async clear(c) {
       data[c].clear();
+    },
+    async replaceAll(c, pairs) {
+      data[c].clear();
+      for (const [k, r] of pairs) data[c].set(k, structuredClone(r));
     }
   };
 }
@@ -70,7 +74,16 @@ async function indexedDbBackend(idb) {
     get: async (c, key) => (await wrap(store(c, 'readonly').get(key))) ?? null,
     list: (c) => wrap(store(c, 'readonly').getAll()),
     delete: (c, key) => wrap(store(c, 'readwrite').delete(key)),
-    clear: (c) => wrap(store(c, 'readwrite').clear())
+    clear: (c) => wrap(store(c, 'readwrite').clear()),
+    // One transaction: clear then add everything, or nothing changes.
+    replaceAll: (c, pairs) => new Promise((resolve, reject) => {
+      const tx = db.transaction(c, 'readwrite');
+      const os = tx.objectStore(c);
+      os.clear();
+      for (const [k, r] of pairs) os.put(r, k);
+      tx.oncomplete = () => resolve();
+      tx.onerror = tx.onabort = () => reject(tx.error || new Error('could not save'));
+    })
   };
 }
 
@@ -97,6 +110,18 @@ export async function openStore({ indexedDB = globalThis.indexedDB } = {}) {
     },
     get: (collection, key) => (def(collection), backend.get(collection, key)),
     list: (collection) => (def(collection), backend.list(collection)),
+    // Replace a whole collection in one go (every record is checked first; if one is bad, nothing is changed).
+    async replaceAll(collection, records) {
+      const d = def(collection);
+      const pairs = [];
+      for (const r of records) {
+        const check = d.validate(r);
+        if (!check.ok) throw new Error('invalid ' + collection + ' record: ' + check.errors.join('; '));
+        pairs.push([d.keyOf(r), r]);
+      }
+      await backend.replaceAll(collection, pairs);
+      return pairs.length;
+    },
     delete: (collection, key) => (def(collection), backend.delete(collection, key)),
     clear: (collection) => (def(collection), backend.clear(collection))
   };

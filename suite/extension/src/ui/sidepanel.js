@@ -4,6 +4,10 @@ import { getFlags } from '../flags.js';
 import { createPanel } from '../agent/panel-controller.js';
 import { createRuntimeTransport } from '../agent/runtime-transport.js';
 import { createTour, tourSeen, markTourSeen } from './tour.js';
+import { QUICK_ACTIONS } from '../agent/quick.js';
+import { openStore } from '../store.js';
+import { computeInsights, buyerLabels } from '../orders/insights.js';
+import { renderInsights, wireImport } from './insights-view.js';
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
@@ -14,8 +18,50 @@ if (!flags.agentPanel) {
   $('stop').hidden = true;
   $('again').hidden = true;
 } else {
-  const panel = createPanel(createRuntimeTransport());
+  const store = await openStore();
+  let labels = new Map(); // buyer key -> "Ada A." (from the seller's own file, only used to make text readable)
+  const panel = createPanel(createRuntimeTransport(), { labelFor: (k) => labels.get(k) });
   const s = panel.state;
+  async function setOrders(list) {
+    labels = buyerLabels(list);
+    renderInsights($('insights'), computeInsights(list));
+    render();
+  }
+  wireImport({ $, store, panel, setOrders });
+  async function loadStoredOrders() { await setOrders(s.orders.mode === 'imported' ? await store.list('orders') : []); }
+
+  // ---- tabs (arrow keys move between them)
+  const tabs = ['assistant', 'insights'];
+  function showTab(name, focus = false) {
+    for (const t of tabs) {
+      const sel = t === name;
+      $('tab-' + t).setAttribute('aria-selected', String(sel));
+      $('tab-' + t).tabIndex = sel ? 0 : -1;
+      const pane = $('panel-' + t);
+      pane.hidden = !sel;
+      pane.style.display = sel ? 'flex' : 'none';
+    }
+    $('form').hidden = name !== 'assistant';
+    if (focus) $('tab-' + name).focus();
+  }
+  for (const t of tabs) {
+    $('tab-' + t).addEventListener('click', () => showTab(t));
+    $('tab-' + t).addEventListener('keydown', (e) => {
+      const i = tabs.indexOf(t);
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); showTab(tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length], true); }
+      if (e.key === 'Home') { e.preventDefault(); showTab(tabs[0], true); }
+      if (e.key === 'End') { e.preventDefault(); showTab(tabs[tabs.length - 1], true); }
+    });
+  }
+
+  // ---- the five big buttons
+  for (const q of QUICK_ACTIONS) {
+    const b = el('button', '', q.label);
+    b.type = 'button';
+    b.dataset.quick = q.id;
+    b.addEventListener('click', () => panel.quick(q.id));
+    $('quick').append(b);
+  }
   let focusedCard = null;
 
   // Re-drawing the list must not throw away keyboard focus: remember what was focused, put it back after.
@@ -37,8 +83,14 @@ if (!flags.agentPanel) {
   function render() {
     const keep = focusKey();
     $('practice').hidden = false;
+    $('practice').textContent = s.orders.mode === 'imported'
+      ? `Using your ${s.orders.count.toLocaleString('en-US')} imported orders. They stay on this computer. Stock and messages are still made up.`
+      : 'Practice mode: made-up data. Nothing here is real and nothing is changed.';
+    $('tabs').hidden = false;
+    $('removeOrders').hidden = s.orders.mode !== 'imported';
+    for (const b of document.querySelectorAll('#quick button')) b.disabled = s.busy || s.killed;
     $('body').hidden = false;
-    $('form').hidden = false;
+    $('form').hidden = $('tab-assistant').getAttribute('aria-selected') !== 'true';
     $('stop').hidden = s.killed;
     $('resume').hidden = !s.killed;
     $('go').disabled = s.busy || s.killed;
@@ -158,6 +210,7 @@ if (!flags.agentPanel) {
   $('again').addEventListener('click', () => { while (!tour.isFirst) tour.back(); showTour(); });
 
   if (!(await panel.connect())) $('offline').hidden = false;
+  await loadStoredOrders();
   // Jobs run in the background: look again now and then while the panel is open (read-only lookups).
   setInterval(() => { if (!document.hidden) panel.refresh(); }, 15000);
   render();

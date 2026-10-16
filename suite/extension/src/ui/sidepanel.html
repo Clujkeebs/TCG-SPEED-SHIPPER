@@ -9,7 +9,7 @@ header{display:flex;justify-content:space-between;align-items:center;padding:10p
 #practice{background:#fff7e0;border-bottom:1px solid #ecd9a0;padding:6px 12px;font-size:12px}
 main{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
 section h2{font-size:13px;margin:0 0 4px;color:#555;text-transform:uppercase;letter-spacing:.04em}
-#plan ol{margin:0;padding-left:20px}#plan li.done{color:#2a7a3b}#plan li.doing{font-weight:600}#plan li.skipped{color:#888;text-decoration:line-through}
+#plan ol{margin:0;padding-left:20px}#plan li.done{color:#2a7a3b}#plan li.doing{font-weight:600}#plan li.skipped{color:#666;text-decoration:line-through}
 .msg{padding:8px 10px;border-radius:8px;white-space:pre-wrap}.user{background:#e8f0fe}.answer{background:#f2f2f2}.progress{font-size:12px;color:#555}.notice{background:#fde8e8}
 .card{border:2px solid #c97a00;border-radius:8px;padding:10px;background:#fffaf0}.card h3{font-size:14px;margin:0 0 6px}
 .card dl{margin:6px 0}.card dt{font-weight:600;float:left;clear:left;margin-right:6px}.card dd{margin:0 0 2px}.card button{margin-right:8px;padding:6px 12px}
@@ -22,20 +22,49 @@ button{min-height:36px;cursor:pointer}form textarea{width:100%;resize:vertical}
 #tour{border:2px solid #1a5fd0;border-radius:8px;margin:12px;padding:12px;background:#f3f8ff}#tour h2{font-size:16px;margin:0 0 6px}#tour p{margin:0 0 10px}#tour .count{font-size:12px;color:#555}
 #tour button{margin-right:6px}#again{background:none;border:0;color:#0a58ca;text-decoration:underline;padding:4px}
 .skip{position:absolute;left:-999px}.skip:focus{left:8px;top:8px;background:#fff;padding:6px;z-index:5}
-#suglist{margin:0;padding-left:20px}#suglist li{margin-bottom:8px}.small{font-size:12px;color:#555;margin:0 0 6px}#joblist{list-style:none;padding:0}#joblist li{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid #eee}.report{background:#f7f7f7;border-radius:6px;padding:6px 8px;margin-top:6px;font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere}.card .why{font-size:13px;color:#444}</style></head>
+#suglist{margin:0;padding-left:20px}#suglist li{margin-bottom:8px}.small{font-size:12px;color:#555;margin:0 0 6px}#joblist{list-style:none;padding:0}#joblist li{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid #eee}.report{background:#f7f7f7;border-radius:6px;padding:6px 8px;margin-top:6px;font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere}.card .why{font-size:13px;color:#444}
+[hidden]{display:none !important}
+[role=tablist]{display:flex;gap:4px;padding:6px 12px 0;border-bottom:1px solid #ddd}
+[role=tab]{border:1px solid #ccc;border-bottom:0;border-radius:8px 8px 0 0;background:#f2f2f2;color:#1d1d1f;padding:8px 14px;font-weight:600}
+[role=tab][aria-selected=true]{background:#fff;border-color:#1a5fd0;box-shadow:inset 0 3px 0 #1a5fd0}
+#quick{display:grid;grid-template-columns:1fr;gap:8px}
+#quick button{min-height:48px;font-size:15px;font-weight:600;text-align:left;padding:10px 14px;border:2px solid #1a5fd0;border-radius:10px;background:#fff;color:#0b3a8a}
+#quick button:disabled{border-color:#999;color:#555;cursor:not-allowed}
+#drop{border:2px dashed #555;border-radius:10px;padding:18px 12px;text-align:center;background:#fafafa}
+#drop.over{border-color:#1a5fd0;background:#eef4ff}
+#chooseFile,#removeOrders{min-height:44px;padding:8px 14px;border:2px solid #1a5fd0;border-radius:8px;background:#fff;color:#0b3a8a;font-weight:600}
+#importStatus{margin:8px 0;font-weight:600}.err{color:#8a0017}
+.stat{display:grid;grid-template-columns:1fr 1fr;gap:8px}.stat div{background:#f2f2f2;border-radius:8px;padding:8px}.stat b{display:block;font-size:20px}
+.rows{list-style:none;margin:0;padding:0}.rows li{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid #e3e3e3}
+.bar{display:inline-block;height:10px;background:#1a5fd0;border-radius:3px;vertical-align:middle;margin-left:6px}
+</style></head>
 <body>
 <a class="skip" href="#goal">Skip to the question box</a>
 <header><strong>TCG Speed Agent</strong><span><button id="again" type="button">Tour</button> <button id="resume" type="button" hidden>Resume</button> <button id="stop" type="button">Stop</button></span></header>
 <section id="tour" role="region" aria-labelledby="tourTitle" hidden><div class="count" id="tourCount"></div><h2 id="tourTitle" tabindex="-1"></h2><p id="tourBody"></p><button id="tourBack" type="button">Back</button><button id="tourNext" type="button">Next</button><button id="tourSkip" type="button">Skip</button></section>
 <div id="off" hidden>The Agent panel is switched off. Turn it on in Settings (click the extension icon, then Settings).</div>
 <div id="offline" hidden>The agent is not answering right now.</div>
-<div id="practice" hidden>Practice mode: made-up data. Nothing here is real and nothing is changed.</div>
+<div id="practice" hidden></div>
+<div role="tablist" aria-label="Sections" id="tabs" hidden><button role="tab" id="tab-assistant" aria-controls="panel-assistant" aria-selected="true" type="button">Assistant</button><button role="tab" id="tab-insights" aria-controls="panel-insights" aria-selected="false" tabindex="-1" type="button">Insights</button></div>
 <main id="body" hidden>
+  <div id="panel-assistant" role="tabpanel" aria-labelledby="tab-assistant" tabindex="-1" style="display:flex;flex-direction:column;gap:10px">
+  <section id="quick" aria-label="Quick actions"></section>
   <section id="plan" hidden><h2>Plan</h2><ol id="planlist"></ol></section>
   <section id="suggest" hidden><h2>Five things worth doing this week</h2><ol id="suglist"></ol></section>
   <section id="log" role="log" aria-live="polite" aria-label="Conversation"></section>
   <section id="jobs" hidden><h2>Background jobs (practice)</h2><p class="small">A job runs by itself on a schedule and leaves a report. Anything that would change something waits for your OK.</p><ul id="joblist"></ul><button id="addDaily" type="button">Add a morning stock check</button> <button id="addMinute" type="button">Add a demo job (every minute)</button><div id="reports"></div></section>
   <section id="memory" hidden><h2>What I remember about your shop</h2><ul id="memlist"></ul></section>
+  </div>
+  <div id="panel-insights" role="tabpanel" aria-labelledby="tab-insights" tabindex="-1" hidden style="display:none;flex-direction:column;gap:10px">
+    <section><h2>Your orders</h2>
+      <p class="small">Choose the TCGplayer order export, the same file you give Speed Shipper. It is read on this computer and is never sent anywhere.</p>
+      <div id="drop" tabindex="0" role="button" aria-describedby="dropHelp">Drop the order file here<br><span id="dropHelp" class="small">or press Enter to choose it</span></div>
+      <input type="file" id="orderFile" accept=".csv,text/csv" hidden>
+      <p><button id="chooseFile" type="button">Choose order file</button> <button id="removeOrders" type="button" hidden>Go back to the practice shop</button></p>
+      <p id="importStatus" role="status"></p>
+    </section>
+    <section id="insights" aria-live="polite"></section>
+  </div>
 </main>
 <form id="form" hidden><label for="goal"><strong>What do you want done?</strong></label>
 <textarea id="goal" rows="2" maxlength="2000" aria-describedby="hint" placeholder="For example: lower my prices a little"></textarea><span id="hint" style="font-size:12px;color:#555">Press Enter to send. Shift+Enter for a new line.</span><button id="go" type="submit">Start</button></form>

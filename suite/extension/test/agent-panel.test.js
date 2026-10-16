@@ -140,6 +140,33 @@ test('cards that appear later (from a background job) show up once, even if anno
   assert.equal(p.state.items.filter((i) => i.kind === 'approval').length, 1);
 });
 
+test('the five big buttons: four run goals, one reads the weekly list; none run while busy or stopped', async () => {
+  const p = await ready();
+  assert.equal(await p.quick('today'), true);
+  assert.match(p.state.items.at(-1).text, /^1\. /);
+  for (const id of ['repeat', 'ship', 'weekly', 'reply']) {
+    assert.equal(await p.quick(id), true, id);
+    await tick();
+    assert.equal(p.state.busy, false, id + ' finished');
+    const last = p.state.items.at(-1);
+    assert.equal(last.kind, 'answer', id);
+    assert.ok(!/waiting-approval|card-\d|Goal:|Plan:|\bb-[a-z0-9]{4,}\b/.test(last.text), id + ' is plain: ' + last.text);
+  }
+  assert.equal(await p.quick('nope'), false);
+  await p.stop();
+  await tick();
+  assert.equal(await p.quick('repeat'), false, 'not while stopped');
+});
+
+test('the panel can switch the Agent to the seller\'s own orders and back', async () => {
+  const t = hostTransport();
+  const p = createPanel(t);
+  await p.connect();
+  assert.deepEqual(p.state.orders, { mode: 'practice', count: 60 });
+  assert.equal(await p.useOrders('imported'), false, 'nothing imported yet: a plain notice, not a crash');
+  assert.ok(p.state.items.at(-1).text.length > 0 && !/[{}_]/.test(p.state.items.at(-1).text));
+});
+
 test('bad events and bad responses become notices and never create a card', async () => {
   let push;
   const p = createPanel({ request: async () => ({ nonsense: true }), onEvent(fn) { push = fn; } });
