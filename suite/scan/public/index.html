@@ -102,6 +102,24 @@
 
   <section id="tab-list" class="tab" role="tabpanel" aria-labelledby="t-list" hidden>
     <div class="card">
+      <h2>My lists</h2>
+      <p id="activeListName" class="muted"></p>
+      <div class="btn-row">
+        <button id="listNew" type="button" class="btn-dl">New list</button>
+        <button id="listRename" type="button" class="btn-ghost">Rename this list</button>
+        <button id="listImport" type="button" class="btn-ghost">Open a CSV from Speed Scan</button>
+      </div>
+      <input id="importFile" type="file" accept=".csv,text/csv" hidden>
+      <p id="listMsg" class="status" role="status" aria-live="polite"></p>
+      <ul id="listsOut" class="list"></ul>
+    </div>
+    <div class="card">
+      <h2>How well is scanning working?</h2>
+      <p id="rightFirst" class="muted"></p>
+      <div class="btn-row"><button id="shareResults" type="button" class="btn-ghost">Share my results (copies a short note)</button></div>
+      <textarea id="shareOut" rows="8" hidden aria-label="Results text"></textarea>
+    </div>
+    <div class="card">
       <div class="row-head">
         <h2>Your list</h2>
         <div class="row-actions">
@@ -109,6 +127,22 @@
           <button id="merge" type="button" class="btn-ghost">Merge duplicates</button>
           <button id="clear" type="button" class="btn-ghost">Clear</button>
         </div>
+      </div>
+      <div id="bulk" class="bulk" hidden>
+        <label class="check"><input id="selAll" type="checkbox"> Select all (<span id="selCount">0</span> chosen)</label>
+        <div class="grid">
+          <label>Condition for chosen
+            <select id="bulkCond"><option value="NM">Near Mint</option><option value="LP">Lightly Played</option><option value="MP">Moderately Played</option><option value="HP">Heavily Played</option><option value="DMG">Damaged</option></select>
+          </label>
+          <button id="bulkCondGo" type="button" class="btn-ghost">Apply condition</button>
+          <label>Finish for chosen
+            <select id="bulkFin"><option value="regular">Regular (non-foil)</option><option value="foil">Foil / holo</option></select>
+          </label>
+          <button id="bulkFinGo" type="button" class="btn-ghost">Apply finish</button>
+          <button id="bulkPrice" type="button" class="btn-dl wide">Apply my price rule to chosen</button>
+        </div>
+        <p class="muted">After changing condition or finish, tap "Apply my price rule" to update the prices. Undo reverses the last change.</p>
+        <p id="bulkMsg" class="status" role="status" aria-live="polite"></p>
       </div>
       <p id="empty" class="muted">Nothing yet. Scan or search on the Add tab.</p>
       <ul id="queue" class="list"></ul>

@@ -20,13 +20,18 @@ The built-in list is only 96 sample cards. With **Look up any card online** tick
 ## Prices, links and problems
 Prices from the card sites carry the time they were fetched; older than 24 hours means a refetch, or a red warning on the row. For a card with no TCGplayer product id, paste its TCGplayer page address (only the number is read from the text; the page is never opened). **Report a problem** copies a short plain-text note for the board inbox.
 
+## Lists, bulk edit, and measuring real use
+- **Lists** (List tab): several named lists on the device (newest 20 kept): new, rename, open, copy, delete (asks first), a CSV per list, and **Open a CSV from Speed Scan** to continue a saved file (cards are matched by TCGplayer product id; unknown ones show as "TCGplayer product N").
+- **Bulk edit**: tick rows (or Select all), set condition or finish for all of them, or re-apply your price rule to them; **Undo** reverses the whole change at once.
+- **Right first time** (List tab): counts only, kept on this device: added by itself, you tapped its first guess, you fixed it. It is also in **Report a problem**.
+- **Share my results**: copies a short anonymous text (the raw text the reader saw on the title and number strips, the card we matched, the card you ended with, the game, how sure we were; newest 60 cards; no photos, names or prices). `node scan/eval/from-results.js <file>` (from `suite/`) turns a pasted one into accuracy and the commonest failure patterns, so the parser can be tuned on real reader output.
+
 ## iPad / iPhone (Safari) notes
 Camera starts only from a tap, video is inline and muted, constraints are "ideal" only; plain-words messages for blocked,
 missing, busy camera and non-https pages; screen stays awake while scanning (quietly skipped if the browser has no Wake Lock);
 pictures are shrunk to 1600 px before reading; the card reader is shut down after a minute idle; **Check my device** on the first
 screen (its result is included in **Report a problem**); home-screen icon, full-screen mode, notch and home-bar spacing; fields
-are 16 px so Safari does not zoom. A new version waits and shows "New version ready, tap to refresh" (see `AUTO_ACTIVATE` in
-`public/sw.js`). Only tested in Chromium here; Safari-specific behaviour is untested.
+are 16 px so Safari does not zoom. A new version waits and shows "New version ready, tap to refresh" (`AUTO_ACTIVATE` in `public/sw.js` is false; `node scan/dev/sw-update-check.cjs` proves the flow in Chromium). Only tested in Chromium here; Safari-specific behaviour is untested.
 
 ## Host it on its own site
 `node suite/scan/build.js` writes a plain static folder to `suite/scan/dist/` (about 130 KB). Upload that folder to any
