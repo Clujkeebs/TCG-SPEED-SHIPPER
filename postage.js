@@ -20,6 +20,12 @@ const express = require('express');
 const { makePbClient, PbError } = require('./pb-client');
 
 const MAX_LABELS_PER_REQUEST = 50;
+// Identical quotes (same addresses, service, weight) are remembered for ten
+// minutes, so editing a batch or asking again does not hit the carrier again.
+const QUOTE_TTL_MS = 10 * 60 * 1000;
+const QUOTE_CACHE_MAX = 300;
+const quoteCache = new Map();
+const quoteKey = (mode, from, to, service, oz) => JSON.stringify([mode, from, to, service, oz]);
 // Below this balance, each label is quoted before it's bought (see below).
 const LOW_BALANCE_CENTS = 1500;
 
@@ -205,7 +211,7 @@ module.exports = function mountPostageRoutes(router, d) {
   function pb() {
     const cfg = pbConfig(env);
     const k = cfg.mode + ':' + env.PB_API_KEY;
-    if (!client || clientKey !== k) { client = makePbClient({ key: env.PB_API_KEY, secret: env.PB_API_SECRET, env: cfg.mode, partnerId: env.PB_PARTNER_ID, carrierAccountId: env.PB_CARRIER_ACCOUNT_ID, fetchImpl }); clientKey = k; }
+    if (!client || clientKey !== k) { client = makePbClient({ key: env.PB_API_KEY, secret: env.PB_API_SECRET, env: cfg.mode, partnerId: env.PB_PARTNER_ID, carrierAccountId: env.PB_CARRIER_ACCOUNT_ID, fetchImpl, retryBaseMs: Number(env.PB_RETRY_BASE_MS) || 400 }); clientKey = k; }
     return client;
   }
 
@@ -224,9 +230,15 @@ module.exports = function mountPostageRoutes(router, d) {
   }
   const guard = [express.json({ limit: '200kb' }), requireSupabase, requireUser, gate];
 
+  // Plain words for Pitney Bowes errors. "Too Many Requests" (their rate limit)
+  // is retried inside the client first; if it still comes through, say so kindly.
+  function pbMessage(err, fallback) {
+    if (!(err instanceof PbError)) return fallback;
+    return err.status === 429 ? 'Pitney Bowes is busy right now. Wait a few seconds and try again.' : err.message;
+  }
   function pbFail(res, err, what) {
     if (err instanceof PbError) {
-      return res.status(err.status >= 500 ? 502 : 400).json({ error: what + ': ' + err.message });
+      return res.status(err.status >= 500 ? 502 : 400).json({ error: what + ': ' + pbMessage(err) });
     }
     if (logError) logError('postage', what + ' failed:', err);
     return res.status(502).json({ error: what + ' failed. Please try again.' });
@@ -281,17 +293,24 @@ module.exports = function mountPostageRoutes(router, d) {
       if (to.missing.length) return { ref, ok: false, error: 'Address needs: ' + to.missing.join(', ') };
       if (oz < s.minOz || oz > s.maxOz) return { ref, ok: false, error: s.label + ' allows up to ' + s.maxOz + ' oz' };
       try {
-        const q = await pb().rate(buildShipment({ from: from.address, to: to.address, service: item.service, weightOz: oz, phone: env.PB_DEFAULT_PHONE }));
-        const p = priced(item.service, money(q && (Array.isArray(q.rate) ? q.rate[0] : q.rate)), env, plan);
+        const key = quoteKey(pbConfig(env).mode, from.address, to.address, item.service, oz);
+        let q = quoteCache.get(key);
+        if (!q || q.at < Date.now() - QUOTE_TTL_MS) {
+          q = { at: Date.now(), rate: await pb().rate(buildShipment({ from: from.address, to: to.address, service: item.service, weightOz: oz, phone: env.PB_DEFAULT_PHONE })) };
+          quoteCache.set(key, q);
+          if (quoteCache.size > QUOTE_CACHE_MAX) quoteCache.delete(quoteCache.keys().next().value); // oldest first
+        }
+        const p = priced(item.service, money(q.rate && (Array.isArray(q.rate.rate) ? q.rate.rate[0] : q.rate.rate)), env, plan);
         return p.price == null ? { ref, ok: false, error: 'No price came back' } : Object.assign({ ref, ok: true }, p);
       } catch (err) {
-        return { ref, ok: false, error: err instanceof PbError ? err.message : 'Quote failed, please retry' };
+        return { ref, ok: false, error: pbMessage(err, 'Quote failed, please retry') };
       }
     };
-    // A few at a time: fast enough for a batch, gentle on the carrier API.
+    // Two at a time: fast enough for a batch, gentle on the carrier API (four
+    // at once made Pitney Bowes answer 429 Too Many Requests to a whole batch).
     const items = new Array(list.length);
     let next = 0;
-    await Promise.all(Array.from({ length: Math.min(4, list.length) }, async () => {
+    await Promise.all(Array.from({ length: Math.min(2, list.length) }, async () => {
       while (next < list.length) { const i = next++; items[i] = await quoteOne(list[i]); }
     }));
     const total = Math.round(items.reduce((t, x) => t + (x.ok ? x.price : 0), 0) * 100) / 100;
@@ -374,7 +393,7 @@ module.exports = function mountPostageRoutes(router, d) {
         });
         if (error && logError) logError('postage', 'ledger insert failed:', error);
       } catch (err) {
-        results.push({ ref, ok: false, error: err instanceof PbError ? err.message : 'Label failed, please retry' });
+        results.push({ ref, ok: false, error: pbMessage(err, 'Label failed, please retry') });
         if (!(err instanceof PbError) && logError) logError('postage', 'label failed:', err);
       }
     }

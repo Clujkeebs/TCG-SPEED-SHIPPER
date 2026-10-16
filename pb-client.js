@@ -26,22 +26,40 @@ class PbError extends Error {
   }
 }
 
-function makePbClient({ key, secret, env = 'sandbox', partnerId, carrierAccountId, fetchImpl = fetch, now = Date.now }) {
+function makePbClient({ key, secret, env = 'sandbox', partnerId, carrierAccountId, fetchImpl = fetch, now = Date.now,
+  sleep = (ms) => new Promise((r) => setTimeout(r, ms)), maxRetries = 3, retryBaseMs = 400 }) {
   const host = HOSTS[env] || HOSTS.sandbox;
   let token = null; // { value, expiresAt }
   let uspsAccount = carrierAccountId || null; // looked up once if not given
 
-  async function call(url, init) {
-    const res = await fetchImpl(url, Object.assign({ signal: AbortSignal.timeout(30000) }, init));
-    const text = await res.text();
-    let body = null;
-    try { body = text ? JSON.parse(text) : null; } catch (e) { body = text; }
-    if (!res.ok) throw new PbError(res.status, body);
-    return body;
+  // A 429 means Pitney Bowes refused the request before doing anything, so
+  // trying again is always safe. A 502/503/504 may have been processed, so those
+  // are retried only for calls that change nothing (rates, tracking, lookups).
+  // The same headers go out again, so the X-PB-TransactionId de-duplicates a retry.
+  function retryDelay(res, attempt) {
+    const h = res.headers && typeof res.headers.get === 'function' ? res.headers.get('retry-after') : null;
+    const secs = h && /^\d+(\.\d+)?$/.test(String(h).trim()) ? Number(h) : NaN;
+    const base = Number.isFinite(secs) ? secs * 1000 : retryBaseMs * (2 ** attempt);
+    return Math.min(base, 4000) + Math.floor(Math.random() * 150);
+  }
+  async function call(url, init, { read = false } = {}) {
+    for (let attempt = 0; ; attempt += 1) {
+      const res = await fetchImpl(url, Object.assign({ signal: AbortSignal.timeout(30000) }, init));
+      const text = await res.text();
+      let body = null;
+      try { body = text ? JSON.parse(text) : null; } catch (e) { body = text; }
+      if (res.ok) return body;
+      const retryable = res.status === 429 || (read && (res.status === 502 || res.status === 503 || res.status === 504));
+      if (retryable && attempt < maxRetries) { await sleep(retryDelay(res, attempt)); continue; }
+      throw new PbError(res.status, body);
+    }
   }
 
-  async function getToken() {
-    if (token && token.expiresAt > now()) return token.value;
+  // One token request at a time: a batch starts several calls at once, and
+  // each one used to ask for its own token (a stampede Pitney Bowes answers
+  // with 429 Too Many Requests).
+  let tokenFlight = null;
+  async function fetchToken() {
     const body = await call(host + '/auth/api/v1/token', {
       method: 'POST',
       headers: {
@@ -49,11 +67,16 @@ function makePbClient({ key, secret, env = 'sandbox', partnerId, carrierAccountI
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: 'grant_type=client_credentials&scope=psapi',
-    });
+    }, { read: true });
     // Refresh at half-life so a token never expires mid-batch.
     const ttl = Number(body && (body.expires_in || body.expiresIn)) || 14400;
     token = { value: body.access_token, expiresAt: now() + ttl * 500 };
     return token.value;
+  }
+  async function getToken() {
+    if (token && token.expiresAt > now()) return token.value;
+    if (!tokenFlight) tokenFlight = fetchToken().finally(() => { tokenFlight = null; });
+    return tokenFlight;
   }
 
   async function authed(path, init = {}) {
@@ -64,20 +87,25 @@ function makePbClient({ key, secret, env = 'sandbox', partnerId, carrierAccountI
       // Unique per request; PB uses it to de-duplicate retries.
       'X-PB-TransactionId': init.transactionId || crypto.randomBytes(12).toString('hex'),
     }, partnerId ? { 'X-PB-Developer-Partner-Id': partnerId } : {}, init.headers || {});
-    return call(host + path, { method: init.method || 'GET', headers, body: init.body ? JSON.stringify(init.body) : undefined });
+    return call(host + path, { method: init.method || 'GET', headers, body: init.body ? JSON.stringify(init.body) : undefined }, { read: Boolean(init.read) });
   }
 
   // The USPS carrier account the labels are bought under. Shipping 360
   // accounts come with one; we look it up once instead of asking the owner.
-  async function carrierAccount() {
-    if (uspsAccount) return uspsAccount;
+  let accountFlight = null;
+  async function lookUpAccount() {
     try {
-      const r = await authed('/shipping/api/v1/carrierAccounts');
+      const r = await authed('/shipping/api/v1/carrierAccounts', { read: true });
       const list = (r && r.data && r.data.carrierAccounts) || (r && r.carrierAccounts) || [];
       const usps = list.find((a) => /usps/i.test(String(a.carrierName || a.carrier || '')));
       if (usps) uspsAccount = usps.carrierAccountId;
     } catch (e) { /* fall back to carrier: 'USPS' without an account id */ }
     return uspsAccount;
+  }
+  async function carrierAccount() {
+    if (uspsAccount) return uspsAccount;
+    if (!accountFlight) accountFlight = lookUpAccount().finally(() => { accountFlight = null; });
+    return accountFlight;
   }
   async function withAccount(shipment) {
     const id = await carrierAccount();
@@ -87,12 +115,12 @@ function makePbClient({ key, secret, env = 'sandbox', partnerId, carrierAccountI
 
   return {
     env,
-    rate: async (shipment) => authed('/shipping/api/v2/rates', { method: 'POST', body: await withAccount(shipment) }),
+    rate: async (shipment) => authed('/shipping/api/v2/rates', { method: 'POST', body: await withAccount(shipment), read: true }),
     createShipment: async (shipment, transactionId) => authed('/shipping/api/v2/shipments', { method: 'POST', body: await withAccount(shipment), transactionId }),
     // Cancelling an unused label is how postage gets refunded.
     cancelShipment: (shipmentId) => authed('/shipping/api/v2/shipments/cancel', { method: 'POST', body: { shipmentId } }),
     tracking: (trackingNumber, carrier = 'USPS') =>
-      authed('/shippingtracking/api/v1/tracking/' + encodeURIComponent(trackingNumber) + '?carrier=' + encodeURIComponent(carrier)),
+      authed('/shippingtracking/api/v1/tracking/' + encodeURIComponent(trackingNumber) + '?carrier=' + encodeURIComponent(carrier), { read: true }),
   };
 }
 
