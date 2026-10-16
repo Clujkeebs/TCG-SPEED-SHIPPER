@@ -3,6 +3,7 @@
 import { getFlags } from '../flags.js';
 import { createPanel } from '../agent/panel-controller.js';
 import { createRuntimeTransport } from '../agent/runtime-transport.js';
+import { createTour, tourSeen, markTourSeen } from './tour.js';
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
@@ -11,9 +12,11 @@ const flags = await getFlags();
 if (!flags.agentPanel) {
   $('off').hidden = false;
   $('stop').hidden = true;
+  $('again').hidden = true;
 } else {
   const panel = createPanel(createRuntimeTransport());
   const s = panel.state;
+  let focusedCard = null;
 
   function render() {
     $('practice').hidden = false;
@@ -29,6 +32,10 @@ if (!flags.agentPanel) {
     $('log').replaceChildren(...s.items.map((i) => {
       if (i.kind !== 'approval') return el('div', 'msg ' + i.kind, i.text);
       const card = el('div', 'card');
+      card.setAttribute('role', 'group');
+      card.setAttribute('aria-label', 'Needs your OK');
+      card.tabIndex = -1;
+      card.dataset.cardId = i.id;
       card.append(el('h3', '', 'Needs your OK: ' + i.description));
       const dl = el('dl');
       for (const row of i.rows) dl.append(el('dt', '', row.label + ':'), el('dd', '', row.value));
@@ -56,6 +63,12 @@ if (!flags.agentPanel) {
       return li;
     }));
     $('body').scrollTop = $('body').scrollHeight;
+    // A new card that needs an answer gets keyboard focus once, so it is the next thing a keyboard user reaches.
+    const waiting = s.items.find((x) => x.kind === 'approval' && x.state === 'waiting');
+    if (waiting && waiting.id !== focusedCard) {
+      focusedCard = waiting.id;
+      document.querySelector(`[data-card-id="${waiting.id}"]`)?.focus();
+    }
   }
 
   panel.subscribe(render);
@@ -64,8 +77,30 @@ if (!flags.agentPanel) {
     const goal = $('goal').value;
     if (await panel.start(goal)) $('goal').value = '';
   });
+  $('goal').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); $('form').requestSubmit(); }
+  });
   $('stop').addEventListener('click', () => panel.stop());
   $('resume').addEventListener('click', () => panel.resume());
+  const tour = createTour();
+  function showTour() {
+    const t = $('tour');
+    t.hidden = false;
+    $('tourCount').textContent = `Step ${tour.index + 1} of ${tour.total}`;
+    $('tourTitle').textContent = tour.step.title;
+    $('tourBody').textContent = tour.step.body;
+    $('tourBack').disabled = tour.isFirst;
+    $('tourNext').textContent = tour.isLast ? 'Done' : 'Next';
+    $('tourTitle').focus();
+  }
+  async function closeTour() { $('tour').hidden = true; await markTourSeen(); $('goal').focus(); }
+  $('tourNext').addEventListener('click', () => { if (tour.isLast) closeTour(); else { tour.next(); showTour(); } });
+  $('tourBack').addEventListener('click', () => { tour.back(); showTour(); });
+  $('tourSkip').addEventListener('click', closeTour);
+  $('tour').addEventListener('keydown', (e) => { if (e.key === 'Escape') closeTour(); });
+  $('again').addEventListener('click', () => { while (!tour.isFirst) tour.back(); showTour(); });
+
   if (!(await panel.connect())) $('offline').hidden = false;
   render();
+  if (!(await tourSeen())) showTour();
 }

@@ -10,7 +10,7 @@ export const ROUTES = [
 
 export const routeFor = (text) => ROUTES.find((r) => r.test.test(String(text)));
 
-const sayFor = (tool, out) => {
+export const sayFor = (tool, out) => {
   if (!out || out.error) return /not approve|did not/.test(String(out && out.error)) ? 'Okay, I did not change anything.' : 'I could not do that: ' + (out && out.error ? out.error : 'unknown problem') + '.';
   switch (tool) {
     case 'orders.stats': return `Practice answer: ${out.orders} orders in the made-up shop, ${out.repeat.repeatBuyers} of ${out.repeat.buyers} buyers ordered more than once.`;

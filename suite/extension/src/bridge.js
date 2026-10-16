@@ -35,6 +35,30 @@ export function isAllowedOrigin(origin) {
 const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const isShortStr = (v) => typeof v === 'string' && v.length > 0 && v.length <= MAX_ID_LENGTH;
 
+// ---- Tracking batches (Shipper -> extension). The website hands over tracking numbers it just made; the
+// extension keeps them on this computer, ready for "Paste tracking" later. Nothing leaves the device.
+export const CARRIERS = ['USPS', 'UPS', 'FedEx', 'DHL', 'other'];
+export const MAX_BATCH_ITEMS = 200;
+const ORDER_ID = /^[A-Za-z0-9._-]{1,80}$/;
+const TRACKING = /^[A-Za-z0-9 ]{6,40}$/;
+
+// Returns an error string or null. Exact shape: { batchId, items: [{ orderId, trackingNumber, carrier? }] }.
+export function checkTrackingBatch(p) {
+  if (!isObj(p) || Object.keys(p).some((k) => !['batchId', 'items'].includes(k))) return 'payload must be { batchId, items }';
+  if (typeof p.batchId !== 'string' || !ORDER_ID.test(p.batchId)) return 'batchId must be 1 to 80 letters, digits, dot, dash or underscore';
+  if (!Array.isArray(p.items) || p.items.length < 1 || p.items.length > MAX_BATCH_ITEMS) return 'items must be a list of 1 to ' + MAX_BATCH_ITEMS;
+  const seen = new Set();
+  for (const it of p.items) {
+    if (!isObj(it) || Object.keys(it).some((k) => !['orderId', 'trackingNumber', 'carrier'].includes(k))) return 'each item must be { orderId, trackingNumber, carrier? }';
+    if (typeof it.orderId !== 'string' || !ORDER_ID.test(it.orderId)) return 'orderId must be 1 to 80 letters, digits, dot, dash or underscore';
+    if (seen.has(it.orderId)) return 'orderId appears twice: ' + it.orderId;
+    seen.add(it.orderId);
+    if (typeof it.trackingNumber !== 'string' || !TRACKING.test(it.trackingNumber)) return 'trackingNumber must be 6 to 40 letters, digits or spaces';
+    if (it.carrier !== undefined && !CARRIERS.includes(it.carrier)) return 'carrier must be one of ' + CARRIERS.join(', ');
+  }
+  return null;
+}
+
 // type -> payload check. Returns an error string or null.
 const PAYLOADS = {
   hello: (p) => (p === undefined || (isObj(p) && Object.keys(p).length === 0) ? null : 'hello takes no payload'),
@@ -47,6 +71,9 @@ const PAYLOADS = {
     if (!isObj(p) || !COLLECTIONS.includes(p.collection)) return 'collection must be one of ' + COLLECTIONS.join(', ');
     return isShortStr(p.key) ? null : 'key must be a short string';
   },
+  'tracking.put': checkTrackingBatch,
+  'tracking.get': (p) => (isObj(p) && Object.keys(p).length === 1 && typeof p.batchId === 'string' && ORDER_ID.test(p.batchId) ? null : 'payload must be { batchId }'),
+  'tracking.list': (p) => (p === undefined || (isObj(p) && Object.keys(p).length === 0) ? null : 'tracking.list takes no payload'),
   'store.list': (p) => (isObj(p) && COLLECTIONS.includes(p.collection) ? null : 'collection must be one of ' + COLLECTIONS.join(', '))
 };
 export const MESSAGE_TYPES = Object.keys(PAYLOADS);

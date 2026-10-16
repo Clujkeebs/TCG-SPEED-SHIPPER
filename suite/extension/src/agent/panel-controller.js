@@ -3,6 +3,7 @@
 //  - anything the agent sends is checked first; bad messages become a notice and change nothing;
 //  - the Stop button always works, even while waiting for an approval;
 //  - plan and memory views appear only if the agent says (in hello) that it supports them.
+import { plainError } from './friendly.js';
 import { makeRequest, validateEvent, validateResponse, argRows, MAX_TEXT } from './protocol.js';
 
 export function createPanel(transport) {
@@ -15,11 +16,11 @@ export function createPanel(transport) {
   };
   const listeners = new Set();
   const changed = () => listeners.forEach((f) => f());
-  const notice = (text) => state.items.push({ kind: 'notice', text });
+  const notice = (text, ours = false) => state.items.push({ kind: 'notice', text: ours ? text : plainError(text) });
 
   transport.onEvent((e) => {
     const check = validateEvent(e);
-    if (!check.ok) { notice('Ignored a message that did not look right.'); return changed(); }
+    if (!check.ok) { notice('I ignored a message that did not look right.', true); return changed(); }
     switch (e.event) {
       case 'agent.progress':
         state.items.push({ kind: 'progress', text: (e.denied ? 'Was not allowed to use ' : e.ok ? 'Used ' : 'Tried and failed: ') + e.tool });
@@ -30,12 +31,12 @@ export function createPanel(transport) {
       case 'agent.answer':
         state.busy = false;
         for (const c of state.items) if (c.kind === 'approval' && c.state === 'waiting') c.state = 'expired';
-        state.items.push({ kind: 'answer', text: e.text || (e.status === 'error' ? 'Something went wrong: ' + (e.reason || 'unknown') : e.status === 'stopped' ? 'Stopped: ' + (e.reason || '') : 'Done.') });
+        state.items.push({ kind: 'answer', text: e.text || (e.status === 'error' ? plainError(e.reason) : e.status === 'stopped' ? 'Stopped. ' + plainError(e.reason) : 'Done.') });
         break;
       case 'agent.stopped':
         state.busy = false; state.killed = true;
         for (const c of state.items) if (c.kind === 'approval' && c.state === 'waiting') c.state = 'expired';
-        notice('Stopped. Nothing else will run until you press Resume.');
+        notice('Stopped. Nothing else will run until you press Resume.', true);
         break;
       case 'agent.plan':
         state.plan = e.steps.map((s) => ({ text: s.text, state: s.state }));
@@ -50,7 +51,7 @@ export function createPanel(transport) {
   async function call(type, payload) {
     let res;
     try { res = await transport.request(makeRequest(type, payload)); } catch { res = null; }
-    if (!res || !validateResponse(res).ok) { notice('The agent did not answer properly.'); changed(); return null; }
+    if (!res || !validateResponse(res).ok) { notice('I could not reach the assistant just now. Close and reopen this panel. If it keeps happening, switch the Agent panel off and on in Settings.', true); changed(); return null; }
     if (!res.ok) { notice(res.error.slice(0, 200)); changed(); return null; }
     return res.result;
   }
