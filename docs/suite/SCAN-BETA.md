@@ -11,6 +11,14 @@ is, adds it to a list with a price, and at the end gives you one file to upload 
 - **What is sent out:** looking up a card sends what you type, or the text the camera read from the card, to Scryfall, the Pokémon TCG API and YGOPRODeck (free card sites). Never the photo. You can turn this off with the tickbox on the first screen, but then only the small sample list works.
 - If something goes wrong, tap **Report a problem**. It copies a short note (what you typed, which site, the error, the time). Paste it where we told you. It has no photos or names.
 
+**On an iPad or iPhone (Safari):**
+1. Open the link in **Safari** (not inside another app). It must start with https.
+2. Tap **Check my device**. Everything should show a green tick. Red lines tell you in one sentence what is wrong.
+3. Tap the Share button, then **Add to Home Screen**. Open it from the new icon: it opens full screen like an app.
+4. The first time you tap **Start live camera**, Safari asks to use the camera. Tap **Allow**. If you tapped Don't Allow by mistake, tap the "aA" in the address bar, then Website Settings, then Camera, then Allow.
+5. Keep the iPad flat or leaning, with the card filling most of the picture and good light. The screen stays on while the camera is on.
+6. When a new version is ready, a bar at the top says so. Tap **Tap to refresh**.
+
 **Five minutes:**
 1. Open the link we sent you. Allow the camera when it asks. (You can also use **Upload photos**.)
 2. On the first screen pick your **price rule** (for example "5% under market"), the **condition** and whether the cards are **foil**.
@@ -27,5 +35,7 @@ is, adds it to a list with a price, and at the end gives you one file to upload 
 6. Anything slow, confusing or annoying? What did you wish a button did?
 7. Would you use this every week? Would you pay for it, and roughly how much per month?
 8. Can you send us a photo or two of cards it got wrong? (Optional.)
+
+**About the file:** the file we make uses the same columns that Mana Pool's importer says it reads from TCGplayer files (from Mana Pool's own help article). We have not yet checked it against a real TCGplayer file, so look at the first lines before you upload.
 
 Send answers to the person who gave you the link. Thank you.

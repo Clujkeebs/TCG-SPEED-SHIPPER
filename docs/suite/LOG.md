@@ -457,3 +457,27 @@ Needs Builder: someone with open internet should read optcgapi.com's terms and s
 on the preview copy and paste a "Report a problem" note if anything fails.
 Needs owner: paste a "Report a problem" note into the board inbox if a card is not found.
 Next: real error texts from those notes; One Piece once terms are known.
+
+### 2026-10-16 · scan · batch 4: iPad Safari hardening, Check my device · done (PR open)
+Read the code against known iOS/WebKit pitfalls and fixed what it found. (1) Camera: starts only from a tap; video inline + muted
+(+ webkit-playsinline); constraints all "ideal" (environment camera, 1280x720), never exact; picture restarts after rotation;
+camera stopped when the page is hidden or taken away, with a plain message; plain-words messages for blocked / no camera / busy
+(other tab or app) / non-https (`core/camera-errors.js`, tested). (2) Screen stays awake while scanning via Wake Lock, asked
+again when the page returns, silent if unsupported (`core/wakelock.js`, tested). (3) Every frame and photo is shrunk to at most
+1600 px on the long side; photo decoding falls back to an <img> for older Safari; the OCR worker is shut down after 60 s idle
+(`core/idle.js`); frames are not kept. Measured on synthetic cards (2000 px pictures): shrinking to 1600 gave 100% vs 97.9%
+right-first and 126 vs 167 ms median, so it helps; no iPad memory figure. (4) Updates: a waiting new version shows "New version
+ready, tap to refresh" and switches only on tap; page reloads once. Checked in Chromium by publishing a second service-worker
+version (banner appeared, tap reloaded onto it). NOTE: `AUTO_ACTIVATE = true` in `public/sw.js` for THIS release only, so
+devices still running the old page (Sam's iPad) pick up the banner code; the NEXT release must set it to false. (5) Home-screen:
+real PNG icons (180/192/512, full-bleed green because iOS paints transparent corners black), apple-mobile-web-app tags, black-
+translucent status bar, safe-area spacing for notch and home bar, fields at 16 px (Safari zooms smaller ones), tap-targets all
+44 px or more (checked), nothing hover-only, no modal overlays exist so no scroll lock was needed. (6) "Check my device" on the first
+screen (https, camera API, WebAssembly, SIMD, storage, online, clipboard; green/red with one sentence each); its result is added
+to the Report a problem text. The report is built without waiting so Safari's copy-needs-a-tap rule is met. (7) SCAN-BETA.md has an
+iPad section and the Mana Pool column line.
+Numbers: Scan tests 111 pass offline. All Safari-specific behaviour is unverified: only Chromium here.
+Needs Builder: next release set AUTO_ACTIVATE to false in sw.js. Ask Sam to tap Check my device on the iPad and paste a Report a
+problem note: it now includes the device lines.
+Needs owner: same; one real TCGplayer export.
+Next: whatever the iPad report shows.

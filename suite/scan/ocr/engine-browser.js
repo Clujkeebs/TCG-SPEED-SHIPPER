@@ -1,5 +1,7 @@
 // Browser text reader: self-hosted Tesseract.js (see vendor/VENDOR.md). Loaded on first use, runs in a worker, offline.
 // engine.recognize(grayImage, { region }) -> Promise<string>
+import { createIdleCloser } from '../core/idle.js';
+
 const BASE = new URL('../vendor/tesseract/', import.meta.url).href;
 const MODES = { title: '7', bottom: '6', whole: '11' }; // single line for the name; a small block for number and set code
 
@@ -52,14 +54,19 @@ export function createBrowserEngine({ binarize = false } = {}) {
     return w;
   })().catch((e) => { workerP = null; throw e; }));
   let mode = '';
-  return {
-    ready: () => worker().then(() => true),
+  // After a minute of nothing the reader is shut down to give memory back (it starts again on the next scan).
+  const idle = createIdleCloser({ ms: 60000, close: () => { api.close(); } });
+  const api = {
+    ready: () => worker().then(() => { idle.touch(); return true; }),
     async recognize(img, { region = 'title' } = {}) {
+      idle.cancel();
       const w = await worker();
       if (mode !== region) { await w.setParameters({ tessedit_pageseg_mode: MODES[region] || '6' }); mode = region; }
       const { data } = await w.recognize(toCanvas(img, binarize));
+      idle.touch();
       return data.text || '';
     },
-    async close() { if (workerP) { const w = await workerP; await w.terminate(); workerP = null; } },
+    async close() { idle.cancel(); if (workerP) { const p = workerP; workerP = null; mode = ''; try { const w = await p; await w.terminate(); } catch { /* never started */ } } },
   };
+  return api;
 }
