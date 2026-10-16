@@ -16,18 +16,26 @@ section h2{font-size:13px;margin:0 0 4px;color:#555;text-transform:uppercase;let
 #memory ul{list-style:none;padding:0;margin:0}#memory li{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid #eee}
 form{display:flex;flex-direction:column;gap:6px;padding:10px;border-top:1px solid #ddd}form textarea{padding:8px;font:inherit}
 #off,#offline{padding:16px}
+*{box-sizing:border-box}body{min-width:0}main,header,form,.card,.msg{min-width:0;overflow-wrap:anywhere}
+button,textarea,input{font:inherit}button:focus-visible,textarea:focus-visible,a:focus-visible,.card:focus-visible{outline:3px solid #1a5fd0;outline-offset:2px}
+button{min-height:36px;cursor:pointer}form textarea{width:100%;resize:vertical}
+#tour{border:2px solid #1a5fd0;border-radius:8px;margin:12px;padding:12px;background:#f3f8ff}#tour h2{font-size:16px;margin:0 0 6px}#tour p{margin:0 0 10px}#tour .count{font-size:12px;color:#555}
+#tour button{margin-right:6px}#again{background:none;border:0;color:#0a58ca;text-decoration:underline;padding:4px}
+.skip{position:absolute;left:-999px}.skip:focus{left:8px;top:8px;background:#fff;padding:6px;z-index:5}
 </style></head>
 <body>
-<header><strong>TCG Speed Agent</strong><span><button id="resume" hidden>Resume</button> <button id="stop">Stop</button></span></header>
+<a class="skip" href="#goal">Skip to the question box</a>
+<header><strong>TCG Speed Agent</strong><span><button id="again" type="button">Tour</button> <button id="resume" type="button" hidden>Resume</button> <button id="stop" type="button">Stop</button></span></header>
+<section id="tour" role="region" aria-labelledby="tourTitle" hidden><div class="count" id="tourCount"></div><h2 id="tourTitle" tabindex="-1"></h2><p id="tourBody"></p><button id="tourBack" type="button">Back</button><button id="tourNext" type="button">Next</button><button id="tourSkip" type="button">Skip</button></section>
 <div id="off" hidden>The Agent panel is switched off. Turn it on in Settings (click the extension icon, then Settings).</div>
 <div id="offline" hidden>The agent is not answering right now.</div>
 <div id="practice" hidden>Practice mode: made-up data. Nothing here is real and nothing is changed.</div>
 <main id="body" hidden>
   <section id="plan" hidden><h2>Plan</h2><ol id="planlist"></ol></section>
-  <section id="log" role="log" aria-live="polite"></section>
+  <section id="log" role="log" aria-live="polite" aria-label="Conversation"></section>
   <section id="memory" hidden><h2>What I remember about your shop</h2><ul id="memlist"></ul></section>
 </main>
 <form id="form" hidden><label for="goal"><strong>What do you want done?</strong></label>
-<textarea id="goal" rows="2" maxlength="2000" placeholder="For example: lower my prices a little"></textarea><button id="go">Start</button></form>
+<textarea id="goal" rows="2" maxlength="2000" aria-describedby="hint" placeholder="For example: lower my prices a little"></textarea><span id="hint" style="font-size:12px;color:#555">Press Enter to send. Shift+Enter for a new line.</span><button id="go" type="submit">Start</button></form>
 <script type="module" src="sidepanel.js"></script>
 </body></html>

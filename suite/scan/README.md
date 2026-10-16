@@ -11,6 +11,12 @@ TCGplayer Seller Portal import. Works offline after the first visit. No build st
 4. **Start live camera**: hold a card steady and it is picked up when it stops moving (swap cards to keep going). Or **Upload photos** (pick or drop several). It finds the card, reads the name, set code and number with a self-hosted reader (first scan downloads about 11 MB, then it works offline), and adds it or shows the likely matches to tap.
 5. Type TCGplayer product IDs where asked, then **Download CSV**. Remember the columns are unverified.
 
+## Testing with other sellers
+`docs/suite/SCAN-BETA.md` is a one-page plain-language how-to with the feedback questions. The card list is only the 96-card sample until real index files are built (`docs/suite/SCAN-COVERAGE.md`).
+
+## Finding any card
+The built-in list is only 96 sample cards. With **Look up any card online** ticked (default), a search that finds nothing locally asks Scryfall / Pokémon TCG / YGOPRODeck from your browser and remembers the result on the device. Tested with simulated responses only.
+
 ## Host it on its own site
 `node suite/scan/build.js` writes a plain static folder to `suite/scan/dist/` (about 130 KB). Upload that folder to any
 static host (Netlify, Cloudflare Pages, GitHub Pages) with https. Nothing runs on a server. The folder is not committed.

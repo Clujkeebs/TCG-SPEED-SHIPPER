@@ -63,6 +63,32 @@ Post `{ source: 'tcgss-app', v: 1, id, type, payload }` to `window` and listen f
 I chose a content script with `postMessage` over `externally_connectable`: the page never gets a
 direct line to the service worker, and each message is checked twice (page side and worker side).
 
+## Shipper bridge: the exact message shape (for the web app)
+The web app (tcgspeedshipper.com, or localhost in development) posts to its own window and listens for the answer:
+```js
+window.postMessage({ source: 'tcgss-app', v: 1, id: 'any-unique-string-up-to-80-chars', type: 'tracking.put',
+  payload: { batchId: 'batch-2026-10-15-1',            // 1-80 of A-Z a-z 0-9 . _ -
+             items: [ { orderId: 'ORD-1001',           // same character rule; unique within the batch
+                        trackingNumber: '9400 1000 0000 0000 0000 00',  // 6-40 letters, digits or spaces
+                        carrier: 'USPS' } ] } },      // optional: USPS, UPS, FedEx, DHL or other
+  location.origin);
+// answer, delivered with window.postMessage to the same origin:
+// { source: 'tcgss-extension', v: 1, id: <same id>, ok: true, result: { key: 'batch-2026-10-15-1', count: 1 } }
+// or { ..., ok: false, error: 'plain reason' }
+```
+Rules: 1 to 200 items per batch; no other fields anywhere (extra fields are refused); a second `tracking.put` with the
+same `batchId` replaces the first. Also `tracking.get` `{ batchId }` (returns `{ batch: { id, receivedAt, items } }` or
+`{ batch: null }`) and `tracking.list` (no payload; returns `{ batches: [{ id, receivedAt, count }] }`). Only
+`https://tcgspeedshipper.com` exactly, or `http://localhost[:port]` in development, can talk to the bridge. The first message
+may be sent right after page load (early messages are queued). Everything is stored on the seller's computer only.
+Other types: `hello`, `store.put|get|list` (collections `orders`, `listings`, `inventory`, `scans`; records are validated; 64 KB cap).
+
+## Durability (the service worker can sleep at any time)
+The practice Agent saves its plan, memory, a waiting approval, the Stop switch and the practice shop's prices in
+`chrome.storage.local`, and its audit trail in IndexedDB. A worker that wakes restores them; a test kills the worker in real
+Chromium and checks that the card is still there and the click still finishes the job. (A run that was in the middle of
+thinking when the worker died is not resumed; an approval that was already waiting is.)
+
 ## Adapters (X1, still off)
 `createAdapter(document, { dryRun })` works on a page you give it. In dry run (the default) it only
 records what it would do in `adapter.actions` (tracking numbers are never written to that log). With

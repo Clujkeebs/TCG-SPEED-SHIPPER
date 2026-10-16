@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TCG Speed Suite settings</title>
 <style>body{font:16px/1.5 system-ui,sans-serif;margin:24px auto;max-width:600px;padding:0 16px;color:#1d1d1f}
 h1{font-size:22px}label{display:block;margin:14px 0 2px;font-weight:600}.what{margin:0 0 0 24px;color:#555;font-size:14px}
-.lock{background:#fff7e0;border:1px solid #ecd9a0;border-radius:8px;padding:10px 12px;font-size:14px}</style></head>
+.lock{background:#fff7e0;border:1px solid #ecd9a0;border-radius:8px;padding:10px 12px;font-size:14px}button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #1a5fd0;outline-offset:2px}button{min-height:36px;font:inherit}*{box-sizing:border-box}</style></head>
 <body><h1>Settings</h1>
 <p>Switch each helper on or off. Everything is off until you turn it on. Your choices stay on this computer.</p>
 <p class="lock" id="gate"></p>
@@ -13,4 +13,9 @@ h1{font-size:22px}label{display:block;margin:14px 0 2px;font-weight:600}.what{ma
 <input id="endpoint" type="text" placeholder="https://..." style="width:100%;padding:6px">
 <label><input id="endpointOn" type="checkbox"> Use this server</label>
 <button id="saveEndpoint">Save</button> <span id="endpointMsg" role="status"></span>
+<h2 style="font-size:18px;margin-top:28px">Clear everything</h2>
+<p class="what" style="margin-left:0">Erases everything this extension keeps on this computer: your switches, the practice assistant's memory and history, and any saved lists. This cannot be undone. Nothing is stored anywhere else.</p>
+<button id="clearAsk" type="button">Clear everything&hellip;</button>
+<span id="clearSure" hidden role="alertdialog" aria-labelledby="clearQ"><strong id="clearQ">Really erase everything?</strong> <button id="clearYes" type="button">Yes, erase it</button> <button id="clearNo" type="button">No, keep it</button></span>
+<p id="clearMsg" role="status"></p>
 <script type="module" src="options.js"></script></body></html>

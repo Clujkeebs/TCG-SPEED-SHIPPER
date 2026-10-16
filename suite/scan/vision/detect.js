@@ -60,6 +60,7 @@ export function cropGray(image, box) {
 
 // The strips of a card where set code and number are printed. Fractions of the cropped card.
 export const REGIONS = {
+  whole: { x: 0, y: 0, w: 1, h: 1 },
   title: { x: 0.05, y: 0.03, w: 0.9, h: 0.1 },
   bottom: { x: 0.03, y: 0.9, w: 0.94, h: 0.09 },
 };

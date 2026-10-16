@@ -4,6 +4,9 @@ import { validateRequest, makeResponse, makeError } from './bridge.js';
 import { getFlags } from './flags.js';
 import { openStore } from './store.js';
 import { createPracticeHost } from './agent-host/host.js';
+import { chromeStatePersist, AUDIT_DB } from './agent-host/persist.js';
+import { createIdbStore } from './vendor/agent/audit.js';
+import { clearEverything } from './clear.js';
 import { PANEL_SOURCE, AGENT_SOURCE, makeError as agentError } from './vendor/agent/protocol.js';
 
 let storePromise;
@@ -17,6 +20,14 @@ export async function handleRequest(msg, senderOrigin, store) {
     switch (msg.type) {
       case 'hello':
         return makeResponse(msg.id, { name: 'TCG Speed Suite', version: globalThis.chrome?.runtime?.getManifest?.().version ?? 'test', flags: await getFlags() });
+      case 'tracking.put': {
+        const record = { id: p.batchId, receivedAt: new Date().toISOString(), items: p.items.map((i) => ({ ...i })) };
+        return makeResponse(msg.id, { key: await store.put('trackingBatches', record), count: record.items.length });
+      }
+      case 'tracking.get':
+        return makeResponse(msg.id, { batch: await store.get('trackingBatches', p.batchId) });
+      case 'tracking.list':
+        return makeResponse(msg.id, { batches: (await store.list('trackingBatches')).map((b) => ({ id: b.id, receivedAt: b.receivedAt, count: b.items.length })) });
       case 'store.put':
         return makeResponse(msg.id, { key: await store.put(p.collection, p.record) });
       case 'store.get':
@@ -35,12 +46,31 @@ export async function handleRequest(msg, senderOrigin, store) {
 let hostInstance;
 export async function handlePanelMessage(msg, sender, extensionId, emit) {
   if (!(await getFlags()).agentPanel) return agentError(msg?.id, 'The Agent panel is switched off in Settings.');
-  hostInstance ??= createPracticeHost({ extensionId });
+  // State and the audit trail live in storage, so a worker that went to sleep wakes up where it left off.
+  hostInstance ??= createPracticeHost({ extensionId, persist: chromeStatePersist(), auditStore: globalThis.indexedDB ? createIdbStore(indexedDB, AUDIT_DB) : undefined });
   return hostInstance.handle(msg, sender, emit);
+}
+
+// "Clear everything" comes only from our own extension pages (the Settings page), never from a web page.
+export async function handleAdminMessage(msg, sender, extensionId, deps) {
+  const own = sender && sender.id === extensionId && typeof sender.url === 'string' && sender.url.startsWith('chrome-extension://' + extensionId + '/');
+  if (!own || msg.type !== 'clear-everything') return { ok: false, error: 'not allowed' };
+  const result = await clearEverything(deps);
+  return result;
 }
 
 if (globalThis.chrome?.runtime?.onMessage) {
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    if (msg && msg.source === 'tcgss-admin') {
+      (async () => {
+        const store = await getStore();
+        const host = hostInstance;
+        const out = await handleAdminMessage(msg, sender, chrome.runtime.id, { storage: chrome.storage.local, store, idb: globalThis.indexedDB, host });
+        hostInstance = undefined; // next use starts from a clean slate
+        return out;
+      })().then(sendResponse, (err) => sendResponse({ ok: false, error: err?.message || 'failed' }));
+      return true;
+    }
     if (msg && msg.source === PANEL_SOURCE) {
       const emit = (event) => chrome.runtime.sendMessage(event).catch(() => {});
       handlePanelMessage(msg, sender, chrome.runtime.id, emit).then(sendResponse, (err) => sendResponse(agentError(msg.id, err?.message || 'failed')));

@@ -67,6 +67,14 @@ async function main() {
     const unknown = await page.evaluate(() => window.tcgssSend('run.script', { code: '1' }));
     assert.equal(unknown.ok, false);
 
+    // Tracking batch from the site: stored, read back, and a malformed one is refused.
+    const tb = await page.evaluate(() => window.tcgssSend('tracking.put', { batchId: 'e2e-batch', items: [{ orderId: 'SYN-9', trackingNumber: '9400 1000 0000 0000', carrier: 'USPS' }] }));
+    assert.deepEqual([tb.ok, tb.result.count], [true, 1]);
+    const tg = await page.evaluate(() => window.tcgssSend('tracking.get', { batchId: 'e2e-batch' }));
+    assert.equal(tg.result.batch.items[0].orderId, 'SYN-9');
+    const tbad = await page.evaluate(() => window.tcgssSend('tracking.put', { batchId: 'e2e-bad', items: [{ orderId: 'SYN-9', trackingNumber: 'x', carrier: 'USPS' }] }));
+    assert.equal(tbad.ok, false);
+
     // A page on an origin that is NOT allow-listed (127.0.0.1) gets no bridge at all.
     const stranger = await ctx.newPage();
     await stranger.goto(`http://127.0.0.1:${port}/`);
@@ -103,16 +111,34 @@ async function main() {
     // Side panel (agent flag is on from the step above): goal, plan, approval card, memory, stop.
     const panel = await ctx.newPage();
     panel.on('pageerror', (e) => problems.push('sidepanel: ' + e.message));
+    await panel.setViewportSize({ width: 360, height: 640 });
     await panel.goto(`chrome-extension://${extId}/src/ui/sidepanel.html`);
     await panel.waitForSelector('#memlist li');
     assert.equal(await panel.locator('#memlist li').count(), 2);
+    // First-run tour: shown once, keyboard reachable, remembered after Skip.
+    await panel.waitForSelector('#tour:not([hidden])');
+    assert.match(await panel.textContent('#tourTitle'), /practice mode/);
+    assert.equal(await panel.evaluate(() => document.activeElement.id), 'tourTitle', 'focus moves into the tour');
+    await panel.click('#tourNext');
+    assert.match(await panel.textContent('#tourTitle'), /last word/);
+    await panel.click('#tourBack');
+    await panel.keyboard.press('Escape');
+    await panel.waitForSelector('#tour', { state: 'hidden' });
+    assert.equal(await panel.evaluate(() => document.activeElement.id), 'goal', 'focus returns to the question box');
+    // Keyboard only: Enter sends; the new card takes focus; Tab reaches Approve; Enter approves.
     await panel.fill('#goal', 'please lower the price');
-    await panel.click('#go');
+    await panel.press('#goal', 'Enter');
     await panel.waitForSelector('.card button[data-answer=approve]');
+    assert.equal(await panel.evaluate(() => document.activeElement.className), 'card', 'the approval card takes keyboard focus');
+    // 360 px wide: nothing may push the page sideways.
+    const overflow = await panel.evaluate(() => ({ doc: document.documentElement.scrollWidth - document.documentElement.clientWidth, main: document.getElementById('body').scrollWidth - document.getElementById('body').clientWidth }));
+    assert.deepEqual(overflow, { doc: 0, main: 0 }, 'no sideways scrolling at 360 px');
+    await panel.keyboard.press('Tab');
+    assert.equal(await panel.evaluate(() => document.activeElement.dataset.answer), 'approve');
     assert.match(await panel.textContent('.card'), /newPriceCents:\s*70/);
     assert.match(await panel.textContent('#planlist'), /Ask you before changing anything/);
     assert.equal(await panel.locator('#memlist li').count(), 2);
-    await panel.click('.card button[data-answer=approve]');
+    await panel.keyboard.press('Enter');
     await panel.waitForSelector('text=You approved this.');
     await panel.waitForSelector('text=Done, in practice data only');
     await panel.fill('#goal', 'remember that I close on Sundays');
@@ -135,6 +161,25 @@ async function main() {
     await pop.waitForSelector('#status li');
     assert.match(await pop.textContent('#status'), /Paste tracking\s*Locked/);
     await pop.close();
+    // Settings at 360 px, then Clear everything (asks first; erases data, audit and the tour flag).
+    const opt = await ctx.newPage();
+    await opt.setViewportSize({ width: 360, height: 640 });
+    opt.on('pageerror', (e) => problems.push('options: ' + e.message));
+    await opt.goto(`chrome-extension://${extId}/src/ui/options.html`);
+    await opt.waitForSelector('#clearAsk');
+    assert.equal(await opt.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 0, 'settings fit 360 px');
+    await opt.click('#clearAsk');
+    await opt.click('#clearNo');
+    assert.ok(Object.keys(await opt.evaluate(() => chrome.storage.local.get(null))).length > 0, 'saying No erases nothing');
+    await opt.click('#clearAsk');
+    await opt.click('#clearYes');
+    await opt.waitForSelector('text=Everything was erased');
+    assert.deepEqual(await opt.evaluate(() => chrome.storage.local.get(null)), {}, 'settings and saved state are gone');
+    const after = await page.evaluate(async () => ({ tracking: (await window.tcgssSend('tracking.list')).result.batches.length, orders: (await window.tcgssSend('store.list', { collection: 'orders' })).result.records.length }));
+    assert.deepEqual(after, { tracking: 0, orders: 0 }, 'stored records are gone');
+    const audit = await opt.evaluate(async () => (await chrome.runtime.sendMessage({ source: 'tcgss-panel', v: 1, id: 'a1', type: 'agent.audit' })));
+    assert.equal(audit.ok, false, 'with the switch cleared the panel is off again');
+    await opt.close();
     assert.deepEqual(problems, [], 'extension pages must load without errors');
   } finally {
     await ctx.close();
