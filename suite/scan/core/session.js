@@ -15,7 +15,7 @@ export function createMemoryStore() {
 }
 
 // IndexedDB when the browser has it; otherwise (Node, private modes) the in-memory store.
-export function createIndexedDbStore(name = 'tcg-speed-scan') {
+export function createIndexedDbStore(name = 'tcg-speed-scan', key = KEY) {
   if (typeof indexedDB === 'undefined') return createMemoryStore();
   const open = () => new Promise((resolve, reject) => {
     const req = indexedDB.open(name, 1);
@@ -35,8 +35,8 @@ export function createIndexedDbStore(name = 'tcg-speed-scan') {
   const fallback = createMemoryStore();
   return {
     kind: 'indexeddb',
-    async load() { try { return await run('readonly', (s) => s.get(KEY)); } catch { return fallback.load(); } },
-    async save(state) { try { await run('readwrite', (s) => s.put(state, KEY)); } catch { await fallback.save(state); } },
+    async load() { try { return await run('readonly', (s) => s.get(key)); } catch { return fallback.load(); } },
+    async save(state) { try { await run('readwrite', (s) => s.put(state, key)); } catch { await fallback.save(state); } },
   };
 }
 

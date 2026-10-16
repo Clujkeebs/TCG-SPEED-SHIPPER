@@ -5,6 +5,16 @@ sandbox cannot reach them (a test fetch of Scryfall was refused by the network).
 No real catalog is loaded yet: the app ships only the 96-card sample list, so it cannot list real inventory until the
 importers below are run by someone with open internet (a laptop).
 
+## Live lookup from the seller's browser (built 2026-10-16, UNVERIFIED against the real services)
+Because no real catalog is loaded, any card not in the sample list is looked up online by the seller's own browser
+(`data/live.js`): Magic through Scryfall (exact set + number, or name), Pokémon through the Pokémon TCG API, Yu-Gi-Oh!
+through YGOPRODeck. One Piece has no source yet. Found cards are added to the search list and saved on the device, so
+they work offline next time. Requests are spaced 120 ms apart and run one at a time. What the seller types is sent to
+those services (the app says so beside a checkbox that turns it off). The build sandbox cannot reach any of them, so this
+is tested only with fixtures and a simulated Scryfall in a browser; the Pokémon and YGOPRODeck request shapes are from
+memory and may need fixing against the real services. Whether their sites allow browser calls (CORS) is also unconfirmed
+for the last two.
+
 ## The offline index (designed and built)
 One file per game, `data/index/<game>.json`, loaded on first use and cached for offline use. Format (`data/compact.js`,
 tested): a small header (`version`, `game`, `asOf`, `source`, `count`) and one array per printing:

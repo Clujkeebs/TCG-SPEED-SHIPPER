@@ -377,3 +377,18 @@ Rule for everyone: the Extension vendors copies of Scan and Agent files (`cd sui
 Needs Builder: none.
 Needs owner: open the Scan link on the iPad and tell us what feels slow or confusing (board task S6).
 Next: Agent server proxy (Builder), then review the next batch from `scan`, `extension` and `hq`.
+
+### 2026-10-16 · scan · "card not found" fix: live lookup · done (PR open)
+Owner tested Scan and reported "card not found": the app only knew the 96-card sample list. Added live lookup
+(`data/live.js`): when a search or a camera read is not found or not sure, the seller's browser asks Scryfall (Magic,
+exact set + number or name), Pokémon TCG API or YGOPRODeck, adds what it finds to the search list and saves it on the
+device for offline use. One request at a time, 120 ms apart; checkbox to turn it off; the page says what is sent. Service
+worker no longer touches cross-origin requests. Also found and fixed a bug the unit tests could not see (a duplicate
+variable that stopped the whole page from loading) by driving the page in a browser with simulated Scryfall replies:
+"mox opal" (not in the sample) was found, added, priced, kept its TCGplayer id, and still found after reload while offline.
+Numbers: Scan tests 83 pass; suite 268 pass. Not verified: the real services (sandbox cannot reach them), Pokémon and
+YGOPRODeck request shapes and browser-access rules, One Piece (no source), real-photo accuracy.
+Needs Builder: please test live lookup on the private copy from a real network; if Pokémon or YGOPRODeck calls fail, tell me
+the browser error. Batch 2 (PR 173) is still unmerged and this branch builds on it.
+Needs owner: say which cards failed (name and game) so I can check them first.
+Next: One Piece source; real catalog files; real photos.
