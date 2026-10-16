@@ -13,6 +13,7 @@ process.env.STRIPE_PRICE_BASE = 'price_base';
 process.env.STRIPE_PRICE_PREMIUM = 'price_premium';
 process.env.SUPABASE_URL = 'https://stub.supabase.co';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'stub-key';
+process.env.PB_RETRY_BASE_MS = '1'; // retries pause 1 ms in tests, not 400
 process.env.PB_API_KEY = 'pbkey';
 process.env.PB_API_SECRET = 'pbsecret';
 process.env.PB_PILOT_EMAILS = 'Pilot@Example.com, other@example.com';
@@ -62,12 +63,16 @@ const supabaseStub = {
 
 // Fake Pitney Bowes.
 let shipSeq = 0;
+let rates429 = 0; // how many price requests answer 429 Too Many Requests before succeeding
 global.fetch = async (url, init) => {
   pbCalls.push({ url, init });
   const json = (status, body) => ({ ok: status < 300, status, text: async () => JSON.stringify(body) });
   if (url.endsWith('/auth/api/v1/token')) return json(200, { access_token: 'tok', expires_in: 14400, token_type: 'Bearer' });
   if (url.endsWith('/shipping/api/v1/carrierAccounts')) return json(200, { data: { carrierAccounts: [{ carrierAccountId: 'acct_ups', carrierName: 'UPS' }, { carrierAccountId: 'acct_usps', carrierName: 'USPS' }] } });
-  if (url.endsWith('/shipping/api/v2/rates')) return json(200, { rate: [{ serviceId: 'FCM', totalCarrierCharge: 0.78 }] });
+  if (url.endsWith('/shipping/api/v2/rates')) {
+    if (rates429 > 0) { rates429 -= 1; return json(429, { message: 'Too Many Requests' }); }
+    return json(200, { rate: [{ serviceId: 'FCM', totalCarrierCharge: 0.78 }] });
+  }
   if (url.endsWith('/shipping/api/v2/shipments') && init.method === 'POST') {
     const b = JSON.parse(init.body);
     if (b.toAddress.postalCode === '00000') return json(400, { errors: [{ errorCode: '1001', message: 'Invalid address' }] });
@@ -148,6 +153,20 @@ server.listen(0, async () => {
     check('no sender phone: one clear error up front, PB never called', r.status === 400 && r.body.field === 'phone' && /phone/i.test(r.body.error) && pbCalls.length === np, JSON.stringify(r.body));
     r = await req('POST', '/api/postage/quote', { from: FROM, labels: [{ ref: 'Q1', to: TO, service: 'letter', weightOz: 1 }, { ref: 'Q2', to: TO, service: 'ground', weightOz: 3 }] }, 'pilot-token');
     check('quote prices the whole batch and buys nothing', r.status === 200 && r.body.items.length === 2 && r.body.items.every((x) => x.ok && x.price > 0) && Math.abs(r.body.total - (r.body.items[0].price + r.body.items[1].price)) < 0.001 && !pbCalls.slice(np).some((c) => /\/shipments(\?|$)/.test(String(c.url))) && pbCalls.slice(np).some((c) => /\/rates/.test(String(c.url))), JSON.stringify(r.body));
+    // Pitney Bowes rate limit: retried quietly, then said kindly; repeated quotes come from memory.
+    const TO2 = Object.assign({}, TO, { addr1: '789 Pine Rd', zip: '60602' });
+    const TO3 = Object.assign({}, TO, { addr1: '12 Elm Ct', zip: '60603' });
+    const rateCalls = () => pbCalls.filter((c) => c.url.endsWith('/shipping/api/v2/rates')).length;
+    rates429 = 2;
+    r = await req('POST', '/api/postage/quote', { from: FROM, labels: [{ ref: 'R1', to: TO2, service: 'letter', weightOz: 1 }] }, 'pilot-token');
+    check('PB says Too Many Requests twice: the quote still comes back (retried inside)', r.status === 200 && r.body.items[0].ok === true && rates429 === 0, JSON.stringify(r.body));
+    rates429 = 1000;
+    r = await req('POST', '/api/postage/quote', { from: FROM, labels: [{ ref: 'R2', to: TO3, service: 'letter', weightOz: 1 }] }, 'pilot-token');
+    check('PB keeps saying Too Many Requests: plain words for the seller, not the raw error', r.status === 200 && r.body.items[0].ok === false && /busy/i.test(r.body.items[0].error) && !/Too Many Requests/.test(r.body.items[0].error), JSON.stringify(r.body));
+    rates429 = 0;
+    const callsBefore = rateCalls();
+    r = await req('POST', '/api/postage/quote', { from: FROM, labels: [{ ref: 'R3', to: TO2, service: 'letter', weightOz: 1 }] }, 'pilot-token');
+    check('the same quote asked again comes from memory (no new call to PB)', r.status === 200 && r.body.items[0].ok === true && rateCalls() === callsBefore, 'calls ' + (rateCalls() - callsBefore));
     r = await req('POST', '/api/postage/rates', { from: FROM, to: TO, service: 'letter', weightOz: 1 }, 'owner-token');
     check('rate quote shows postage, our fee and the price (Premium-rate owner: 12 cents)', r.status === 200 && r.body.postage === 0.78 && r.body.fee === 0.12 && r.body.price === 0.9, JSON.stringify(r.body));
     r = await req('POST', '/api/postage/rates', { from: FROM, to: TO, service: 'letter', weightOz: 5 }, 'owner-token');
