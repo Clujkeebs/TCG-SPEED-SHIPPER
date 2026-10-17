@@ -46,5 +46,6 @@ export const VENDORED = [
   'agent/orderfile.js',
   'agent/voice.js',
   'agent/briefing.js',
-  'agent/persist.js'
+  'agent/persist.js',
+  'agent/adapters/proxy.js'
 ];
