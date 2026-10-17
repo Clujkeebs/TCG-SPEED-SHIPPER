@@ -100,3 +100,12 @@ If you add or change a file the Extension imports, add new files to `suite/exten
 | Test fakes | `fixtures/fake-idb.js`, `fixtures/shipping-export.js` | a faithful fake IndexedDB; an invented shipping export |
 
 The budget for the order file is written down in `orderfile.test.js` (10,000 rows, under 1,500 ms, under 100 MB growth).
+
+## The real model (batch 4)
+| Need | File | In one line |
+|---|---|---|
+| Real model through our server | `adapters/proxy.js` | posts only `{ messages, tools }` with the login token from a function you give it (never stored); checks the conversation shape first; returns `{ content, costCents, remaining }`; every failure is a `ProxyError` with the server's plain words, `code` and `resetsAt` |
+| Contract stand-in | `fixtures/proxy-stub.js` | a local HTTP server that enforces the contract in `AGENT-PROXY.md` ("How to call it") so the adapter runs real `fetch` code with no real model |
+| Direct provider adapter | `adapters/anthropic.js` | LOCAL EXPERIMENTS ONLY: refuses to start without `AGENT_LOCAL_EXPERIMENT=yes` and refuses to run in a web page; renames `.` to `__` like the server does |
+| Draft text for the panel | `plan.js` `copyableOf`, `agent.fillCopy` | finished draft steps carry the text to copy in `agent.plan` (`output`) and `agent.answer` (`drafts`); first names are filled in on the device only |
+| Cost per question | `eval/measure.js`, `docs/suite/AGENT-MEASURE.md` | six scenarios first, three numbers, tested against the stand-in |

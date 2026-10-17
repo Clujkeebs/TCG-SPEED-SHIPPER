@@ -8,14 +8,15 @@
 //     agent.memory.list, agent.memory.forget {id}, agent.inbox.list, agent.suggestions, agent.undo {approvalId}, agent.export {csv}, agent.orders {csv}, agent.voice {samples}, agent.voice.set {card}, agent.briefing   (only when the service has an agent)
 //   agent -> panel  (source 'tcgss-agent'): responses, plus events
 //     agent.progress {tool, ok, denied, summary}        agent.approval-needed {approvalId, tool, description, why, undo, expected?, warning?, args}
-//     agent.answer {status, text, calls?}               agent.stopped
-//     agent.plan {planId, steps:[{text, state: todo|doing|done|skipped}]}       agent.memory {items:[{id, text}]}
+//     agent.answer {status, text, calls?, drafts?: [{title, text, notes?, truncated?}], code?, resetsAt?}   (drafts = the replies and summaries to copy)               agent.stopped
+//     agent.plan {planId, steps:[{text, state: todo|doing|done|skipped, output?}]}   (output = the text of a finished draft step, names filled in on the device)       agent.memory {items:[{id, text}]}
 //
 // `hello.types` lists every request type this service answers AND every event it may send, so a panel can decide what
 // to show. `hello.requests` and `hello.events` list them separately.
 // Trust: a message counts only if the browser says it came from our own extension (sender.id).
 import { runAgent } from './loop.js';
 import { TAINT_WARNING } from './untrusted.js';
+import { copyableOf } from './plan.js';
 
 export const PROTOCOL_VERSION = 1;
 export const PANEL_SOURCE = 'tcgss-panel';
@@ -90,7 +91,7 @@ export function validateEvent(e) {
   switch (e.event) {
     case 'agent.plan':
       if (!Array.isArray(e.steps) || e.steps.length === 0 || e.steps.length > 8) return 'steps must be a list of 1 to 8';
-      return e.steps.every((s) => isObj(s) && str(s.text, 200) && PLAN_STATES.includes(s.state)) ? null : 'each step needs text and a state of ' + PLAN_STATES.join('|');
+      return e.steps.every((s) => isObj(s) && str(s.text, 200) && PLAN_STATES.includes(s.state) && (s.output === undefined || (typeof s.output === 'string' && s.output.length <= 6000))) ? null : 'each step needs text and a state of ' + PLAN_STATES.join('|') + ' (and optionally output, a text of at most 6000 characters)';
     case 'agent.memory':
       return Array.isArray(e.items) && e.items.every((i) => isObj(i) && shortStr(i.id) && str(i.text, 300)) ? null : 'items must be [{id, text}]';
     case 'agent.progress':
@@ -99,6 +100,7 @@ export function validateEvent(e) {
       if (e.warning !== undefined && !str(e.warning)) return 'warning must be a short text';
       return shortStr(e.approvalId) && str(e.tool, 80) && str(e.description) && str(e.why) && str(e.undo) && isObj(e.args) ? null : 'approval needs approvalId, tool, description, why, undo, args';
     case 'agent.answer':
+      if (e.drafts !== undefined && !(Array.isArray(e.drafts) && e.drafts.length <= 5 && e.drafts.every((d) => isObj(d) && str(d.title, 200) && typeof d.text === 'string' && d.text.length <= 6000 && (d.notes === undefined || typeof d.notes === 'string')))) return 'drafts must be up to 5 of { title, text, notes? }';
       return typeof e.status === 'string' && typeof e.text === 'string' ? null : 'answer needs status and text';
     default:
       return null;
@@ -132,6 +134,12 @@ export function summarizeCall({ tool, tier, ok, denied }) {
   return tier === 'act' ? 'Made a change you approved' : tier === 'draft' ? 'Wrote a draft (not sent)' : 'Looked something up';
 }
 
+// A model-door error (adapters/proxy.js) carries the server's plain words, a code, and when a limit comes back.
+function answerForError(err) {
+  const reason = String((err && err.message) || err);
+  return { status: 'error', text: err && err.name === 'ProxyError' ? reason : '', reason, ...(err && err.code ? { code: String(err.code) } : {}), ...(err && err.resetsAt ? { resetsAt: String(err.resetsAt) } : {}) };
+}
+
 const STATE_OF = { pending: 'todo', ok: 'done', 'waiting-approval': 'doing', skipped: 'skipped', failed: 'skipped', unexpected: 'skipped' };
 
 // The service the side panel talks to.
@@ -148,7 +156,7 @@ export function createAgentService({ registry, model, extensionId, system, appro
   const availableEvents = () => EVENT_TYPES.filter((t) => agent || !['agent.plan', 'agent.memory'].includes(t));
   const memoryItems = () => agent.memory.list().map((f) => ({ id: f.id, text: f.text }));
   const emitMemory = (emit) => emit(makeEvent('agent.memory', { items: memoryItems() }));
-  const emitPlan = (emit, planId) => emit(makeEvent('agent.plan', { planId, steps: views.get(planId).map(({ text, state }) => ({ text, state })) }));
+  const emitPlan = (emit, planId) => emit(makeEvent('agent.plan', { planId, steps: views.get(planId).map(({ text, state, output }) => ({ text, state, ...(output ? { output } : {}) })) }));
 
   function denyAllPending() {
     for (const resolve of pending.values()) resolve(false);
@@ -171,13 +179,22 @@ export function createAgentService({ registry, model, extensionId, system, appro
       }),
     };
     try {
+      const copies = [];
       const out = await runAgent({
         model, registry, messages: [{ role: 'user', content: text }], ctx, maxSteps, system,
-        onCall: (c) => emit(makeEvent('agent.progress', { ...c, summary: summarizeCall({ ...c, tier: (registry.get(c.tool) || {}).tier }) })),
+        onCall: (c, res) => {
+          const copy = agent && res && res.ok ? copyableOf(c.tool, res.result) : null;
+          if (copy) copies.push(copy);
+          emit(makeEvent('agent.progress', { ...c, summary: summarizeCall({ ...c, tier: (registry.get(c.tool) || {}).tier }) }));
+        },
       });
-      emit(makeEvent('agent.answer', { status: out.status, text: out.text, reason: out.reason, calls: out.calls.map((c) => c.name) }));
+      // names are filled in here, on the device: the model only ever saw {{first_name}}
+      const drafts = copies.slice(0, 5).map((c) => agent.fillCopy(c));
+      const lastOrder = [...copies].reverse().find((c) => c.orderId);
+      const answerText = agent && lastOrder ? agent.fillCopy({ text: out.text, orderId: lastOrder.orderId }).text : out.text;
+      emit(makeEvent('agent.answer', { status: out.status, text: answerText, reason: out.reason, calls: out.calls.map((c) => c.name), ...(drafts.length ? { drafts } : {}) }));
     } catch (err) {
-      emit(makeEvent('agent.answer', { status: 'error', text: '', reason: String((err && err.message) || err) }));
+      emit(makeEvent('agent.answer', answerForError(err)));
     }
   }
 
@@ -193,6 +210,7 @@ export function createAgentService({ registry, model, extensionId, system, appro
       } else if (e.event === 'step') {
         const s = views.get(e.planId).find((x) => x.id === e.id);
         s.state = STATE_OF[e.status] || 'skipped';
+        if (e.copy) { const c = agent.fillCopy(e.copy); s.output = c.text; } // the reply to copy, names filled in on this device only
         emitPlan(emit, e.planId);
         const tier = (registry.get(e.tool) || {}).tier;
         if (e.status !== 'waiting-approval') emit(makeEvent('agent.progress', { tool: e.tool, ok: e.status === 'ok', denied: false, summary: e.status === 'ok' ? summarizeCall({ tool: e.tool, tier, ok: true, denied: false }) : (e.note || 'That step did not work').slice(0, 200) }));
@@ -201,7 +219,8 @@ export function createAgentService({ registry, model, extensionId, system, appro
     const out = await agent.goal(text, { onEvent });
     if (out.status === 'no-plan' || out.status === 'invalid') return out;
     for (const s of out.steps) if (s.cardId) announceCard(emit, agent.inbox.get(s.cardId));
-    emit(makeEvent('agent.answer', { status: out.status, text: out.report, calls: out.steps.map((s) => s.tool) }));
+    const drafts = out.steps.filter((s) => s.copy).slice(0, 5).map((s) => agent.fillCopy(s.copy));
+    emit(makeEvent('agent.answer', { status: out.status, text: out.report, calls: out.steps.map((s) => s.tool), ...(drafts.length ? { drafts } : {}) }));
     return out;
   }
 
@@ -215,7 +234,7 @@ export function createAgentService({ registry, model, extensionId, system, appro
       }
       await chat(text, emit);
     } catch (err) {
-      emit(makeEvent('agent.answer', { status: 'error', text: '', reason: String((err && err.message) || err) }));
+      emit(makeEvent('agent.answer', answerForError(err)));
     } finally {
       busy = false;
       denyAllPending();

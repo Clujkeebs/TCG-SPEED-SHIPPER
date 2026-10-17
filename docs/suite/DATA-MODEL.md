@@ -95,8 +95,9 @@ types appear only when the service has an agent, so an older panel sees no chang
 | request `agent.voice` | `{ samples: [3 to 5 past replies] }`. Response `{ card, text }`; the card is saved in memory |
 | request `agent.voice.set` | `{ card: { ...fields to change } }`. Response `{ card, text }` |
 | request `agent.suggestions` | no payload. Response `{ weekEnding, suggestions: [{ rank, id, title, why, goal }] }` (at most 5) |
-| event `agent.plan` | `{ planId, steps: [{ text, state: todo\|doing\|done\|skipped }] }` (1 to 8 steps) |
+| event `agent.plan` | `{ planId, steps: [{ text, state: todo\|doing\|done\|skipped, output? }] }` (1 to 8 steps); `output` is the text of a finished draft step (at most 6000 characters), names filled in on the device only |
 | event `agent.memory` | `{ items: [{ id, text }] }` |
+| event `agent.answer` | `{ status, text, calls?, drafts?: [{ title, text, notes?, truncated? }], code?, resetsAt? }`; `drafts` are the replies and summaries to copy (names filled in on the device, `notes` is the seller-only block); `code` and `resetsAt` appear when the model door refused (see AGENT-PROXY.md) |
 | event `agent.progress` | `{ tool, ok, denied, summary }`; `summary` is a short plain-words line, never arguments |
 | event `agent.approval-needed` | `{ approvalId, tool, description, why, undo, expected?, warning?, args }`; `warning` is present when the request came after the assistant read text written by someone else |
 

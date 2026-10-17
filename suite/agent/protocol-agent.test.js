@@ -197,3 +197,74 @@ test('an approval asked for after reading untrusted text carries a warning', asy
   await s.send('agent.approve', { approvalId: e.approvalId, approved: false });
   await waitFor(() => s.of('agent.answer').length > 0);
 });
+
+test('a drafted reply reaches the panel as text to copy, with the first name filled in on the device only', async () => {
+  const s = shop();
+  const order = s.w.orders.find((o) => o.id === 'ORD-1010');
+  const first = order.shipTo.name.split(' ')[0], full = order.shipTo.name;
+  await s.send('agent.ask', { text: 'Draft a reply to the oldest unanswered message' });
+  await waitFor(() => s.of('agent.answer').length > 0);
+  const ans = s.of('agent.answer')[0];
+  assert.equal(ans.status, 'done');
+  assert.equal(validateEvent(ans), null);
+  assert.equal(ans.drafts.length, 1);
+  const d = ans.drafts[0];
+  assert.equal(d.title, 'Reply to the buyer (draft, not sent)');
+  assert.ok(d.text.startsWith(`Hi ${first},`), d.text);
+  assert.ok(!d.text.includes('{{'), 'no placeholder left on screen');
+  assert.match(d.notes, /LOST-1.*check TCGplayer's current article/s);
+  assert.ok(!d.text.includes('For you, not the buyer'), 'the seller-only notes are separate from the reply');
+  // the plan event for that step carries the same text
+  const withOutput = s.of('agent.plan').flatMap((p) => p.steps).filter((st) => st.output);
+  assert.ok(withOutput.length >= 1 && withOutput.at(-1).output === d.text);
+  s.of('agent.plan').forEach((p) => assert.equal(validateEvent(p), null));
+  // ...but the name is nowhere the model or the record could see it
+  const audit = await s.w.audit.exportJsonl();
+  assert.ok(!audit.includes(full) && !new RegExp('\\b' + first + '\\b').test(audit));
+  const saved = JSON.stringify([...s.w.agent.runs.entries()]);
+  assert.ok(saved.includes('{{first_name}}') && !saved.includes(full), 'the saved plan keeps the placeholder');
+  assert.equal(s.of('agent.progress').every((p) => !p.summary.includes(first)), true);
+});
+
+test('weekly summary and briefing steps carry their text too', async () => {
+  const s = shop();
+  await s.send('agent.ask', { text: 'Write my weekly summary' });
+  await waitFor(() => s.of('agent.answer').length > 0);
+  assert.equal(s.of('agent.answer')[0].drafts[0].title, 'Weekly summary (draft)');
+  assert.match(s.of('agent.answer')[0].drafts[0].text, /^Week ending /);
+});
+
+test('when a model writes the answer, the name is still filled in on the device, never sent to the model', async () => {
+  let seenByModel = '';
+  const w0 = makeWorld({ clockStart: '2026-10-12T08:00:00Z' });
+  const order = w0.orders.find((o) => o.id === 'ORD-1020');
+  const first = order.shipTo.name.split(' ')[0];
+  const model = scriptedModel([
+    [{ type: 'tool_use', id: 'd', name: 'support.draftReply', input: { orderId: 'ORD-1020', buyerMessage: 'the card arrived creased' } }],
+    (messages) => { seenByModel = JSON.stringify(messages); return [{ type: 'text', text: 'Here is a reply you can send:\n' + JSON.parse(messages.at(-1).content[0].content).message }]; },
+  ]);
+  const w = w0;
+  const svc = createAgentService({ registry: w.registry, extensionId: EXT, agent: w.agent, model });
+  const events = [];
+  // a goal the planner does not know, so the model path runs
+  await svc.handle(msg('agent.ask', { text: 'Please write something kind to the person whose card arrived creased' }), sender, (e) => events.push(e));
+  await waitFor(() => events.some((e) => e.event === 'agent.answer'));
+  const ans = events.find((e) => e.event === 'agent.answer');
+  assert.ok(seenByModel.includes('{{first_name}}') && !seenByModel.includes(first), 'the model saw only the placeholder');
+  assert.ok(ans.text.includes(`Hi ${first},`) && !ans.text.includes('{{'), 'the panel sees the name');
+  assert.equal(ans.drafts[0].notes.includes('RET-3'), true);
+  assert.equal(validateEvent(ans), null);
+});
+
+test('very long drafts are cut with a flag, and the event rules reject malformed output', async () => {
+  const { copyableOf, MAX_COPY_CHARS } = await import('./plan.js');
+  const c = copyableOf('report.weeklyDraft', { text: 'x'.repeat(MAX_COPY_CHARS + 500) });
+  assert.equal(c.truncated, true); assert.equal(c.text.length, MAX_COPY_CHARS);
+  assert.equal(copyableOf('orders.stats', { total: 1 }), null);
+  assert.equal(copyableOf('support.draftReply', null), null);
+  const ok = { source: 'tcgss-agent', v: 1 };
+  assert.match(validateEvent({ ...ok, event: 'agent.plan', steps: [{ text: 'x', state: 'done', output: 5 }] }), /output/);
+  assert.match(validateEvent({ ...ok, event: 'agent.answer', status: 'done', text: 't', drafts: [{ title: 'a' }] }), /drafts/);
+  assert.match(validateEvent({ ...ok, event: 'agent.answer', status: 'done', text: 't', drafts: Array(6).fill({ title: 'a', text: 'b' }) }), /drafts/);
+  assert.equal(validateEvent({ ...ok, event: 'agent.answer', status: 'done', text: 't', drafts: [{ title: 'a', text: 'b', notes: 'c' }] }), null);
+});

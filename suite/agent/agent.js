@@ -6,7 +6,7 @@ import { runPlan, renderPlan, validatePlan } from './plan.js';
 import { fillBuyerNames } from './orderfile.js';
 import { VOICE_KEY, deriveVoiceCard, describeVoice, voiceFromMemory, editVoiceCard, DEFAULT_CARD } from './voice.js';
 
-export function createAgent({ registry, memory, inbox, planner, reports, jobs, now, names = new Map() }) {
+export function createAgent({ registry, memory, inbox, planner, reports, jobs, now, names = new Map(), firstNameFor = () => undefined }) {
   const runs = new Map(); // planId -> { plan, status, steps, text }
   const iso = () => (typeof now === 'function' ? now() : now);
 
@@ -93,6 +93,14 @@ export function createAgent({ registry, memory, inbox, planner, reports, jobs, n
       const saved = old ? memory.edit(old.id, fact) : memory.add({ ...fact, source: 'user' });
       await audit(old ? 'memory.edit' : 'memory.add', { id: saved.id }, 'user');
       return { card, text: saved.text, memoryId: saved.id };
+    },
+
+    // On this device only: a draft's text with the buyer's first name filled in, ready to show and copy.
+    //   copy: { title, text, notes?, orderId?, truncated? } as returned in a plan step; the original is not changed.
+    fillCopy(copy) {
+      const fill = (t) => (t === undefined ? undefined : fillBuyerNames(String(t).split('{{first_name}}').join(firstNameFor(copy.orderId) || 'there'), names));
+      const { orderId, ...rest } = copy;
+      return { ...rest, text: fill(copy.text), ...(copy.notes ? { notes: fill(copy.notes) } : {}) };
     },
 
     // On this device only: put "Ada L." in place of {{buyer:KEY}} in a draft.
