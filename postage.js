@@ -198,7 +198,8 @@ async function pbSelfCheck(env = process.env, fetchImpl = fetch) {
     try {
       const q = await client.rate(buildShipment({ from, to, service, weightOz: service === 'letter' ? 1 : 8, phone: env.PB_DEFAULT_PHONE || '6502530000' }));
       const price = money(q && (Array.isArray(q.rate) ? q.rate[0] : q.rate));
-      out.push('pb_rate_' + service + (price == null ? '=NO_PRICE' : '=OK($' + price.toFixed(2) + ')'));
+      // No price found: say what the answer looked like (a rate quote holds no secrets), so the parser can be fixed from the log.
+      out.push('pb_rate_' + service + (price == null ? '=NO_PRICE shape=' + JSON.stringify(q).replace(/\s+/g, ' ').slice(0, 700) : '=OK($' + price.toFixed(2) + ')'));
     } catch (e) { out.push('pb_rate_' + service + '=FAILED' + why(e)); }
   }
   return out.join(' ');
