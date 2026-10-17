@@ -67,7 +67,7 @@ const isShip = (u) => u.endsWith('/shipping/api/v2/shipments');
     const validLang = (init) => /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(String((init.headers && init.headers['Accept-Language']) || '*'));
     const gateway = (u, init) => (isToken(u) ? resp(200, { access_token: 't', expires_in: 14400 })
       : !validLang(init) ? resp(400, { errors: [{ errorCode: '1000', message: 'Invalid value for Accept-Language in http header, ex: en-US.' }] })
-      : isRates(u) ? resp(200, { rate: [{ totalCarrierCharge: 0.78 }] })
+      : isRates(u) ? resp(200, { rates: [{ rate: { baseCharge: 0.78, carrier: 'USPS' } }] }) // the live sandbox's shape (Oct 17 boot self-check)
       : isShip(u) ? resp(200, { shipmentId: 'S1' })
       : u.endsWith('/shipping/api/v1/carrierAccounts') ? resp(200, { data: { carrierAccounts: [{ carrierAccountId: 'acct_usps', carrierName: 'USPS' }] } })
       : u.endsWith('/shipping/api/v2/shipments/cancel') ? resp(200, { status: 'INITIATED' })
@@ -75,7 +75,7 @@ const isShip = (u) => u.endsWith('/shipping/api/v2/shipments');
     const gw = makePbClient({ key: 'k', secret: 's', env: 'sandbox', fetchImpl: async (u, init) => { gwCalls.push({ url: u, init }); return gateway(u, init); }, sleep: async () => {} });
     const gwCalls = [];
     out = await gw.rate(SHIP);
-    check('a price quote gets through a gateway that refuses "Accept-Language: *"', out && out.rate[0].totalCarrierCharge === 0.78);
+    check('a price quote gets through a gateway that refuses "Accept-Language: *"', out && out.rates[0].rate.baseCharge === 0.78);
     out = await gw.createShipment(SHIP);
     check('so does buying a label', out && out.shipmentId === 'S1');
     out = await gw.cancelShipment('S1');
@@ -107,6 +107,36 @@ const isShip = (u) => u.endsWith('/shipping/api/v2/shipments');
     check('no USPS account and no price are said plainly', /pb_account=NO_USPS\(1 accounts\)/.test(line) && /pb_rate_letter=NO_PRICE/.test(line), line);
     check('keys not set: "pb=NOT_SET", and nothing is called', (await pbSelfCheck({}, async () => { throw new Error('must not be called'); })) === 'pb=NOT_SET');
     check('production mode is named when it is really on', /^pb_mode=production /.test(await pbSelfCheck(Object.assign({ PB_ENV: 'production', PB_LIVE_OK: 'yes' }, SELF_ENV), async (u, init) => tokenFirst(u, init))));
+
+    console.log('\n-- reading a price out of every shape Pitney Bowes uses --');
+    const { rateOf, readLabel } = require('../postage');
+    check('the live sandbox shape: { rates: [ { rate: {...} } ] }', rateOf({ rates: [{ rate: { baseCharge: 0.78 } }] }).baseCharge === 0.78);
+    check('the docs shape: { rate: [ {...} ] }', rateOf({ rate: [{ totalCarrierCharge: 1.5 }] }).totalCarrierCharge === 1.5);
+    check('a purchase answer: { rate: {...} }', rateOf({ rate: { totalCarrierCharge: 4.5 } }).totalCarrierCharge === 4.5);
+    check('a rates list of bare rates: { rates: [ {...} ] }', rateOf({ rates: [{ baseCharge: 2 }] }).baseCharge === 2);
+    check('nothing usable gives null, never a crash', rateOf({}) === null && rateOf({ rates: [] }) === null && rateOf(null) === null && rateOf('x') === null && rateOf({ rate: [] }) === null);
+    const { money } = require('../postage');
+    check('a missing price is null, never $0.00 (Number(null) is 0)', money(null) === null && money(undefined) === null && money({}) === null && money({ baseCharge: null }) === null && money({ totalCarrierCharge: null, baseCharge: null }) === null && money({ baseCharge: '' }) === null);
+    check('zero, negative and junk are "no price" too; real prices are rounded to cents', money({ totalCarrierCharge: 0 }) === null && money({ baseCharge: -1 }) === null && money({ baseCharge: 'abc' }) === null && money({ baseCharge: '0.784' }) === 0.78 && money({ totalCarrierCharge: 6.24, baseCharge: 5 }) === 6.24);
+    check('a purchase answer in the live shape still yields its price', readLabel({ shipmentId: 'S', parcelTrackingNumber: 'T', rates: [{ rate: { totalCarrierCharge: 6.24 } }] }).rate.totalCarrierCharge === 6.24);
+
+    console.log('\n-- the sandbox buy and refund rehearsal (only when asked, only in the sandbox) --');
+    const fullBuy = (u, init) => (isToken(u) ? resp(200, { access_token: 'TOKEN-DO-NOT-LEAK', expires_in: 14400 })
+      : isShip(u) ? resp(200, { shipmentId: 'SB1', parcelTrackingNumber: '9400111899223197428490', rate: { totalCarrierCharge: 0.78 }, labelLayout: [{ contentType: 'BASE64', contents: 'JVBERi0xLjQ=', fileFormat: 'PDF', size: 'DOC_4X6', type: 'SHIPPING_LABEL' }] })
+      : u.endsWith('/shipments/cancel') ? resp(200, { status: 'INITIATED', totalCarrierCharge: 0.78 })
+      : gateway(u, init));
+    const buyCalls = [];
+    const buyFetch = async (u, init) => { buyCalls.push({ url: u, method: init.method }); return fullBuy(u, init); };
+    line = await pbSelfCheck(Object.assign({ PB_SELFTEST_BUY: 'on' }, SELF_ENV), buyFetch);
+    check('on: it buys a letter and a package label and checks the answer holds an id, a tracking number, a PDF and a price', /pb_buy_letter=OK\(id=yes tracking=yes pdf=yes price=0\.78/.test(line) && /pb_buy_ground=OK\(id=yes tracking=yes pdf=yes price=0\.78/.test(line), line);
+    check('it refunds the package label (letters cannot be refunded) and reports the answer', /pb_cancel_ground=OK\(\{"status":"INITIATED"/.test(line) && buyCalls.filter((c) => /cancel/.test(c.url)).length === 1);
+    check('the label itself is never in the log line', !/JVBERi0/.test(line) && !/TOKEN-DO-NOT-LEAK/.test(line));
+    buyCalls.length = 0;
+    line = await pbSelfCheck(SELF_ENV, buyFetch);
+    check('off (the default): nothing is bought', !/pb_buy/.test(line) && !buyCalls.some((c) => /shipments/.test(c.url)));
+    buyCalls.length = 0;
+    line = await pbSelfCheck(Object.assign({ PB_SELFTEST_BUY: 'on', PB_ENV: 'production', PB_LIVE_OK: 'yes' }, SELF_ENV), buyFetch);
+    check('in production mode it NEVER buys, even if asked', !/pb_buy/.test(line) && !buyCalls.some((c) => /shipments/.test(c.url)), line);
 
     console.log('\n-- a batch does not stampede --');
     const tokenCalls = []; const acctCalls = [];
