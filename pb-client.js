@@ -13,6 +13,15 @@ const HOSTS = {
   production: 'https://api.sendpro360.pitneybowes.com',
 };
 
+// Node's built-in fetch sends "Accept-Language: *" when nobody sets one, and Pitney Bowes' gateway refuses that
+// ("Invalid value for Accept-Language in http header, ex: en-US"; the owner's Oct 16 sample-order test, once the
+// 429s stopped hiding it). So every call says what it means. Callers can still override a header.
+const BASE_HEADERS = {
+  Accept: 'application/json',
+  'Accept-Language': 'en-US',
+  'User-Agent': 'TCGSpeedShipper/1.0 (+https://tcgspeedshipper.com)',
+};
+
 class PbError extends Error {
   constructor(status, body) {
     const list = Array.isArray(body) ? body : (body && (body.errors || body.errorCauses)) || null;
@@ -44,7 +53,7 @@ function makePbClient({ key, secret, env = 'sandbox', partnerId, carrierAccountI
   }
   async function call(url, init, { read = false } = {}) {
     for (let attempt = 0; ; attempt += 1) {
-      const res = await fetchImpl(url, Object.assign({ signal: AbortSignal.timeout(30000) }, init));
+      const res = await fetchImpl(url, Object.assign({ signal: AbortSignal.timeout(30000) }, init, { headers: Object.assign({}, BASE_HEADERS, init.headers) }));
       const text = await res.text();
       let body = null;
       try { body = text ? JSON.parse(text) : null; } catch (e) { body = text; }
