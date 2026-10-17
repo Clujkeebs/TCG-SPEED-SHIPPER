@@ -4228,7 +4228,8 @@ document.getElementById('pg-buy').addEventListener('click', function () {
       msg.innerHTML = '<div class="pg-result">✓ ' + ok.length + ' label' + (ok.length === 1 ? '' : 's') + ' bought' +
         (j.total ? ' · $' + j.total.toFixed(2) : '') + (j.mode !== 'production' ? ' · test labels' : '') +
         (ok.length ? '. Your postage PDF is downloading, and the tracking numbers are filled in below.' : '.') +
-        bad.map(function (x) { return '<div class="bad">' + esc(x.ref) + ': ' + esc(friendlyPostageError(x.error)) + '</div>'; }).join('') + '</div>';
+        bad.map(function (x) { return '<div class="bad">' + esc(x.ref) + ': ' + esc(friendlyPostageError(x.error)) + '</div>'; }).join('') +
+        ok.filter(function (x) { return x.warning; }).map(function (x) { return '<div class="bad">' + esc(x.ref) + ': ' + esc(x.warning) + '</div>'; }).join('') + '</div>';
       if (j.balanceCents != null) postageBalance = j.balanceCents;
       renderPostage();
       loadPostageHistory();
