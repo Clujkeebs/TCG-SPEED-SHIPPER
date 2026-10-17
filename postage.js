@@ -205,11 +205,27 @@ async function pbSelfCheck(env = process.env, fetchImpl = fetch) {
   const client = makePbClient({ key: env.PB_API_KEY, secret: env.PB_API_SECRET, env: cfg.mode, partnerId: env.PB_PARTNER_ID, carrierAccountId: env.PB_CARRIER_ACCOUNT_ID, fetchImpl, retryBaseMs: Number(env.PB_RETRY_BASE_MS) || 400 });
   const why = (e) => '(' + (e instanceof PbError ? e.status + ' ' : '') + String((e && e.message) || e).replace(/\s+/g, ' ').slice(0, 140) + ')';
   const out = ['pb_mode=' + cfg.mode];
+  let accountId = null;
   try {
     const r = await client.carrierAccounts();
     const list = (r && r.data && r.data.carrierAccounts) || (r && r.carrierAccounts) || [];
-    out.push(list.some((a) => /usps/i.test(String(a.carrierName || a.carrier || ''))) ? 'pb_account=OK(USPS)' : 'pb_account=NO_USPS(' + list.length + ' accounts)');
+    const usps = list.find((a) => /usps/i.test(String(a.carrierName || a.carrier || '')));
+    accountId = (usps && usps.carrierAccountId) || null;
+    out.push(usps ? 'pb_account=OK(USPS)' : 'pb_account=NO_USPS(' + list.length + ' accounts)');
   } catch (e) { out.push('pb_account=FAILED' + why(e)); }
+  // The postage wallet labels are paid from, and which payment methods can refill it (codes and status only, never an account number).
+  if (accountId) {
+    try {
+      const w = await client.walletBalance(accountId);
+      const bal = Number(w && w.walletAccount && w.walletAccount.balanceAvailable);
+      out.push(Number.isFinite(bal) ? 'pb_wallet=OK($' + bal.toFixed(2) + ')' : 'pb_wallet=NO_BALANCE');
+    } catch (e) { out.push('pb_wallet=FAILED' + why(e)); }
+    try {
+      const m = await client.paymentMethods(accountId);
+      const methods = (m && Array.isArray(m.paymentMethods) ? m.paymentMethods : []).map((x) => String(x.paymentMethodCode || '?') + ':' + String(x.paymentMethodStatus || '?'));
+      out.push('pb_pay_methods=' + methods.length + (methods.length ? '(' + methods.join(',') + ')' : ''));
+    } catch (e) { out.push('pb_pay_methods=FAILED' + why(e)); }
+  }
   const from = pbAddress(SELFCHECK_FROM).address;
   const to = pbAddress(SELFCHECK_TO).address;
   for (const service of Object.keys(SERVICES)) {
@@ -223,17 +239,34 @@ async function pbSelfCheck(env = process.env, fetchImpl = fetch) {
   // Rehearsal of a purchase and a refund, ONLY in the sandbox (free test labels) and only when PB_SELFTEST_BUY=on is set on
   // the server (set it for one deploy, read the log, remove it). It says what the answers hold, never the label itself.
   if (env.PB_SELFTEST_BUY === 'on' && cfg.mode === 'sandbox') {
+    // Test money for the sandbox wallet, if asked: PB_SELFTEST_REFILL=<dollars> (sandbox only; the payment method on file is a test one).
+    const refill = Number(env.PB_SELFTEST_REFILL);
+    if (accountId && Number.isFinite(refill) && refill > 0 && refill <= 500) {
+      try {
+        const f = await client.walletRefill(accountId, refill);
+        out.push('pb_refill=' + (f && f.status === 'SUCCESS' ? 'OK' : 'NOT_SUCCESS') + '(status=' + (f && f.status) + ' balance=' + (f && f.balanceAvailable) + ')');
+      } catch (e) { out.push('pb_refill=FAILED' + why(e)); }
+    }
+    // The letter's label size is probed: every size we have a reason to try, each answered with PB's own words (a size PB
+    // accepts moves on to the next check, like the wallet balance; a size it refuses says "Invalid label paper size").
+    const sizes = { letter: String(env.PB_SELFTEST_LETTER_SIZES || 'DOC_4X6,DOC_6X4,6X4,DOC_9X4,9X4,DOC_4X8,DOC_8X11').split(',').map((x) => x.trim()).filter(Boolean), ground: [null] };
     for (const service of ['letter', 'ground']) {
       let bought = null;
-      try {
-        const r = await client.createShipment(buildShipment({ from, to, service, weightOz: service === 'letter' ? 1 : 8, phone: env.PB_DEFAULT_PHONE || '6502530000' }), 'selftest-' + service + '-' + Date.now());
-        const l = readLabel(r);
-        bought = l.shipmentId;
-        const docs = (Array.isArray(r && r.labelLayout) ? r.labelLayout : []).map((d) => ({ type: d && d.contentType, format: d && d.fileFormat, size: d && d.size, length: d && d.contents ? String(d.contents).length : 0 }));
-        out.push('pb_buy_' + service + '=' + (l.shipmentId && l.trackingNumber && l.labelPdfBase64 && money(l.rate) != null ? 'OK' : 'INCOMPLETE')
-          + '(id=' + (l.shipmentId ? 'yes' : 'NO') + ' tracking=' + (l.trackingNumber ? 'yes' : 'NO') + ' pdf=' + (l.labelPdfBase64 ? 'yes' : 'NO') + ' price=' + money(l.rate)
-          + ' keys=' + Object.keys(r || {}).join(',') + ' labelLayout=' + JSON.stringify(docs) + ')');
-      } catch (e) { out.push('pb_buy_' + service + '=FAILED' + why(e)); }
+      for (const size of sizes[service]) {
+        const tag = 'pb_buy_' + service + (size ? '[' + size + ']' : '');
+        try {
+          const ship = buildShipment({ from, to, service, weightOz: service === 'letter' ? 1 : 8, phone: env.PB_DEFAULT_PHONE || '6502530000' });
+          if (size) ship.labelSize = size;
+          const r = await client.createShipment(ship, 'selftest-' + service + '-' + Date.now());
+          const l = readLabel(r);
+          bought = l.shipmentId;
+          const docs = (Array.isArray(r && r.labelLayout) ? r.labelLayout : []).map((d) => ({ type: d && d.contentType, format: d && d.fileFormat, size: d && d.size, length: d && d.contents ? String(d.contents).length : 0 }));
+          out.push(tag + '=' + (l.shipmentId && l.trackingNumber && l.labelPdfBase64 && money(l.rate) != null ? 'OK' : 'INCOMPLETE')
+            + '(id=' + (l.shipmentId ? 'yes' : 'NO') + ' tracking=' + (l.trackingNumber ? 'yes' : 'NO') + ' pdf=' + (l.labelPdfBase64 ? 'yes' : 'NO') + ' price=' + money(l.rate)
+            + ' keys=' + Object.keys(r || {}).join(',') + ' labelLayout=' + JSON.stringify(docs) + ')');
+          break; // one bought label is enough
+        } catch (e) { out.push(tag + '=FAILED' + why(e)); }
+      }
       if (bought && service === 'ground') {
         try { out.push('pb_cancel_ground=OK(' + JSON.stringify(await client.cancelShipment(bought)).replace(/\s+/g, ' ').slice(0, 200) + ')'); }
         catch (e) { out.push('pb_cancel_ground=FAILED' + why(e)); }

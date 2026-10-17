@@ -128,6 +128,11 @@ function makePbClient({ key, secret, env = 'sandbox', partnerId, carrierAccountI
     createShipment: async (shipment, transactionId) => authed('/shipping/api/v2/shipments', { method: 'POST', body: await withAccount(shipment), transactionId }),
     // The raw carrier-account list (the boot self-check wants to SEE a failure; lookUpAccount above hides it).
     carrierAccounts: () => authed('/shipping/api/v1/carrierAccounts', { read: true }),
+    // Payments API (docs.shipping360.pitneybowes.com/openapi/payment): the postage wallet the labels are paid from.
+    walletBalance: (carrierAccountId) => authed('/shippingpaymentmgmt/api/v1/payments/accounts/balance?accountType=WALLET&carrierAccountId=' + encodeURIComponent(carrierAccountId), { read: true }),
+    paymentMethods: (carrierAccountId) => authed('/shippingpaymentmgmt/api/v1/payments/methods?carrierAccountId=' + encodeURIComponent(carrierAccountId), { read: true }),
+    // Charges the payment method on file and adds the amount (dollars) to the wallet. Not read-only: never retried.
+    walletRefill: (carrierAccountId, amount) => authed('/shippingpaymentmgmt/api/v1/payments/wallet/refill', { method: 'POST', body: { carrierAccountId, amount } }),
     // Cancelling an unused label is how postage gets refunded.
     cancelShipment: (shipmentId) => authed('/shipping/api/v2/shipments/cancel', { method: 'POST', body: { shipmentId } }),
     tracking: (trackingNumber, carrier = 'USPS') =>
