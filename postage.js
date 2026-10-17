@@ -222,6 +222,11 @@ function money(r) {
 const linkWhere = (v) => { try { const u = new URL(String(v)); return { host: u.hostname, query: Boolean(u.search) }; } catch (e) { return { host: null }; } };
 const SELFCHECK_FROM = { name: 'TCG Speed Shipper', addr1: '1600 Amphitheatre Parkway', city: 'Mountain View', state: 'CA', zip: '94043' };
 const SELFCHECK_TO = { name: 'Self Check', addr1: '350 Fifth Avenue', city: 'New York', state: 'NY', zip: '10118' };
+// The first two rows of public/samples/tcgplayer-sample-shipping-export.csv (the second has an apartment line).
+const SELFCHECK_SAMPLE_TOS = [
+  { name: 'Sample Buyer', addr1: '123 Sample Way', city: 'Portland', state: 'ME', zip: '04101' },
+  { name: 'Ash Example', addr1: '45 Example Street', addr2: 'Apt 2', city: 'Los Angeles', state: 'CA', zip: '90012' },
+];
 async function pbSelfCheck(env = process.env, fetchImpl = fetch) {
   const cfg = pbConfig(env);
   if (!cfg.configured) return 'pb=NOT_SET';
@@ -270,34 +275,49 @@ async function pbSelfCheck(env = process.env, fetchImpl = fetch) {
         out.push('pb_refill=' + (f && f.status === 'SUCCESS' ? 'OK' : 'NOT_SUCCESS') + '(status=' + (f && f.status) + ' balance=' + (f && f.balanceAvailable) + ')');
       } catch (e) { out.push('pb_refill=FAILED' + why(e)); }
     }
+    // One rehearsal purchase, reported in short words (never the label, its link or a token). Returns { id } if the purchase call
+    // answered, null if it was refused.
+    const rehearse = async (tag, service, toAddr, size, options) => {
+      try {
+        const ship = buildShipment({ from, to: toAddr, service, weightOz: service === 'letter' ? 1 : 8, phone: env.PB_DEFAULT_PHONE || '6502530000' });
+        if (size) ship.labelSize = size;
+        if (options) ship.shipmentOptions = options;
+        const r = await client.createShipment(ship, 'selftest-' + service + '-' + Date.now());
+        const l = readLabel(r);
+        // A PDF label is a link: fetch it the way the buy route does and say how it went (never the link or the file itself).
+        const file = !l.labelPdfBase64 && l.labelPdfUrl ? await downloadLabel(l.labelPdfUrl, client, downloadPauses(env)) : null;
+        const docs = (Array.isArray(r && r.labelLayout) ? r.labelLayout : []).map((d) => Object.assign({ type: d && d.contentType, format: d && d.fileFormat, size: d && d.size }, linkWhere(d && d.contents)));
+        const pdf = l.labelPdfBase64 ? 'yes(inline)'
+          : file && file.base64 ? 'yes(fetched ' + (file.via === 'token' ? 'after login' : 'with no login') + ', ' + file.bytes + ' bytes)'
+            : l.labelPdfUrl ? 'LINK_ONLY(' + (file && file.why) + ')' : 'NO';
+        out.push(tag + '=' + (l.shipmentId && l.trackingNumber && /^yes/.test(pdf) && money(l.rate) != null ? 'OK' : 'INCOMPLETE')
+          + '(id=' + (l.shipmentId ? 'yes' : 'NO') + ' tracking=' + (l.trackingNumber ? 'yes' : 'NO') + ' pdf=' + pdf + ' price=' + money(l.rate)
+          + ' keys=' + Object.keys(r || {}).join(',') + ' labelLayout=' + JSON.stringify(docs) + ')');
+        return { id: l.shipmentId };
+      } catch (e) { out.push(tag + '=FAILED' + why(e)); return null; }
+    };
     // The letter's label size is probed: the two sizes Pitney Bowes documents for First-Class letters, each answered with PB's
     // own words (a size PB accepts moves on to the next check, like the wallet balance; one it refuses says "Invalid label paper size").
     const sizes = { letter: String(env.PB_SELFTEST_LETTER_SIZES || 'DOC_6X4,DOC_9X4').split(',').map((x) => x.trim()).filter(Boolean), ground: [null] };
     for (const service of ['letter', 'ground']) {
       let bought = null;
       for (const size of sizes[service]) {
-        const tag = 'pb_buy_' + service + (size ? '[' + size + ']' : '');
-        try {
-          const ship = buildShipment({ from, to, service, weightOz: service === 'letter' ? 1 : 8, phone: env.PB_DEFAULT_PHONE || '6502530000' });
-          if (size) ship.labelSize = size;
-          const r = await client.createShipment(ship, 'selftest-' + service + '-' + Date.now());
-          const l = readLabel(r);
-          bought = l.shipmentId;
-          // A PDF label is a link: fetch it the way the buy route does and say how it went (never the link or the file itself).
-          const file = !l.labelPdfBase64 && l.labelPdfUrl ? await downloadLabel(l.labelPdfUrl, client, downloadPauses(env)) : null;
-          const docs = (Array.isArray(r && r.labelLayout) ? r.labelLayout : []).map((d) => Object.assign({ type: d && d.contentType, format: d && d.fileFormat, size: d && d.size }, linkWhere(d && d.contents)));
-          const pdf = l.labelPdfBase64 ? 'yes(inline)'
-            : file && file.base64 ? 'yes(fetched ' + (file.via === 'token' ? 'after login' : 'with no login') + ', ' + file.bytes + ' bytes)'
-              : l.labelPdfUrl ? 'LINK_ONLY(' + (file && file.why) + ')' : 'NO';
-          out.push(tag + '=' + (l.shipmentId && l.trackingNumber && /^yes/.test(pdf) && money(l.rate) != null ? 'OK' : 'INCOMPLETE')
-            + '(id=' + (l.shipmentId ? 'yes' : 'NO') + ' tracking=' + (l.trackingNumber ? 'yes' : 'NO') + ' pdf=' + pdf + ' price=' + money(l.rate)
-            + ' keys=' + Object.keys(r || {}).join(',') + ' labelLayout=' + JSON.stringify(docs) + ')');
-          break; // one bought label is enough
-        } catch (e) { out.push(tag + '=FAILED' + why(e)); }
+        const res = await rehearse('pb_buy_' + service + (size ? '[' + size + ']' : ''), service, to, size);
+        if (res) { bought = res.id; break; } // one bought label is enough
       }
       if (bought && service === 'ground') {
         try { out.push('pb_cancel_ground=OK(' + JSON.stringify(await client.cancelShipment(bought)).replace(/\s+/g, ' ').slice(0, 200) + ')'); }
         catch (e) { out.push('pb_cancel_ground=FAILED' + why(e)); }
+      }
+    }
+    // PB_SELFTEST_TO=sample: the app's own sample orders (public/samples) have made-up street names and Pitney Bowes checks the street
+    // on a purchase. Each is bought as a letter the strict way; if PB refuses it, once more with minimalAddressValidation, to see
+    // whether that switch is the way to let the sandbox demo work.
+    if (env.PB_SELFTEST_TO === 'sample') {
+      for (const [i, addr] of SELFCHECK_SAMPLE_TOS.entries()) {
+        const tag = 'pb_buy_sample' + (i + 1);
+        const toAddr = pbAddress(addr).address;
+        if (!(await rehearse(tag, 'letter', toAddr, 'DOC_6X4'))) await rehearse(tag + '_minimal', 'letter', toAddr, 'DOC_6X4', { minimalAddressValidation: true });
       }
     }
   }

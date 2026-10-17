@@ -202,6 +202,30 @@ const isShip = (u) => u.endsWith('/shipping/api/v2/shipments');
     line = await pbSelfCheck(Object.assign({ PB_SELFTEST_BUY: 'on', PB_SELFTEST_LETTER_SIZES: 'DOC_4X6, 9X4' }, SELF_ENV), sizeFetch);
     check('the sizes to try can be chosen (PB_SELFTEST_LETTER_SIZES)', /pb_buy_letter\[DOC_4X6\]=FAILED/.test(line) && /pb_buy_letter\[9X4\]=FAILED/.test(line) && !/DOC_6X4/.test(line.split('pb_buy_ground')[0]), line);
 
+    console.log('\n-- the sample orders\' made-up street addresses (PB_SELFTEST_TO=sample) --');
+    line = await pbSelfCheck(Object.assign({ PB_SELFTEST_BUY: 'on' }, SELF_ENV), buyFetch);
+    check('off by default: no sample-address purchases', !/pb_buy_sample/.test(line));
+    const sampleShips = [];
+    const sampleFetch = (strict) => async (u, init) => {
+      if (isShip(u) && init.method === 'POST') {
+        const b = JSON.parse(init.body);
+        sampleShips.push(b);
+        if (strict && /Sample|Example/.test(b.toAddress.addressLine1) && !(b.shipmentOptions && b.shipmentOptions.minimalAddressValidation)) return resp(400, { errors: [{ errorCode: '2001', message: 'Invalid address: address not found.' }] });
+      }
+      return fullBuy(u, init);
+    };
+    line = await pbSelfCheck(Object.assign({ PB_SELFTEST_BUY: 'on', PB_SELFTEST_TO: 'sample' }, SELF_ENV), sampleFetch(false));
+    check('on: the first two sample orders (one with an apartment line) are bought as letters and reported', /pb_buy_sample1=OK\(id=yes tracking=yes pdf=yes/.test(line) && /pb_buy_sample2=OK\(/.test(line) && !/_minimal/.test(line), line);
+    check('they go to the sample addresses (Portland ME, Los Angeles CA) with the apartment line kept', sampleShips.some((b) => b.toAddress.cityTown === 'Portland' && b.toAddress.stateProvince === 'ME') && sampleShips.some((b) => b.toAddress.cityTown === 'Los Angeles' && b.toAddress.addressLine2 === 'Apt 2'));
+    sampleShips.length = 0;
+    line = await pbSelfCheck(Object.assign({ PB_SELFTEST_BUY: 'on', PB_SELFTEST_TO: 'sample' }, SELF_ENV), sampleFetch(true));
+    check('if Pitney Bowes refuses a made-up street, its words are shown and the same letter is tried once more with minimalAddressValidation', /pb_buy_sample1=FAILED\(400 Invalid address: address not found\.\)/.test(line) && /pb_buy_sample1_minimal=OK\(/.test(line) && /pb_buy_sample2_minimal=OK\(/.test(line), line);
+    const strictTries = sampleShips.filter((b) => /Sample|Example/.test(b.toAddress.addressLine1));
+    check('and only that retry carries the option (the first try is the strict one)', strictTries.filter((b) => b.shipmentOptions && b.shipmentOptions.minimalAddressValidation === true).length === 2 && strictTries.filter((b) => !b.shipmentOptions).length === 2);
+    buyCalls.length = 0;
+    line = await pbSelfCheck(Object.assign({ PB_SELFTEST_BUY: 'on', PB_SELFTEST_TO: 'sample', PB_ENV: 'production', PB_LIVE_OK: 'yes' }, SELF_ENV), buyFetch);
+    check('in production mode it still never buys', !/pb_buy/.test(line) && !buyCalls.some((c) => /shipments/.test(c.url)), line);
+
     console.log('\n-- fetching the label file behind a link (a PDF label is always a link) --');
     const fileRig = (handler) => {
       const calls = [];

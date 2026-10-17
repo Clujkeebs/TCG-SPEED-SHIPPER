@@ -19,6 +19,29 @@ this file, ever: names of variables only.
   `PB_FEE_LETTER` / `PB_FEE_GROUND` override a fee for every plan. Revisit
   after Pitney Bowes' rate sheet.
 
+## What the sandbox rehearsal proved (Oct 17)
+
+The server can rehearse a purchase on every deploy, sandbox only, by itself: set `PB_SELFTEST_BUY=on` (and, if the test wallet
+is low, `PB_SELFTEST_REFILL=<dollars>`, sandbox test money only), deploy, read the Railway deploy log line that starts
+`[self-check] pb_`, then set `PB_SELFTEST_BUY=off` and `PB_SELFTEST_REFILL=0`. It buys one letter and one package, fetches both
+PDFs, and cancels the package. It never runs in production mode and never prints a key, token, label or label link. Learned
+this way, in this order (each was a real "Pitney Bowes error" the owner would have hit):
+
+1. `Accept-Language: *` (Node's default) is refused: every call sends `en-US`.
+2. A price quote answers `{ rates: [ { rate: {...} } ] }`, not the docs' `{ rate: [...] }`; `rateOf` reads every shape and a
+   missing price is never `$0.00`.
+3. First-Class **letters** only accept label size `DOC_6X4` or `DOC_9X4` (IMb labels); packages use `DOC_4X6`.
+4. A **PDF label is always a link** (`labelLayout[].contents`). `contentType: BASE64` is only for ZPL2/PNG/GIF and a PDF
+   request with it fails with "Invalid label file output format", so the request carries no `contentType`. The sandbox link is
+   public (no login, no signature) on a `*-labels-cls.gcs.pitneybowes.com` host; the app fetches it at once and stores the file
+   for reprints. A package whose file cannot be fetched is cancelled and fails; a letter (USPS cannot cancel it) is kept and
+   flagged with its tracking number.
+5. The postage wallet must hold money before any purchase: `pb_wallet=OK($…)` in the same log line (read-only, also in
+   production). Sandbox top-ups work through `/shippingpaymentmgmt/api/v1/payments/wallet/refill` with the test card on file.
+
+For the production flip: the first real letter and package are the first time the production label host is seen; if the log
+shows `label file did not download`, the link needs a login or sits on another host (`pb-client.js` `fetchFile`).
+
 ## Ask Pitney Bowes on the call
 
 Each answer maps to a code or config change, so write them down:
@@ -49,7 +72,7 @@ Each answer maps to a code or config change, so write them down:
    `/api/health` now shows `pb_mode: production`, and balances switch on.
 5. Owner adds a small top-up (the $20 minimum), then buys **one real letter**
    to his own address. Check:
-   - the label prints and scans as a USPS label;
+   - the label prints and scans as a USPS label (and the deploy log has no `label file did not download`);
    - `tcgss_postage_labels` has one row with `mode = 'production'`;
    - the balance dropped by exactly `price` (postage + fee);
    - the charge shows on the PB account.
