@@ -71,6 +71,9 @@ const isShip = (u) => u.endsWith('/shipping/api/v2/shipments');
       : isShip(u) ? resp(200, { shipmentId: 'S1' })
       : u.endsWith('/shipping/api/v1/carrierAccounts') ? resp(200, { data: { carrierAccounts: [{ carrierAccountId: 'acct_usps', carrierName: 'USPS' }] } })
       : u.endsWith('/shipping/api/v2/shipments/cancel') ? resp(200, { status: 'INITIATED' })
+      : u.includes('/shippingpaymentmgmt/api/v1/payments/accounts/balance') ? resp(200, { walletAccount: { currency: 'USD', balanceAvailable: 12.5, pendingBalance: 0 } })
+      : u.includes('/shippingpaymentmgmt/api/v1/payments/methods') ? resp(200, { paymentMethods: [{ paymentMethodCode: 'CC_Visa', paymentMethodStatus: 'ACTIVE', accountNumber: '1111' }] })
+      : u.endsWith('/shippingpaymentmgmt/api/v1/payments/wallet/refill') ? resp(200, { requestedAmount: 50, balanceAvailable: 62.5, totalAmount: 51.75, status: 'SUCCESS' })
       : resp(200, { currentStatus: { status: 'In Transit' } }));
     const gw = makePbClient({ key: 'k', secret: 's', env: 'sandbox', fetchImpl: async (u, init) => { gwCalls.push({ url: u, init }); return gateway(u, init); }, sleep: async () => {} });
     const gwCalls = [];
@@ -95,10 +98,14 @@ const isShip = (u) => u.endsWith('/shipping/api/v2/shipments');
     const selfCalls = [];
     const tokenFirst = (u, init) => (isToken(u) ? resp(200, { access_token: 'TOKEN-DO-NOT-LEAK', expires_in: 14400 }) : gateway(u, init));
     let line = await pbSelfCheck(SELF_ENV, async (u, init) => { selfCalls.push({ url: u, init }); return tokenFirst(u, init); });
-    check('all good: login, the USPS account and a price for each service', line === 'pb_mode=sandbox pb_account=OK(USPS) pb_rate_letter=OK($0.78) pb_rate_ground=OK($0.78)', line);
+    check('all good: login, the USPS account and a price for each service', line === 'pb_mode=sandbox pb_account=OK(USPS) pb_wallet=OK($12.50) pb_pay_methods=1(CC_Visa:ACTIVE) pb_rate_letter=OK($0.78) pb_rate_ground=OK($0.78)', line);
     check('it buys and refunds nothing (only the login, the account list and price quotes)', selfCalls.length >= 3 && !selfCalls.some((c) => /shipments/.test(c.url)), JSON.stringify(selfCalls.map((c) => c.url.split('.com')[1])));
     check('the quote bodies are made-up public addresses, not a seller\'s', selfCalls.filter((c) => isRates(c.url)).every((c) => /Amphitheatre/.test(c.init.body) && /Fifth Avenue/.test(c.init.body)));
     check('the answer never contains the key, the secret or the token', !/KEY-DO-NOT-LEAK|SECRET-DO-NOT-LEAK|TOKEN-DO-NOT-LEAK/.test(line));
+    check('it reads the postage wallet and the payment-method codes, and never a card number', /pb_wallet=OK\(\$12\.50\)/.test(line) && /pb_pay_methods=1\(CC_Visa:ACTIVE\)/.test(line) && !/1111/.test(line));
+    check('the wallet and payment-method lookups are plain reads (GET), and no refill happens by default', selfCalls.filter((c) => /shippingpaymentmgmt/.test(c.url)).every((c) => c.init.method === 'GET') && !selfCalls.some((c) => /wallet\/refill/.test(c.url)));
+    line = await pbSelfCheck(SELF_ENV, async (u, init) => (/shippingpaymentmgmt/.test(u) ? resp(403, { errors: [{ message: 'Not allowed for this account.' }] }) : tokenFirst(u, init)));
+    check('a payments refusal is shown, and the quotes after it still run', /pb_wallet=FAILED\(403 Not allowed for this account\./.test(line) && /pb_pay_methods=FAILED\(403/.test(line) && /pb_rate_letter=OK/.test(line), line);
     line = await pbSelfCheck(SELF_ENV, async (u, init) => tokenFirst(u, { headers: {} })); // what the old client sent
     check('a gateway refusal is shown with its reason (the Oct 16 Accept-Language error would have been seen at deploy time)', /pb_account=FAILED\(400 Invalid value for Accept-Language/.test(line) && /pb_rate_letter=FAILED\(400 Invalid value for Accept-Language/.test(line) && /pb_rate_ground=FAILED\(400/.test(line), line);
     line = await pbSelfCheck(SELF_ENV, async (u) => (isToken(u) ? resp(401, { error: 'invalid_client' }) : resp(200, {})));
@@ -128,7 +135,7 @@ const isShip = (u) => u.endsWith('/shipping/api/v2/shipments');
     const buyCalls = [];
     const buyFetch = async (u, init) => { buyCalls.push({ url: u, method: init.method }); return fullBuy(u, init); };
     line = await pbSelfCheck(Object.assign({ PB_SELFTEST_BUY: 'on' }, SELF_ENV), buyFetch);
-    check('on: it buys a letter and a package label and checks the answer holds an id, a tracking number, a PDF and a price', /pb_buy_letter=OK\(id=yes tracking=yes pdf=yes price=0\.78/.test(line) && /pb_buy_ground=OK\(id=yes tracking=yes pdf=yes price=0\.78/.test(line), line);
+    check('on: it buys a letter and a package label and checks the answer holds an id, a tracking number, a PDF and a price', /pb_buy_letter\[DOC_4X6\]=OK\(id=yes tracking=yes pdf=yes price=0\.78/.test(line) && /pb_buy_ground=OK\(id=yes tracking=yes pdf=yes price=0\.78/.test(line), line);
     check('it refunds the package label (letters cannot be refunded) and reports the answer', /pb_cancel_ground=OK\(\{"status":"INITIATED"/.test(line) && buyCalls.filter((c) => /cancel/.test(c.url)).length === 1);
     check('the label itself is never in the log line', !/JVBERi0/.test(line) && !/TOKEN-DO-NOT-LEAK/.test(line));
     buyCalls.length = 0;
@@ -137,6 +144,32 @@ const isShip = (u) => u.endsWith('/shipping/api/v2/shipments');
     buyCalls.length = 0;
     line = await pbSelfCheck(Object.assign({ PB_SELFTEST_BUY: 'on', PB_ENV: 'production', PB_LIVE_OK: 'yes' }, SELF_ENV), buyFetch);
     check('in production mode it NEVER buys, even if asked', !/pb_buy/.test(line) && !buyCalls.some((c) => /shipments/.test(c.url)), line);
+
+    console.log('\n-- the sandbox refill and the letter label-size probe --');
+    buyCalls.length = 0;
+    const refillBodies = [];
+    const refillFetch = async (u, init) => { buyCalls.push({ url: u, method: init.method }); if (/wallet\/refill/.test(u)) refillBodies.push(JSON.parse(init.body)); return fullBuy(u, init); };
+    line = await pbSelfCheck(Object.assign({ PB_SELFTEST_BUY: 'on', PB_SELFTEST_REFILL: '50' }, SELF_ENV), refillFetch);
+    check('with PB_SELFTEST_REFILL=50 (sandbox, test on) it tops up the wallet by 50 dollars and says so', /pb_refill=OK\(status=SUCCESS balance=62\.5\)/.test(line) && refillBodies.length === 1 && refillBodies[0].amount === 50 && refillBodies[0].carrierAccountId === 'acct_usps', line + JSON.stringify(refillBodies));
+    check('the refill comes before the purchases', line.indexOf('pb_refill') < line.indexOf('pb_buy_letter'));
+    buyCalls.length = 0; refillBodies.length = 0;
+    await pbSelfCheck(Object.assign({ PB_SELFTEST_BUY: 'on', PB_SELFTEST_REFILL: '5000' }, SELF_ENV), refillFetch);
+    await pbSelfCheck(Object.assign({ PB_SELFTEST_BUY: 'on', PB_SELFTEST_REFILL: 'abc' }, SELF_ENV), refillFetch);
+    await pbSelfCheck(Object.assign({ PB_SELFTEST_REFILL: '50' }, SELF_ENV), refillFetch); // refill asked, but the rehearsal switch is off
+    await pbSelfCheck(Object.assign({ PB_SELFTEST_BUY: 'on', PB_SELFTEST_REFILL: '50', PB_ENV: 'production', PB_LIVE_OK: 'yes' }, SELF_ENV), refillFetch);
+    check('never refills: over 500 dollars, not a number, rehearsal off, or production', refillBodies.length === 0);
+    const sizeFetch = async (u, init) => {
+      if (isShip(u) && init.method === 'POST') {
+        const size = JSON.parse(init.body).labelSize;
+        if (size !== '6X4') return resp(400, { errors: [{ errorCode: '1', message: 'Invalid label paper size.' }] });
+        return resp(200, { shipmentId: 'LB1', parcelTrackingNumber: '9400111899223197428490', rate: { totalCarrierCharge: 0.78 }, labelLayout: [{ contentType: 'BASE64', contents: 'JVBERi0xLjQ=', fileFormat: 'PDF', size: '6X4', type: 'SHIPPING_LABEL' }] });
+      }
+      return fullBuy(u, init);
+    };
+    line = await pbSelfCheck(Object.assign({ PB_SELFTEST_BUY: 'on' }, SELF_ENV), sizeFetch);
+    check('the letter label size is probed in order, each refusal shown in PB\'s words, and it stops at the first size PB accepts', /pb_buy_letter\[DOC_4X6\]=FAILED\(400 Invalid label paper size\.\)/.test(line) && /pb_buy_letter\[DOC_6X4\]=FAILED/.test(line) && /pb_buy_letter\[6X4\]=OK\(id=yes/.test(line) && !/pb_buy_letter\[DOC_9X4\]/.test(line), line);
+    line = await pbSelfCheck(Object.assign({ PB_SELFTEST_BUY: 'on', PB_SELFTEST_LETTER_SIZES: 'DOC_6X4, 9X4' }, SELF_ENV), sizeFetch);
+    check('the sizes to try can be chosen (PB_SELFTEST_LETTER_SIZES)', /pb_buy_letter\[DOC_6X4\]=FAILED/.test(line) && /pb_buy_letter\[9X4\]=FAILED/.test(line) && !/DOC_4X6/.test(line.split('pb_buy_ground')[0]), line);
 
     console.log('\n-- a batch does not stampede --');
     const tokenCalls = []; const acctCalls = [];
