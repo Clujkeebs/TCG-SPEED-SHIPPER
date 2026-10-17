@@ -20,7 +20,7 @@ stored on our servers.
 - **Your login, if you are signed in on tcgspeedshipper.com**: the website hands the extension your short-lived *access* token (never
   your refresh token). It is held in memory (with the browser's session storage as a backup that is wiped when you close the browser),
   never written to long-term storage or to any log, and forgotten when it expires, when you sign out, and by Clear everything. The only
-  use is one request to tcgspeedshipper.com asking whether the online assistant is available to you.
+  use is one request to tcgspeedshipper.com asking whether the online assistant is available to you. This is off until you switch on "Online assistant" in Settings, and Chrome asks you at that moment.
 - **The side-panel assistant (practice mode)**: its current plan, the facts you ask it to remember about your shop (you can see
   and remove each one), the approval cards waiting for your answer (and recently finished ones, so you can undo them), saved
   background jobs and the reports they leave, whether you pressed Stop, and the prices in its made-up practice shop. Background

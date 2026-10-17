@@ -213,7 +213,7 @@ test('ATTACK: the token never shows up in storage, messages, status answers, the
   answers.push(await handleRequest(req('account.link', { accessToken: TOKEN, expiresAt: inSeconds(c, 3600) }), SITE, store, { vault: v }));
   answers.push(await handleRequest(req('tracking.put', { batchId: 'b', items: [{ orderId: 'O1', trackingNumber: '123456' }] }), SITE, store, { vault: v }));
   for (const t of ['store.list', 'tracking.list', 'account.token', 'account.get', 'account.status']) answers.push(await handleRequest(req(t, { collection: 'orders' }), SITE, store, { vault: v }));
-  const status = await handleAccountStatus({ type: 'ext.account.status', id: 's1' }, { id: 'EXT', url: 'chrome-extension://EXT/p.html' }, 'EXT', { vault: v, now: c.now, fetchFn: async () => ({ status: 200, json: async () => ({ available: true, remaining: { runsToday: 2 } }) }) });
+  const status = await handleAccountStatus({ type: 'ext.account.status', id: 's1' }, { id: 'EXT', url: 'chrome-extension://EXT/p.html' }, 'EXT', { vault: v, now: c.now, isOn: async () => true, fetchFn: async () => ({ status: 200, json: async () => ({ available: true, remaining: { runsToday: 2 } }) }) });
   answers.push(status);
   const host = createPracticeHost({ extensionId: 'EXT', persist: { async load() { return null; }, async save(s) { local.data.state = s; }, async clear() {} }, now: () => new Date(c.ms) });
   await host.handle({ source: 'tcgss-panel', v: 1, id: 'q', type: 'agent.ask', payload: { text: 'Who are my repeat buyers?' } }, { id: 'EXT', url: 'chrome-extension://EXT/p.html' }, (e) => answers.push(e));
@@ -232,7 +232,7 @@ test('only our own extension pages can ask for the status line, and answers are 
   const c = clockAt(T0); const v = createVault({ area: spyArea(), now: c.now });
   await v.set(TOKEN, c.ms + 3600_000);
   let calls = 0;
-  const deps = { vault: v, now: c.now, fetchFn: async () => { calls++; return { status: 200, json: async () => ({ available: true, remaining: { runsToday: calls } }) }; } };
+  const deps = { vault: v, now: c.now, isOn: async () => true, fetchFn: async () => { calls++; return { status: 200, json: async () => ({ available: true, remaining: { runsToday: calls } }) }; } };
   const mine = { id: 'EXT', url: 'chrome-extension://EXT/src/ui/sidepanel.html' };
   const ask = (sender) => handleAccountStatus({ type: 'ext.account.status', id: 's' }, sender, 'EXT', deps);
   for (const s of [{ id: 'EXT', url: 'https://tcgspeedshipper.com/' }, { id: 'OTHER', url: 'chrome-extension://EXT/x' }, { id: 'EXT' }, undefined]) assert.equal((await ask(s)).ok, false);
@@ -256,3 +256,15 @@ test('Clear everything also forgets the login token and empties session storage'
   assert.deepEqual(session.data, {});
 });
 function memoryArea2() { return { async clear() {}, async remove() {}, async get() { return {}; }, async set() {} }; }
+
+test('with the online assistant off (or the permission gone) the status call makes no request at all', async () => {
+  forgetStatus();
+  const c = clockAt(T0); const v = createVault({ area: spyArea(), now: c.now });
+  await v.set(TOKEN, c.ms + 3600_000);
+  let calls = 0;
+  const r = await handleAccountStatus({ type: 'ext.account.status', id: 's' }, { id: 'EXT', url: 'chrome-extension://EXT/p.html' }, 'EXT', { vault: v, now: c.now, isOn: async () => false, fetchFn: async () => { calls++; return { status: 200, json: async () => ({}) }; } });
+  assert.equal(r.ok, true);
+  assert.equal(r.result.kind, 'assistant-off');
+  assert.match(r.result.line, /off/i);
+  assert.equal(calls, 0);
+});

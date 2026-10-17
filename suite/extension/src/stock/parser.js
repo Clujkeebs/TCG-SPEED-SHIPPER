@@ -5,7 +5,7 @@
 //
 // Each product becomes a "printing" (name, set, number, TCGplayer id) and each condition/finish a stock row.
 // parse(text) -> { ok, items, printings, skipped: [{row, reason}], rows, columns, format, error? }
-import { readCsvRows, MAX_BYTES, MAX_ROWS } from '../orders/parser.js';
+import { readCsvRows, readProblem, MAX_BYTES, MAX_ROWS } from '../orders/parser.js';
 import { validatePrinting, validateInventoryItem, dollarsToCents } from '../vendor/shared/models.js';
 
 const norm = (h) => String(h).toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -17,6 +17,7 @@ const WANT = {
   number: ['number', 'cardnumber', 'collectornumber'],
   condition: ['condition'],
   quantity: ['totalquantity', 'quantity', 'qty', 'stock'],
+  addQuantity: ['addtoquantity', 'addquantity', 'quantitytoadd'],
   price: ['tcgmarketplaceprice', 'yourprice', 'listprice', 'price'],
   market: ['tcgmarketprice', 'marketprice']
 };
@@ -49,11 +50,12 @@ export function parseStockExport(text, { now = new Date() } = {}) {
   const fail = (error, extra = {}) => ({ ok: false, error, items: [], printings: [], skipped: [], rows: 0, ...extra });
   if (typeof text !== 'string' || text.trim() === '') return fail('That file is empty.');
   if (text.length > MAX_BYTES) return fail('That file is too big (over 10 MB). Is it the inventory export?');
-  const rows = readCsvRows(text);
+  let rows;
+  try { rows = readCsvRows(text); } catch (err) { return fail(readProblem(err, 'cards')); }
   if (rows.length < 2) return fail('The file needs a header row and at least one card.');
   if (rows.length - 1 > MAX_ROWS) return fail(`That file has more than ${MAX_ROWS.toLocaleString('en-US')} rows. Split it and import the biggest part.`, { rows: rows.length - 1 });
   const cols = mapStockColumns(rows[0]);
-  if (cols.productId === -1 || cols.quantity === -1) {
+  if (cols.productId === -1 || (cols.quantity === -1 && cols.addQuantity === -1)) {
     return fail('I could not find the product id and quantity columns. Is this the TCGplayer inventory export (or the file Speed Scan makes), not the order export? Columns I found: ' + rows[0].filter(Boolean).slice(0, 12).join(', '), { rows: rows.length - 1 });
   }
   const asOf = now.toISOString().slice(0, 10);
@@ -67,7 +69,9 @@ export function parseStockExport(text, { now = new Date() } = {}) {
     const rowNo = r + 1;
     const productId = get('productId');
     if (!/^\d{1,12}$/.test(productId) || Number(productId) <= 0) { skipped.push({ row: rowNo, reason: 'no product id' }); continue; }
-    const q = get('quantity');
+    // "Total Quantity" is the current count in TCGplayer's own export. Speed Scan may write "Add to Quantity" instead (it is
+    // the count of cards just scanned). Read the total when there is one, otherwise the add column.
+    const q = get('quantity') !== '' ? get('quantity') : get('addQuantity');
     if (!/^\d{1,6}$/.test(q)) { skipped.push({ row: rowNo, reason: 'unreadable quantity' }); continue; }
     const cond = readCondition(cols.condition === -1 ? '' : get('condition'));
     if (!cond) { skipped.push({ row: rowNo, reason: 'condition not understood (sealed product?)' }); continue; }

@@ -17,7 +17,7 @@ TCG Speed Suite is a set of helpers for people who sell trading cards.
 
 **Your real stock.** Choose the inventory export from TCGplayer (or the CSV Speed Scan makes) and repricing works on your real cards. Nothing is guessed: no price is made up.
 
-**Online assistant status.** If you are signed in on tcgspeedshipper.com, the panel shows one plain line: whether the online assistant is available to you and how many questions are left today.
+**Online assistant status.** If you switch it on in Settings and are signed in on tcgspeedshipper.com, the panel shows one plain line: whether the online assistant is available to you and how many questions are left today.
 
 **Five big buttons.** "What should I do today?", "Who are my repeat buyers?", "Where do I ship most?", "Write my weekly summary" and "Draft a reply". No typing needed.
 
@@ -35,7 +35,7 @@ TCG Speed Suite is a set of helpers for people who sell trading cards.
 - **storage**: remembers your switches and the assistant's notes on your own computer.
 - **sidePanel**: shows the assistant next to the page you are on.
 - **alarms**: wakes the extension once a minute so a saved job can run on schedule.
-- **tcgspeedshipper.com**: lets our own website hand the extension your tracking numbers and your short-lived login token, to keep on your computer; the website cannot read anything back. The extension also makes one request to this address, only while you are signed in, to ask whether the online assistant is available to you.
+- **tcgspeedshipper.com**: lets our own website hand the extension your tracking numbers and your short-lived login token, to keep on your computer; the website cannot read anything back. Chrome asks your permission for this when you switch on "Online assistant" in Settings, not when you install. The extension then makes one request to this address, only while you are signed in, to ask whether the online assistant is available to you.
 - **seller.tcgplayer.com (optional, asked only if you switch a TCGplayer helper on; not available yet)**: so a helper can fill in a form you already have open, when you click.
 
 ## What data stays on the device

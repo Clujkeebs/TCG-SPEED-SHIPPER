@@ -50,7 +50,7 @@ async function main() {
     const extId = new URL(sw.url()).host;
     const setup = await ctx.newPage();
     await setup.goto(`chrome-extension://${extId}/src/ui/options.html`);
-    await setup.evaluate(() => chrome.storage.local.set({ tcgss_flags_v1: { agentPanel: true }, tcgss_ui_v1: { tourDone: true } }));
+    await setup.evaluate(() => chrome.storage.local.set({ tcgss_flags_v1: { agentPanel: true, onlineAssistant: true }, tcgss_ui_v1: { tourDone: true } }));
 
     const site = await ctx.newPage();
     await site.goto(`http://localhost:${port}/`);
@@ -155,7 +155,7 @@ async function main() {
     await setup.waitForSelector('text=Everything was erased');
     assert.deepEqual(await setup.evaluate(() => chrome.storage.session.get(null)), {}, 'session storage is empty');
     const beforeClear = seen.length;
-    await setup.evaluate(() => chrome.storage.local.set({ tcgss_flags_v1: { agentPanel: true }, tcgss_ui_v1: { tourDone: true } }));
+    await setup.evaluate(() => chrome.storage.local.set({ tcgss_flags_v1: { agentPanel: true, onlineAssistant: true }, tcgss_ui_v1: { tourDone: true } }));
     assert.equal((await panelLine()).line, 'You are not signed in.');
     assert.equal(seen.length, beforeClear);
     console.log('account scenario ok');

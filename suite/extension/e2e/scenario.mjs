@@ -101,7 +101,7 @@ async function main() {
       await ui.goto(`chrome-extension://${extId}/src/ui/${file}`);
       if (file === 'options.html') {
         await ui.waitForSelector('input[data-flag]');
-        assert.equal(await ui.locator('input[data-flag]').count(), 4);
+        assert.equal(await ui.locator('input[data-flag]').count(), 5);
         await ui.check('input[data-flag="pasteTracking"]');
         await ui.check('input[data-flag="agentPanel"]');
         const res = await ui.evaluate(async () => {

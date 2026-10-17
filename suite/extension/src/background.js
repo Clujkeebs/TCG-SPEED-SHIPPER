@@ -4,6 +4,7 @@ import { validateRequest, makeResponse, makeError, normalizeExpiry } from './bri
 import { createVault } from './account/vault.js';
 import { checkAccount } from './account/status.js';
 import { API_BASE } from './build-config.js';
+import { SITE_ORIGIN } from './site-origin.js';
 import { getFlags } from './flags.js';
 import { openStore } from './store.js';
 import { createPracticeHost } from './agent-host/host.js';
@@ -52,9 +53,19 @@ let hostInstance;
 const broadcast = (event) => { try { chrome.runtime.sendMessage(event).catch(() => {}); } catch { /* no panel open */ } };
 // ---- "Is the online assistant available?" The panel asks; the answer is one plain line (never a token).
 let statusCache = null; // { at, result }
-export async function handleAccountStatus(msg, sender, extensionId, { vault: v = vault, fetchFn, base = API_BASE, now = () => Date.now() } = {}) {
+export const OFF_LINE = 'The online assistant is off. Turn it on in Settings if you want it.';
+// On only when the person switched it on AND Chrome still holds the permission they granted on that click.
+async function onlineAssistantOn() {
+  try {
+    if (!(await getFlags()).onlineAssistant) return false;
+    return (await chrome.permissions.contains({ origins: [SITE_ORIGIN] })) === true;
+  } catch { return false; }
+}
+
+export async function handleAccountStatus(msg, sender, extensionId, { vault: v = vault, fetchFn, base = API_BASE, now = () => Date.now(), isOn = onlineAssistantOn } = {}) {
   const own = sender && sender.id === extensionId && typeof sender.url === 'string' && sender.url.startsWith('chrome-extension://' + extensionId + '/');
   if (!own || !msg || msg.type !== 'ext.account.status') return { ok: false, error: 'not allowed' };
+  if (!(await isOn())) return { ok: true, result: { kind: 'assistant-off', line: OFF_LINE, openSite: false } };
   const hasToken = await v.has();
   if (statusCache && hasToken === statusCache.hadToken && now() - statusCache.at < 60000) return { ok: true, result: statusCache.result };
   const res = await checkAccount({ vault: v, fetchFn: fetchFn ?? globalThis.fetch.bind(globalThis), base });

@@ -163,3 +163,15 @@ test('column map finds the usual names', () => {
   const cols = mapStockColumns(STOCK_HEADER.split(','));
   assert.deepEqual([cols.productId, cols.name, cols.condition, cols.quantity, cols.price, cols.market], [0, 3, 7, 12, 14, 8]);
 });
+
+test('quantity: "Total Quantity" wins, "Add to Quantity" is the fallback, and either header alone is enough', () => {
+  const head = 'TCGplayer Id,Product Name,Set Name,Condition,TCG Market Price';
+  const both = parseStockExport([STOCK_HEADER, '111,Magic,"Practice Set","Ember Drake",,12,Rare,Near Mint,5.00,,,4.50,3,9,4.75', '112,Magic,"Practice Set","Quiet Grove",,13,Rare,Near Mint,5.00,,,4.50,,6,4.75'].join('\n'));
+  assert.equal(both.ok, true);
+  assert.deepEqual(both.items.map((i) => i.quantity), [3, 6]);
+  const addOnly = parseStockExport([head + ',Add to Quantity', '111,"Ember Drake","Practice Set",Near Mint,5.00,7'].join('\n'));
+  assert.equal(addOnly.ok, true);
+  assert.equal(addOnly.items[0].quantity, 7);
+  const bad = parseStockExport([head + ',Add to Quantity', '111,"Ember Drake","Practice Set",Near Mint,5.00,lots'].join('\n'));
+  assert.equal(bad.items.length, 0);
+});

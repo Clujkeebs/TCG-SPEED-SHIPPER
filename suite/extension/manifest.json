@@ -10,7 +10,8 @@
     "alarms"
   ],
   "optional_host_permissions": [
-    "https://seller.tcgplayer.com/*"
+    "https://seller.tcgplayer.com/*",
+    "https://tcgspeedshipper.com/*"
   ],
   "background": {
     "service_worker": "src/background.js",
@@ -52,8 +53,5 @@
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
-  },
-  "host_permissions": [
-    "https://tcgspeedshipper.com/*"
-  ]
+  }
 }

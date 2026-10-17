@@ -23,7 +23,7 @@ time."
 |---|---|
 | `storage` | Save the seller's on/off settings on their device. |
 | `sidePanel` | Show the Agent panel (placeholder in this version). |
-| `https://tcgspeedshipper.com/*` (script and one request) | Pass the seller's own tracking numbers and login token from our website to the extension (write only), and ask the site once whether the online assistant is available. | 
+| `https://tcgspeedshipper.com/*` (script and one request) | Pass the seller's own tracking numbers and login token from our website to the extension (write only), and ask the site once whether the online assistant is available. Optional: Chrome asks on the Settings click, not at install. | 
 | optional host `https://seller.tcgplayer.com/*` | Asked at runtime, only when the seller turns on a TCGplayer helper (not available yet). No install-time warning. |
 
 ## Data-use disclosures (store form)
