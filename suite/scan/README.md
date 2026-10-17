@@ -17,6 +17,9 @@ TCGplayer Seller Portal import. Works offline after the first visit. No build st
 ## Finding any card
 The built-in list is only 96 sample cards. With **Look up any card online** ticked (default), a search that finds nothing locally asks Scryfall / Pokémon TCG / YGOPRODeck from your browser and remembers the result on the device. Tested with simulated responses only.
 
+## Which file to download (read this)
+List tab, **File to download**: **Add these cards to my stock** (default, safe: counts go in "Add to Quantity" so stock only goes up), **Set my stock to exactly these counts** (can LOWER counts: warned), or **Mana Pool file**. First import of any new file: 3 cards, into Staged inventory, check them. What is verified from a source and what is not: `docs/suite/SCAN-COVERAGE.md`. All the column names live in `core/csv-format.js`.
+
 ## Prices, links and problems
 Prices from the card sites carry the time they were fetched; older than 24 hours means a refetch, or a red warning on the row. For a card with no TCGplayer product id, paste its TCGplayer page address (only the number is read from the text; the page is never opened). **Report a problem** copies a short plain-text note for the board inbox.
 
@@ -59,7 +62,8 @@ cd suite && npm test
 | Scryfall adapter | Tested on hand-written fixtures in the documented shape. Never run against the real service. `dev/fetch-scryfall.js` (not used by tests) can fetch a set, politely and cached. Check Scryfall's terms first. |
 | Sample data (`data/sample/`, 96 printings, 4 games) | Names and set codes are public facts; **collector numbers are best effort, not checked**. Prices are **made-up demo numbers**. No product IDs, no images. |
 | Camera, card detection, text reading (Tesseract.js in `vendor/`), parsing, lookup, accept-or-ask | Measured on synthetic cards only (see `docs/suite/SCAN-EVAL.md`). **No accuracy on real photos yet.** |
-| CSV columns | All in `core/csv-format.js`. The **CSV check** tab compares a pasted real export header with ours. Unverified until a real export arrives. |
+| CSV columns | All in `core/csv-format.js` (three files: add / set / Mana Pool). The **CSV check** tab compares a pasted real export header with the chosen file. **Unverified against a real export**; sources and gaps in SCAN-COVERAGE.md. |
+| One Piece online lookup | Built against an assumed fixture and **switched off** (`data/flags.js`); terms, fields and browser access unverified. |
 | Pokémon, Yu-Gi-Oh!, One Piece adapters | Written against assumed response shapes, tested on hand-written fixtures only. |
 | Phone layout | Checked at 390px and 1280px in a headless browser. Not yet tried on a real iPad or iPhone. |
 

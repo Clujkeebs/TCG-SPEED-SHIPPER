@@ -75,3 +75,25 @@ but the row shows "price from <date>, older than a day" in red until the seller 
 ## TCGplayer product id from a pasted link (built 2026-10-16)
 When a card has no product id the seller pastes the card's TCGplayer page address; the number after `/product/` is read out of
 the text (`core/tcgurl.js`). The page is never fetched or opened by the app. Only tcgplayer.com addresses are accepted.
+
+## The import files: what is verified and what is not (updated 2026-10-17)
+The app writes one of three files (`core/csv-format.js`; the rules are in the code and repeated here). **Default: "Add these cards to my stock".**
+| File | Count goes in | Why |
+|---|---|---|
+| TCGplayer, add (default) | "Add to Quantity"; no "Total Quantity" column | A scanner should ADD what it scanned and must never be able to LOWER a count |
+| TCGplayer, set | "Total Quantity" | For a seller who has counted a card completely. The app warns it can lower counts |
+| Mana Pool | "Total Quantity" (Mana Pool ignores "Add to Quantity") | Mana Pool has its own Add / Update choice at import |
+
+**Verified from a source** (read through search results; our sandbox cannot open tcgplayer.com or manapool.com, and NO real export file has been checked):
+1. TCGplayer's export has both "Total Quantity" and "Add to Quantity" (a whole number; positive adds). TCGplayer help, "Importing and Exporting CSVs to Mass Update Prices and Quantities".
+2. "TCG Marketplace Price" is required. Same article.
+3. The Pricing tab imports into Staged inventory first. Same article.
+4. Mana Pool reads "TCGPlayer Id", "Total Quantity", "TCG Marketplace Price", ignores "Add to Quantity", and has its own Add / Update choice. Mana Pool support article.
+
+**Still unverified:** exact header capitals on TCGplayer's side (we write "TCGplayer Id" for TCGplayer, "TCGPlayer Id" for Mana Pool, as each source spells it); whether TCGplayer accepts "Add to Quantity" with no "Total Quantity" column and what an empty "Total Quantity" would do; the "Condition" column (name, "Near Mint Foil" wording, whether extras are ignored); how a product id picks condition and finish. PLAN.md quotes an older snippet saying imports never overwrite quantities; a later reading says Total Quantity may set them: treat "set" as able to lower counts.
+**Closes it:** one real TCGplayer inventory export from Sam (paste its first line into the CSV check tab), and a 3-card trial import into Staged inventory.
+**Seller advice shown in the app and SCAN-BETA.md:** the first import of any new file is 3 cards, into Staged inventory, checked before it goes live.
+
+## One Piece: built but OFF (2026-10-17)
+**UNVERIFIED, and switched off** (`FLAGS.onePieceLive = false` in `data/flags.js`). A search found optcgapi.com claiming to be free for OP-01 to OP-15 with card endpoints like `/api/sets/card/{card_id}/` and `/api/decks/card/{card_id}/`. We found **no terms of use**, no key requirement, and an undocumented price API; a different project (arjunkai/optcg-api) lists TCGplayer market prices and history but needs a key and is gated to named sites. The adapter (`providers/onepiece.js`) and the lookup path (`data/live.js`) are written against `data/fixtures/onepiece-optcgapi-ASSUMED.json`, a file that says in every row that it is NOT a real response. **Unknown for sure: the terms of use, the real field names, and whether a browser may call it (CORS).** The app does not look One Piece cards up online and tests prove it makes no request while the flag is off.
+**Closes it (owner/HQ action):** ask the maintainer (their Discord) about terms and browser use, or Sam opens the site's docs page and pastes ONE real card response (for example OP01-016) into the board inbox. Then the fixture is replaced by the real response, the adapter is corrected, and the flag is turned on in a PR.

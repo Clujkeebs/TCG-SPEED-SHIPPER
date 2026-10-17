@@ -56,19 +56,27 @@ test('scripted model fails loudly when its script runs out', async () => {
   await assert.rejects(runAgent({ model: scriptedModel([]), registry: reg(), messages: ask }), /ran out/);
 });
 
-test('anthropic adapter needs env vars and builds the request (fake fetch, no network)', async () => {
-  assert.throws(() => createAnthropicModel({ env: {} }), /API_KEY/);
-  assert.throws(() => createAnthropicModel({ env: { ANTHROPIC_API_KEY: 'k' } }), /MODEL/);
+test('direct provider adapter: local experiments only, never in a page, renames dotted tool names both ways (fake fetch, no network)', async () => {
+  const env = { ANTHROPIC_API_KEY: 'test-key', ANTHROPIC_MODEL: 'test-model', AGENT_LOCAL_EXPERIMENT: 'yes' };
+  assert.throws(() => createAnthropicModel({ env: { ANTHROPIC_API_KEY: 'k', ANTHROPIC_MODEL: 'm' } }), /local experiments only/);
+  assert.throws(() => createAnthropicModel({ env: { AGENT_LOCAL_EXPERIMENT: 'yes' } }), /API_KEY/);
+  assert.throws(() => createAnthropicModel({ env: { ANTHROPIC_API_KEY: 'k', AGENT_LOCAL_EXPERIMENT: 'yes' } }), /MODEL/);
+  globalThis.window = {};
+  try { assert.throws(() => createAnthropicModel({ env }), /web page/); } finally { delete globalThis.window; }
   let seen;
-  const fetchImpl = async (url, init) => { seen = { url, init }; return { ok: true, json: async () => ({ content: [{ type: 'text', text: 'hi' }], usage: { input_tokens: 1000000, output_tokens: 0 } }) }; };
-  const m = createAnthropicModel({ env: { ANTHROPIC_API_KEY: 'test-key', ANTHROPIC_MODEL: 'test-model' }, fetchImpl, centsPerMillionIn: 300 });
-  const r = await m.complete(ask, [{ name: 'x' }], 'sys');
-  assert.match(seen.url, /^https:\/\/api\.anthropic\.com\/v1\/messages$/);
+  const fetchImpl = async (url, init) => { seen = { url, init }; return { ok: true, json: async () => ({ content: [{ type: 'tool_use', id: 'x', name: 'orders__search', input: {} }], usage: { input_tokens: 1000000, output_tokens: 0 } }) }; };
+  const m = createAnthropicModel({ env, fetchImpl, centsPerMillionIn: 300 });
+  const history = [{ role: 'user', content: 'q' }, { role: 'assistant', content: [{ type: 'tool_use', id: 'p', name: 'orders.stats', input: {} }] }, { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'p', content: '{}' }] }];
+  const r = await m.complete(history, [{ name: 'orders.search', description: 'd', input_schema: { type: 'object', properties: {} } }], 'sys');
   const body = JSON.parse(seen.init.body);
-  assert.equal(body.model, 'test-model');
-  assert.equal(body.system, 'sys');
+  assert.match(seen.url, /^https:\/\/api\.anthropic\.com\/v1\/messages$/);
+  assert.equal(body.tools[0].name, 'orders__search', 'tool names go out without dots');
+  assert.equal(body.messages[1].content[0].name, 'orders__stats', 'and so does earlier history');
+  assert.equal(r.content[0].name, 'orders.search', 'names come back with dots');
+  assert.equal(body.model, 'test-model'); assert.equal(body.system, 'sys');
   assert.equal(seen.init.headers['x-api-key'], 'test-key');
   assert.equal(r.costCents, 300);
-  const failing = createAnthropicModel({ env: { ANTHROPIC_API_KEY: 'k', ANTHROPIC_MODEL: 'm' }, fetchImpl: async () => ({ ok: false, status: 429 }) });
+  await assert.rejects(m.complete(history, [{ name: 'a__b', description: 'd', input_schema: {} }]), /already contains/);
+  const failing = createAnthropicModel({ env, fetchImpl: async () => ({ ok: false, status: 429 }) });
   await assert.rejects(failing.complete(ask, []), /429/);
 });

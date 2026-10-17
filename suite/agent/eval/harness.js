@@ -18,13 +18,13 @@ import { automationScenarios } from './automation-scenarios.js';
 const BUDGET3 = { maxMs: 1500, maxRssGrowthMB: 100 };
 
 // A whole shop on made-up data. `clock` can be changed by a scenario to move through the week.
-export function makeWorld({ clockStart = FIXTURE_NOW, auditStore } = {}) {
+export function makeWorld({ clockStart = FIXTURE_NOW, auditStore, limitConfig } = {}) {
   const printings = loadPrintings();
   const state = { now: clockStart };
   const clock = () => new Date(state.now);
   const nowIso = () => state.now;
   const audit = createAuditLog({ now: clock, ...(auditStore ? { store: auditStore } : {}) });
-  const limits = createLimits({ now: clock });
+  const limits = createLimits({ now: clock, ...(limitConfig || {}) });
   const registry = createRegistry({ audit, limits });
   const orders = makeOrders({ printings });
   const inventory = makeInventory({ printings });
@@ -37,7 +37,7 @@ export function makeWorld({ clockStart = FIXTURE_NOW, auditStore } = {}) {
   registerAll(registry, { orders, inventory, printings, messages, memory, automations, names, pending: () => (inbox ? inbox.pendingCount() : 0), now: nowIso });
   inbox = createInbox({ registry, now: clock });
   const planner = createRulePlanner({ registry, memory, now: nowIso });
-  const agent = createAgent({ registry, memory, inbox, planner, reports, now: nowIso, names });
+  const agent = createAgent({ registry, memory, inbox, planner, reports, now: nowIso, names, firstNameFor: (orderId) => { const o = orders.find((x) => x.id === orderId); return o && o.shipTo.name ? o.shipTo.name.split(' ')[0] : undefined; } });
   return { registry, audit, limits, memory, inbox, planner, agent, automations, reports, orders, inventory, printings, messages, names, state, nowIso };
 }
 
@@ -79,7 +79,7 @@ export async function runAll(list = scenarios) {
   return results;
 }
 
-export function toMarkdown(results, date, week, redteam, batch3) {
+export function toMarkdown(results, date, week, redteam, batch3, batch4) {
   const passed = results.filter((r) => r.pass).length;
   const lines = [
     '# Agent evaluation',
@@ -135,6 +135,14 @@ export function toMarkdown(results, date, week, redteam, batch3) {
     lines.push('', '### Example: the weekly summary from the 10,000-row file (names filled in on the device)', '', '```', m.insightsDraft, '```', '',
       '### Example: the morning briefing', '', '```', m.briefing.text, '```', '',
       '### Example: the same "where is my order" reply in two saved voices', '', '```', m.voice.casualDraft, '', '--- vs ---', '', m.voice.formalDraft, '```', '');
+  }
+  if (batch4) {
+    const ok = batch4.checks.filter((c) => c.pass).length;
+    lines.push('## The real-model door, draft text for the panel, cost measurement', '',
+      `No real model: everything runs against a local stand-in that enforces the contract in \`AGENT-PROXY.md\`. **${ok} of ${batch4.checks.length} checks pass.** No real cost has been measured yet; the plan and the report format are in \`AGENT-MEASURE.md\`.`, '',
+      '| Area | Check | Result |', '|---|---|---|');
+    for (const c of batch4.checks) lines.push(`| ${c.area} | ${c.name} | ${c.pass ? 'pass' : 'FAIL ' + c.detail} |`);
+    lines.push('', '### Example report from the stand-in (invented numbers)', '', '```', batch4.reportText.trim(), '```', '');
   }
   lines.push('Also covered by unit tests (not scenarios): tool limits and kill switch, audit log hashing, side-panel message protocol, CSV import and export, deal-finder allow-list.');
   lines.push('', 'Re-run: `node suite/agent/eval/run.js` (add `--write` to refresh this file).', '');

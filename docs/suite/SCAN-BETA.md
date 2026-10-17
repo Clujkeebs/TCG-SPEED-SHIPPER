@@ -38,7 +38,12 @@ is, adds it to a list with a price, and at the end gives you one file to upload 
 7. Would you use this every week? Would you pay for it, and roughly how much per month?
 8. Can you send us a photo or two of cards it got wrong? (Optional.)
 
-**About the file:** the file we make uses the same columns that Mana Pool's importer says it reads from TCGplayer files (from Mana Pool's own help article). We have not yet checked it against a real TCGplayer file, so look at the first lines before you upload.
+**About the file (please read).** On the **List** tab, under **File to download**, you pick what the file does:
+- **Add these cards to my stock** (the default): your stock goes UP by the cards you scanned. Safe.
+- **Set my stock to exactly these counts**: careful, this can LOWER your stock. If you own 20 of a card and the file says 1, TCGplayer may change 20 to 1.
+- **Mana Pool file**: for Mana Pool's importer.
+
+**The first time you import any new file, use just 3 cards, into Staged inventory, and check them before anything goes live.** The column names come from TCGplayer's and Mana Pool's help articles (read through a search tool); we have not yet checked the file against a real TCGplayer file. The file uses the same ID, quantity and price columns that Mana Pool's importer says it reads from TCGplayer files.
 
 If you can, tap **Share my results** on the List tab after a session and paste what it copies. It holds no photos, names or prices, only what the camera read and what card you ended up with, and it helps us fix the reading.
 

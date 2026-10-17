@@ -567,6 +567,15 @@ its agent (see `openWorld` in `eval/harness.js`); the Extension's own copy of th
 Needs owner: none.
 Next: a measured run with a real model (needs a key and a small budget from the owner); event triggers on a real timer inside the Extension.
 
+### 2026-10-17 · scan · batch 6: safe CSV, One Piece (off), offline list · done (PR open)
+1) CSV made safe. **`suite/scan/core/csv-format.js` CHANGED** (the Extension vendors a copy; I ran `cd suite/extension && npm run vendor` and committed the refresh). The file now has three formats: "Add these cards to my stock" (DEFAULT: count in "Add to Quantity", NO "Total Quantity" column, so a scan can never lower stock), "Set my stock to exactly these counts" (Total Quantity; red warning that it can lower counts), and a Mana Pool file (Total Quantity). The List tab has a plain "File to download" choice (remembered on the device) with the first-import advice (3 cards, Staged inventory, check first); the download message and footer repeat it. `FORMAT` (what the Extension reads) is now the "add" format, so its header is `TCGplayer Id,Condition,Add to Quantity,TCG Marketplace Price`. `csv-format.js` has a `RULES` block, and SCAN-COVERAGE.md has a table, saying exactly which column rules are verified from a source (4 items, read through search, no real export checked) and which are not. Tests: golden files for all three formats, safe default, warning only on "set", round trip of all three through our CSV reader, header check per format.
+2) One Piece: built but OFF (`data/flags.js`, `onePieceLive = false`). Adapter + lookup path against `onepiece-optcgapi-ASSUMED.json`, which says in every row it is not a real response; tests prove no request is made while off, and exercise the path with the flag injected on. Loud UNVERIFIED section in SCAN-COVERAGE.md (terms, fields, CORS) and the action that closes it: ask the maintainer, or Sam pastes one real card response.
+3) Found by a new test and fixed: the service worker's offline list was missing 7 scripts the app loads (live lookup, flags, the four providers, the reader wrapper); they were only cached after a first online load. Now all are precached; the test fails if one is missing in future.
+Numbers: Scan tests 140 pass offline; suite 413 and root 19 suites green. Note: the Extension browser test "import 2,000 orders, insights, quick actions, restart, accessibility, Clear everything" failed in 2 of 4 runs here and passed on re-run (timing, not related to Scan).
+Needs Builder: please check the Extension's own tests/uploader against the new default header (it compares an upload's header with `FORMAT`). After merge, tell Sam the file now ADDS to stock by default.
+Needs owner: one real TCGplayer export (paste its first line into the CSV check tab); then do a 3-card test import into Staged inventory. For One Piece: paste one real card response from optcgapi.com's docs page.
+Next: wait for Sam's real session (Share my results text).
+
 ### 2026-10-17 · hq · board updates after merges · done
 Board only. New Now item A19 "Reply to Rob: he has been waiting since Oct 15" (does not show the draft text; says the draft suggests a plan above Premium and that the owner decides). I made it a new item instead of unticking A16, so the owner's Oct 15 tick and note stay as they were. S6 stays on top and has the line about "Share my results". New low-priority owner task S8 "Try Import my orders in the Chrome extension" (only reaches Now when fewer than three items are open). No "real AI model" task was added. A small "Two quick questions" block on Now shows the two blocking decisions with one-tap answers that post to the inbox: buy the three domains (Yes at Porkbun, Yes through Claude on Vercel, Not yet) and C5 (Yes, Not yet). Today's order on Now: S6, A19, A8. Re-checked at 820x1180, 1180x820 and 390x844 in dark: no errors, no sideways scroll.
 Needs Builder: the answers arrive in the inbox as plain text starting "buy domains:" or "C5:". S8 says "tell Claude ready" for install steps: please send them when asked.
@@ -604,3 +613,34 @@ Numbers: `cd suite && npm test` 443 pass, 0 fail; root `npm test` 19 suites pass
 Needs Builder: same as the entry above (web app side of `account.link`, `adapters/proxy.js`, card names in orders). If the restart test flakes in CI, rerun it once.
 Needs owner: none new.
 Next: STOP, per instructions. Nothing blocked on me except X2.
+
+### 2026-10-17 · agent · batch 4: the real-model door, draft text for the panel, cost-measurement plan · done
+Batch 3 (#186) was already merged; this branch was restarted from `main`. Read the Builder's proxy entry and `AGENT-PROXY.md`.
+(1) `adapters/proxy.js`: posts only `{ messages, tools }` to `/api/agent/messages` with the login token from a function the host gives it (asked for
+on every call, never stored, never in an error); no system prompt or model name; tools go as the registry gives them (a name containing "__" is
+refused); the conversation is checked first (one plain-text question, then tool_use / tool_result pairs, ending on a user message, at most 8 model
+calls, under 60 KB). Returns `{ content, costCents, costMillicents, usage, remaining }` and keeps `model.remaining`; `model.status()` calls
+`GET /api/agent/status`. Every failure is a `ProxyError` with the server's plain words, `code` and `resetsAt`; the panel gets them in `agent.answer`
+(`code`, `resetsAt`). Tested over real HTTP against a local stand-in that enforces the contract (`fixtures/proxy-stub.js`): all 14 status/code rows
+of the table (400, 402, 403, 413, 429 with runs, calls, day, month, global, steps, busy, 502, 503 with off and try_again), plus 401, network down and
+timeout. No `Buffer` or other Node-only global in the adapter (a test guards that, since the Extension's worker runs it).
+(2) BUG fixed in `adapters/anthropic.js`: dotted tool names are rejected by the provider. It now renames `.` to `__` and back, and is marked LOCAL
+EXPERIMENTS ONLY: it refuses to start without `AGENT_LOCAL_EXPERIMENT=yes` and refuses to run in a web page.
+(3) Draft text: finished draft steps (reply to a buyer, weekly summary, briefing, order-file summary) carry the text to copy in `agent.plan` steps
+(`output`) and in `agent.answer` (`drafts: [{ title, text, notes?, truncated? }]`, notes = the seller-only policy block). `{{first_name}}` and
+`{{buyer:KEY}}` are filled in on the device only: the model, the audit trail and the saved plans only ever hold placeholders (tested). Same when a
+model writes the answer. Shapes in `DATA-MODEL.md`.
+(4) `docs/suite/AGENT-MEASURE.md` and `eval/measure.js`: the first six scenarios, the three numbers (tokens per question, right tools, 8-step limit
+rate) plus the cents the server counted, a report format, a budget stop and a stop when the server says a limit is reached. `--stub` is safe;
+`--live` needs `--yes-spend-money`, an https address and `AGENT_LOGIN_TOKEN` (never printed). Tested only against the stand-in; no real model was
+called. Note the default limit (5 questions, 25 cents a person a day) fits five of the six on day one.
+Numbers: `cd suite && npm test` 428 pass, 0 fail; root `npm test` run before the PR. 24 scenarios, week 31/31, red team 22/22, batch 3 19/19, batch 4
+9/9. Vendoring done: added `agent/adapters/proxy.js` to the Extension's vendor list and ran `npm run vendor`.
+Flaky test, not from this change: the Extension's `e2e/orders.e2e.test.js` ("import 2,000 orders...") failed twice (once in a full run, once alone,
+both right after heavy runs) with "waiting for event filechooser" at `orders.scenario.mjs:90` (Enter on `#drop` did not open the file chooser within
+30 s), then passed 3 of 3 with identical files and on a clean `main`. Probably a focus race on `#drop`; worth a look by the Extension session.
+Needs Builder: the Extension's service worker builds `createProxyModel({ baseUrl, getToken })` with the site login token and passes it to
+`createAgentService({ model })`.
+Needs owner: nothing now. When you are ready: "Turn on a real model (costs money)" (a key with its own spend limit, then the Railway variables in
+`AGENT-PROXY.md`), then ask the Agent session to run the six questions. Expect well under a dollar.
+Next: run the measurement once the model is on; trim tool descriptions if the numbers say so.

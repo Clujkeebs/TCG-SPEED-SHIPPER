@@ -33,7 +33,7 @@ export async function runAgent({ model, registry, messages, ctx = {}, maxSteps =
     for (const use of uses) {
       const out = await registry.run(use.name, use.input || {}, ctx);
       calls.push({ name: use.name, input: use.input || {}, ok: out.ok, denied: !!out.denied });
-      if (onCall) onCall({ tool: use.name, ok: out.ok, denied: !!out.denied });
+      if (onCall) onCall({ tool: use.name, ok: out.ok, denied: !!out.denied }, out); // `out` (with the raw result) is for the device only
       results.push({ type: 'tool_result', tool_use_id: use.id, content: JSON.stringify(out.ok ? (out.untrusted ? { notice: UNTRUSTED_NOTICE, data: out.result } : out.result) : { error: out.error }), is_error: !out.ok });
     }
     convo.push({ role: 'user', content: results });

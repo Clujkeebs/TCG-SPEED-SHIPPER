@@ -110,6 +110,23 @@ const FORMAT = {
   'orders.fileInsights': (r) => `${r.summary.orders} orders read from your file`,
   'suggestions.weekly': (r) => `${r.suggestions.length} things worth doing`,
 };
+// The text a seller can copy out of a finished draft step: { title, text, notes?, orderId?, truncated? }.
+// It still holds placeholders ({{first_name}}, {{buyer:KEY}}); the device fills the names in just before showing it.
+export const MAX_COPY_CHARS = 6000;
+export function copyableOf(tool, result) {
+  if (!result || typeof result !== 'object') return null;
+  let c = null;
+  if (tool === 'support.draftReply' && typeof result.message === 'string') {
+    const notes = typeof result.draft === 'string' ? result.draft.slice(result.message.length).trim() : '';
+    c = { title: 'Reply to the buyer (draft, not sent)', text: result.message, ...(notes ? { notes } : {}), orderId: result.orderId };
+  } else if (tool === 'report.weeklyDraft' && typeof result.text === 'string') c = { title: 'Weekly summary (draft)', text: result.text };
+  else if (tool === 'briefing.morning' && typeof result.text === 'string') c = { title: 'Morning briefing', text: result.text };
+  else if (tool === 'orders.fileInsights' && typeof result.draft === 'string') c = { title: 'Weekly summary from your order file (draft)', text: result.draft };
+  if (!c) return null;
+  if (c.text.length > MAX_COPY_CHARS) { c.text = c.text.slice(0, MAX_COPY_CHARS - 1) + '…'; c.truncated = true; }
+  return c;
+}
+
 export const formatResult = (tool, result) => (FORMAT[tool] ? FORMAT[tool](result) : 'done');
 
 export async function runPlan({ plan, registry, inbox, onEvent = () => {}, ctx = {}, actor = 'agent' }) {
@@ -153,7 +170,7 @@ export async function runPlan({ plan, registry, inbox, onEvent = () => {}, ctx =
       results[step.id] = out.result;
       const problem = check(step, out.result);
       if (problem) { rec.status = 'unexpected'; rec.note = problem; }
-      else { rec.status = 'ok'; rec.note = formatResult(step.tool, out.result); }
+      else { rec.status = 'ok'; rec.note = formatResult(step.tool, out.result); const copy = copyableOf(step.tool, out.result); if (copy) rec.copy = copy; }
     }
     onEvent({ event: 'step', planId: plan.id, ...rec });
   }
