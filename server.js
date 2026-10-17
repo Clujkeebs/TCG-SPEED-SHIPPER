@@ -1443,6 +1443,8 @@ async function selfCheck() {
   out.push('webhook_secret=' + (process.env.STRIPE_WEBHOOK_SECRET ? (/^whsec_/.test(process.env.STRIPE_WEBHOOK_SECRET) ? 'PRESENT' : 'WRONG_FORMAT') : 'MISSING'));
   ['STRIPE_PRICE_BASE', 'STRIPE_PRICE_PREMIUM'].forEach((k) => out.push(k + '=' + (process.env[k] ? 'SET' : 'MISSING')));
   console.log('[self-check] ' + out.join(' '));
+  // Pitney Bowes, read-only (no label is bought): its own line, so a slow answer never delays the one above.
+  try { console.log('[self-check] ' + await require('./postage').pbSelfCheck()); } catch (e) { console.log('[self-check] pb=FAILED(exception)'); }
 }
 
 if (require.main === module) {

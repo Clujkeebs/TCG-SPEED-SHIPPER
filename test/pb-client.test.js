@@ -89,6 +89,25 @@ const isShip = (u) => u.endsWith('/shipping/api/v2/shipments');
     err = null; try { await bare.rate(SHIP); } catch (e) { err = e; }
     check('(the stand-in gateway does refuse a call that sets no Accept-Language, so this test would have caught the bug)', err instanceof PbError && err.status === 400 && /Accept-Language/.test(err.message), err && err.message);
 
+    console.log('\n-- the boot self-check: a read-only look at Pitney Bowes --');
+    const { pbSelfCheck } = require('../postage');
+    const SELF_ENV = { PB_API_KEY: 'KEY-DO-NOT-LEAK', PB_API_SECRET: 'SECRET-DO-NOT-LEAK', PB_RETRY_BASE_MS: '1' };
+    const selfCalls = [];
+    const tokenFirst = (u, init) => (isToken(u) ? resp(200, { access_token: 'TOKEN-DO-NOT-LEAK', expires_in: 14400 }) : gateway(u, init));
+    let line = await pbSelfCheck(SELF_ENV, async (u, init) => { selfCalls.push({ url: u, init }); return tokenFirst(u, init); });
+    check('all good: login, the USPS account and a price for each service', line === 'pb_mode=sandbox pb_account=OK(USPS) pb_rate_letter=OK($0.78) pb_rate_ground=OK($0.78)', line);
+    check('it buys and refunds nothing (only the login, the account list and price quotes)', selfCalls.length >= 3 && !selfCalls.some((c) => /shipments/.test(c.url)), JSON.stringify(selfCalls.map((c) => c.url.split('.com')[1])));
+    check('the quote bodies are made-up public addresses, not a seller\'s', selfCalls.filter((c) => isRates(c.url)).every((c) => /Amphitheatre/.test(c.init.body) && /Fifth Avenue/.test(c.init.body)));
+    check('the answer never contains the key, the secret or the token', !/KEY-DO-NOT-LEAK|SECRET-DO-NOT-LEAK|TOKEN-DO-NOT-LEAK/.test(line));
+    line = await pbSelfCheck(SELF_ENV, async (u, init) => tokenFirst(u, { headers: {} })); // what the old client sent
+    check('a gateway refusal is shown with its reason (the Oct 16 Accept-Language error would have been seen at deploy time)', /pb_account=FAILED\(400 Invalid value for Accept-Language/.test(line) && /pb_rate_letter=FAILED\(400 Invalid value for Accept-Language/.test(line) && /pb_rate_ground=FAILED\(400/.test(line), line);
+    line = await pbSelfCheck(SELF_ENV, async (u) => (isToken(u) ? resp(401, { error: 'invalid_client' }) : resp(200, {})));
+    check('wrong keys: says FAILED with the status', /pb_account=FAILED\(401/.test(line) && !/KEY-DO-NOT-LEAK|SECRET-DO-NOT-LEAK/.test(line), line);
+    line = await pbSelfCheck(SELF_ENV, async (u, init) => (u.endsWith('/shipping/api/v1/carrierAccounts') ? resp(200, { data: { carrierAccounts: [{ carrierAccountId: 'u1', carrierName: 'UPS' }] } }) : isRates(u) ? resp(200, {}) : tokenFirst(u, init)));
+    check('no USPS account and no price are said plainly', /pb_account=NO_USPS\(1 accounts\)/.test(line) && /pb_rate_letter=NO_PRICE/.test(line), line);
+    check('keys not set: "pb=NOT_SET", and nothing is called', (await pbSelfCheck({}, async () => { throw new Error('must not be called'); })) === 'pb=NOT_SET');
+    check('production mode is named when it is really on', /^pb_mode=production /.test(await pbSelfCheck(Object.assign({ PB_ENV: 'production', PB_LIVE_OK: 'yes' }, SELF_ENV), async (u, init) => tokenFirst(u, init))));
+
     console.log('\n-- a batch does not stampede --');
     const tokenCalls = []; const acctCalls = [];
     const slow = (ms) => new Promise((r) => setTimeout(r, ms));

@@ -126,6 +126,8 @@ function makePbClient({ key, secret, env = 'sandbox', partnerId, carrierAccountI
     env,
     rate: async (shipment) => authed('/shipping/api/v2/rates', { method: 'POST', body: await withAccount(shipment), read: true }),
     createShipment: async (shipment, transactionId) => authed('/shipping/api/v2/shipments', { method: 'POST', body: await withAccount(shipment), transactionId }),
+    // The raw carrier-account list (the boot self-check wants to SEE a failure; lookUpAccount above hides it).
+    carrierAccounts: () => authed('/shipping/api/v1/carrierAccounts', { read: true }),
     // Cancelling an unused label is how postage gets refunded.
     cancelShipment: (shipmentId) => authed('/shipping/api/v2/shipments/cancel', { method: 'POST', body: { shipmentId } }),
     tracking: (trackingNumber, carrier = 'USPS') =>
