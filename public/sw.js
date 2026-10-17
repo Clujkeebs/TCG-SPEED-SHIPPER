@@ -16,7 +16,7 @@
 var VERSION = 'v4';
 var CACHE = 'tcgss-' + VERSION;
 var PRECACHE = [
-  '/', '/css/site.css', '/js/site.js', '/js/shipper-core.js', '/fonts/fonts.css',
+  '/', '/css/site.css', '/js/site.js', '/js/shipper-core.js', '/js/suite-bridge.js', '/fonts/fonts.css',
   '/favicon.svg', '/icon-192.png', '/manifest.webmanifest',
   '/vendor/jspdf-2.5.1.umd.min.js', '/vendor/qrcode-1.0.0.min.js',
   '/vendor/supabase-js-2.111.0.umd.js'
