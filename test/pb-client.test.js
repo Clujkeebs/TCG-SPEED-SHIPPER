@@ -135,7 +135,7 @@ const isShip = (u) => u.endsWith('/shipping/api/v2/shipments');
     const buyCalls = [];
     const buyFetch = async (u, init) => { buyCalls.push({ url: u, method: init.method }); return fullBuy(u, init); };
     line = await pbSelfCheck(Object.assign({ PB_SELFTEST_BUY: 'on' }, SELF_ENV), buyFetch);
-    check('on: it buys a letter and a package label and checks the answer holds an id, a tracking number, a PDF and a price', /pb_buy_letter\[DOC_4X6\]=OK\(id=yes tracking=yes pdf=yes price=0\.78/.test(line) && /pb_buy_ground=OK\(id=yes tracking=yes pdf=yes price=0\.78/.test(line), line);
+    check('on: it buys a letter and a package label and checks the answer holds an id, a tracking number, a PDF and a price', /pb_buy_letter\[DOC_6X4\]=OK\(id=yes tracking=yes pdf=yes price=0\.78/.test(line) && /pb_buy_ground=OK\(id=yes tracking=yes pdf=yes price=0\.78/.test(line), line);
     check('it refunds the package label (letters cannot be refunded) and reports the answer', /pb_cancel_ground=OK\(\{"status":"INITIATED"/.test(line) && buyCalls.filter((c) => /cancel/.test(c.url)).length === 1);
     check('the label itself is never in the log line', !/JVBERi0/.test(line) && !/TOKEN-DO-NOT-LEAK/.test(line));
     buyCalls.length = 0;
@@ -161,15 +161,15 @@ const isShip = (u) => u.endsWith('/shipping/api/v2/shipments');
     const sizeFetch = async (u, init) => {
       if (isShip(u) && init.method === 'POST') {
         const size = JSON.parse(init.body).labelSize;
-        if (size !== '6X4') return resp(400, { errors: [{ errorCode: '1', message: 'Invalid label paper size.' }] });
-        return resp(200, { shipmentId: 'LB1', parcelTrackingNumber: '9400111899223197428490', rate: { totalCarrierCharge: 0.78 }, labelLayout: [{ contentType: 'BASE64', contents: 'JVBERi0xLjQ=', fileFormat: 'PDF', size: '6X4', type: 'SHIPPING_LABEL' }] });
+        if (size !== 'DOC_9X4') return resp(400, { errors: [{ errorCode: '1', message: 'Invalid label paper size.' }] });
+        return resp(200, { shipmentId: 'LB1', parcelTrackingNumber: '9400111899223197428490', rate: { totalCarrierCharge: 0.78 }, labelLayout: [{ contentType: 'BASE64', contents: 'JVBERi0xLjQ=', fileFormat: 'PDF', size: 'DOC_9X4', type: 'SHIPPING_LABEL' }] });
       }
       return fullBuy(u, init);
     };
     line = await pbSelfCheck(Object.assign({ PB_SELFTEST_BUY: 'on' }, SELF_ENV), sizeFetch);
-    check('the letter label size is probed in order, each refusal shown in PB\'s words, and it stops at the first size PB accepts', /pb_buy_letter\[DOC_4X6\]=FAILED\(400 Invalid label paper size\.\)/.test(line) && /pb_buy_letter\[DOC_6X4\]=FAILED/.test(line) && /pb_buy_letter\[6X4\]=OK\(id=yes/.test(line) && !/pb_buy_letter\[DOC_9X4\]/.test(line), line);
-    line = await pbSelfCheck(Object.assign({ PB_SELFTEST_BUY: 'on', PB_SELFTEST_LETTER_SIZES: 'DOC_6X4, 9X4' }, SELF_ENV), sizeFetch);
-    check('the sizes to try can be chosen (PB_SELFTEST_LETTER_SIZES)', /pb_buy_letter\[DOC_6X4\]=FAILED/.test(line) && /pb_buy_letter\[9X4\]=FAILED/.test(line) && !/DOC_4X6/.test(line.split('pb_buy_ground')[0]), line);
+    check('the letter label size is probed in order, each refusal shown in PB\'s words, and it stops at the first size PB accepts', /pb_buy_letter\[DOC_6X4\]=FAILED\(400 Invalid label paper size\.\)/.test(line) && /pb_buy_letter\[DOC_9X4\]=OK\(id=yes/.test(line), line);
+    line = await pbSelfCheck(Object.assign({ PB_SELFTEST_BUY: 'on', PB_SELFTEST_LETTER_SIZES: 'DOC_4X6, 9X4' }, SELF_ENV), sizeFetch);
+    check('the sizes to try can be chosen (PB_SELFTEST_LETTER_SIZES)', /pb_buy_letter\[DOC_4X6\]=FAILED/.test(line) && /pb_buy_letter\[9X4\]=FAILED/.test(line) && !/DOC_6X4/.test(line.split('pb_buy_ground')[0]), line);
 
     console.log('\n-- a batch does not stampede --');
     const tokenCalls = []; const acctCalls = [];

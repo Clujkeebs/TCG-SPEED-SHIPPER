@@ -80,6 +80,7 @@ global.fetch = async (url, init) => {
   }
   if (url.endsWith('/shipping/api/v2/shipments') && init.method === 'POST') {
     const b = JSON.parse(init.body);
+    if (b.byCarrier.service === 'FCM' && !/^DOC_(6X4|9X4)$/.test(String(b.labelSize))) return json(400, { errors: [{ errorCode: '1001', message: 'Invalid label paper size.' }] }); // IMb letters only
     if (b.toAddress.postalCode === '00000') return json(400, { errors: [{ errorCode: '1001', message: 'Invalid address' }] });
     shipSeq++;
     return json(200, { shipmentId: 'USPS' + shipSeq, parcelTrackingNumber: '9400' + shipSeq, rate: { serviceId: b.byCarrier.service, totalCarrierCharge: b.byCarrier.service === 'UGA' ? 4.5 : 0.78 }, labelLayout: [{ contentType: 'BASE64', contents: 'JVBERi0x', fileFormat: 'PDF', size: b.labelSize, type: 'SHIPPING_LABEL' }] });
@@ -195,8 +196,8 @@ server.listen(0, async () => {
     check('total = postage + fees, purchased labels only', r.body.postage === 5.28 && r.body.fees === 0.65 && r.body.total === 5.93, JSON.stringify([r.body.postage, r.body.fees, r.body.total]));
     check('each label carries its price (Base: 15 cent letter fee, 50 cent package fee)', res3[0].price === 0.93 && res3[0].fee === 0.15 && res3[2].price === 5 && res3[2].fee === 0.5);
     const ships = pbCalls.filter((c) => c.url.endsWith('/shipping/api/v2/shipments')).map((c) => JSON.parse(c.init.body));
-    check('letter → USPS FCM LETTER on a 4x6 PDF label', ships[0].byCarrier.carrier === 'USPS' && ships[0].byCarrier.service === 'FCM' && ships[0].parcels[0].parcelType === 'LETTER' && ships[0].labelSize === 'DOC_4X6' && ships[0].labelFormat === 'PDF');
-    check('ground → USPS Ground Advantage package', ships[2].byCarrier.service === 'UGA' && ships[2].parcels[0].parcelType === 'PKG');
+    check('letter → USPS FCM LETTER on a 6x4 PDF label (Pitney Bowes: IMb letters use DOC_6X4 or DOC_9X4, DOC_4X6 is refused)', ships[0].byCarrier.carrier === 'USPS' && ships[0].byCarrier.service === 'FCM' && ships[0].parcels[0].parcelType === 'LETTER' && ships[0].labelSize === 'DOC_6X4' && ships[0].labelFormat === 'PDF' && !ships[0].specialServices);
+    check('ground → USPS Ground Advantage package on a 4x6 label', ships[2].byCarrier.service === 'UGA' && ships[2].parcels[0].parcelType === 'PKG' && ships[2].labelSize === 'DOC_4X6');
     check('weight goes in ounces', ships[0].parcels[0].parcel.weight === 1 && ships[0].parcels[0].parcel.weightUnit === 'OZ');
     check('the USPS carrier account is looked up and sent', ships.every((x) => x.byCarrier.carrierAccountId === 'acct_usps'));
     check('the carrier account is looked up only once', pbCalls.filter((c) => c.url.endsWith('/carrierAccounts')).length <= 1);

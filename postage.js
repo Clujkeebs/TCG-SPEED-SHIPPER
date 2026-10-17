@@ -63,7 +63,9 @@ const SERVICES = {
     label: 'First-Class letter + IMb scans',
     service: 'FCM', parcelType: 'LETTER',
     dimension: { length: 6, width: 4, height: 0.25 },
-    labelSize: 'DOC_4X6',
+    // Pitney Bowes' OpenAPI: "For IMB labels, use 'DOC_6X4' or 'DOC_9X4' (LETTER only)". DOC_4X6 is refused for letters
+    // ("Invalid label paper size", seen in the Oct 17 sandbox rehearsal), so the letter label is a 6 x 4 inch landscape PDF.
+    labelSize: 'DOC_6X4',
     minOz: 0.1, maxOz: 3.5,
   },
   ground: {
@@ -247,9 +249,9 @@ async function pbSelfCheck(env = process.env, fetchImpl = fetch) {
         out.push('pb_refill=' + (f && f.status === 'SUCCESS' ? 'OK' : 'NOT_SUCCESS') + '(status=' + (f && f.status) + ' balance=' + (f && f.balanceAvailable) + ')');
       } catch (e) { out.push('pb_refill=FAILED' + why(e)); }
     }
-    // The letter's label size is probed: every size we have a reason to try, each answered with PB's own words (a size PB
-    // accepts moves on to the next check, like the wallet balance; a size it refuses says "Invalid label paper size").
-    const sizes = { letter: String(env.PB_SELFTEST_LETTER_SIZES || 'DOC_4X6,DOC_6X4,6X4,DOC_9X4,9X4,DOC_4X8,DOC_8X11').split(',').map((x) => x.trim()).filter(Boolean), ground: [null] };
+    // The letter's label size is probed: the two sizes Pitney Bowes documents for First-Class letters, each answered with PB's
+    // own words (a size PB accepts moves on to the next check, like the wallet balance; one it refuses says "Invalid label paper size").
+    const sizes = { letter: String(env.PB_SELFTEST_LETTER_SIZES || 'DOC_6X4,DOC_9X4').split(',').map((x) => x.trim()).filter(Boolean), ground: [null] };
     for (const service of ['letter', 'ground']) {
       let bought = null;
       for (const size of sizes[service]) {
