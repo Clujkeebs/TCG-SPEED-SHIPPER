@@ -4,6 +4,6 @@
   "type": "module",
   "description": "Code for the TCG Speed Suite (Scan, Extension, Agent). Not part of the live site: the live server never reads this folder.",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test --test-concurrency=1"
   }
 }
