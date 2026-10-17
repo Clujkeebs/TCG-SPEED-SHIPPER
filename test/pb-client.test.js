@@ -222,6 +222,23 @@ const isShip = (u) => u.endsWith('/shipping/api/v2/shipments');
     check('if Pitney Bowes refuses a made-up street, its words are shown and the same letter is tried once more with minimalAddressValidation', /pb_buy_sample1=FAILED\(400 Invalid address: address not found\.\)/.test(line) && /pb_buy_sample1_minimal=OK\(/.test(line) && /pb_buy_sample2_minimal=OK\(/.test(line), line);
     const strictTries = sampleShips.filter((b) => /Sample|Example/.test(b.toAddress.addressLine1));
     check('and only that retry carries the option (the first try is the strict one)', strictTries.filter((b) => b.shipmentOptions && b.shipmentOptions.minimalAddressValidation === true).length === 2 && strictTries.filter((b) => !b.shipmentOptions).length === 2);
+    // The quotes for the sample addresses are read-only: they run with PB_SELFTEST_TO=sample alone (no purchase switch needed).
+    line = await pbSelfCheck(SELF_ENV, buyFetch);
+    check('no sample quotes unless asked', !/pb_rate_sample/.test(line));
+    buyCalls.length = 0;
+    line = await pbSelfCheck(Object.assign({ PB_SELFTEST_TO: 'sample' }, SELF_ENV), buyFetch);
+    check('PB_SELFTEST_TO=sample alone prices both sample orders and buys nothing', /pb_rate_sample1=OK\(\$0\.78\) pb_rate_sample2=OK\(\$0\.78\)/.test(line) && !/_minimal|pb_buy/.test(line) && !buyCalls.some((c) => /shipments/.test(c.url)), line);
+    const rateBodiesSeen = [];
+    const strictRates = async (u, init) => {
+      if (isRates(u) && init.method === 'POST') {
+        const b = JSON.parse(init.body); rateBodiesSeen.push(b);
+        if (/Sample|Example/.test(b.toAddress.addressLine1) && !(b.shipmentOptions && b.shipmentOptions.minimalAddressValidation)) return resp(400, { errors: [{ errorCode: '2001', message: 'Invalid address provided.' }] });
+      }
+      return fullBuy(u, init);
+    };
+    line = await pbSelfCheck(Object.assign({ PB_SELFTEST_TO: 'sample' }, SELF_ENV), strictRates);
+    check('when quotes refuse the made-up street, the words are shown and the option is tried', /pb_rate_sample1=FAILED\(400 Invalid address provided\.\) pb_rate_sample1_minimal=OK\(\$0\.78\)/.test(line) && /pb_rate_sample2_minimal=OK/.test(line), line);
+    check('the sample quotes and purchases never run in production mode', !/pb_rate_sample/.test(await pbSelfCheck(Object.assign({ PB_SELFTEST_TO: 'sample', PB_ENV: 'production', PB_LIVE_OK: 'yes' }, SELF_ENV), buyFetch)));
     buyCalls.length = 0;
     line = await pbSelfCheck(Object.assign({ PB_SELFTEST_BUY: 'on', PB_SELFTEST_TO: 'sample', PB_ENV: 'production', PB_LIVE_OK: 'yes' }, SELF_ENV), buyFetch);
     check('in production mode it still never buys', !/pb_buy/.test(line) && !buyCalls.some((c) => /shipments/.test(c.url)), line);
