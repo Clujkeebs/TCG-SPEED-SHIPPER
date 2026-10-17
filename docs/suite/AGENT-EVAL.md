@@ -1,6 +1,6 @@
 # Agent evaluation
 
-Run on 2026-10-16, offline, scripted fake model, made-up buyers. **24 of 24 scenarios pass.**
+Run on 2026-10-17, offline, scripted fake model, made-up buyers. **24 of 24 scenarios pass.**
 
 What this proves: the tools return the right data, the right tier is used, nothing is sent or changed, and every call is logged.
 What it does not prove: how a real model chooses tools. That needs a measured run with a real model, which costs money and waits for the owner.
@@ -94,7 +94,7 @@ One scripted week on made-up data, offline, driven through the same checked mess
 - Approval cards: 4 (1 undone, 1 done, 2 declined).
 - Plans: 6. Background job reports: 3. Shop facts at the end: 3.
 - Messages to the side panel: 52 (25 plan, 10 progress, 4 approval-needed, 11 answer, 1 memory, 1 stopped).
-- Whole week ran in about 71 ms. Same numbers on every run (a test checks that).
+- Whole week ran in about 80 ms. Same numbers on every run (a test checks that).
 
 The full audit trail is exportable as one JSON line per call (`audit.exportJsonl()`); arguments appear only as hashes.
 
@@ -135,7 +135,7 @@ No model, no network, invented data. **19 of 19 checks pass.**
 
 ### Measured
 
-- **Order file at scale:** 10,000 invented rows (1056 KB) read in a median 59 ms (worst of 3: 102 ms), memory growth 4.9 MB. Written-down budget: under 1500 ms and under 100 MB. Numbers are from the build machine and vary a little between runs.
+- **Order file at scale:** 10,000 invented rows (1056 KB) read in a median 87 ms (worst of 3: 93 ms), memory growth 5.9 MB. Written-down budget: under 1500 ms and under 100 MB. Numbers are from the build machine and vary a little between runs.
 - **What it found in that file:** 10000 orders from 1740 buyers, 1552 of them repeat; 1396 orders at $49.99 or more (tracking), 166 at $250 or more (signature); 5 sets of chart numbers.
 - **Saved on the device:** memory, plans, approval cards, reports, schedules and the audit trail survive a restart (tested on a fake IndexedDB; also checked once by hand in real Chromium, see LOG.md).
 - **Morning briefing:** 69 words (limit 150).
@@ -144,8 +144,8 @@ No model, no network, invented data. **19 of 19 checks pass.**
 
 | Area | Check | Result |
 |---|---|---|
-| Order file | 10000 invented rows read in under 1500 ms (median 59 ms) | pass |
-| Order file | memory growth under 100 MB (measured 4.9 MB) | pass |
+| Order file | 10000 invented rows read in under 1500 ms (median 87 ms) | pass |
+| Order file | memory growth under 100 MB (measured 5.9 MB) | pass |
 | Order file | every row counted, none skipped | pass |
 | Order file | streaming gives the same rows however the file is cut up | pass |
 | Order file | no buyer name or street in the summary, draft or charts | pass |
@@ -216,6 +216,49 @@ Your order ORD-1024 was shipped on 2026-04-17 via USPS. The tracking number is T
 
 Kind regards,
 Corner Cards
+```
+
+## The real-model door, draft text for the panel, cost measurement
+
+No real model: everything runs against a local stand-in that enforces the contract in `AGENT-PROXY.md`. **9 of 9 checks pass.** No real cost has been measured yet; the plan and the report format are in `AGENT-MEASURE.md`.
+
+| Area | Check | Result |
+|---|---|---|
+| Model door | sends only messages and tools: no system prompt, model name or key | pass |
+| Model door | tool names go as they are (with dots); the server renames them | pass |
+| Model door | all 14 status/code rows of the contract become a plain-words ProxyError (14 of 14) | pass |
+| Model door | a badly shaped or over-long conversation is refused before anything is sent | pass |
+| Draft text | the reply to copy reaches the panel in the answer and in the plan step | pass |
+| Draft text | the name is filled in on the device only: not in the audit trail or the saved plan | pass |
+| Draft text | seller-only notes (policy ids, "check TCGplayer's current article") come separately | pass |
+| Draft text | every event is well formed | pass |
+| Cost measurement | the six first scenarios run against the stand-in and report the three numbers | pass |
+
+### Example report from the stand-in (invented numbers)
+
+```
+# Agent cost-per-run measurement (STUB: invented numbers, spends nothing)
+
+6 questions measured, 14.55 cents of a 50 cent budget used.
+
+## The three numbers
+
+1. **Tokens per question:** 6870 on average (median 6180; 6567 in, 303 out).
+2. **Chose the right tools:** 100% of questions.
+3. **Hit the 8-step limit:** 0% of questions.
+
+Cost the server counted: 2.43 cents per question on average, 3.6 at most.
+
+## Each question
+
+| Question | Steps | Tokens in/out | Cents | Tools called | Right tools | Step limit |
+|---|---|---|---|---|---|---|
+| repeat-customers | 2 | 5900 / 280 | 2.19 | report.repeatCustomers | yes | no |
+| shipping-cadence | 2 | 5900 / 280 | 2.19 | report.shipping | yes | no |
+| restock-list | 2 | 5900 / 280 | 2.19 | inventory.restock | yes | no |
+| price-one-card | 3 | 9900 / 420 | 3.60 | inventory.search, pricing.suggest | yes | no |
+| weekly-summary | 2 | 5900 / 280 | 2.19 | report.weekly | yes | no |
+| support-where | 2 | 5900 / 280 | 2.19 | support.draftReply | yes | no |
 ```
 
 Also covered by unit tests (not scenarios): tool limits and kill switch, audit log hashing, side-panel message protocol, CSV import and export, deal-finder allow-list.
