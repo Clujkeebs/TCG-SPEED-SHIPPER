@@ -22,6 +22,11 @@ const BASE_HEADERS = {
   'User-Agent': 'TCGSpeedShipper/1.0 (+https://tcgspeedshipper.com)',
 };
 
+// A PDF label never comes inline: the purchase answer holds a LINK to the file (Pitney Bowes sends BASE64 only for ZPL2, PNG and
+// GIF; asking for BASE64 with a PDF is refused with "Invalid label file output format", the Oct 17 sandbox rehearsal). The token
+// is only ever sent to Pitney Bowes' own hosts.
+const OWN_HOSTS = /(^|\.)(pitneycloud\.com|pitneybowes\.com)$/i;
+
 class PbError extends Error {
   constructor(status, body) {
     const list = Array.isArray(body) ? body : (body && (body.errors || body.errorCauses)) || null;
@@ -135,6 +140,34 @@ function makePbClient({ key, secret, env = 'sandbox', partnerId, carrierAccountI
     walletRefill: (carrierAccountId, amount) => authed('/shippingpaymentmgmt/api/v1/payments/wallet/refill', { method: 'POST', body: { carrierAccountId, amount } }),
     // Cancelling an unused label is how postage gets refunded.
     cancelShipment: (shipmentId) => authed('/shipping/api/v2/shipments/cancel', { method: 'POST', body: { shipmentId } }),
+    // Fetches the file behind a label link: https only, small, first with no credentials (a signed link wants none and a stray
+    // Authorization header spoils it); if a Pitney Bowes host asks for a login (401/403) once more with the token. Never throws:
+    // { ok, status, bytes, via: 'link'|'token' } or { ok: false, status, reason, again } (again = worth a retry: not there yet,
+    // a 5xx, a network error), so the buy route and the boot self-check can say exactly what happened.
+    fetchFile: async (link, opts = {}) => {
+      const maxBytes = opts.maxBytes || 3 * 1024 * 1024;
+      let u;
+      try { u = new URL(String(link)); } catch (e) { return { ok: false, status: 0, reason: 'not a link', again: false }; }
+      if (u.protocol !== 'https:') return { ok: false, status: 0, reason: 'not an https link', again: false };
+      let status = 0;
+      for (const via of OWN_HOSTS.test(u.hostname) ? ['link', 'token'] : ['link']) {
+        try {
+          const headers = Object.assign({}, BASE_HEADERS, { Accept: 'application/pdf, */*;q=0.5' });
+          if (via === 'token') headers.Authorization = 'Bearer ' + await getToken();
+          const res = await fetchImpl(u.href, { headers, signal: AbortSignal.timeout(opts.timeoutMs || 15000) });
+          status = res.status;
+          if (res.ok) {
+            const len = Number(res.headers && typeof res.headers.get === 'function' ? res.headers.get('content-length') : NaN);
+            if (Number.isFinite(len) && len > maxBytes) return { ok: false, status, reason: 'file too large', again: false };
+            const bytes = Buffer.from(await res.arrayBuffer());
+            if (bytes.length > maxBytes) return { ok: false, status, reason: 'file too large', again: false };
+            return { ok: true, status, bytes, via };
+          }
+          if (status !== 401 && status !== 403) break; // only a login question is worth the second, signed-in try
+        } catch (e) { return { ok: false, status, reason: 'could not fetch (' + String((e && e.name) || 'error') + ')', again: true }; }
+      }
+      return { ok: false, status, reason: 'HTTP ' + status, again: status === 404 || status === 429 || status >= 500 };
+    },
     tracking: (trackingNumber, carrier = 'USPS') =>
       authed('/shippingtracking/api/v1/tracking/' + encodeURIComponent(trackingNumber) + '?carrier=' + encodeURIComponent(carrier), { read: true }),
   };

@@ -64,15 +64,22 @@ const supabaseStub = {
 // Fake Pitney Bowes.
 let shipSeq = 0;
 let rates429 = 0; // how many price requests answer 429 Too Many Requests before succeeding
-let labelAs = 'BASE64'; // 'BASE64' (the file inline), 'URL' (a link), 'URL_HTTP' (an insecure link) or 'NONE' (no file at all)
-const labelDownloads = []; // every label link the server tried to fetch
+const LABEL_HOST = 'prv-labels-cls.gcs.pitneycloud.com'; // where Pitney Bowes keeps label files (the docs' example link)
+const LABEL_PDF = Buffer.from('%PDF-1.4 test label');
+const LABEL_B64 = LABEL_PDF.toString('base64');
+let labelAs = 'URL'; // what a purchase answer holds: 'URL' (a link, like the real one), 'URL_HTTP' (an insecure link), 'URL_MISSING' (a link to nothing), 'URL_LOGIN' (a link that wants the token), 'URL_FOREIGN' (a link to another host), 'URL_FOREIGN_LOGIN' (another host that wants a login), 'URL_SLOW' (not there on the first try) or 'NONE' (no file at all)
+const labelDownloads = []; // every label link the server tried to fetch: { url, auth }
 let ratesEmpty = false; // price requests answer 200 with nothing usable in them (a missing price must never read as $0.00)
+let slowTries = 0; // 'URL_SLOW' links: how many tries so far
 global.fetch = async (url, init) => {
-  if (/^https?:\/\/labels\.example\.test\//.test(url)) { // the link a purchase answer can hold instead of the file
-    labelDownloads.push(url);
-    if (/missing/.test(url)) return { ok: false, status: 404, arrayBuffer: async () => new ArrayBuffer(0) };
-    const pdf = Buffer.from('%PDF-1.4 test label');
-    return { ok: true, status: 200, arrayBuffer: async () => pdf.buffer.slice(pdf.byteOffset, pdf.byteOffset + pdf.length) };
+  if (/^https?:\/\/(prv-labels-cls\.gcs\.pitneycloud\.com|labels\.example\.test)\//.test(url)) { // the link a purchase answer holds instead of the file
+    const auth = Boolean(init && init.headers && init.headers.Authorization);
+    labelDownloads.push({ url, auth });
+    const file = (status, ok) => ({ ok, status, headers: { get: () => null }, arrayBuffer: async () => (ok ? LABEL_PDF.buffer.slice(LABEL_PDF.byteOffset, LABEL_PDF.byteOffset + LABEL_PDF.length) : new ArrayBuffer(0)) });
+    if (/missing/.test(url)) return file(404, false);
+    if (/slow/.test(url) && (slowTries += 1) < 2) return file(404, false);
+    if (/login/.test(url) && !auth) return file(403, false);
+    return file(200, true);
   }
   pbCalls.push({ url, init });
   const json = (status, body) => ({ ok: status < 300, status, text: async () => JSON.stringify(body) });
@@ -90,13 +97,15 @@ global.fetch = async (url, init) => {
     const b = JSON.parse(init.body);
     if (b.byCarrier.service === 'FCM' && !/^DOC_(6X4|9X4)$/.test(String(b.labelSize))) return json(400, { errors: [{ errorCode: '1001', message: 'Invalid label paper size.' }] }); // IMb letters only
     if (b.toAddress.postalCode === '00000') return json(400, { errors: [{ errorCode: '1001', message: 'Invalid address' }] });
+    // Like the real gateway (Oct 17 sandbox rehearsal): a PDF label can only be a link; BASE64 is for ZPL2, PNG and GIF.
+    if (b.contentType === 'BASE64' && b.labelFormat === 'PDF') return json(400, { errors: [{ errorCode: '1002', message: 'Invalid label file output format.' }] });
     shipSeq++;
-    // Like the real gateway: a link unless the request asks for the file itself (contentType BASE64).
-    const wantsFile = b.contentType === 'BASE64' && labelAs === 'BASE64';
-    const doc = wantsFile ? { contentType: 'BASE64', contents: 'JVBERi0x' }
-      : labelAs === 'URL_HTTP' ? { contentType: 'URL', contents: 'http://labels.example.test/l' + shipSeq + '.pdf' }
+    const link = (host, scheme, name) => ({ contentType: 'URL', contents: (scheme || 'https') + '://' + (host || LABEL_HOST) + '/usps/910187923/outbound/label/' + name + shipSeq + '.pdf' });
+    const doc = labelAs === 'URL_HTTP' ? link(null, 'http', 'l')
       : labelAs === 'NONE' ? null
-      : { contentType: 'URL', contents: 'https://labels.example.test/' + (labelAs === 'URL_MISSING' ? 'missing' : 'l') + shipSeq + '.pdf' };
+      : labelAs === 'URL_FOREIGN' ? link('labels.example.test', null, 'l')
+      : labelAs === 'URL_FOREIGN_LOGIN' ? link('labels.example.test', null, 'login')
+      : link(null, null, labelAs === 'URL_MISSING' ? 'missing' : labelAs === 'URL_LOGIN' ? 'login' : labelAs === 'URL_SLOW' ? 'slow' : 'l');
     return json(200, { shipmentId: 'USPS' + shipSeq, parcelTrackingNumber: '9400' + shipSeq, rate: { serviceId: b.byCarrier.service, totalCarrierCharge: b.byCarrier.service === 'UGA' ? 4.5 : 0.78 }, labelLayout: doc ? [Object.assign({ fileFormat: 'PDF', size: b.labelSize, type: 'SHIPPING_LABEL' }, doc)] : [] });
   }
   if (url.endsWith('/shipping/api/v2/shipments/cancel') && init.method === 'POST') return json(200, { status: 'INITIATED', totalCarrierCharge: 4.5 });
@@ -206,12 +215,12 @@ server.listen(0, async () => {
     const res3 = r.body.results || [];
     check('a batch returns one result per label, in order', r.status === 200 && res3.map((x) => x.ref).join() === 'A1,A2,A3', JSON.stringify(r.body));
     check('a bad address fails alone; the others still print', res3[0].ok && !res3[1].ok && res3[2].ok && /Invalid address/.test(res3[1].error));
-    check('labels come back with tracking and a PDF', res3[0].trackingNumber && res3[0].labelPdfBase64 === 'JVBERi0x');
+    check('labels come back with tracking and the PDF (fetched from the link Pitney Bowes answers with)', res3[0].trackingNumber && res3[0].labelPdfBase64 === LABEL_B64);
     check('total = postage + fees, purchased labels only', r.body.postage === 5.28 && r.body.fees === 0.65 && r.body.total === 5.93, JSON.stringify([r.body.postage, r.body.fees, r.body.total]));
     check('each label carries its price (Base: 15 cent letter fee, 50 cent package fee)', res3[0].price === 0.93 && res3[0].fee === 0.15 && res3[2].price === 5 && res3[2].fee === 0.5);
     const ships = pbCalls.filter((c) => c.url.endsWith('/shipping/api/v2/shipments')).map((c) => JSON.parse(c.init.body));
     check('letter → USPS FCM LETTER on a 6x4 PDF label (Pitney Bowes: IMb letters use DOC_6X4 or DOC_9X4, DOC_4X6 is refused)', ships[0].byCarrier.carrier === 'USPS' && ships[0].byCarrier.service === 'FCM' && ships[0].parcels[0].parcelType === 'LETTER' && ships[0].labelSize === 'DOC_6X4' && ships[0].labelFormat === 'PDF' && !ships[0].specialServices);
-    check('every purchase asks for the label FILE (contentType BASE64), not a link', ships.every((x) => x.contentType === 'BASE64'));
+    check('no purchase asks for BASE64 with a PDF (Pitney Bowes refuses it: "Invalid label file output format"); the PDF comes as a link', ships.every((x) => x.contentType !== 'BASE64' && x.labelFormat === 'PDF'));
     check('ground → USPS Ground Advantage package on a 4x6 label', ships[2].byCarrier.service === 'UGA' && ships[2].parcels[0].parcelType === 'PKG' && ships[2].labelSize === 'DOC_4X6');
     check('weight goes in ounces', ships[0].parcels[0].parcel.weight === 1 && ships[0].parcels[0].parcel.weightUnit === 'OZ');
     check('the USPS carrier account is looked up and sent', ships.every((x) => x.byCarrier.carrierAccountId === 'acct_usps'));
@@ -244,29 +253,42 @@ server.listen(0, async () => {
     check('more than 50 labels at once is refused', r.status === 400);
 
     console.log('\n-- Label history and reprint --');
-    check('the label PDF is saved for reprints', ledger.every((x) => x.label_pdf === 'JVBERi0x'));
+    check('the label PDF is saved for reprints', ledger.every((x) => x.label_pdf === LABEL_B64));
     r = await req('GET', '/api/postage/labels/' + res3[0].shipmentId + '/pdf', undefined, 'pilot-token');
-    check('the buyer can reprint a label', r.status === 200 && r.body.labelPdfBase64 === 'JVBERi0x');
+    check('the buyer can reprint a label', r.status === 200 && r.body.labelPdfBase64 === LABEL_B64);
 
-    console.log('\n-- the label as a link, or not at all (live sandbox, Oct 17: a link unless asked for the file) --');
+    console.log('\n-- the label is a link to the PDF (live sandbox, Oct 17); what happens when the link misbehaves --');
     const cancels = () => pbCalls.filter((c) => c.url.endsWith('/shipping/api/v2/shipments/cancel')).length;
+    const buy = (ref, service, token) => req('POST', '/api/postage/labels', { from: FROM, labels: [{ ref, to: TO, service, weightOz: service === 'ground' ? 3 : 1 }] }, token || 'pilot-token');
     labelAs = 'URL'; labelDownloads.length = 0;
-    r = await req('POST', '/api/postage/labels', { from: FROM, labels: [{ ref: 'U1', to: TO, service: 'letter', weightOz: 1 }] }, 'pilot-token');
+    r = await buy('U1', 'letter');
     const u1 = (r.body.results || [])[0] || {};
-    check('Pitney Bowes answers with a link anyway: the file is fetched at once and is a real PDF', u1.ok === true && Buffer.from(String(u1.labelPdfBase64), 'base64').toString().startsWith('%PDF') && labelDownloads.length === 1 && !u1.warning, JSON.stringify(r.body).slice(0, 220));
+    check('the normal case: the link is fetched at once with no login, and what is kept is a real PDF', u1.ok === true && Buffer.from(String(u1.labelPdfBase64), 'base64').toString().startsWith('%PDF') && labelDownloads.length === 1 && labelDownloads[0].auth === false && !u1.warning, JSON.stringify(r.body).slice(0, 220));
     check('and the ledger keeps that file, so the label can be reprinted', (ledger.find((x) => x.shipment_id === u1.shipmentId) || {}).label_pdf === u1.labelPdfBase64);
+    labelAs = 'URL_LOGIN'; labelDownloads.length = 0;
+    r = await buy('U1b', 'letter');
+    check('a Pitney Bowes link that asks for a login is fetched again with the token, and the file is kept', r.body.results[0].ok === true && r.body.results[0].labelPdfBase64 === LABEL_B64 && labelDownloads.length === 2 && labelDownloads[0].auth === false && labelDownloads[1].auth === true, JSON.stringify(labelDownloads));
+    labelAs = 'URL_SLOW'; labelDownloads.length = 0; slowTries = 0;
+    r = await buy('U1c', 'letter');
+    check('a file that is not there on the first try (404) is tried again and then kept', r.body.results[0].ok === true && r.body.results[0].labelPdfBase64 === LABEL_B64 && labelDownloads.length === 2, JSON.stringify(labelDownloads));
+    labelAs = 'URL_FOREIGN'; labelDownloads.length = 0;
+    r = await buy('U1d', 'letter');
+    check('a link on some other host is fetched with no credentials at all', r.body.results[0].labelPdfBase64 === LABEL_B64 && labelDownloads.length === 1 && labelDownloads[0].auth === false, JSON.stringify(labelDownloads));
+    labelAs = 'URL_FOREIGN_LOGIN'; labelDownloads.length = 0;
+    r = await buy('U1e', 'letter');
+    check('the token is NEVER sent to another host, even if it asks for a login (the letter is kept and flagged)', labelDownloads.length >= 1 && labelDownloads.every((d) => d.auth === false) && /did not come back/.test(r.body.results[0].warning || ''), JSON.stringify(labelDownloads));
     labelAs = 'URL_HTTP'; labelDownloads.length = 0;
-    r = await req('POST', '/api/postage/labels', { from: FROM, labels: [{ ref: 'U2', to: TO, service: 'letter', weightOz: 1 }] }, 'pilot-token');
+    r = await buy('U2', 'letter');
     check('an insecure (http) link is never fetched; the letter is kept and flagged for support with its tracking number', labelDownloads.length === 0 && r.body.results[0].ok === true && !r.body.results[0].labelPdfBase64 && /tracking number 9400\d+/.test(r.body.results[0].warning || ''), JSON.stringify(r.body.results[0]).slice(0, 200));
     labelAs = 'URL_MISSING'; labelDownloads.length = 0;
     const cancelsBefore = cancels();
-    r = await req('POST', '/api/postage/labels', { from: FROM, labels: [{ ref: 'U3', to: TO, service: 'ground', weightOz: 3 }] }, 'pilot-token');
-    check('a package whose file never arrives is cancelled at once and reported, not kept', r.body.results[0].ok === false && /did not come back/.test(r.body.results[0].error) && cancels() === cancelsBefore + 1, JSON.stringify(r.body.results[0]).slice(0, 200));
+    r = await buy('U3', 'ground');
+    check('a package whose file never arrives (404 three times) is cancelled at once and reported, not kept', r.body.results[0].ok === false && /did not come back/.test(r.body.results[0].error) && cancels() === cancelsBefore + 1 && labelDownloads.length === 3, JSON.stringify([r.body.results[0], labelDownloads.length]).slice(0, 240));
     check('and it is not in the ledger as bought', !ledger.some((x) => x.order_ref === 'U3'));
     labelAs = 'NONE';
-    r = await req('POST', '/api/postage/labels', { from: FROM, labels: [{ ref: 'U4', to: TO, service: 'letter', weightOz: 1 }] }, 'pilot-token');
+    r = await buy('U4', 'letter');
     check('no file at all on a letter: kept and flagged (a letter cannot be cancelled), never a crash', r.status === 200 && r.body.results[0].ok === true && /did not come back/.test(r.body.results[0].warning || ''), JSON.stringify(r.body).slice(0, 200));
-    labelAs = 'BASE64';
+    labelAs = 'URL';
     r = await req('GET', '/api/postage/labels/' + res3[0].shipmentId + '/pdf', undefined, 'owner-token');
     check('nobody else can reprint it', r.status === 404);
     r = await req('GET', '/api/postage/labels', undefined, 'stranger-token');
