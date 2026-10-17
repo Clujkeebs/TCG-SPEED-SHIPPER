@@ -566,3 +566,9 @@ Needs Builder: for the Extension to keep memory and cards between sessions, call
 its agent (see `openWorld` in `eval/harness.js`); the Extension's own copy of the stores must have `snapshot()`/`restore()` (the vendored ones do).
 Needs owner: none.
 Next: a measured run with a real model (needs a key and a small budget from the owner); event triggers on a real timer inside the Extension.
+
+### 2026-10-17 · hq · board updates after merges · done
+Board only. New Now item A19 "Reply to Rob: he has been waiting since Oct 15" (does not show the draft text; says the draft suggests a plan above Premium and that the owner decides). I made it a new item instead of unticking A16, so the owner's Oct 15 tick and note stay as they were. S6 stays on top and has the line about "Share my results". New low-priority owner task S8 "Try Import my orders in the Chrome extension" (only reaches Now when fewer than three items are open). No "real AI model" task was added. A small "Two quick questions" block on Now shows the two blocking decisions with one-tap answers that post to the inbox: buy the three domains (Yes at Porkbun, Yes through Claude on Vercel, Not yet) and C5 (Yes, Not yet). Today's order on Now: S6, A19, A8. Re-checked at 820x1180, 1180x820 and 390x844 in dark: no errors, no sideways scroll.
+Needs Builder: the answers arrive in the inbox as plain text starting "buy domains:" or "C5:". S8 says "tell Claude ready" for install steps: please send them when asked.
+Needs owner: none new.
+Next: none
