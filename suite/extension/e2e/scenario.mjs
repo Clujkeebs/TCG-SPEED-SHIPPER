@@ -12,6 +12,7 @@ import { pathToFileURL } from 'node:url';
 const here = fileURLToPath(new URL('.', import.meta.url));
 const prodPath = join(here, '..');
 // The browser test uses a TEST COPY of the extension that also accepts localhost pages. Production never does.
+const { DB_VERSION } = await import(pathToFileURL(join(prodPath, 'src/store.js')).href);
 const { makeTestBuild } = await import(pathToFileURL(join(prodPath, 'scripts/make-test-build.js')).href);
 const extPath = makeTestBuild(mkdtempSync(join(tmpdir(), 'tcgss-testbuild-')));
 const chromePath = process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
@@ -52,12 +53,12 @@ async function main() {
     const extId = new URL(sw.url()).host;
     const setup = await ctx.newPage();
     await setup.goto(`chrome-extension://${extId}/src/ui/options.html`);
-    await setup.evaluate((o) => new Promise((resolve, reject) => {
-      const open = indexedDB.open('tcgss_suite', 2);
-      open.onupgradeneeded = () => { for (const c of ['orders', 'listings', 'inventory', 'scans', 'trackingBatches']) if (!open.result.objectStoreNames.contains(c)) open.result.createObjectStore(c); };
+    await setup.evaluate(([o, version]) => new Promise((resolve, reject) => {
+      const open = indexedDB.open('tcgss_suite', version);
+      open.onupgradeneeded = () => { for (const c of ['printings', 'orders', 'listings', 'inventory', 'scans', 'trackingBatches']) if (!open.result.objectStoreNames.contains(c)) open.result.createObjectStore(c); };
       open.onerror = () => reject(open.error);
       open.onsuccess = () => { const tx = open.result.transaction('orders', 'readwrite'); tx.objectStore('orders').put(o, o.id); tx.oncomplete = () => resolve(); };
-    }), order);
+    }), [order, DB_VERSION]);
     await setup.close();
 
     // ...and NO message from a page can read, list or overwrite them (or anything else).

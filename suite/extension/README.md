@@ -55,6 +55,13 @@ on the device (header names loosely matched; the Shipper's sample file works; re
 in IndexedDB (`orders`), and the host switches the Agent to them (`ext.orders.use`). The reader sits behind a tiny interface in
 `src/orders/index.js` (`parser.parse(text) -> { ok, orders, skipped, rows }`), so the Agent session's faster parser can replace it.
 Insights use the Agent's own `analytics.js`. Five quick-action buttons run goals the Agent already knows.
+**Your own stock (Insights tab, "Your stock").** The seller picks TCGplayer's inventory export (or the CSV Speed Scan writes). It
+is read on the device (`src/stock/parser.js`; "Total Quantity" is the current count; column names are matched loosely and the real
+export is unverified), saved all-or-nothing (cards and stock together) in IndexedDB, and the host switches the Agent to it
+(`ext.stock.use`), rebuilding the Agent's tools because they index the card list once. Switching waits until no approval card is
+waiting. Nothing is guessed: no price is invented, and cards are not matched to a database. Price changes the seller approves are saved
+on top of the file and come back after a restart. Order files have no card names, so "restock" (which counts what sold) finds nothing
+until orders carry card names; repricing works on the real stock now.
 **Background jobs:** `chrome.alarms` wakes the extension once a minute; a saved job whose schedule has come runs on the
 practice data, leaves a report and queues approval cards (it never acts on its own). The toolbar icon shows how many
 approvals are waiting (a number, no pop-ups). Jobs, cards (same ids), plan, memory and the stop switch are saved, so a
@@ -88,10 +95,29 @@ window.postMessage({ source: 'tcgss-app', v: 1, id: 'any-unique-string-up-to-80-
 Rules: 1 to 200 items per batch; no other fields anywhere (extra fields are refused); a second `tracking.put` with the
 same `batchId` replaces the first.
 
-**What a page can call (and nothing else): `hello` and `tracking.put`.** `hello` answers `{ name, version }` only.
+**What a page can call (and nothing else): `hello`, `tracking.put`, `account.link` and `account.unlink`.** `hello` answers `{ name, version }` only.
 `tracking.put` is write-only and answers `{ key, count }`. There is no way for a page to read from, list, or write to the
 extension's storage: the seller's orders, inventory, listings, scans and tracking batches never leave through the bridge, and
 every other message type is refused as `unknown type`. Only `https://tcgspeedshipper.com` exactly can talk to the bridge.
+
+### Account link (for the web app to implement)
+When the user is signed in (and whenever the login is renewed), post the ACCESS token and its expiry, nothing else:
+```js
+window.postMessage({ source: 'tcgss-app', v: 1, id: 'any-unique-id', type: 'account.link',
+  payload: { accessToken: session.access_token, expiresAt: session.expires_at } }, location.origin);
+// -> { source: 'tcgss-extension', v: 1, id, ok: true, result: { linked: true } }
+// on sign-out:
+window.postMessage({ source: 'tcgss-app', v: 1, id: 'another-id', type: 'account.unlink' }, location.origin);
+```
+`expiresAt` is seconds (the login's `expires_at`) or milliseconds since 1970. Never send the refresh token or the whole login JSON:
+extra fields are refused (any field name containing "refresh" gets a pointed error). A token that is already expired, or valid for more
+than 24 hours, is refused. The extension keeps the token in the service worker's memory, with `chrome.storage.session` as a backup for
+a sleeping worker (never the long-term store, never IndexedDB, never a log, never an answer back to a page), drops it at its own expiry,
+on `account.unlink`, on a 401 from the server, and on Clear everything. It uses it for one thing: `GET /api/agent/status` with
+`Authorization: Bearer <token>` (no cookies, no referrer), and the side panel shows one plain line from the answer (available with
+"N runs left today", needs Premium, not switched on yet, not signed in with an "Open tcgspeedshipper.com" button, and a sentence for every
+code in `docs/suite/AGENT-PROXY.md`). The model is **not** called yet: when `adapters/proxy.js` lands in `suite/agent`, vendor it and
+wire it to `vault.get()` (small).
 The first message may be sent right after page load (early messages are queued). Everything is stored on the seller's computer only.
 
 ## Durability (the service worker can sleep at any time)

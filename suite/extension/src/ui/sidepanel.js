@@ -7,7 +7,7 @@ import { createTour, tourSeen, markTourSeen } from './tour.js';
 import { QUICK_ACTIONS } from '../agent/quick.js';
 import { openStore } from '../store.js';
 import { computeInsights, buyerLabels } from '../orders/insights.js';
-import { renderInsights, wireImport } from './insights-view.js';
+import { renderInsights, wireImport, wireStock } from './insights-view.js';
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
@@ -28,6 +28,7 @@ if (!flags.agentPanel) {
     render();
   }
   wireImport({ $, store, panel, setOrders });
+  wireStock({ $, store, panel });
   async function loadStoredOrders() { await setOrders(s.orders.mode === 'imported' ? await store.list('orders') : []); }
 
   // ---- tabs (arrow keys move between them)
@@ -83,14 +84,17 @@ if (!flags.agentPanel) {
   function render() {
     const keep = focusKey();
     $('practice').hidden = false;
-    $('practice').textContent = s.orders.mode === 'imported'
-      ? `Using your ${s.orders.count.toLocaleString('en-US')} imported orders. They stay on this computer. Stock and messages are still made up.`
+    const own = [s.orders.mode === 'imported' ? `${s.orders.count.toLocaleString('en-US')} orders` : null, s.stock.mode === 'imported' ? `${s.stock.items.toLocaleString('en-US')} stock rows` : null].filter(Boolean);
+    const madeUp = [s.orders.mode === 'imported' ? null : 'orders', s.stock.mode === 'imported' ? null : 'stock', 'messages'].filter(Boolean);
+    $('practice').textContent = own.length
+      ? `Using your ${own.join(' and ')}. They stay on this computer. The ${madeUp.join(' and ')} ${madeUp.length > 1 ? 'are' : 'is'} still made up.`
       : 'Practice mode: made-up data. Nothing here is real and nothing is changed.';
     $('account').hidden = !s.account;
     if (s.account) $('account').textContent = s.account.line;
     $('openSite').hidden = !(s.account && s.account.openSite);
     $('tabs').hidden = false;
     $('removeOrders').hidden = s.orders.mode !== 'imported';
+    $('removeStock').hidden = s.stock.mode !== 'imported';
     for (const b of document.querySelectorAll('#quick button')) b.disabled = s.busy || s.killed;
     $('body').hidden = false;
     $('form').hidden = $('tab-assistant').getAttribute('aria-selected') !== 'true';

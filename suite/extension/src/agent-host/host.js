@@ -33,14 +33,15 @@ const STEPS = [
   { tool: 'inventory.setPrices', args: { changes: [{ printingId: 'mtg:practice:p2', condition: 'NM', finish: 'nonfoil', priceCents: 70 }] } }
 ];
 
-export function createPracticeHost({ extensionId, shop = makeShop(), persist = memoryStatePersist(), auditStore, now = () => new Date(), onBadge = () => {}, loadOrders } = {}) {
+export function createPracticeHost({ extensionId, shop = makeShop(), persist = memoryStatePersist(), auditStore, now = () => new Date(), onBadge = () => {}, loadOrders, loadStock } = {}) {
   const shopNow = () => shop.now; // the made-up shop lives on a fixed day so the numbers stay sensible
   const audit = createAuditLog(auditStore ? { store: auditStore, now } : { now });
   const limits = createLimits({ now });
-  const registry = createRegistry({ audit, limits });
   const memory = createShopMemory({ now });
   const automations = createAutomationStore();
-  registerAll(registry, { orders: shop.orders, inventory: shop.inventory, printings: shop.printings, messages: shop.messages, memory, automations, now: shopNow });
+  // These are rebuilt when the stock changes (the Agent's tools index the card list once, when they are made).
+  let registry, inner, planner, agent, service;
+  let baseline = new Map(); // stock key -> the price it had when loaded, so only real changes are saved
 
   // ---- reports (the Agent's store has no way to load saved ones, so we keep the log)
   let repCounter = 0;
@@ -52,7 +53,6 @@ export function createPracticeHost({ extensionId, shop = makeShop(), persist = m
   };
 
   // ---- inbox with ids that stay the same across restarts
-  const inner = createInbox({ registry, now });
   const ledger = new Map(); // xid -> { xid, innerId|null, status, spec, undo?, restored? }
   const xidOf = new Map(); // innerId -> xid
   let xCounter = 0;
@@ -101,13 +101,22 @@ export function createPracticeHost({ extensionId, shop = makeShop(), persist = m
     pendingCount: () => inner.pendingCount()
   };
 
-  const planner = createRulePlanner({ registry, memory, now: shopNow });
-  const agent = createAgent({ registry, memory, inbox, planner, reports, now: shopNow });
-  const service = createAgentService({ registry, extensionId, agent });
+  const stockKey = (i) => `${i.printingId}|${i.condition}|${i.finish}`;
+  function buildCore() {
+    registry = createRegistry({ audit, limits });
+    registerAll(registry, { orders: shop.orders, inventory: shop.inventory, printings: shop.printings, messages: shop.messages, memory, automations, now: shopNow });
+    inner = createInbox({ registry, now });
+    planner = createRulePlanner({ registry, memory, now: shopNow });
+    agent = createAgent({ registry, memory, inbox, planner, reports, now: shopNow });
+    service = createAgentService({ registry, extensionId, agent });
+    baseline = new Map(shop.inventory.map((i) => [stockKey(i), i.priceCents]));
+  }
+  buildCore();
 
   // The shop's orders are made up until the seller imports their own file (kept on this device).
-  const practice = { orders: shop.orders.slice(), messages: shop.messages.slice(), now: shop.now };
+  const practice = { orders: shop.orders.slice(), messages: shop.messages.slice(), now: shop.now, inventory: shop.inventory, printings: shop.printings };
   let usingImported = false;
+  let usingStock = false;
   async function applyOrders(mode) {
     if (mode === 'imported') {
       const list = loadOrders ? await loadOrders() : [];
@@ -126,6 +135,24 @@ export function createPracticeHost({ extensionId, shop = makeShop(), persist = m
     return true;
   }
 
+  // The stock: the made-up practice stock, or the seller's imported stock file (kept on this device).
+  // Switching rebuilds the Agent's tools, so it waits until nothing is running and no card is waiting.
+  async function applyStock(mode) {
+    if (mode === 'imported') {
+      const loaded = loadStock ? await loadStock() : { items: [], printings: [] };
+      if (!loaded.items.length) return false;
+      shop.inventory = loaded.items;
+      shop.printings = loaded.printings;
+      usingStock = true;
+    } else {
+      shop.inventory = practice.inventory;
+      shop.printings = practice.printings;
+      usingStock = false;
+    }
+    buildCore();
+    return true;
+  }
+
   let lastPlan = null; // { planId, steps: [{ text, state }] }
   let jobCounter = 0;
 
@@ -133,8 +160,8 @@ export function createPracticeHost({ extensionId, shop = makeShop(), persist = m
     memory: memory.exportJson(),
     ledger: [...ledger.values()].map(({ xid, status, spec, undo }) => ({ xid, status, spec, ...(undo ? { undo } : {}) })),
     xCounter, plan: lastPlan, killed: limits.isKilled(),
-    prices: Object.fromEntries(shop.inventory.map((i) => [`${i.printingId}|${i.condition}|${i.finish}`, i.priceCents])),
-    jobs: automations.list(), reports: reportLog, repCounter, jobCounter, usingImported
+    prices: Object.fromEntries(shop.inventory.filter((i) => i.priceCents !== baseline.get(stockKey(i)) && i.priceCents !== undefined).map((i) => [stockKey(i), i.priceCents])),
+    jobs: automations.list(), reports: reportLog, repCounter, jobCounter, usingImported, usingStock
   });
   const save = () => persist.save(snapshot());
   const badge = () => { try { onBadge(inbox.pendingCount()); } catch { /* the badge is a nicety */ } };
@@ -160,8 +187,9 @@ export function createPracticeHost({ extensionId, shop = makeShop(), persist = m
     }
     lastPlan = saved.plan;
     if (saved.usingImported) { try { await applyOrders('imported'); } catch { /* fall back to the practice orders */ } }
+    if (saved.usingStock) { try { await applyStock('imported'); } catch { /* fall back to the practice stock */ } }
     if (saved.killed) limits.kill('restored: stopped before the worker slept');
-    for (const i of shop.inventory) { const p = saved.prices[`${i.printingId}|${i.condition}|${i.finish}`]; if (p) i.priceCents = p; }
+    for (const i of shop.inventory) { const p = saved.prices[stockKey(i)]; if (p) i.priceCents = p; }
     badge();
   })();
 
@@ -190,6 +218,18 @@ export function createPracticeHost({ extensionId, shop = makeShop(), persist = m
         await save();
         return makeResponse(msg.id, { mode, orders: shop.orders.length });
       }
+      case 'ext.stock.use': {
+        const mode = p && p.mode;
+        if (mode !== 'imported' && mode !== 'practice') return makeError(msg.id, 'mode must be imported or practice');
+        if (service.busy || inner.pendingCount() > 0) return makeError(msg.id, 'Answer or decline the waiting approval cards first, then switch the stock.');
+        const was = shop.inventory.length;
+        if (!(await applyStock(mode))) return makeError(msg.id, 'There is no imported stock to use.');
+        await audited('stock.use', { mode });
+        await save();
+        return makeResponse(msg.id, { mode, items: shop.inventory.length, was });
+      }
+      case 'ext.stock.status':
+        return makeResponse(msg.id, { mode: usingStock ? 'imported' : 'practice', items: shop.inventory.length, cards: shop.printings.length });
       case 'ext.orders.status':
         return makeResponse(msg.id, { mode: usingImported ? 'imported' : 'practice', orders: shop.orders.length });
       case 'ext.jobs.list':
@@ -273,11 +313,12 @@ export function createPracticeHost({ extensionId, shop = makeShop(), persist = m
     await persist.clear();
     ledger.clear(); xidOf.clear(); reportLog = [];
     await applyOrders('practice');
+    await applyStock('practice');
     for (const f of memory.list()) memory.delete(f.id);
     for (const a of automations.list()) automations.remove(a.id);
     lastPlan = null;
     badge();
   }
 
-  return { handle, tick, ready, clearAll, snapshot, registry, shop, memory, inbox, automations, reports, get busy() { return service.busy; } };
+  return { handle, tick, ready, clearAll, snapshot, get registry() { return registry; }, shop, memory, inbox, automations, reports, get busy() { return service.busy; } };
 }

@@ -17,6 +17,7 @@ export function createPanel(transport, { labelFor = () => undefined } = {}) {
     canPlan: true, canMemory: false, canInbox: false, canSuggest: false, canUndo: false, canJobs: false,
     suggestions: [], jobs: [], reports: [],
     orders: { mode: 'practice', count: 0 }, // which orders the Agent is looking at
+    stock: { mode: 'practice', items: 0, cards: 0 }, // which stock the Agent looks at
     account: null // { kind, line, openSite }: can the online assistant be used? (one plain line)
   };
   const addCard = (c) => { if (!state.items.some((i) => i.kind === 'approval' && i.id === c.approvalId)) state.items.push({ kind: 'approval', id: c.approvalId, tool: c.tool, description: c.description, rows: argRows(c.args), why: c.why, undo: c.undo, expected: c.expected, state: 'waiting' }); };
@@ -82,11 +83,22 @@ export function createPanel(transport, { labelFor = () => undefined } = {}) {
       if (state.canMemory) await call('agent.memory.list');
       if (state.canInbox) { const c = await call('agent.inbox.list'); for (const card of cleanCards(c)) addCard(card); }
       await this.ordersStatus();
+      await this.stockStatus();
       await this.refresh();
       changed();
       return true;
     },
     // Suggestions and jobs: read-only lookups, safe to repeat.
+    async useStock(mode) {
+      const r = await call('ext.stock.use', { mode });
+      if (r) { await this.stockStatus(); await this.refresh(); }
+      return !!r;
+    },
+    async stockStatus() {
+      const r = await callQuiet('ext.stock.status');
+      if (r && (r.mode === 'imported' || r.mode === 'practice')) { state.stock = { mode: r.mode, items: r.items | 0, cards: r.cards | 0 }; changed(); }
+      return r;
+    },
     async accountStatus() {
       const r = await callQuiet('ext.account.status');
       const kinds = ['available', 'signed-out', 'needs-plan', 'off', 'unavailable', 'offline'];

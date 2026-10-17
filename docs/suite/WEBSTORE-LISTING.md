@@ -15,6 +15,10 @@ TCG Speed Suite is a set of helpers for people who sell trading cards.
 
 **Insights from your own order file.** Drop in the order export you already download from TCGplayer. The extension reads it on your computer and shows plain numbers: your repeat buyers (first name and last initial only), where you ship most, your busiest days, your average order and this week against last week. The file is never sent anywhere.
 
+**Your real stock.** Choose the inventory export from TCGplayer (or the CSV Speed Scan makes) and repricing works on your real cards. Nothing is guessed: no price is made up.
+
+**Online assistant status.** If you are signed in on tcgspeedshipper.com, the panel shows one plain line: whether the online assistant is available to you and how many questions are left today.
+
 **Five big buttons.** "What should I do today?", "Who are my repeat buyers?", "Where do I ship most?", "Write my weekly summary" and "Draft a reply". No typing needed.
 
 **It remembers your shop.** Tell it "remember that I ship on Tuesdays". You can see every fact it keeps and press Forget on any of them.
@@ -31,11 +35,11 @@ TCG Speed Suite is a set of helpers for people who sell trading cards.
 - **storage**: remembers your switches and the assistant's notes on your own computer.
 - **sidePanel**: shows the assistant next to the page you are on.
 - **alarms**: wakes the extension once a minute so a saved job can run on schedule.
-- **tcgspeedshipper.com**: lets our own website hand the extension your tracking numbers, to keep on your computer. The website cannot read anything back.
+- **tcgspeedshipper.com**: lets our own website hand the extension your tracking numbers and your short-lived login token, to keep on your computer; the website cannot read anything back. The extension also makes one request to this address, only while you are signed in, to ask whether the online assistant is available to you.
 - **seller.tcgplayer.com (optional, asked only if you switch a TCGplayer helper on; not available yet)**: so a helper can fill in a form you already have open, when you click.
 
 ## What data stays on the device
-All of it. Settings, the orders you import (kept in your browser only), the assistant's memory, waiting approvals, saved jobs and reports, the history of what it did, and any orders or tracking numbers the website hands over are stored in your browser on your computer. Nothing is sent to us or to anyone else. One button in Settings, **Clear everything**, erases all of it. Full text: `suite/extension/PRIVACY.md`.
+All of it. Settings, the orders and stock you import (kept in your browser only), the assistant's memory, waiting approvals, saved jobs and reports, the history of what it did, and any orders or tracking numbers the website hands over are stored in your browser on your computer. Nothing is sent to us or to anyone else. One button in Settings, **Clear everything**, erases all of it. Full text: `suite/extension/PRIVACY.md`.
 
 ## Single purpose (store form)
 Help trading-card sellers run their shop from one place: an assistant that plans, remembers and asks before it changes anything, and passes their own order and tracking data between our tools on their computer.

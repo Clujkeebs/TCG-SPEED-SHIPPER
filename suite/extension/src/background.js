@@ -76,6 +76,7 @@ function getHost(extensionId) {
   hostInstance ??= createPracticeHost({
     extensionId, persist: chromeStatePersist(), onBadge: setBadge,
     loadOrders: async () => (await getStore()).list('orders'),
+    loadStock: async () => { const st = await getStore(); return { items: await st.list('inventory'), printings: await st.list('printings') }; },
     auditStore: globalThis.indexedDB ? createIdbStore(indexedDB, AUDIT_DB) : undefined
   });
   return hostInstance;
