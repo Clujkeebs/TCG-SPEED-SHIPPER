@@ -71,6 +71,11 @@ let labelAs = 'URL'; // what a purchase answer holds: 'URL' (a link, like the re
 const labelDownloads = []; // every label link the server tried to fetch: { url, auth }
 let ratesEmpty = false; // price requests answer 200 with nothing usable in them (a missing price must never read as $0.00)
 let slowTries = 0; // 'URL_SLOW' links: how many tries so far
+// Where the fake gateway checks the street: 'purchase' (like the live sandbox, Oct 17: a quote takes anything, a purchase refuses made-up
+// streets unless minimalAddressValidation is set), 'both' (quotes refuse them too, unless the option is set), 'both_noflag' (quotes refuse them even with it).
+let addressCheck = 'purchase';
+const madeUp = (b) => /Sample|Example/.test(String((b.toAddress && b.toAddress.addressLine1) || ''));
+const minimal = (b) => Boolean(b.shipmentOptions && b.shipmentOptions.minimalAddressValidation);
 global.fetch = async (url, init) => {
   if (/^https?:\/\/(prv-labels-cls\.gcs\.pitneycloud\.com|labels\.example\.test)\//.test(url)) { // the link a purchase answer holds instead of the file
     const auth = Boolean(init && init.headers && init.headers.Authorization);
@@ -91,12 +96,15 @@ global.fetch = async (url, init) => {
   if (url.endsWith('/shipping/api/v2/rates')) {
     if (rates429 > 0) { rates429 -= 1; return json(429, { message: 'Too Many Requests' }); }
     if (ratesEmpty) return json(200, { rates: [{ rate: {} }], fromAddress: {}, toAddress: {} });
+    const rb = JSON.parse(init.body);
+    if (madeUp(rb) && ((addressCheck === 'both' && !minimal(rb)) || addressCheck === 'both_noflag')) return json(400, { errors: [{ errorCode: '1001', message: 'Invalid address provided.' }] });
     return json(200, { rates: [{ rate: { serviceId: 'FCM', baseCharge: 0.78, totalCarrierCharge: 0.78 } }] }); // the live sandbox's shape
   }
   if (url.endsWith('/shipping/api/v2/shipments') && init.method === 'POST') {
     const b = JSON.parse(init.body);
     if (b.byCarrier.service === 'FCM' && !/^DOC_(6X4|9X4)$/.test(String(b.labelSize))) return json(400, { errors: [{ errorCode: '1001', message: 'Invalid label paper size.' }] }); // IMb letters only
     if (b.toAddress.postalCode === '00000') return json(400, { errors: [{ errorCode: '1001', message: 'Invalid address' }] });
+    if (madeUp(b) && !minimal(b)) return json(400, { errors: [{ errorCode: '1001', message: 'Invalid address provided.' }] });
     // Like the real gateway (Oct 17 sandbox rehearsal): a PDF label can only be a link; BASE64 is for ZPL2, PNG and GIF.
     if (b.contentType === 'BASE64' && b.labelFormat === 'PDF') return json(400, { errors: [{ errorCode: '1002', message: 'Invalid label file output format.' }] });
     shipSeq++;
@@ -289,6 +297,31 @@ server.listen(0, async () => {
     r = await buy('U4', 'letter');
     check('no file at all on a letter: kept and flagged (a letter cannot be cancelled), never a crash', r.status === 200 && r.body.results[0].ok === true && /did not come back/.test(r.body.results[0].warning || ''), JSON.stringify(r.body).slice(0, 200));
     labelAs = 'URL';
+    console.log('\n-- the sample orders (made-up streets): sandbox only --');
+    const SAMPLE_TO = { firstName: 'Sample', lastName: 'Buyer', addr1: '123 Sample Way', city: 'Portland', state: 'ME', zip: '04101' };
+    const shipBodies = () => pbCalls.filter((c) => c.url.endsWith('/shipping/api/v2/shipments') && c.init.method === 'POST').map((c) => JSON.parse(c.init.body));
+    const rateBodies = () => pbCalls.filter((c) => c.url.endsWith('/shipping/api/v2/rates')).map((c) => JSON.parse(c.init.body));
+    const sampleAt = (n) => Object.assign({}, SAMPLE_TO, { addr1: n + ' Sample Way' }); // a new street each time, so no quote comes from memory
+    pbCalls.length = 0; addressCheck = 'purchase';
+    r = await req('POST', '/api/postage/quote', { from: FROM, labels: [{ ref: 'SAMPLE-0001', to: sampleAt(123), service: 'letter', weightOz: 1 }] }, 'pilot-token');
+    check('a sample order is priced when the gateway takes the street (the live sandbox does): one call, no option', r.body.items[0].ok === true && rateBodies().length === 1 && !rateBodies()[0].shipmentOptions, JSON.stringify(r.body));
+    pbCalls.length = 0; addressCheck = 'both';
+    r = await req('POST', '/api/postage/quote', { from: FROM, labels: [{ ref: 'SAMPLE-0002', to: sampleAt(124), service: 'letter', weightOz: 1 }] }, 'pilot-token');
+    check('if quotes refuse the made-up street, a sample order is quoted again with minimal address validation and priced', r.body.items[0].ok === true && rateBodies().length === 2 && !rateBodies()[0].shipmentOptions && rateBodies()[1].shipmentOptions.minimalAddressValidation === true, JSON.stringify(r.body));
+    pbCalls.length = 0;
+    r = await req('POST', '/api/postage/quote', { from: FROM, labels: [{ ref: 'ORD-77', to: sampleAt(125), service: 'letter', weightOz: 1 }] }, 'pilot-token');
+    check('a real order (not SAMPLE-) with a refused street is not retried: the seller sees Pitney Bowes\' words', r.body.items[0].ok === false && /Invalid address/.test(r.body.items[0].error) && rateBodies().length === 1, JSON.stringify(r.body));
+    addressCheck = 'both_noflag'; pbCalls.length = 0;
+    r = await req('POST', '/api/postage/quote', { from: FROM, labels: [{ ref: 'SAMPLE-0003', to: sampleAt(126), service: 'letter', weightOz: 1 }] }, 'pilot-token');
+    check('if even the option does not help, the error is shown after one retry', r.body.items[0].ok === false && /Invalid address/.test(r.body.items[0].error) && rateBodies().length === 2, JSON.stringify(r.body));
+    addressCheck = 'purchase'; pbCalls.length = 0;
+    r = await req('POST', '/api/postage/labels', { from: FROM, labels: [{ ref: 'SAMPLE-0001', to: SAMPLE_TO, service: 'letter', weightOz: 1 }] }, 'pilot-token');
+    check('buying a sample order in the sandbox sends minimalAddressValidation and succeeds (without it Pitney Bowes says "Invalid address provided.")', r.body.results[0].ok === true && shipBodies().length === 1 && shipBodies()[0].shipmentOptions.minimalAddressValidation === true, JSON.stringify(r.body.results[0]));
+    pbCalls.length = 0;
+    r = await req('POST', '/api/postage/labels', { from: FROM, labels: [{ ref: 'ORD-78', to: SAMPLE_TO, service: 'letter', weightOz: 1 }] }, 'pilot-token');
+    check('a real order with a made-up street gets no option: Pitney Bowes refuses it and nothing is bought', r.body.results[0].ok === false && /Invalid address/.test(r.body.results[0].error) && shipBodies().length === 1 && !shipBodies()[0].shipmentOptions, JSON.stringify(r.body.results[0]));
+    const { sampleOptions } = require(path.join(__dirname, '..', 'postage.js'));
+    check('the option exists only in the sandbox and only for SAMPLE- refs; production never gets it', sampleOptions('SAMPLE-0001', 'sandbox').minimalAddressValidation === true && sampleOptions('sample-9', 'sandbox') != null && sampleOptions('SAMPLE-0001', 'production') === null && sampleOptions('ORD-1', 'sandbox') === null && sampleOptions('', 'sandbox') === null && sampleOptions(null, 'sandbox') === null);
     r = await req('GET', '/api/postage/labels/' + res3[0].shipmentId + '/pdf', undefined, 'owner-token');
     check('nobody else can reprint it', r.status === 404);
     r = await req('GET', '/api/postage/labels', undefined, 'stranger-token');

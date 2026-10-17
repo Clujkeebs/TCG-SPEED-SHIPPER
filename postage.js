@@ -139,6 +139,20 @@ function buildShipment({ from, to, service, weightOz, phone }) {
   };
 }
 
+// The app's sample orders (SAMPLE-0001 ...) have made-up streets. Pitney Bowes checks the street on a purchase and refuses them
+// ("Invalid address provided.", sandbox rehearsal Oct 17) unless minimalAddressValidation is set, which then works. SANDBOX
+// ONLY: the demo works for the owner, while in production a made-up address is refused and can never buy real postage.
+const SAMPLE_OPTIONS = { minimalAddressValidation: true };
+const sampleOptions = (ref, mode) => (mode === 'sandbox' && /^SAMPLE-/i.test(String(ref || '')) ? SAMPLE_OPTIONS : null);
+// A price quote; a sandbox sample order whose made-up street is refused is quoted again with minimal address validation.
+async function quoteShipment(client, shipment, ref, mode) {
+  try { return await client.rate(shipment); } catch (err) {
+    const opt = sampleOptions(ref, mode);
+    if (opt && err instanceof PbError && err.status === 400 && /address/i.test(err.message)) return client.rate(Object.assign({}, shipment, { shipmentOptions: opt }));
+    throw err;
+  }
+}
+
 // Pulls what we need out of a Shipping 360 create-shipment response.
 function readLabel(r) {
   r = r || {};
@@ -264,6 +278,23 @@ async function pbSelfCheck(env = process.env, fetchImpl = fetch) {
       out.push('pb_rate_' + service + (price == null ? '=NO_PRICE shape=' + JSON.stringify(q).replace(/\s+/g, ' ').slice(0, 700) : '=OK($' + price.toFixed(2) + ')'));
     } catch (e) { out.push('pb_rate_' + service + '=FAILED' + why(e)); }
   }
+  // PB_SELFTEST_TO=sample (sandbox): would the app's sample orders get a price? Read-only. The strict quote first, and the
+  // minimalAddressValidation option only if Pitney Bowes refuses the made-up street.
+  if (env.PB_SELFTEST_TO === 'sample' && cfg.mode === 'sandbox') {
+    for (const [i, addr] of SELFCHECK_SAMPLE_TOS.entries()) {
+      const toAddr = pbAddress(addr).address;
+      for (const options of [null, SAMPLE_OPTIONS]) {
+        const tag = 'pb_rate_sample' + (i + 1) + (options ? '_minimal' : '');
+        try {
+          const ship = buildShipment({ from, to: toAddr, service: 'letter', weightOz: 1, phone: env.PB_DEFAULT_PHONE || '6502530000' });
+          if (options) ship.shipmentOptions = options;
+          const price = money(rateOf(await client.rate(ship)));
+          out.push(tag + (price == null ? '=NO_PRICE' : '=OK($' + price.toFixed(2) + ')'));
+          if (price != null) break;
+        } catch (e) { out.push(tag + '=FAILED' + why(e)); }
+      }
+    }
+  }
   // Rehearsal of a purchase and a refund, ONLY in the sandbox (free test labels) and only when PB_SELFTEST_BUY=on is set on
   // the server (set it for one deploy, read the log, remove it). It says what the answers hold, never the label itself.
   if (env.PB_SELFTEST_BUY === 'on' && cfg.mode === 'sandbox') {
@@ -317,7 +348,7 @@ async function pbSelfCheck(env = process.env, fetchImpl = fetch) {
       for (const [i, addr] of SELFCHECK_SAMPLE_TOS.entries()) {
         const tag = 'pb_buy_sample' + (i + 1);
         const toAddr = pbAddress(addr).address;
-        if (!(await rehearse(tag, 'letter', toAddr, 'DOC_6X4'))) await rehearse(tag + '_minimal', 'letter', toAddr, 'DOC_6X4', { minimalAddressValidation: true });
+        if (!(await rehearse(tag, 'letter', toAddr, 'DOC_6X4'))) await rehearse(tag + '_minimal', 'letter', toAddr, 'DOC_6X4', SAMPLE_OPTIONS);
       }
     }
   }
@@ -444,7 +475,7 @@ module.exports = function mountPostageRoutes(router, d) {
         const key = quoteKey(pbConfig(env).mode, from.address, to.address, item.service, oz);
         let q = quoteCache.get(key);
         if (!q || q.at < Date.now() - QUOTE_TTL_MS) {
-          q = { at: Date.now(), rate: await pb().rate(buildShipment({ from: from.address, to: to.address, service: item.service, weightOz: oz, phone: env.PB_DEFAULT_PHONE })) };
+          q = { at: Date.now(), rate: await quoteShipment(pb(), buildShipment({ from: from.address, to: to.address, service: item.service, weightOz: oz, phone: env.PB_DEFAULT_PHONE }), ref, pbConfig(env).mode) };
           quoteCache.set(key, q);
           if (quoteCache.size > QUOTE_CACHE_MAX) quoteCache.delete(quoteCache.keys().next().value); // oldest first
         }
@@ -504,7 +535,7 @@ module.exports = function mountPostageRoutes(router, d) {
         // Letter postage can't be voided, so when the balance is getting low,
         // quote first and stop before buying a label nobody can pay for.
         if (useBalance && known != null && known < LOW_BALANCE_CENTS) {
-          const q = await pb().rate(shipment);
+          const q = await quoteShipment(pb(), shipment, ref, mode);
           const est = priced(item.service, money(rateOf(q)), env, plan).price;
           if (est == null || cents(est) > known) {
             outOfFunds = true;
@@ -512,7 +543,8 @@ module.exports = function mountPostageRoutes(router, d) {
             continue;
           }
         }
-        const l = readLabel(await pb().createShipment(shipment));
+        const opt = sampleOptions(ref, mode);
+        const l = readLabel(await pb().createShipment(opt ? Object.assign({}, shipment, { shipmentOptions: opt }) : shipment));
         if (!l.labelPdfBase64 && l.labelPdfUrl) {
           const f = await downloadLabel(l.labelPdfUrl, pb(), downloadPauses(env));
           l.labelPdfBase64 = f.base64;
@@ -665,6 +697,7 @@ module.exports.readLabel = readLabel;
 module.exports.pbConfig = pbConfig;
 module.exports.pbAddress = pbAddress;
 module.exports.buildShipment = buildShipment;
+module.exports.sampleOptions = sampleOptions;
 module.exports.SERVICES = SERVICES;
 module.exports.feeFor = feeFor;
 module.exports.effectivePlan = effectivePlan;
