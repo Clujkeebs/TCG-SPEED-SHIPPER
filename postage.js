@@ -175,6 +175,35 @@ function money(r) {
   return Number.isFinite(n) ? Math.round(n * 100) / 100 : null;
 }
 
+// A read-only look at Pitney Bowes for the boot self-check (server.js): the login, the USPS account and one price for
+// each service, using two public addresses. Nothing is bought, stored or refunded. It answers in short words and never
+// shows a key or a token, so a deploy's log says how the real Pitney Bowes behaves without waiting for a seller's click:
+//   "pb_mode=sandbox pb_account=OK(USPS) pb_rate_letter=OK($0.78) pb_rate_ground=FAILED(400 Invalid value for ...)"
+const SELFCHECK_FROM = { name: 'TCG Speed Shipper', addr1: '1600 Amphitheatre Parkway', city: 'Mountain View', state: 'CA', zip: '94043' };
+const SELFCHECK_TO = { name: 'Self Check', addr1: '350 Fifth Avenue', city: 'New York', state: 'NY', zip: '10118' };
+async function pbSelfCheck(env = process.env, fetchImpl = fetch) {
+  const cfg = pbConfig(env);
+  if (!cfg.configured) return 'pb=NOT_SET';
+  const client = makePbClient({ key: env.PB_API_KEY, secret: env.PB_API_SECRET, env: cfg.mode, partnerId: env.PB_PARTNER_ID, carrierAccountId: env.PB_CARRIER_ACCOUNT_ID, fetchImpl, retryBaseMs: Number(env.PB_RETRY_BASE_MS) || 400 });
+  const why = (e) => '(' + (e instanceof PbError ? e.status + ' ' : '') + String((e && e.message) || e).replace(/\s+/g, ' ').slice(0, 140) + ')';
+  const out = ['pb_mode=' + cfg.mode];
+  try {
+    const r = await client.carrierAccounts();
+    const list = (r && r.data && r.data.carrierAccounts) || (r && r.carrierAccounts) || [];
+    out.push(list.some((a) => /usps/i.test(String(a.carrierName || a.carrier || ''))) ? 'pb_account=OK(USPS)' : 'pb_account=NO_USPS(' + list.length + ' accounts)');
+  } catch (e) { out.push('pb_account=FAILED' + why(e)); }
+  const from = pbAddress(SELFCHECK_FROM).address;
+  const to = pbAddress(SELFCHECK_TO).address;
+  for (const service of Object.keys(SERVICES)) {
+    try {
+      const q = await client.rate(buildShipment({ from, to, service, weightOz: service === 'letter' ? 1 : 8, phone: env.PB_DEFAULT_PHONE || '6502530000' }));
+      const price = money(q && (Array.isArray(q.rate) ? q.rate[0] : q.rate));
+      out.push('pb_rate_' + service + (price == null ? '=NO_PRICE' : '=OK($' + price.toFixed(2) + ')'));
+    } catch (e) { out.push('pb_rate_' + service + '=FAILED' + why(e)); }
+  }
+  return out.join(' ');
+}
+
 // USPS labels through Shipping 360 need a phone on the sender. TCGplayer
 // exports have no buyer phones, so the sender's (or PB_DEFAULT_PHONE) is
 // required up front instead of failing once per label.
@@ -497,6 +526,7 @@ module.exports = function mountPostageRoutes(router, d) {
   });
 };
 
+module.exports.pbSelfCheck = pbSelfCheck;
 module.exports.pbConfig = pbConfig;
 module.exports.pbAddress = pbAddress;
 module.exports.buildShipment = buildShipment;
