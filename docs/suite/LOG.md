@@ -644,3 +644,13 @@ Needs Builder: the Extension's service worker builds `createProxyModel({ baseUrl
 Needs owner: nothing now. When you are ready: "Turn on a real model (costs money)" (a key with its own spend limit, then the Railway variables in
 `AGENT-PROXY.md`), then ask the Agent session to run the six questions. Expect well under a dollar.
 Next: run the measurement once the model is on; trim tool descriptions if the numbers say so.
+
+### 2026-10-17 · builder · tests-one-at-a-time · done
+`cd suite && npm test` now runs one test file at a time (`node --test --test-concurrency=1`): 474 tests in 45 s instead of 19 s, 474 of 474 in both modes.
+Reason: the browser (Chromium) test files started three at a time on a 4-core machine and starved each other. About once per full run one of them
+failed on a timeout (three different tests over two days, each green when run alone, twice). The merge script uses this serial run. If you add a
+browser test, give it its own file and keep its waits generous. If one still fails once in a full run, run it alone twice before calling it
+flaky, and tell me which one.
+Needs Builder: none
+Needs owner: none
+Next: none
