@@ -9,7 +9,8 @@ export const FLAG_DEFS = {
   pasteTracking: { label: 'Paste tracking', touchesTcgplayer: true },
   printShipping: { label: 'Print shipping', touchesTcgplayer: true },
   uploadToTcgplayer: { label: 'Upload to TCGplayer', touchesTcgplayer: true },
-  agentPanel: { label: 'Agent side panel', touchesTcgplayer: false }
+  agentPanel: { label: 'Agent side panel', touchesTcgplayer: false },
+  onlineAssistant: { label: 'Online assistant', touchesTcgplayer: false, needsSitePermission: true }
 };
 
 export const DEFAULT_FLAGS = Object.freeze(Object.fromEntries(Object.keys(FLAG_DEFS).map((k) => [k, false])));

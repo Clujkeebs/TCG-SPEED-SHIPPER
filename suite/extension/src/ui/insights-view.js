@@ -1,6 +1,7 @@
 // The Insights tab: importing the seller's order file and showing plain numbers. All text is added as
 // plain text. The file is read on this device and saved only in this browser's own storage.
 import { importOrderText } from '../orders/index.js';
+import { parseStockExport } from '../stock/parser.js';
 import { computeInsights } from '../orders/insights.js';
 
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
@@ -79,5 +80,33 @@ export function wireImport({ $, store, panel, setOrders }) {
     await panel.useOrders('practice');
     await setOrders([]);
     say('Your orders were removed from this computer. The assistant is back on the practice shop.');
+  });
+}
+
+// "Your stock": read on this device, saved all-or-nothing (cards and stock together), then the Agent switches to it.
+export function wireStock({ $, store, panel }) {
+  const status = $('stockStatus');
+  const say = (text, bad = false) => { status.textContent = text; status.className = bad ? 'err' : ''; };
+  async function handleFile(file) {
+    if (!file) return;
+    if (!/\.csv$/i.test(file.name) && file.type !== 'text/csv') return say('Please choose the CSV file you export from TCGplayer.', true);
+    say('Reading the file on this computer…');
+    let text;
+    try { text = await file.text(); } catch { return say('I could not open that file. Try choosing it again.', true); }
+    const t0 = Date.now();
+    const res = parseStockExport(text);
+    if (!res.ok) return say(res.error, true);
+    try { await store.replaceCollections({ printings: res.printings, inventory: res.items }); } catch { return say('I could not save the stock, so nothing was changed. Try again.', true); }
+    const used = await panel.useStock('imported');
+    const skipped = res.skipped.length ? ` ${res.skipped.length} row${res.skipped.length > 1 ? 's' : ''} could not be read and were left out.` : '';
+    const note = used ? '' : ' The assistant could not switch to it yet: answer or decline any waiting approval cards, then choose the file again.';
+    say(`Done. ${res.items.length.toLocaleString('en-US')} stock rows for ${res.printings.length.toLocaleString('en-US')} cards read in ${((Date.now() - t0) / 1000).toFixed(1)} s and kept on this computer.${skipped}${note}`, !used);
+  }
+  $('chooseStock').addEventListener('click', () => $('stockFile').click());
+  $('stockFile').addEventListener('change', (e) => { handleFile(e.target.files[0]); e.target.value = ''; });
+  $('removeStock').addEventListener('click', async () => {
+    if (!(await panel.useStock('practice'))) return say('Answer or decline the waiting approval cards first, then try again.', true);
+    await store.replaceCollections({ printings: [], inventory: [] });
+    say('Your stock was removed from this computer. The assistant is back on the practice stock.');
   });
 }

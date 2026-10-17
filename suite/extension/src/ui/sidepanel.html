@@ -32,8 +32,8 @@ button{min-height:36px;cursor:pointer}form textarea{width:100%;resize:vertical}
 #quick button:disabled{border-color:#999;color:#555;cursor:not-allowed}
 #drop{border:2px dashed #555;border-radius:10px;padding:18px 12px;text-align:center;background:#fafafa}
 #drop.over{border-color:#1a5fd0;background:#eef4ff}
-#chooseFile,#removeOrders{min-height:44px;padding:8px 14px;border:2px solid #1a5fd0;border-radius:8px;background:#fff;color:#0b3a8a;font-weight:600}
-#importStatus{margin:8px 0;font-weight:600}.err{color:#8a0017}
+#chooseFile,#removeOrders,#chooseStock,#removeStock{min-height:44px;padding:8px 14px;border:2px solid #1a5fd0;border-radius:8px;background:#fff;color:#0b3a8a;font-weight:600}
+#importStatus,#stockStatus{margin:8px 0;font-weight:600}.err{color:#8a0017}
 .stat{display:grid;grid-template-columns:1fr 1fr;gap:8px}.stat div{background:#f2f2f2;border-radius:8px;padding:8px}.stat b{display:block;font-size:20px}
 .rows{list-style:none;margin:0;padding:0}.rows li{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid #e3e3e3}
 .bar{display:inline-block;height:10px;background:#1a5fd0;border-radius:3px;vertical-align:middle;margin-left:6px}
@@ -48,6 +48,7 @@ button{min-height:36px;cursor:pointer}form textarea{width:100%;resize:vertical}
 <div role="tablist" aria-label="Sections" id="tabs" hidden><button role="tab" id="tab-assistant" aria-controls="panel-assistant" aria-selected="true" type="button">Assistant</button><button role="tab" id="tab-insights" aria-controls="panel-insights" aria-selected="false" tabindex="-1" type="button">Insights</button></div>
 <main id="body" hidden>
   <div id="panel-assistant" role="tabpanel" aria-labelledby="tab-assistant" tabindex="-1" style="display:flex;flex-direction:column;gap:10px">
+  <p id="account" class="small" role="status" hidden></p><button id="openSite" type="button" hidden>Open tcgspeedshipper.com</button>
   <section id="quick" aria-label="Quick actions"></section>
   <section id="plan" hidden><h2>Plan</h2><ol id="planlist"></ol></section>
   <section id="suggest" hidden><h2>Five things worth doing this week</h2><ol id="suglist"></ol></section>
@@ -62,6 +63,12 @@ button{min-height:36px;cursor:pointer}form textarea{width:100%;resize:vertical}
       <input type="file" id="orderFile" accept=".csv,text/csv" hidden>
       <p><button id="chooseFile" type="button">Choose order file</button> <button id="removeOrders" type="button" hidden>Go back to the practice shop</button></p>
       <p id="importStatus" role="status"></p>
+    </section>
+    <section><h2>Your stock</h2>
+      <p class="small">Choose your TCGplayer inventory export (or the file Speed Scan makes). It is read on this computer and never sent anywhere. Then restock and repricing use your real stock.</p>
+      <input type="file" id="stockFile" accept=".csv,text/csv" hidden>
+      <p><button id="chooseStock" type="button">Choose stock file</button> <button id="removeStock" type="button" hidden>Go back to the practice stock</button></p>
+      <p id="stockStatus" role="status"></p>
     </section>
     <section id="insights" aria-live="polite"></section>
   </div>

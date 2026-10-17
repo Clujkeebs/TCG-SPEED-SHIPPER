@@ -8,30 +8,31 @@
 // can replace it (the Agent session is writing a faster one).
 import { dollarsToCents, validateOrder } from '../vendor/shared/models.js';
 import { buyerKeyFor } from '../adapters/index.js';
+import { createCsvParser } from '../vendor/agent/orderfile.js';
 
 export const MAX_BYTES = 10 * 1024 * 1024;
 export const MAX_ROWS = 20000;
 
-// RFC 4180-ish: quotes, doubled quotes, CRLF or LF, a leading BOM. One pass, no regex per cell.
+// Reading the CSV uses the Agent's own streaming reader (suite/agent/orderfile.js, vendored): quotes, doubled quotes, CRLF,
+// a BOM and blank lines are handled, and it refuses absurd files (a cell over 20,000 characters, more than 200 columns)
+// instead of using all the memory. It throws a plain Error in those cases; callers turn that into a sentence.
 export function readCsvRows(text) {
   const rows = [];
-  let row = [], cell = '', quoted = false, i = text.charCodeAt(0) === 0xfeff ? 1 : 0;
-  for (; i < text.length; i++) {
-    const c = text[i];
-    if (quoted) {
-      if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else quoted = false; } else cell += c;
-    } else if (c === '"') quoted = true;
-    else if (c === ',') { row.push(cell); cell = ''; }
-    else if (c === '\n' || c === '\r') {
-      if (c === '\r' && text[i + 1] === '\n') i++;
-      row.push(cell); cell = '';
-      if (row.length > 1 || row[0] !== '') rows.push(row);
-      row = [];
-      if (rows.length > MAX_ROWS + 1) break;
-    } else cell += c;
-  }
-  if (cell !== '' || row.length) { row.push(cell); if (row.length > 1 || row[0] !== '') rows.push(row); }
+  const reader = createCsvParser((row) => {
+    rows.push(row);
+    if (rows.length > MAX_ROWS + 1) throw new Error('too many rows');
+  });
+  reader.push(text);
+  reader.end();
   return rows;
+}
+
+// Plain words for a file the reader refused.
+export function readProblem(err, noun = 'orders') {
+  const m = String(err && err.message);
+  if (/too many rows/.test(m)) return `That file has more than ${MAX_ROWS.toLocaleString('en-US')} ${noun}. Split it and import the newest part.`;
+  if (/too many columns|cell is too long/.test(m)) return 'That does not look like a normal spreadsheet export (a cell or row is far too big). Is it the right file?';
+  return 'I could not read that file as a spreadsheet (CSV).';
 }
 
 const norm = (h) => String(h).toLowerCase().replace(/[^a-z0-9#]/g, '');
@@ -86,7 +87,8 @@ const money = (s) => {
 export function parseOrderExport(text) {
   if (typeof text !== 'string' || text.trim() === '') return { ok: false, error: 'That file is empty.', orders: [], skipped: [], rows: 0 };
   if (text.length > MAX_BYTES) return { ok: false, error: 'That file is too big (over 10 MB). Is it the order export?', orders: [], skipped: [], rows: 0 };
-  const rows = readCsvRows(text);
+  let rows;
+  try { rows = readCsvRows(text); } catch (err) { return { ok: false, error: readProblem(err), orders: [], skipped: [], rows: 0 }; }
   if (rows.length < 2) return { ok: false, error: 'The file needs a header row and at least one order.', orders: [], skipped: [], rows: 0 };
   if (rows.length - 1 > MAX_ROWS) return { ok: false, error: `That file has more than ${MAX_ROWS.toLocaleString('en-US')} orders. Split it and import the newest part.`, orders: [], skipped: [], rows: rows.length - 1 };
   const cols = mapColumns(rows[0]);

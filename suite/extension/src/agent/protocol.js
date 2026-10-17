@@ -53,7 +53,7 @@ export function validateEvent(m) {
       return str(m.approvalId, MAX_ID) && plainName(m.tool) && str(m.description, 400) && isObj(m.args)
         && ['why', 'undo', 'expected'].every((k) => m[k] === undefined || str(m[k], 400)) ? { ok: true } : bad;
     case 'agent.answer':
-      return ['done', 'stopped', 'step-limit', 'error'].includes(m.status) && typeof (m.text ?? '') === 'string' && String(m.text ?? '').length <= 8000 ? { ok: true } : bad;
+      return ['done', 'stopped', 'step-limit', 'error', 'waiting-approval', 'planned', 'no-plan', 'invalid'].includes(m.status) && typeof (m.text ?? '') === 'string' && String(m.text ?? '').length <= 8000 ? { ok: true } : bad;
     case 'agent.stopped':
       return { ok: true };
     case 'agent.plan':

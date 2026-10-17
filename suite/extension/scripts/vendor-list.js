@@ -17,6 +17,7 @@ export const VENDORED = [
   'agent/support.js',
   'agent/deals.js',
   'agent/agent.js',
+  'agent/orderfile.js',
   'agent/plan.js',
   'agent/planner.js',
   'agent/memory.js',

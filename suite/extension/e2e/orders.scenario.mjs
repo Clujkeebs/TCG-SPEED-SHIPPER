@@ -12,33 +12,10 @@ const here = fileURLToPath(new URL('.', import.meta.url));
 const extPath = join(here, '..');
 const chromePath = process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const pwPath = process.env.PLAYWRIGHT_PATH || '/opt/node22/lib/node_modules/playwright';
+const { contrastProblems } = await import(pathToFileURL(join(here, 'a11y.mjs')).href);
 const { makeOrderCsv, LAST_NAMES } = await import(pathToFileURL(join(extPath, 'test/helpers/orders-csv.js')).href);
 const { parseOrderExport } = await import(pathToFileURL(join(extPath, 'src/orders/parser.js')).href);
 const { repeatBuyers } = await import(pathToFileURL(join(extPath, 'src/vendor/agent/analytics.js')).href);
-
-// WCAG contrast of every visible piece of text against what is behind it.
-const contrastProblems = () => {
-  const lum = ([r, g, b]) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
-  const parse = (c) => { const m = c.match(/rgba?\(([^)]+)\)/); if (!m) return null; const p = m[1].split(',').map((x) => parseFloat(x)); return { rgb: p.slice(0, 3), a: p[3] ?? 1 }; };
-  const bgOf = (el) => { for (let e = el; e; e = e.parentElement) { const c = parse(getComputedStyle(e).backgroundColor); if (c && c.a > 0.9) return c.rgb; } return [255, 255, 255]; };
-  const bad = [];
-  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
-    if (!n.textContent.trim()) continue;
-    const el = n.parentElement;
-    const cs = getComputedStyle(el);
-    if (cs.visibility === 'hidden' || cs.display === 'none' || el.closest('[hidden]') || el.disabled || el.closest(':disabled')) continue;
-    const r = el.getBoundingClientRect();
-    if (r.width === 0 || r.height === 0) continue;
-    const fg = parse(cs.color).rgb, bg = bgOf(el);
-    const [a, b] = [lum(fg), lum(bg)];
-    const ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
-    const px = parseFloat(cs.fontSize), bold = parseInt(cs.fontWeight, 10) >= 700;
-    const need = px >= 24 || (px >= 18.66 && bold) ? 3 : 4.5;
-    if (ratio < need) bad.push(`${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''} "${n.textContent.trim().slice(0, 30)}" ${ratio.toFixed(2)} < ${need}`);
-  }
-  return bad;
-};
 
 async function main() {
   const { chromium } = createRequire(import.meta.url)(pwPath);
@@ -87,7 +64,13 @@ async function main() {
     // ---- import 2,000 invented orders by keyboard, with time and memory
     const heap0 = await panel.evaluate(() => performance.memory.usedJSHeapSize);
     const t0 = Date.now();
-    const [chooser] = await Promise.all([panel.waitForEvent('filechooser'), panel.keyboard.press('Enter')]);
+    // Enter on the drop area opens the file chooser. Under a heavy machine the first key press can be too early, so try again.
+    let chooser;
+    for (let attempt = 1; attempt <= 3 && !chooser; attempt++) {
+      await panel.focus('#drop');
+      [chooser] = await Promise.all([panel.waitForEvent('filechooser', { timeout: 6000 }).catch(() => null), panel.keyboard.press('Enter')]);
+    }
+    assert.ok(chooser, 'Enter on the drop area opens the file chooser');
     await chooser.setFiles({ name: 'orders-export.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
     await panel.waitForFunction(() => /^Done\. 2,000 orders/.test(document.getElementById('importStatus').textContent), null, { timeout: 20000 });
     const importMs = Date.now() - t0;
@@ -109,7 +92,7 @@ async function main() {
     const everything = await panel.evaluate(() => document.body.innerText);
     for (const last of LAST_NAMES) assert.ok(!everything.includes(last), 'full last name on screen: ' + last);
     assert.ok(!/Example St|62701|97201/.test(everything), 'no addresses on screen');
-    assert.match(await panel.textContent('#practice'), /Using your 2,000 imported orders/);
+    assert.match(await panel.textContent('#practice'), /Using your 2,000 orders/);
     assert.equal(await panel.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 0, 'no sideways scroll at 360 px (Insights)');
     assert.deepEqual(await panel.evaluate(contrastProblems), [], 'contrast on the Insights tab');
 

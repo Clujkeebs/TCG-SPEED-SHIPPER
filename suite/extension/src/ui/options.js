@@ -1,5 +1,6 @@
 import { FLAG_DEFS, getFlags, setFlag, TOS_OK } from '../flags.js';
 import { FLAG_TEXT, LOCK_NOTE } from '../flags-text.js';
+import { SITE_ORIGIN } from '../site-origin.js';
 import { getSettings, saveEndpoint } from '../settings.js';
 
 const box = document.getElementById('flags');
@@ -13,13 +14,28 @@ for (const [name, def] of Object.entries(FLAG_DEFS)) {
   input.type = 'checkbox';
   input.checked = flags[name];
   input.dataset.flag = name;
-  input.addEventListener('change', () => setFlag(name, input.checked));
+  const note = document.createElement('p');
+  note.className = 'what';
+  note.setAttribute('role', 'status');
+  input.addEventListener('change', async () => {
+    note.textContent = '';
+    if (def.needsSitePermission) {
+      // Chrome only shows its question on a click, so this runs straight from the change event.
+      const origins = [SITE_ORIGIN];
+      try {
+        if (input.checked) {
+          if (!(await chrome.permissions.request({ origins }))) { input.checked = false; note.textContent = 'Chrome did not give permission, so this stays off.'; return setFlag(name, false); }
+        } else await chrome.permissions.remove({ origins });
+      } catch { input.checked = false; note.textContent = 'Could not ask Chrome. This stays off.'; return setFlag(name, false); }
+    }
+    return setFlag(name, input.checked);
+  });
   const locked = def.touchesTcgplayer && !TOS_OK;
   label.append(input, ' ' + FLAG_TEXT[name].title + (locked ? ' (locked)' : ''));
   const what = document.createElement('p');
   what.className = 'what';
   what.textContent = FLAG_TEXT[name].what;
-  box.append(label, what);
+  box.append(label, what, note);
 }
 
 const settings = await getSettings();

@@ -10,7 +10,8 @@
     "alarms"
   ],
   "optional_host_permissions": [
-    "https://seller.tcgplayer.com/*"
+    "https://seller.tcgplayer.com/*",
+    "https://tcgspeedshipper.com/*"
   ],
   "background": {
     "service_worker": "src/background.js",
@@ -19,8 +20,7 @@
   "content_scripts": [
     {
       "matches": [
-        "https://tcgspeedshipper.com/*",
-        "http://localhost/*"
+        "https://tcgspeedshipper.com/*"
       ],
       "js": [
         "src/content-loader.js"
@@ -32,11 +32,11 @@
     {
       "resources": [
         "src/content-bridge.js",
-        "src/bridge.js"
+        "src/bridge.js",
+        "src/build-config.js"
       ],
       "matches": [
-        "https://tcgspeedshipper.com/*",
-        "http://localhost/*"
+        "https://tcgspeedshipper.com/*"
       ]
     }
   ],

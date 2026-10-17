@@ -7,9 +7,14 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { pathToFileURL } from 'node:url';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
-const extPath = join(here, '..');
+const prodPath = join(here, '..');
+// The browser test uses a TEST COPY of the extension that also accepts localhost pages. Production never does.
+const { DB_VERSION } = await import(pathToFileURL(join(prodPath, 'src/store.js')).href);
+const { makeTestBuild } = await import(pathToFileURL(join(prodPath, 'scripts/make-test-build.js')).href);
+const extPath = makeTestBuild(mkdtempSync(join(tmpdir(), 'tcgss-testbuild-')));
 const chromePath = process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const pwPath = process.env.PLAYWRIGHT_PATH || '/opt/node22/lib/node_modules/playwright';
 
@@ -38,40 +43,42 @@ async function main() {
     // "localhost" is on the extension's allow-list; 127.0.0.1 is not, so use the name.
     await page.goto(`http://localhost:${port}/`);
 
+    // The page can call exactly two things. hello gives out name and version only.
     const hello = await page.evaluate(() => window.tcgssSend('hello'));
     assert.equal(hello.ok, true);
+    assert.deepEqual(Object.keys(hello.result).sort(), ['name', 'version']);
     assert.equal(hello.result.name, 'TCG Speed Suite');
-    assert.ok(Object.values(hello.result.flags).every((v) => v === false), 'all flags off by default');
 
-    const put = await page.evaluate((o) => window.tcgssSend('store.put', { collection: 'orders', record: o }), order);
-    assert.deepEqual([put.ok, put.result.key], [true, 'ord-e2e-1']);
-
-    const got = await page.evaluate(() => window.tcgssSend('store.get', { collection: 'orders', key: 'ord-e2e-1' }));
-    assert.equal(got.result.record.items[0].name, 'Sample Card');
-
-    // The result really sits in the service worker's IndexedDB.
-    const inDb = await sw.evaluate(() => new Promise((resolve, reject) => {
-      const open = indexedDB.open('tcgss_suite');
+    // The seller's imported orders sit in the extension's storage (written by an extension page, as the panel does)...
+    const extId = new URL(sw.url()).host;
+    const setup = await ctx.newPage();
+    await setup.goto(`chrome-extension://${extId}/src/ui/options.html`);
+    await setup.evaluate(([o, version]) => new Promise((resolve, reject) => {
+      const open = indexedDB.open('tcgss_suite', version);
+      open.onupgradeneeded = () => { for (const c of ['printings', 'orders', 'listings', 'inventory', 'scans', 'trackingBatches']) if (!open.result.objectStoreNames.contains(c)) open.result.createObjectStore(c); };
       open.onerror = () => reject(open.error);
-      open.onsuccess = () => {
-        const q = open.result.transaction('orders').objectStore('orders').get('ord-e2e-1');
-        q.onsuccess = () => resolve(q.result && q.result.id);
-        q.onerror = () => reject(q.error);
-      };
-    }));
-    assert.equal(inDb, 'ord-e2e-1');
+      open.onsuccess = () => { const tx = open.result.transaction('orders', 'readwrite'); tx.objectStore('orders').put(o, o.id); tx.oncomplete = () => resolve(); };
+    }), [order, DB_VERSION]);
+    await setup.close();
 
-    // Rejections: bad record, and a message with the wrong shape.
-    const bad = await page.evaluate(() => window.tcgssSend('store.put', { collection: 'orders', record: { id: 'x' } }));
-    assert.equal(bad.ok, false);
-    const unknown = await page.evaluate(() => window.tcgssSend('run.script', { code: '1' }));
-    assert.equal(unknown.ok, false);
+    // ...and NO message from a page can read, list or overwrite them (or anything else).
+    const attempts = [['store.list', { collection: 'orders' }], ['store.get', { collection: 'orders', key: 'ord-e2e-1' }], ['store.put', { collection: 'orders', record: { ...order, status: 'hacked' } }], ['store.list', { collection: 'inventory' }], ['tracking.get', { batchId: 'e2e-batch' }], ['tracking.list', undefined], ['agent.audit', undefined], ['clear-everything', undefined], ['run.script', { code: '1' }]];
+    for (const [type, payload] of attempts) {
+      const r = await page.evaluate(([t, p]) => window.tcgssSend(t, p), [type, payload]);
+      assert.equal(r.ok, false, type + ' must be refused');
+      assert.equal(r.error, 'unknown type', type);
+      assert.ok(!JSON.stringify(r).includes('Test Buyer'), type + ' leaked buyer data');
+    }
+    const untouched = await ctx.newPage();
+    await untouched.goto(`chrome-extension://${extId}/src/ui/options.html`);
+    const stored = await untouched.evaluate(() => new Promise((resolve) => { const o = indexedDB.open('tcgss_suite'); o.onsuccess = () => { const q = o.result.transaction('orders').objectStore('orders').get('ord-e2e-1'); q.onsuccess = () => resolve(q.result); }; }));
+    assert.deepEqual([stored.id, stored.status, stored.shipTo.name], ['ord-e2e-1', 'paid', 'Test Buyer'], 'the order is untouched');
+    await untouched.close();
 
-    // Tracking batch from the site: stored, read back, and a malformed one is refused.
+    // Tracking batch from the site: accepted and stored (write only); a malformed one is refused.
     const tb = await page.evaluate(() => window.tcgssSend('tracking.put', { batchId: 'e2e-batch', items: [{ orderId: 'SYN-9', trackingNumber: '9400 1000 0000 0000', carrier: 'USPS' }] }));
     assert.deepEqual([tb.ok, tb.result.count], [true, 1]);
-    const tg = await page.evaluate(() => window.tcgssSend('tracking.get', { batchId: 'e2e-batch' }));
-    assert.equal(tg.result.batch.items[0].orderId, 'SYN-9');
+    assert.deepEqual(Object.keys(tb.result).sort(), ['count', 'key']);
     const tbad = await page.evaluate(() => window.tcgssSend('tracking.put', { batchId: 'e2e-bad', items: [{ orderId: 'SYN-9', trackingNumber: 'x', carrier: 'USPS' }] }));
     assert.equal(tbad.ok, false);
 
@@ -86,7 +93,6 @@ async function main() {
     await stranger.close();
 
     // The extension's own pages load without errors, and a TCGplayer flag stays inert.
-    const extId = new URL(sw.url()).host;
     const problems = [];
     for (const file of ['options.html', 'popup.html', 'sidepanel.html']) {
       const ui = await ctx.newPage();
@@ -95,7 +101,7 @@ async function main() {
       await ui.goto(`chrome-extension://${extId}/src/ui/${file}`);
       if (file === 'options.html') {
         await ui.waitForSelector('input[data-flag]');
-        assert.equal(await ui.locator('input[data-flag]').count(), 4);
+        assert.equal(await ui.locator('input[data-flag]').count(), 5);
         await ui.check('input[data-flag="pasteTracking"]');
         await ui.check('input[data-flag="agentPanel"]');
         const res = await ui.evaluate(async () => {
@@ -185,8 +191,8 @@ async function main() {
     await opt.click('#clearYes');
     await opt.waitForSelector('text=Everything was erased');
     assert.deepEqual(await opt.evaluate(() => chrome.storage.local.get(null)), {}, 'settings and saved state are gone');
-    const after = await page.evaluate(async () => ({ tracking: (await window.tcgssSend('tracking.list')).result.batches.length, orders: (await window.tcgssSend('store.list', { collection: 'orders' })).result.records.length }));
-    assert.deepEqual(after, { tracking: 0, orders: 0 }, 'stored records are gone');
+    const after = await opt.evaluate(() => new Promise((resolve) => { const o = indexedDB.open('tcgss_suite'); o.onsuccess = () => { const db = o.result; const count = (n) => new Promise((r) => { const q = db.transaction(n).objectStore(n).count(); q.onsuccess = () => r(q.result); }); Promise.all([count('orders'), count('trackingBatches')]).then(([orders, tracking]) => resolve({ orders, tracking })); }; }));
+    assert.deepEqual(after, { orders: 0, tracking: 0 }, 'stored records are gone');
     const audit = await opt.evaluate(async () => (await chrome.runtime.sendMessage({ source: 'tcgss-panel', v: 1, id: 'a1', type: 'agent.audit' })));
     assert.equal(audit.ok, false, 'with the switch cleared the panel is off again');
     await opt.close();
@@ -195,6 +201,7 @@ async function main() {
     await ctx.close();
     server.close();
     rmSync(profile, { recursive: true, force: true });
+    rmSync(extPath, { recursive: true, force: true });
   }
 }
 

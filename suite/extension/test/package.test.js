@@ -10,13 +10,13 @@ const manifest = JSON.parse(readFileSync(join(root, 'manifest.json'), 'utf8'));
 test('manifest is MV3 with minimal permissions', () => {
   assert.equal(manifest.manifest_version, 3);
   assert.deepEqual([...manifest.permissions].sort(), ['alarms', 'sidePanel', 'storage']);
-  assert.equal(manifest.host_permissions, undefined);
-  assert.deepEqual(manifest.optional_host_permissions, ['https://seller.tcgplayer.com/*']);
+  assert.equal(manifest.host_permissions, undefined, 'nothing is granted at install');
+  assert.deepEqual([...manifest.optional_host_permissions].sort(), ['https://seller.tcgplayer.com/*', 'https://tcgspeedshipper.com/*'], 'both asked for later, on a click');
 });
 
 test('no content script runs on TCGplayer', () => {
   for (const cs of manifest.content_scripts) for (const m of cs.matches) assert.ok(!/tcgplayer/i.test(m), m);
-  assert.deepEqual(manifest.content_scripts[0].matches, ['https://tcgspeedshipper.com/*', 'http://localhost/*']);
+  assert.deepEqual(manifest.content_scripts[0].matches, ['https://tcgspeedshipper.com/*']);
 });
 
 test('every file the manifest names exists', () => {
@@ -66,4 +66,26 @@ test('the side-panel protocol mirror matches suite/agent/protocol.js', () => {
     assert.equal(mine.match(re)?.[1], expected, 'mirror ' + name + ' out of date');
   }
   for (const event of ['agent.progress', 'agent.approval-needed', 'agent.answer', 'agent.stopped']) assert.ok(upstream.includes(`'${event}'`) && mine.includes(`'${event}'`), event);
+});
+
+test('the production build has no localhost anywhere: manifest, bridge switch, page-accessible files', () => {
+  assert.ok(!/localhost/i.test(readFileSync(join(root, 'manifest.json'), 'utf8')), 'manifest.json mentions localhost');
+  assert.match(readFileSync(join(root, 'src/build-config.js'), 'utf8'), /ALLOW_LOCALHOST = false;/);
+  assert.deepEqual(manifest.web_accessible_resources[0].matches, ['https://tcgspeedshipper.com/*']);
+});
+
+test('the test build adds localhost to a COPY and never to the committed files', async () => {
+  const { makeTestBuild } = await import('../scripts/make-test-build.js');
+  const { mkdtempSync, rmSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const dir = mkdtempSync(join(tmpdir(), 'tcgss-testbuild-'));
+  try {
+    makeTestBuild(dir);
+    const m = JSON.parse(readFileSync(join(dir, 'manifest.json'), 'utf8'));
+    assert.ok(m.content_scripts[0].matches.includes('http://localhost/*'));
+    assert.match(readFileSync(join(dir, 'src/build-config.js'), 'utf8'), /ALLOW_LOCALHOST = true/);
+    assert.ok(!/localhost/i.test(readFileSync(join(root, 'manifest.json'), 'utf8')), 'the committed manifest is untouched');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

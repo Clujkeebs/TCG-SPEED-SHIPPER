@@ -4,12 +4,13 @@ import {
   validateOrder,
   validateListingDraft,
   validateInventoryItem,
-  validateScanRecord
+  validateScanRecord,
+  validatePrinting
 } from './vendor/shared/models.js';
 import { checkTrackingBatch } from './bridge.js';
 
 export const DB_NAME = 'tcgss_suite';
-export const DB_VERSION = 2;
+export const DB_VERSION = 3;
 
 // A batch of tracking numbers from the Shipper site, already checked by the bridge (src/bridge.js).
 function validateTrackingBatch(r) {
@@ -18,6 +19,7 @@ function validateTrackingBatch(r) {
 }
 
 export const COLLECTION_DEFS = {
+  printings: { validate: validatePrinting, keyOf: (r) => r.id },
   trackingBatches: { validate: validateTrackingBatch, keyOf: (r) => r.id },
   orders: { validate: validateOrder, keyOf: (r) => r.id },
   listings: { validate: validateListingDraft, keyOf: (r) => r.id },
@@ -47,6 +49,9 @@ function memoryBackend() {
     async replaceAll(c, pairs) {
       data[c].clear();
       for (const [k, r] of pairs) data[c].set(k, structuredClone(r));
+    },
+    async replaceMany(map) {
+      for (const [c, pairs] of Object.entries(map)) { data[c].clear(); for (const [k, r] of pairs) data[c].set(k, structuredClone(r)); }
     }
   };
 }
@@ -81,6 +86,14 @@ async function indexedDbBackend(idb) {
       const os = tx.objectStore(c);
       os.clear();
       for (const [k, r] of pairs) os.put(r, k);
+      tx.oncomplete = () => resolve();
+      tx.onerror = tx.onabort = () => reject(tx.error || new Error('could not save'));
+    }),
+    // Several collections in ONE transaction: all of them change, or none does.
+    replaceMany: (map) => new Promise((resolve, reject) => {
+      const names = Object.keys(map);
+      const tx = db.transaction(names, 'readwrite');
+      for (const c of names) { const os = tx.objectStore(c); os.clear(); for (const [k, r] of map[c]) os.put(r, k); }
       tx.oncomplete = () => resolve();
       tx.onerror = tx.onabort = () => reject(tx.error || new Error('could not save'));
     })
@@ -121,6 +134,20 @@ export async function openStore({ indexedDB = globalThis.indexedDB } = {}) {
       }
       await backend.replaceAll(collection, pairs);
       return pairs.length;
+    },
+    // Replace several collections at once (for example the card list and the stock). Everything is checked first;
+    // if anything is bad, or saving fails, nothing at all is changed.
+    async replaceCollections(byCollection) {
+      const map = {};
+      for (const [collection, records] of Object.entries(byCollection)) {
+        const d = def(collection);
+        map[collection] = records.map((r) => {
+          const check = d.validate(r);
+          if (!check.ok) throw new Error('invalid ' + collection + ' record: ' + check.errors.join('; '));
+          return [d.keyOf(r), r];
+        });
+      }
+      await backend.replaceMany(map);
     },
     delete: (collection, key) => (def(collection), backend.delete(collection, key)),
     clear: (collection) => (def(collection), backend.clear(collection))

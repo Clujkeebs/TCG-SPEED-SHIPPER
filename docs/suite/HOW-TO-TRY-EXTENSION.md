@@ -10,6 +10,6 @@
 
 **What to click**
 - **Assistant tab:** five big buttons: "What should I do today?", "Who are my repeat buyers?", "Where do I ship most?", "Write my weekly summary", "Draft a reply". Or type a goal, like "Reprice my cards 5% under market". It shows a plan, then a card. **Approve**, **Deny** or **Undo**. **Stop** any time.
-- **Insights tab:** drop in your TCGplayer order export (the same file you give Speed Shipper). You get repeat buyers (first name and initial only), top states, busy days, average order and this week against last. The file is read on your computer and goes nowhere.
+- **Insights tab:** drop in your TCGplayer order export (the same file you give Speed Shipper) for repeat buyers (first name and initial only), top states, busy days and this week against last. Also choose your TCGplayer inventory export, so repricing uses your real stock. Files are read on your computer and go nowhere.
 
-**Practice mode** means the stock and messages are made up. Until you import orders, so are the orders. **Clear everything** in Settings erases it all, including your imported orders.
+**Practice mode** means the stock and messages are made up. Until you import your files, so are the orders and stock. **Clear everything** in Settings erases it all, including your imported orders.

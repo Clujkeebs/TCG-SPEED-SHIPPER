@@ -1,6 +1,10 @@
-// Service worker. Answers checked messages from the Speed Shipper site and nothing else.
+// Service worker. Answers checked messages from the Speed Shipper site (hello, tracking.put) and nothing else.
 // It never contacts any website and never acts on a TCGplayer page.
-import { validateRequest, makeResponse, makeError } from './bridge.js';
+import { validateRequest, makeResponse, makeError, normalizeExpiry } from './bridge.js';
+import { createVault } from './account/vault.js';
+import { checkAccount } from './account/status.js';
+import { API_BASE } from './build-config.js';
+import { SITE_ORIGIN } from './site-origin.js';
 import { getFlags } from './flags.js';
 import { openStore } from './store.js';
 import { createPracticeHost } from './agent-host/host.js';
@@ -9,31 +13,33 @@ import { createIdbStore } from './vendor/agent/audit.js';
 import { clearEverything } from './clear.js';
 import { PANEL_SOURCE, AGENT_SOURCE, makeError as agentError } from './vendor/agent/protocol.js';
 
+// The login token lives here (memory, with session storage as a backup for a sleeping worker). Nowhere else.
+export const vault = createVault({ area: globalThis.chrome?.storage?.session });
+
 let storePromise;
 const getStore = () => (storePromise ??= openStore());
 
-export async function handleRequest(msg, senderOrigin, store) {
+export async function handleRequest(msg, senderOrigin, store, { vault: v = vault } = {}) {
   const check = validateRequest(msg, senderOrigin);
   if (!check.ok) return makeError(msg?.id, check.error);
   try {
     const p = msg.payload;
     switch (msg.type) {
       case 'hello':
-        return makeResponse(msg.id, { name: 'TCG Speed Suite', version: globalThis.chrome?.runtime?.getManifest?.().version ?? 'test', flags: await getFlags() });
+        return makeResponse(msg.id, { name: 'TCG Speed Suite', version: globalThis.chrome?.runtime?.getManifest?.().version ?? 'test' });
+      case 'account.link': {
+        const ok = await v.set(p.accessToken, normalizeExpiry(p.expiresAt));
+        forgetStatus();
+        return ok ? makeResponse(msg.id, { linked: true }) : makeError(msg.id, 'That login has already expired or lasts too long. Sign in again.');
+      }
+      case 'account.unlink':
+        await v.drop();
+        forgetStatus();
+        return makeResponse(msg.id, { linked: false });
       case 'tracking.put': {
         const record = { id: p.batchId, receivedAt: new Date().toISOString(), items: p.items.map((i) => ({ ...i })) };
         return makeResponse(msg.id, { key: await store.put('trackingBatches', record), count: record.items.length });
       }
-      case 'tracking.get':
-        return makeResponse(msg.id, { batch: await store.get('trackingBatches', p.batchId) });
-      case 'tracking.list':
-        return makeResponse(msg.id, { batches: (await store.list('trackingBatches')).map((b) => ({ id: b.id, receivedAt: b.receivedAt, count: b.items.length })) });
-      case 'store.put':
-        return makeResponse(msg.id, { key: await store.put(p.collection, p.record) });
-      case 'store.get':
-        return makeResponse(msg.id, { record: await store.get(p.collection, p.key) });
-      case 'store.list':
-        return makeResponse(msg.id, { records: await store.list(p.collection) });
     }
   } catch (err) {
     return makeError(msg.id, err.message);
@@ -45,6 +51,30 @@ export async function handleRequest(msg, senderOrigin, store) {
 // The worker can be shut down at any moment; the host saves its state and restores it on the next wake.
 let hostInstance;
 const broadcast = (event) => { try { chrome.runtime.sendMessage(event).catch(() => {}); } catch { /* no panel open */ } };
+// ---- "Is the online assistant available?" The panel asks; the answer is one plain line (never a token).
+let statusCache = null; // { at, result }
+export const OFF_LINE = 'The online assistant is off. Turn it on in Settings if you want it.';
+// On only when the person switched it on AND Chrome still holds the permission they granted on that click.
+async function onlineAssistantOn() {
+  try {
+    if (!(await getFlags()).onlineAssistant) return false;
+    return (await chrome.permissions.contains({ origins: [SITE_ORIGIN] })) === true;
+  } catch { return false; }
+}
+
+export async function handleAccountStatus(msg, sender, extensionId, { vault: v = vault, fetchFn, base = API_BASE, now = () => Date.now(), isOn = onlineAssistantOn } = {}) {
+  const own = sender && sender.id === extensionId && typeof sender.url === 'string' && sender.url.startsWith('chrome-extension://' + extensionId + '/');
+  if (!own || !msg || msg.type !== 'ext.account.status') return { ok: false, error: 'not allowed' };
+  if (!(await isOn())) return { ok: true, result: { kind: 'assistant-off', line: OFF_LINE, openSite: false } };
+  const hasToken = await v.has();
+  if (statusCache && hasToken === statusCache.hadToken && now() - statusCache.at < 60000) return { ok: true, result: statusCache.result };
+  const res = await checkAccount({ vault: v, fetchFn: fetchFn ?? globalThis.fetch.bind(globalThis), base });
+  const result = { kind: res.kind, line: res.line, openSite: res.openSite === true };
+  statusCache = { at: now(), result, hadToken: hasToken };
+  return { ok: true, result };
+}
+export const forgetStatus = () => { statusCache = null; };
+
 export const BADGE_COLOR = '#c97a00';
 
 function setBadge(count) {
@@ -57,6 +87,7 @@ function getHost(extensionId) {
   hostInstance ??= createPracticeHost({
     extensionId, persist: chromeStatePersist(), onBadge: setBadge,
     loadOrders: async () => (await getStore()).list('orders'),
+    loadStock: async () => { const st = await getStore(); return { items: await st.list('inventory'), printings: await st.list('printings') }; },
     auditStore: globalThis.indexedDB ? createIdbStore(indexedDB, AUDIT_DB) : undefined
   });
   return hostInstance;
@@ -89,11 +120,16 @@ if (globalThis.chrome?.runtime?.onMessage) {
       (async () => {
         const store = await getStore();
         const host = hostInstance;
-        const out = await handleAdminMessage(msg, sender, chrome.runtime.id, { storage: chrome.storage.local, store, idb: globalThis.indexedDB, host });
+        const out = await handleAdminMessage(msg, sender, chrome.runtime.id, { storage: chrome.storage.local, session: chrome.storage.session, vault, store, idb: globalThis.indexedDB, host });
+        forgetStatus();
         hostInstance = undefined; // next use starts from a clean slate
         setBadge(0);
         return out;
       })().then(sendResponse, (err) => sendResponse({ ok: false, error: err?.message || 'failed' }));
+      return true;
+    }
+    if (msg && msg.source === PANEL_SOURCE && msg.type === 'ext.account.status') {
+      handleAccountStatus(msg, sender, chrome.runtime.id).then((r) => sendResponse(r.ok ? { source: AGENT_SOURCE, v: 1, id: String(msg.id).slice(0, 80), ok: true, result: r.result } : agentError(msg.id, r.error)), () => sendResponse(agentError(msg.id, 'failed')));
       return true;
     }
     if (msg && msg.source === PANEL_SOURCE) {

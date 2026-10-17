@@ -22,11 +22,13 @@ function emptyAllStores(idb, name) {
 }
 
 // deps: { storage (chrome.storage.local), store (openStore result), idb (indexedDB), host? (practice host) }
-export async function clearEverything({ storage, store, idb, host }) {
+export async function clearEverything({ storage, store, idb, host, vault, session }) {
   const done = [];
   if (host) { await host.clearAll(); done.push('agent'); }
   if (store) { for (const c of Object.keys(COLLECTION_DEFS)) await store.clear(c); done.push('records'); }
   if (idb) { await emptyAllStores(idb, AUDIT_DB); done.push('audit'); }
+  if (vault) { await vault.drop(); done.push('login'); }
+  if (session) { await session.clear(); }
   if (storage) { await storage.clear(); done.push('settings'); }
   return { ok: true, cleared: done };
 }

@@ -16,7 +16,9 @@ export function createPanel(transport, { labelFor = () => undefined } = {}) {
     memory: null,    // null = agent does not offer it; otherwise [{ id, text }]
     canPlan: true, canMemory: false, canInbox: false, canSuggest: false, canUndo: false, canJobs: false,
     suggestions: [], jobs: [], reports: [],
-    orders: { mode: 'practice', count: 0 } // which orders the Agent is looking at
+    orders: { mode: 'practice', count: 0 }, // which orders the Agent is looking at
+    stock: { mode: 'practice', items: 0, cards: 0 }, // which stock the Agent looks at
+    account: null // { kind, line, openSite }: can the online assistant be used? (one plain line)
   };
   const addCard = (c) => { if (!state.items.some((i) => i.kind === 'approval' && i.id === c.approvalId)) state.items.push({ kind: 'approval', id: c.approvalId, tool: c.tool, description: c.description, rows: argRows(c.args), why: c.why, undo: c.undo, expected: c.expected, state: 'waiting' }); };
   const listeners = new Set();
@@ -81,12 +83,31 @@ export function createPanel(transport, { labelFor = () => undefined } = {}) {
       if (state.canMemory) await call('agent.memory.list');
       if (state.canInbox) { const c = await call('agent.inbox.list'); for (const card of cleanCards(c)) addCard(card); }
       await this.ordersStatus();
+      await this.stockStatus();
       await this.refresh();
       changed();
       return true;
     },
     // Suggestions and jobs: read-only lookups, safe to repeat.
+    async useStock(mode) {
+      const r = await call('ext.stock.use', { mode });
+      if (r) { await this.stockStatus(); await this.refresh(); }
+      return !!r;
+    },
+    async stockStatus() {
+      const r = await callQuiet('ext.stock.status');
+      if (r && (r.mode === 'imported' || r.mode === 'practice')) { state.stock = { mode: r.mode, items: r.items | 0, cards: r.cards | 0 }; changed(); }
+      return r;
+    },
+    async accountStatus() {
+      const r = await callQuiet('ext.account.status');
+      const kinds = ['available', 'signed-out', 'needs-plan', 'off', 'unavailable', 'offline'];
+      if (r && kinds.includes(r.kind) && typeof r.line === 'string' && r.line.length > 0 && r.line.length <= 240) state.account = { kind: r.kind, line: r.line, openSite: r.openSite === true };
+      changed();
+      return state.account;
+    },
     async refresh() {
+      await this.accountStatus();
       if (state.canInbox) { const c = await callQuiet('agent.inbox.list'); if (c) for (const card of cleanCards(c)) addCard(card); }
       if (state.canSuggest) { const s = await call('agent.suggestions'); if (s) state.suggestions = cleanSuggestions(s); }
       const j = await callQuiet('ext.jobs.list');

@@ -37,7 +37,7 @@ const clone = (v) => JSON.parse(JSON.stringify(v));
 // (Memory facts and jobs are validated again by the Agent's own code when they are loaded.)
 export function cleanState(raw) {
   if (!isObj(raw)) return null;
-  const out = { memory: null, ledger: [], xCounter: 0, plan: null, killed: raw.killed === true, prices: {}, jobs: [], reports: [], repCounter: 0, jobCounter: 0, usingImported: raw.usingImported === true };
+  const out = { memory: null, ledger: [], xCounter: 0, plan: null, killed: raw.killed === true, prices: {}, jobs: [], reports: [], repCounter: 0, jobCounter: 0, usingImported: raw.usingImported === true, usingStock: raw.usingStock === true };
   if (typeof raw.memory === 'string' && raw.memory.length <= 100000) out.memory = raw.memory;
   if (Number.isInteger(raw.xCounter) && raw.xCounter >= 0 && raw.xCounter < 1e6) out.xCounter = raw.xCounter;
   if (Number.isInteger(raw.repCounter) && raw.repCounter >= 0 && raw.repCounter < 1e6) out.repCounter = raw.repCounter;

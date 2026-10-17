@@ -1,5 +1,7 @@
 // Forced service-worker restart in real Chromium: the Agent's state must survive. Exit 0 = pass.
 import assert from 'node:assert/strict';
+import http from 'node:http';
+import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -21,6 +23,16 @@ async function main() {
     let [sw] = ctx.serviceWorkers();
     sw ??= await ctx.waitForEvent('serviceworker', { timeout: 15000 });
     const extId = new URL(sw.url()).host;
+    // The PRODUCTION build must ignore pages on localhost completely (no bridge script is even injected).
+    const html = readFileSync(join(extPath, 'e2e/fixtures/shipper-fixture.html'));
+    const server = http.createServer((q, r) => { r.writeHead(200, { 'content-type': 'text/html' }); r.end(html); });
+    await new Promise((r) => server.listen(0, '127.0.0.1', r));
+    const local = await ctx.newPage();
+    await local.goto(`http://localhost:${server.address().port}/`);
+    const answer = await local.evaluate(() => Promise.race([window.tcgssSend('hello').then(() => 'answered'), new Promise((r) => setTimeout(() => r('silent'), 1500))]));
+    assert.equal(answer, 'silent', 'the production build must not answer a localhost page');
+    await local.close();
+    server.close();
     const setup = await ctx.newPage();
     await setup.goto(`chrome-extension://${extId}/src/ui/options.html`);
     await setup.evaluate(() => chrome.storage.local.set({ tcgss_flags_v1: { agentPanel: true } }));

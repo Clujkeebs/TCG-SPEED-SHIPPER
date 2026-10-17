@@ -3,45 +3,67 @@ import assert from 'node:assert/strict';
 import { handleRequest } from '../src/background.js';
 import { openStore } from '../src/store.js';
 import { REQUEST_SOURCE } from '../src/bridge.js';
+import { parseOrderExport } from '../src/orders/parser.js';
+import { makeOrderCsv } from './helpers/orders-csv.js';
 
 const SITE = 'https://tcgspeedshipper.com';
 const req = (type, payload, id = 'r1') => ({ source: REQUEST_SOURCE, v: 1, id, type, ...(payload ? { payload } : {}) });
-const scan = { id: 's1', sessionId: 'x', at: '2026-10-15T12:00:00Z', printingId: null, confidence: 0.5, method: 'manual', candidates: [], accepted: false };
+const batch = { batchId: 'b-1', items: [{ orderId: 'SYN-1', trackingNumber: '9400 1000 0000', carrier: 'USPS' }] };
 
-test('hello reports all flags off', async () => {
+test('hello says who we are and nothing else (no switches, no data)', async () => {
   const store = await openStore({ indexedDB: undefined });
   const r = await handleRequest(req('hello'), SITE, store);
   assert.equal(r.ok, true);
-  assert.ok(Object.values(r.result.flags).every((v) => v === false));
+  assert.deepEqual(Object.keys(r.result).sort(), ['name', 'version']);
 });
 
-test('put then get then list through the handler', async () => {
+test('tracking.put stores a batch locally and answers with a count only', async () => {
   const store = await openStore({ indexedDB: undefined });
-  assert.equal((await handleRequest(req('store.put', { collection: 'scans', record: scan }), SITE, store)).result.key, 's1');
-  assert.equal((await handleRequest(req('store.get', { collection: 'scans', key: 's1' }), SITE, store)).result.record.id, 's1');
-  assert.equal((await handleRequest(req('store.list', { collection: 'scans' }), SITE, store)).result.records.length, 1);
+  const put = await handleRequest(req('tracking.put', batch), SITE, store);
+  assert.deepEqual([put.ok, put.result.key, put.result.count], [true, 'b-1', 1]);
+  assert.deepEqual(Object.keys(put.result).sort(), ['count', 'key']);
+  const saved = await store.get('trackingBatches', 'b-1');
+  assert.equal(saved.items[0].trackingNumber, '9400 1000 0000');
+  assert.match(saved.receivedAt, /^\d{4}-\d\d-\d\dT/);
 });
 
-test('wrong origin and bad records are refused', async () => {
+test('wrong origin, bad batches and production localhost are refused', async () => {
   const store = await openStore({ indexedDB: undefined });
   assert.equal((await handleRequest(req('hello'), 'https://seller.tcgplayer.com', store)).ok, false);
-  const bad = await handleRequest(req('store.put', { collection: 'scans', record: { id: 's2' } }), SITE, store);
-  assert.equal(bad.ok, false);
-  assert.match(bad.error, /invalid scans record/);
+  assert.equal((await handleRequest(req('tracking.put', batch), 'http://localhost:3000', store)).ok, false);
+  assert.equal((await handleRequest(req('tracking.put', { ...batch, items: [] }), SITE, store)).ok, false);
+  assert.deepEqual(await store.list('trackingBatches'), []);
 });
 
-test('tracking batches are stored locally, listed and read back; raw writes to that collection are refused', async () => {
+// ---- the privacy line: the seller's orders never leave through the page bridge
+test('a page cannot read, list or overwrite the seller\'s imported orders (or anything else in storage)', async () => {
   const store = await openStore({ indexedDB: undefined });
-  const payload = { batchId: 'b-1', items: [{ orderId: 'SYN-1', trackingNumber: '9400 1000 0000', carrier: 'USPS' }] };
-  const put = await handleRequest(req('tracking.put', payload), SITE, store);
-  assert.deepEqual([put.ok, put.result.key, put.result.count], [true, 'b-1', 1]);
-  const got = await handleRequest(req('tracking.get', { batchId: 'b-1' }), SITE, store);
-  assert.equal(got.result.batch.items[0].trackingNumber, '9400 1000 0000');
-  assert.match(got.result.batch.receivedAt, /^\d{4}-\d\d-\d\dT/);
-  const list = await handleRequest(req('tracking.list'), SITE, store);
-  assert.deepEqual(list.result.batches.map((b) => [b.id, b.count]), [['b-1', 1]]);
-  assert.equal((await handleRequest(req('tracking.get', { batchId: 'nope' }), SITE, store)).result.batch, null);
-  assert.equal((await handleRequest(req('store.put', { collection: 'trackingBatches', record: { id: 'x' } }), SITE, store)).ok, false);
-  assert.equal((await handleRequest(req('tracking.put', payload), 'https://seller.tcgplayer.com', store)).ok, false);
-  assert.equal((await handleRequest(req('tracking.put', { ...payload, items: [] }), SITE, store)).ok, false);
+  const orders = parseOrderExport(makeOrderCsv(30)).orders;
+  await store.replaceAll('orders', orders);
+  await store.put('trackingBatches', { id: 'keep', receivedAt: '2026-10-15T12:00:00Z', items: [{ orderId: 'O1', trackingNumber: '123456' }] });
+  const before = JSON.stringify([await store.list('orders'), await store.list('trackingBatches')]);
+
+  const attempts = [
+    ['store.list', { collection: 'orders' }], ['store.get', { collection: 'orders', key: orders[0].id }],
+    ['store.put', { collection: 'orders', record: { ...orders[0], status: 'hacked' } }], ['store.put', { collection: 'orders', record: orders[0] }],
+    ['store.list', { collection: 'inventory' }], ['store.list', { collection: 'trackingBatches' }],
+    ['tracking.get', { batchId: 'keep' }], ['tracking.list', undefined],
+    ['orders.list', undefined], ['ext.orders.status', undefined], ['agent.audit', undefined], ['clear-everything', undefined]
+  ];
+  const seen = [];
+  for (const [type, payload] of attempts) {
+    const r = await handleRequest(req(type, payload), SITE, store);
+    seen.push(JSON.stringify(r));
+    assert.equal(r.ok, false, type);
+    assert.equal(r.error, 'unknown type', type);
+  }
+  const everything = seen.join(' ');
+  for (const o of orders.slice(0, 5)) assert.ok(!everything.includes(o.shipTo.name) && !everything.includes(o.shipTo.address1), 'no buyer data in any answer');
+  assert.equal(JSON.stringify([await store.list('orders'), await store.list('trackingBatches')]), before, 'nothing was changed');
+
+  // the only two things a page can do give back nothing from storage
+  const hello = JSON.stringify(await handleRequest(req('hello'), SITE, store));
+  const put = JSON.stringify(await handleRequest(req('tracking.put', batch), SITE, store));
+  for (const o of orders.slice(0, 5)) assert.ok(!(hello + put).includes(o.shipTo.name));
+  assert.equal((await store.list('orders')).length, 30);
 });
