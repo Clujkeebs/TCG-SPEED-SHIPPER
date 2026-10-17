@@ -30,7 +30,7 @@ either is missing.
 | `manifest.json` | Permissions: `storage`, `sidePanel`. TCGplayer host is optional, asked for later. |
 | `src/flags.js` | Feature flags in `chrome.storage.local`, all off; TCGplayer ones also need `TOS_OK`. |
 | `src/bridge.js` | Origin allow-list and message schema (pure functions). |
-| `src/content-bridge.js` | On tcgspeedshipper.com and localhost only: page <-> service worker. |
+| `src/content-bridge.js` | On tcgspeedshipper.com only: page <-> service worker. The page can call `hello` and `tracking.put`, nothing else. |
 | `src/background.js` | Service worker: re-checks every message, then reads or writes the store. |
 | `src/store.js` | IndexedDB (memory fallback), validated with `src/vendor/models.js`. |
 | `src/adapters/selectors.js` | Every page selector, in one file (synthetic placeholders for now). |
@@ -73,7 +73,7 @@ I chose a content script with `postMessage` over `externally_connectable`: the p
 direct line to the service worker, and each message is checked twice (page side and worker side).
 
 ## Shipper bridge: the exact message shape (for the web app)
-The web app (tcgspeedshipper.com, or localhost in development) posts to its own window and listens for the answer:
+The web app (tcgspeedshipper.com) posts to its own window and listens for the answer:
 ```js
 window.postMessage({ source: 'tcgss-app', v: 1, id: 'any-unique-string-up-to-80-chars', type: 'tracking.put',
   payload: { batchId: 'batch-2026-10-15-1',            // 1-80 of A-Z a-z 0-9 . _ -
@@ -86,11 +86,13 @@ window.postMessage({ source: 'tcgss-app', v: 1, id: 'any-unique-string-up-to-80-
 // or { ..., ok: false, error: 'plain reason' }
 ```
 Rules: 1 to 200 items per batch; no other fields anywhere (extra fields are refused); a second `tracking.put` with the
-same `batchId` replaces the first. Also `tracking.get` `{ batchId }` (returns `{ batch: { id, receivedAt, items } }` or
-`{ batch: null }`) and `tracking.list` (no payload; returns `{ batches: [{ id, receivedAt, count }] }`). Only
-`https://tcgspeedshipper.com` exactly, or `http://localhost[:port]` in development, can talk to the bridge. The first message
-may be sent right after page load (early messages are queued). Everything is stored on the seller's computer only.
-Other types: `hello`, `store.put|get|list` (collections `orders`, `listings`, `inventory`, `scans`; records are validated; 64 KB cap).
+same `batchId` replaces the first.
+
+**What a page can call (and nothing else): `hello` and `tracking.put`.** `hello` answers `{ name, version }` only.
+`tracking.put` is write-only and answers `{ key, count }`. There is no way for a page to read from, list, or write to the
+extension's storage: the seller's orders, inventory, listings, scans and tracking batches never leave through the bridge, and
+every other message type is refused as `unknown type`. Only `https://tcgspeedshipper.com` exactly can talk to the bridge.
+The first message may be sent right after page load (early messages are queued). Everything is stored on the seller's computer only.
 
 ## Durability (the service worker can sleep at any time)
 The practice Agent saves its plan, memory, a waiting approval, the Stop switch and the practice shop's prices in

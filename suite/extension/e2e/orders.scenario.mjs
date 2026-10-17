@@ -87,7 +87,13 @@ async function main() {
     // ---- import 2,000 invented orders by keyboard, with time and memory
     const heap0 = await panel.evaluate(() => performance.memory.usedJSHeapSize);
     const t0 = Date.now();
-    const [chooser] = await Promise.all([panel.waitForEvent('filechooser'), panel.keyboard.press('Enter')]);
+    // Enter on the drop area opens the file chooser. Under a heavy machine the first key press can be too early, so try again.
+    let chooser;
+    for (let attempt = 1; attempt <= 3 && !chooser; attempt++) {
+      await panel.focus('#drop');
+      [chooser] = await Promise.all([panel.waitForEvent('filechooser', { timeout: 6000 }).catch(() => null), panel.keyboard.press('Enter')]);
+    }
+    assert.ok(chooser, 'Enter on the drop area opens the file chooser');
     await chooser.setFiles({ name: 'orders-export.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
     await panel.waitForFunction(() => /^Done\. 2,000 orders/.test(document.getElementById('importStatus').textContent), null, { timeout: 20000 });
     const importMs = Date.now() - t0;

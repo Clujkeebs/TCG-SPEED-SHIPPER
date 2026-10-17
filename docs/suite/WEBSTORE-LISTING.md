@@ -1,7 +1,6 @@
 # Chrome Web Store listing: draft (nothing is submitted)
 
-Draft for Sam. Plain words. Do not submit until: the owner has a developer account, the privacy page is public, `http://localhost/*`
-is removed from the manifest, and (for any TCGplayer helper) "TOS OK" is in `docs/suite/LOG.md`. Checklist: `suite/extension/STORE-CHECKLIST.md`.
+Draft for Sam. Plain words. Do not submit until: the owner has a developer account, the privacy page is public, and (for any TCGplayer helper) "TOS OK" is in `docs/suite/LOG.md`. Checklist: `suite/extension/STORE-CHECKLIST.md`.
 
 ## Name
 TCG Speed Suite
@@ -32,7 +31,7 @@ TCG Speed Suite is a set of helpers for people who sell trading cards.
 - **storage**: remembers your switches and the assistant's notes on your own computer.
 - **sidePanel**: shows the assistant next to the page you are on.
 - **alarms**: wakes the extension once a minute so a saved job can run on schedule.
-- **tcgspeedshipper.com**: lets our own website and the extension pass your tracking numbers and orders to each other, on your computer.
+- **tcgspeedshipper.com**: lets our own website hand the extension your tracking numbers, to keep on your computer. The website cannot read anything back.
 - **seller.tcgplayer.com (optional, asked only if you switch a TCGplayer helper on; not available yet)**: so a helper can fill in a form you already have open, when you click.
 
 ## What data stays on the device

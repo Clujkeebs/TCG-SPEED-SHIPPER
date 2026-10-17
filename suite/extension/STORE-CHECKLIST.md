@@ -24,7 +24,6 @@ time."
 | `storage` | Save the seller's on/off settings on their device. |
 | `sidePanel` | Show the Agent panel (placeholder in this version). |
 | content script on `https://tcgspeedshipper.com/*` | Pass the seller's own messages between the website and the extension. Does nothing else. |
-| content script on `http://localhost/*` | Development only. **Remove before the first submission** unless a reviewer needs it (a store reviewer may question it). |
 | optional host `https://seller.tcgplayer.com/*` | Asked at runtime, only when the seller turns on a TCGplayer helper (not available yet). No install-time warning. |
 
 ## Data-use disclosures (store form)

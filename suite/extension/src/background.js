@@ -1,4 +1,4 @@
-// Service worker. Answers checked messages from the Speed Shipper site and nothing else.
+// Service worker. Answers checked messages from the Speed Shipper site (hello, tracking.put) and nothing else.
 // It never contacts any website and never acts on a TCGplayer page.
 import { validateRequest, makeResponse, makeError } from './bridge.js';
 import { getFlags } from './flags.js';
@@ -19,21 +19,11 @@ export async function handleRequest(msg, senderOrigin, store) {
     const p = msg.payload;
     switch (msg.type) {
       case 'hello':
-        return makeResponse(msg.id, { name: 'TCG Speed Suite', version: globalThis.chrome?.runtime?.getManifest?.().version ?? 'test', flags: await getFlags() });
+        return makeResponse(msg.id, { name: 'TCG Speed Suite', version: globalThis.chrome?.runtime?.getManifest?.().version ?? 'test' });
       case 'tracking.put': {
         const record = { id: p.batchId, receivedAt: new Date().toISOString(), items: p.items.map((i) => ({ ...i })) };
         return makeResponse(msg.id, { key: await store.put('trackingBatches', record), count: record.items.length });
       }
-      case 'tracking.get':
-        return makeResponse(msg.id, { batch: await store.get('trackingBatches', p.batchId) });
-      case 'tracking.list':
-        return makeResponse(msg.id, { batches: (await store.list('trackingBatches')).map((b) => ({ id: b.id, receivedAt: b.receivedAt, count: b.items.length })) });
-      case 'store.put':
-        return makeResponse(msg.id, { key: await store.put(p.collection, p.record) });
-      case 'store.get':
-        return makeResponse(msg.id, { record: await store.get(p.collection, p.key) });
-      case 'store.list':
-        return makeResponse(msg.id, { records: await store.list(p.collection) });
     }
   } catch (err) {
     return makeError(msg.id, err.message);

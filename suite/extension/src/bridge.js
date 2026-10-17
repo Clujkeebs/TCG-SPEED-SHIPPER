@@ -1,25 +1,23 @@
 // Message bridge between the Speed Shipper web app and the extension.
 // Pure functions, no chrome.* calls, so the same rules run in the content script, the service
 // worker and the tests. Every message is checked against an origin allow-list and a schema.
+//
+// The bridge is deliberately tiny. A web page (or a script injected into one) can call exactly two things:
+//   hello        who are you (name and version only)
+//   tracking.put hand over a batch of tracking numbers (write only)
+// Nothing a page can send reads anything back from the extension's storage, and nothing can write to the
+// seller's orders, inventory, listings or scans. Those never leave the device through this bridge.
+import { ALLOW_LOCALHOST } from './build-config.js';
 
 export const BRIDGE_VERSION = 1;
 export const REQUEST_SOURCE = 'tcgss-app';
 export const RESPONSE_SOURCE = 'tcgss-extension';
-export const ALLOWED_ORIGINS = ['https://tcgspeedshipper.com', 'http://localhost'];
-export const COLLECTIONS = ['orders', 'listings', 'inventory', 'scans'];
+export const SITE_ORIGIN = 'https://tcgspeedshipper.com';
 export const MAX_ID_LENGTH = 80;
-export const MAX_RECORD_BYTES = 64 * 1024;
 
-function tooBig(record) {
-  try {
-    return JSON.stringify(record).length > MAX_RECORD_BYTES;
-  } catch {
-    return true; // cannot be serialized
-  }
-}
-
-// localhost may carry any port in development; every other origin must match exactly.
-export function isAllowedOrigin(origin) {
+// The production build accepts only the exact site origin. localhost (any port) is accepted ONLY in the
+// test build (see scripts/make-test-build.js), where build-config.js says so.
+export function isAllowedOrigin(origin, allowLocalhost = ALLOW_LOCALHOST) {
   if (typeof origin !== 'string') return false;
   let u;
   try {
@@ -29,7 +27,7 @@ export function isAllowedOrigin(origin) {
   }
   if (u.origin !== origin) return false;
   if (u.protocol === 'https:' && u.hostname === 'tcgspeedshipper.com' && u.port === '') return true;
-  return u.protocol === 'http:' && u.hostname === 'localhost';
+  return allowLocalhost === true && u.protocol === 'http:' && u.hostname === 'localhost';
 }
 
 const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -62,25 +60,13 @@ export function checkTrackingBatch(p) {
 // type -> payload check. Returns an error string or null.
 const PAYLOADS = {
   hello: (p) => (p === undefined || (isObj(p) && Object.keys(p).length === 0) ? null : 'hello takes no payload'),
-  'store.put': (p) => {
-    if (!isObj(p) || !COLLECTIONS.includes(p.collection)) return 'collection must be one of ' + COLLECTIONS.join(', ');
-    if (!isObj(p.record)) return 'record must be an object';
-    return tooBig(p.record) ? 'record too large' : null;
-  },
-  'store.get': (p) => {
-    if (!isObj(p) || !COLLECTIONS.includes(p.collection)) return 'collection must be one of ' + COLLECTIONS.join(', ');
-    return isShortStr(p.key) ? null : 'key must be a short string';
-  },
-  'tracking.put': checkTrackingBatch,
-  'tracking.get': (p) => (isObj(p) && Object.keys(p).length === 1 && typeof p.batchId === 'string' && ORDER_ID.test(p.batchId) ? null : 'payload must be { batchId }'),
-  'tracking.list': (p) => (p === undefined || (isObj(p) && Object.keys(p).length === 0) ? null : 'tracking.list takes no payload'),
-  'store.list': (p) => (isObj(p) && COLLECTIONS.includes(p.collection) ? null : 'collection must be one of ' + COLLECTIONS.join(', '))
+  'tracking.put': checkTrackingBatch
 };
 export const MESSAGE_TYPES = Object.keys(PAYLOADS);
 
 // Check one request. `origin` is the sender's origin as reported by the browser (never by the message).
-export function validateRequest(msg, origin) {
-  if (!isAllowedOrigin(origin)) return { ok: false, error: 'origin not allowed' };
+export function validateRequest(msg, origin, { allowLocalhost = ALLOW_LOCALHOST } = {}) {
+  if (!isAllowedOrigin(origin, allowLocalhost)) return { ok: false, error: 'origin not allowed' };
   if (!isObj(msg)) return { ok: false, error: 'message must be an object' };
   if (msg.source !== REQUEST_SOURCE) return { ok: false, error: 'wrong source' };
   if (msg.v !== BRIDGE_VERSION) return { ok: false, error: 'unsupported version' };

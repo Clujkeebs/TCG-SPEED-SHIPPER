@@ -32,8 +32,9 @@ stored on our servers.
   a label, and is described in the site's Privacy Policy. The extension does not do it.
 
 ## What it can see
-- It runs a small script only on tcgspeedshipper.com (and localhost, for development) to pass your
-  own messages between the site and the extension.
+- It runs a small script only on tcgspeedshipper.com. A page there can do exactly two things: ask the extension its name and
+  version, and hand it a batch of tracking numbers to keep on your computer. A page can **not** read anything back from the
+  extension, and can not see or change your imported orders, listings, inventory or scans.
 - It has **no access to TCGplayer** in this version. If a later version adds TCGplayer helpers, they
   will ask for permission first, act only when you click a button, never log in for you, never store
   your TCGplayer password, and never read other sellers' data. This policy will be updated before
