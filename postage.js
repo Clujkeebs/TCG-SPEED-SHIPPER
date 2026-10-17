@@ -134,6 +134,8 @@ function buildShipment({ from, to, service, weightOz, phone }) {
     labelSize: s.labelSize,
     labelType: 'SHIPPING_LABEL',
     labelFormat: 'PDF',
+    // Without this Pitney Bowes answers with a LINK to the label (seen in the Oct 17 sandbox rehearsal), which we do not store.
+    contentType: 'BASE64',
   };
 }
 
@@ -146,8 +148,21 @@ function readLabel(r) {
     shipmentId: r.shipmentId,
     trackingNumber: r.parcelTrackingNumber || (parcel && parcel.parcelTrackingNumber) || null,
     labelPdfBase64: doc && doc.contentType !== 'URL' ? doc.contents : null,
+    labelPdfUrl: doc && doc.contentType === 'URL' && typeof doc.contents === 'string' ? doc.contents : null,
     rate: rateOf(r),
   };
+}
+
+// If Pitney Bowes sends the label as a link anyway, fetch the file once, right away (links expire): https only, a real PDF, small.
+async function downloadLabel(url, fetchImpl) {
+  if (!/^https:\/\//i.test(String(url || ''))) return null;
+  try {
+    const res = await fetchImpl(url, { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (!buf.length || buf.length > 3 * 1024 * 1024 || buf.subarray(0, 4).toString() !== '%PDF') return null;
+    return buf.toString('base64');
+  } catch (e) { return null; }
 }
 
 const TOPUP_AMOUNTS = [20, 50, 100];
@@ -264,7 +279,7 @@ async function pbSelfCheck(env = process.env, fetchImpl = fetch) {
           bought = l.shipmentId;
           const docs = (Array.isArray(r && r.labelLayout) ? r.labelLayout : []).map((d) => ({ type: d && d.contentType, format: d && d.fileFormat, size: d && d.size, length: d && d.contents ? String(d.contents).length : 0 }));
           out.push(tag + '=' + (l.shipmentId && l.trackingNumber && l.labelPdfBase64 && money(l.rate) != null ? 'OK' : 'INCOMPLETE')
-            + '(id=' + (l.shipmentId ? 'yes' : 'NO') + ' tracking=' + (l.trackingNumber ? 'yes' : 'NO') + ' pdf=' + (l.labelPdfBase64 ? 'yes' : 'NO') + ' price=' + money(l.rate)
+            + '(id=' + (l.shipmentId ? 'yes' : 'NO') + ' tracking=' + (l.trackingNumber ? 'yes' : 'NO') + ' pdf=' + (l.labelPdfBase64 ? 'yes' : l.labelPdfUrl ? 'LINK_ONLY' : 'NO') + ' price=' + money(l.rate)
             + ' keys=' + Object.keys(r || {}).join(',') + ' labelLayout=' + JSON.stringify(docs) + ')');
           break; // one bought label is enough
         } catch (e) { out.push(tag + '=FAILED' + why(e)); }
@@ -467,11 +482,20 @@ module.exports = function mountPostageRoutes(router, d) {
           }
         }
         const l = readLabel(await pb().createShipment(shipment));
+        if (!l.labelPdfBase64 && l.labelPdfUrl) l.labelPdfBase64 = await downloadLabel(l.labelPdfUrl, fetchImpl);
+        if (!l.labelPdfBase64 && item.service !== 'letter') {
+          // Bought but no file to print: a package label can be cancelled, so cancel it and say so rather than keep money for nothing.
+          try { await pb().cancelShipment(l.shipmentId); } catch (e) { if (logError) logError('postage', 'cancel after missing label file failed:', l.shipmentId, e); }
+          results.push({ ref, ok: false, error: 'The label was created but its file did not come back, so it was cancelled. Nothing was charged. Please try again.' });
+          continue;
+        }
         const out = {
           ref, ok: true, service: item.service,
           shipmentId: l.shipmentId, trackingNumber: l.trackingNumber,
           labelPdfBase64: l.labelPdfBase64,
         };
+        // A letter cannot be cancelled (USPS), so it is kept and flagged for support rather than lost.
+        if (!l.labelPdfBase64) out.warning = 'The label file did not come back. Contact support with tracking number ' + l.trackingNumber + '.';
         Object.assign(out, priced(item.service, money(l.rate), env, plan));
         if (useBalance) {
           // Pay for it from the balance; if that fails, void the label at once
