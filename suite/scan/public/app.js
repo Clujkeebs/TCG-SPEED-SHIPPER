@@ -1,6 +1,6 @@
 import { applyPriceRule, DEFAULT_CONDITION_MULTIPLIERS } from '../core/pricing.js';
 import { PRESETS, presetToFields } from '../core/presets.js';
-import { buildCsv, checkHeader } from '../core/csv.js';
+import { buildCsv, checkHeader, FORMATS, RULES, DEFAULT_FORMAT_KEY, getFormat } from '../core/csv.js';
 import { openSession, createIndexedDbStore } from '../core/session.js';
 import { openLists } from '../core/lists.js';
 import { emptyStats, recordScan, summarize } from '../core/stats.js';
@@ -42,7 +42,8 @@ const lists = await openLists({ store: createIndexedDbStore('tcg-speed-scan', 'l
 let stats = { ...emptyStats(), ...(device.stats || {}) };
 let scanLog = Array.isArray(device.scanLog) ? device.scanLog : [];
 let savedDefaults = device.defaults || (legacy && legacy.defaults) || {};
-const saveDevice = () => { deviceStore.save({ stats, scanLog, defaults: savedDefaults }).catch(() => {}); };
+let exportFormat = FORMATS[device.exportFormat] ? device.exportFormat : DEFAULT_FORMAT_KEY; // the safe 'add to my stock' unless the seller chose otherwise
+const saveDevice = () => { deviceStore.save({ stats, scanLog, defaults: savedDefaults, exportFormat }).catch(() => {}); };
 let session = await openSession({ store: lists.sessionStore(lists.activeId) });
 
 // Restore saved defaults into the form.
@@ -251,7 +252,7 @@ function renderQueue() {
 }
 
 function currentCsv() {
-  return buildCsv(session.items, (id) => index.get(id));
+  return buildCsv(session.items, (id) => index.get(id), { format: exportFormat });
 }
 
 function renderProblems(result) {
@@ -314,7 +315,7 @@ $('clear').addEventListener('click', () => { if (session.items.length && confirm
 $('merge').addEventListener('click', () => { const n = session.mergeDuplicates(); say(n ? 'Merged ' + n + ' duplicate row' + (n === 1 ? '' : 's') : 'No duplicates.'); });
 const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'list';
 function downloadCsvFile(items, listName) {
-  const r = buildCsv(items, (id) => index.get(id));
+  const r = buildCsv(items, (id) => index.get(id), { format: exportFormat });
   const url = URL.createObjectURL(new Blob([r.csv], { type: 'text/csv' }));
   const a = el('a', { href: url, download: 'speed-scan-' + slug(listName) + '-' + new Date().toISOString().slice(0, 10) + '.csv' });
   document.body.append(a); a.click(); a.remove();
@@ -324,7 +325,10 @@ function downloadCsvFile(items, listName) {
 const activeName = () => (lists.meta().find((m) => m.active) || { name: 'list' }).name;
 $('download').addEventListener('click', () => {
   const r = downloadCsvFile(session.items, activeName());
-  say('Downloaded ' + r.listed + ' rows (format unverified).' + (r.missingId.length + r.missingPrice.length ? ' Some rows were left out.' : ''));
+  const msg = 'Downloaded ' + r.listed + ' rows (' + getFormat(exportFormat).label.replace(/ \(recommended\)/, '') + '). ' + RULES.firstImportAdvice;
+  say(msg + (r.missingId.length + r.missingPrice.length ? ' Some rows were left out.' : ''));
+  $('totals').textContent = 'Downloaded. First time? Import only 3 cards, into Staged inventory.'; // the footer line comes back on the next change
+  setTimeout(() => render(), 9000);
 });
 for (const p of PRESETS) $('preset').append(el('option', { value: p.key }, p.label));
 $('preset').addEventListener('change', () => {
@@ -466,7 +470,7 @@ for (const ev of ['dragleave', 'drop']) drop.addEventListener(ev, (e) => { e.pre
 drop.addEventListener('drop', (e) => handleFiles(e.dataTransfer.files));
 
 $('hdrCheck').addEventListener('click', () => {
-  const r = checkHeader($('hdr').value);
+  const r = checkHeader($('hdr').value, getFormat(exportFormat));
   const ul = $('hdrOut'); ul.replaceChildren();
   for (const n of r.notes) ul.append(el('li', { class: 'item' }, el('div', { class: r.ok ? 'title' : 'title danger' }, n)));
 });
@@ -495,6 +499,18 @@ async function useList(id) { // switch to another saved list
   selected.clear(); $('choices').replaceChildren();
   render();
 }
+
+// ---- which file to write
+for (const f of Object.values(FORMATS)) $('exportFormat').append(el('option', { value: f.key }, f.label));
+function renderExport() {
+  const f = getFormat(exportFormat);
+  $('exportFormat').value = f.key;
+  $('exportExplain').textContent = f.explain + ' ' + f.note;
+  $('exportWarn').hidden = !f.warning; $('exportWarn').textContent = f.warning;
+  $('exportAdvice').textContent = RULES.firstImportAdvice + ' The column names are checked against sources, not against a real TCGplayer file yet.';
+}
+$('exportFormat').addEventListener('change', () => { exportFormat = $('exportFormat').value; saveDevice(); renderExport(); render(); });
+renderExport();
 
 // ---- stats and sharing
 function renderStats() { $('rightFirst').textContent = summarize(stats).text; }
