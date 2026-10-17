@@ -61,6 +61,34 @@ const isShip = (u) => u.endsWith('/shipping/api/v2/shipments');
     const ids = t.calls.filter((c) => isShip(c.url)).map((c) => c.init.headers['X-PB-TransactionId']);
     check('429 on buying is retried with the SAME X-PB-TransactionId (no double purchase)', out && out.shipmentId === 'S1' && ids.length === 2 && ids[0] && ids[0] === ids[1], JSON.stringify(ids));
 
+    console.log('\n-- headers the gateway insists on --');
+    // Node's fetch sends "Accept-Language: *" unless the caller sets one. The real gateway answers that with a 400
+    // (the owner's Oct 16 sample-order test: "Invalid value for Accept-Language in http header, ex: en-US").
+    const validLang = (init) => /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(String((init.headers && init.headers['Accept-Language']) || '*'));
+    const gateway = (u, init) => (isToken(u) ? resp(200, { access_token: 't', expires_in: 14400 })
+      : !validLang(init) ? resp(400, { errors: [{ errorCode: '1000', message: 'Invalid value for Accept-Language in http header, ex: en-US.' }] })
+      : isRates(u) ? resp(200, { rate: [{ totalCarrierCharge: 0.78 }] })
+      : isShip(u) ? resp(200, { shipmentId: 'S1' })
+      : u.endsWith('/shipping/api/v1/carrierAccounts') ? resp(200, { data: { carrierAccounts: [{ carrierAccountId: 'acct_usps', carrierName: 'USPS' }] } })
+      : u.endsWith('/shipping/api/v2/shipments/cancel') ? resp(200, { status: 'INITIATED' })
+      : resp(200, { currentStatus: { status: 'In Transit' } }));
+    const gw = makePbClient({ key: 'k', secret: 's', env: 'sandbox', fetchImpl: async (u, init) => { gwCalls.push({ url: u, init }); return gateway(u, init); }, sleep: async () => {} });
+    const gwCalls = [];
+    out = await gw.rate(SHIP);
+    check('a price quote gets through a gateway that refuses "Accept-Language: *"', out && out.rate[0].totalCarrierCharge === 0.78);
+    out = await gw.createShipment(SHIP);
+    check('so does buying a label', out && out.shipmentId === 'S1');
+    out = await gw.cancelShipment('S1');
+    check('so does refunding one', out && out.status === 'INITIATED');
+    out = await gw.tracking('9400111899223197428490');
+    check('and tracking', out && out.currentStatus.status === 'In Transit');
+    check('every call, the token request included, says Accept-Language en-US and Accept JSON', gwCalls.length >= 6 && gwCalls.every((c) => c.init.headers['Accept-Language'] === 'en-US' && c.init.headers.Accept === 'application/json'), JSON.stringify(gwCalls.map((c) => c.init.headers['Accept-Language'])));
+    check('and identifies itself with its own User-Agent, not "node"', gwCalls.every((c) => /^TCGSpeedShipper\//.test(c.init.headers['User-Agent'])));
+    check('the headers it already sent are still there (Bearer token, JSON body type, transaction id on a purchase)', gwCalls.filter((c) => isShip(c.url) && c.init.method === 'POST').every((c) => c.init.headers.Authorization === 'Bearer t' && c.init.headers['Content-Type'] === 'application/json' && c.init.headers['X-PB-TransactionId']));
+    const bare = makePbClient({ key: 'k', secret: 's', env: 'sandbox', fetchImpl: async (u, init) => gateway(u, { headers: {} }), sleep: async () => {} });
+    err = null; try { await bare.rate(SHIP); } catch (e) { err = e; }
+    check('(the stand-in gateway does refuse a call that sets no Accept-Language, so this test would have caught the bug)', err instanceof PbError && err.status === 400 && /Accept-Language/.test(err.message), err && err.message);
+
     console.log('\n-- a batch does not stampede --');
     const tokenCalls = []; const acctCalls = [];
     const slow = (ms) => new Promise((r) => setTimeout(r, ms));

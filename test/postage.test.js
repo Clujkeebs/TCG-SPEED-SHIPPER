@@ -68,6 +68,9 @@ global.fetch = async (url, init) => {
   pbCalls.push({ url, init });
   const json = (status, body) => ({ ok: status < 300, status, text: async () => JSON.stringify(body) });
   if (url.endsWith('/auth/api/v1/token')) return json(200, { access_token: 'tok', expires_in: 14400, token_type: 'Bearer' });
+  // Like the real gateway: Node's fetch sends "Accept-Language: *" when none is set, and Pitney Bowes refuses it.
+  const lang = String((init.headers && init.headers['Accept-Language']) || '*');
+  if (!/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(lang)) return json(400, { errors: [{ errorCode: '1000', message: 'Invalid value for Accept-Language in http header, ex: en-US.' }] });
   if (url.endsWith('/shipping/api/v1/carrierAccounts')) return json(200, { data: { carrierAccounts: [{ carrierAccountId: 'acct_ups', carrierName: 'UPS' }, { carrierAccountId: 'acct_usps', carrierName: 'USPS' }] } });
   if (url.endsWith('/shipping/api/v2/rates')) {
     if (rates429 > 0) { rates429 -= 1; return json(429, { message: 'Too Many Requests' }); }
