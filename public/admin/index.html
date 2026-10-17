@@ -329,7 +329,7 @@ async function liveVersion() {
   return out;
 }
 function deployRow(v, row) {
-  var fix = 'Netlify → Deploys: open the newest production deploy. If it failed, fix the error; if auto publishing is locked, click Start auto publishing.';
+  var fix = 'Railway → web → Deployments: open the newest one. If it failed, open its logs and tell Claude.';
   var short = function (s) { return String(s || '').slice(0, 7); };
   var ago = function (iso) { var m = Math.round((Date.now() - Date.parse(iso)) / 60000); return m < 90 ? m + ' min ago' : Math.round(m / 60) + ' h ago'; };
   if (!v.live || !v.live.commit) {
@@ -364,8 +364,8 @@ async function loadSetupChecks() {
   var rows = [];
   function row(ok, text, fix) { rows.push([ok, text, fix]); }
   if (h) {
-    row(h.ok, h.ok ? 'Server config complete' : 'Missing server config: ' + (h.missing || []).join(', '), 'Set these in Netlify → Environment variables, then redeploy.');
-    row(/^https:\/\/tcgspeedshipper\.com$/.test(h.config.site_url), 'Site URL: ' + h.config.site_url, 'Set PUBLIC_SITE_URL=https://tcgspeedshipper.com in Netlify.');
+    row(h.ok, h.ok ? 'Server config complete' : 'Missing server config: ' + (h.missing || []).join(', '), 'Set these in Railway → web → Variables (it redeploys by itself).');
+    row(/^https:\/\/tcgspeedshipper\.com$/.test(h.config.site_url), 'Site URL: ' + h.config.site_url, 'Set PUBLIC_SITE_URL=https://tcgspeedshipper.com in Railway → web → Variables.');
     // Mirrors the pricing page: the yearly toggle shows when either plan has a yearly price.
     row(!!h.config.email_key, h.config.email_key ? 'Email (Resend): key set' : 'Email (Resend): not set up yet', 'Add RESEND_API_KEY in Railway → Variables, then use "Send me a test email".');
     var sc = h.config.signup_code || 'off';
@@ -387,7 +387,7 @@ async function loadSetupChecks() {
   var badSig = seen.signature_failed || 0;
   delete seen.signature_failed;
   if (badSig) row(false, badSig + ' webhook deliveries failed the signature check (30 days, last ' + last.signature_failed + ')',
-    'The signing secret changed, e.g. the endpoint was re-created. Copy Stripe → Developers → Webhooks → your endpoint → Signing secret into STRIPE_WEBHOOK_SECRET in Netlify.');
+    'The signing secret changed, e.g. the endpoint was re-created. Copy Stripe → Developers → Webhooks → your endpoint → Signing secret into STRIPE_WEBHOOK_SECRET in Railway → web → Variables.');
   var any = Object.keys(seen).length;
   var note = function (t) { return seen[t] ? seen[t] + ' in 30 days, last ' + last[t] : 'none in 30 days'; };
   row(any > 0, 'Stripe webhooks arriving: ' + (any ? Object.keys(seen).length + ' event types' : 'none recorded yet (counting started with this version)'), 'Check Stripe → Developers → Webhooks: endpoint https://tcgspeedshipper.com/api/stripe-webhook.');

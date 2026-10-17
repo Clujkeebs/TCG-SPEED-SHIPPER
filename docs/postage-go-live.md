@@ -23,7 +23,7 @@ this file, ever: names of variables only.
 
 The server can rehearse a purchase on every deploy, sandbox only, by itself: set `PB_SELFTEST_BUY=on` (and, if the test wallet
 is low, `PB_SELFTEST_REFILL=<dollars>`, sandbox test money only), deploy, read the Railway deploy log line that starts
-`[self-check] pb_`, then set `PB_SELFTEST_BUY=off` and `PB_SELFTEST_REFILL=0`. It buys one letter and one package, fetches both
+`[self-check] pb_`, then set `PB_SELFTEST_BUY=off`, `PB_SELFTEST_REFILL=0` and `PB_SELFTEST_TO=off`. It buys one letter and one package, fetches both
 PDFs, and cancels the package. It never runs in production mode and never prints a key, token, label or label link. Learned
 this way, in this order (each was a real "Pitney Bowes error" the owner would have hit):
 
@@ -36,7 +36,11 @@ this way, in this order (each was a real "Pitney Bowes error" the owner would ha
    public (no login, no signature) on a `*-labels-cls.gcs.pitneybowes.com` host; the app fetches it at once and stores the file
    for reprints. A package whose file cannot be fetched is cancelled and fails; a letter (USPS cannot cancel it) is kept and
    flagged with its tracking number.
-5. The postage wallet must hold money before any purchase: `pb_wallet=OK($…)` in the same log line (read-only, also in
+5. The app's **sample orders** have made-up streets, which Pitney Bowes refuses on a purchase ("Invalid address provided.")
+   unless `shipmentOptions.minimalAddressValidation` is set. Orders numbered `SAMPLE-` get that option in the **sandbox only**
+   (`sampleOptions` in `postage.js`); in production it is never sent, so a made-up address can never buy real postage. Quotes
+   take any street. `PB_SELFTEST_TO=sample` makes the boot check price and buy the first two sample orders to prove it.
+6. The postage wallet must hold money before any purchase: `pb_wallet=OK($…)` in the same log line (read-only, also in
    production). Sandbox top-ups work through `/shippingpaymentmgmt/api/v1/payments/wallet/refill` with the test card on file.
 
 For the production flip: the first real letter and package are the first time the production label host is seen; if the log
