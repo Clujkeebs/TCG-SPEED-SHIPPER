@@ -39,6 +39,7 @@
 
 <script src="/vendor/supabase-js-2.111.0.umd.js"></script>
 <script src="/js/shipper-core.js"></script>
+<script src="/js/suite-bridge.js"></script>
 <link rel="stylesheet" href="/fonts/fonts.css">
 
 <style>
@@ -1998,6 +1999,9 @@ var sb = (window.supabase && window.supabase.createClient) ? window.supabase.cre
 
 var PLAN_LIMITS = { free: 10, base: 500, premium: null };
 var session = null;
+// The Chrome extension (TCG Speed Suite), if installed, is handed the login's access token; see public/js/suite-bridge.js.
+var suiteBridge = null;
+try { suiteBridge = window.TCGSSBridge ? window.TCGSSBridge.create(window) : null; } catch (e) { suiteBridge = null; }
 var serverStatus = null; // { plan, limit, used }
 
 function currentPlan() { return (session && serverStatus) ? serverStatus.plan : 'free'; }
@@ -2121,6 +2125,7 @@ function renderReferralUI() {
 }
 
 function updateAccountUI() {
+  try { if (suiteBridge) suiteBridge.sync(session); } catch (e) {}
   var signedOut = document.getElementById('account-signed-out');
   var signedIn = document.getElementById('account-signed-in');
   var pill = document.getElementById('nav-plan-pill');

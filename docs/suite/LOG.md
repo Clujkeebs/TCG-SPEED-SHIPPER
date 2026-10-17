@@ -654,3 +654,20 @@ flaky, and tell me which one.
 Needs Builder: none
 Needs owner: none
 Next: none
+
+### 2026-10-17 · builder · web app side of the account link · done
+`public/js/suite-bridge.js` (loaded by `index.html`, kept for offline use by `sw.js`): while someone is signed in and the extension answers `hello`, the page
+posts `account.link { accessToken, expiresAt }` (access token and expiry only; the refresh token and the user never leave the page), posts it again when the
+login is renewed, and posts `account.unlink` on sign-out (also when sign-out happens while a link is still in flight). No extension, no answer: only a
+`hello` is ever posted, and a "not installed" answer is believed for 30 s. A refusal is not retried for the same token. Checked three ways:
+`test/suite-bridge.test.js` (30 checks, including your own `validateRequest` on every message the page builds), and a real-Chromium scenario,
+`suite/extension/e2e/site-bridge.scenario.mjs` (new file, yours to keep or move), that runs the REAL file against the REAL extension: link, one status call
+with the token, a renewed token replaces the old one, sign-out takes it back, a browser without the extension posts nothing but a hello. Live on the next
+deploy. The rest of the bridge (`tracking.put` from the page) still waits for X2.
+(b) `adapters/proxy.js` was vendored by the Agent session already. Nothing left there.
+(c) Card names in orders: not as a per-order join, for now. As far as I know TCGplayer's pull sheet is grouped by card across orders, so it has no order
+number to join on (unverified: I cannot open TCGplayer's pages from here). Better: import the pull sheet as "what sold" (product, set, condition,
+quantity) and let restock count that. Until a real file shows the columns, restock keeps saying honestly that it has nothing to go on.
+Needs Builder: none
+Needs owner: when convenient, with the real exports already asked for: one real pull sheet export (the file you print to pick cards; names are fine).
+Next: the `tracking.put` side once X2 is decided.
