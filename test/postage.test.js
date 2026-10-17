@@ -64,6 +64,7 @@ const supabaseStub = {
 // Fake Pitney Bowes.
 let shipSeq = 0;
 let rates429 = 0; // how many price requests answer 429 Too Many Requests before succeeding
+let ratesEmpty = false; // price requests answer 200 with nothing usable in them (a missing price must never read as $0.00)
 global.fetch = async (url, init) => {
   pbCalls.push({ url, init });
   const json = (status, body) => ({ ok: status < 300, status, text: async () => JSON.stringify(body) });
@@ -74,7 +75,8 @@ global.fetch = async (url, init) => {
   if (url.endsWith('/shipping/api/v1/carrierAccounts')) return json(200, { data: { carrierAccounts: [{ carrierAccountId: 'acct_ups', carrierName: 'UPS' }, { carrierAccountId: 'acct_usps', carrierName: 'USPS' }] } });
   if (url.endsWith('/shipping/api/v2/rates')) {
     if (rates429 > 0) { rates429 -= 1; return json(429, { message: 'Too Many Requests' }); }
-    return json(200, { rate: [{ serviceId: 'FCM', totalCarrierCharge: 0.78 }] });
+    if (ratesEmpty) return json(200, { rates: [{ rate: {} }], fromAddress: {}, toAddress: {} });
+    return json(200, { rates: [{ rate: { serviceId: 'FCM', baseCharge: 0.78, totalCarrierCharge: 0.78 } }] }); // the live sandbox's shape
   }
   if (url.endsWith('/shipping/api/v2/shipments') && init.method === 'POST') {
     const b = JSON.parse(init.body);
@@ -167,6 +169,12 @@ server.listen(0, async () => {
     r = await req('POST', '/api/postage/quote', { from: FROM, labels: [{ ref: 'R2', to: TO3, service: 'letter', weightOz: 1 }] }, 'pilot-token');
     check('PB keeps saying Too Many Requests: plain words for the seller, not the raw error', r.status === 200 && r.body.items[0].ok === false && /busy/i.test(r.body.items[0].error) && !/Too Many Requests/.test(r.body.items[0].error), JSON.stringify(r.body));
     rates429 = 0;
+    ratesEmpty = true;
+    r = await req('POST', '/api/postage/quote', { from: FROM, labels: [{ ref: 'E1', to: Object.assign({}, TO, { addr1: '1 Empty Way', zip: '60604' }), service: 'letter', weightOz: 1 }] }, 'pilot-token');
+    check('an answer with no price in it is "No price came back", never $0.00 postage', r.status === 200 && r.body.items[0].ok === false && /no price/i.test(r.body.items[0].error) && r.body.total === 0, JSON.stringify(r.body));
+    r = await req('POST', '/api/postage/rates', { from: FROM, to: Object.assign({}, TO, { addr1: '2 Empty Way', zip: '60605' }), service: 'letter', weightOz: 1 }, 'owner-token');
+    check('the single-rate route does not turn a missing price into a free label either', r.status === 200 && r.body.postage == null && r.body.price == null, JSON.stringify(r.body));
+    ratesEmpty = false;
     const callsBefore = rateCalls();
     r = await req('POST', '/api/postage/quote', { from: FROM, labels: [{ ref: 'R3', to: TO2, service: 'letter', weightOz: 1 }] }, 'pilot-token');
     check('the same quote asked again comes from memory (no new call to PB)', r.status === 200 && r.body.items[0].ok === true && rateCalls() === callsBefore, 'calls ' + (rateCalls() - callsBefore));

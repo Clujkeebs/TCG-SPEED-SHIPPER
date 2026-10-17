@@ -144,7 +144,7 @@ function readLabel(r) {
     shipmentId: r.shipmentId,
     trackingNumber: r.parcelTrackingNumber || (parcel && parcel.parcelTrackingNumber) || null,
     labelPdfBase64: doc && doc.contentType !== 'URL' ? doc.contents : null,
-    rate: Array.isArray(r.rate) ? r.rate[0] : r.rate,
+    rate: rateOf(r),
   };
 }
 
@@ -170,9 +170,27 @@ async function handleTopupSession(db, session, logError) {
   return true;
 }
 
+// The price quote inside a Shipping 360 answer. The docs say { rate: [ {...} ] } (or one rate object on a purchase); the
+// live sandbox answers a quote with { rates: [ { rate: {...} } ] } (seen in the Oct 17 boot self-check: letter 0.78,
+// package 6.24). Accept all of those shapes, and a bare rate object. Returns the rate object or null.
+function rateOf(r) {
+  if (!r || typeof r !== 'object') return null;
+  const first = (v) => (Array.isArray(v) ? v[0] : v);
+  const isObj = (v) => v !== null && typeof v === 'object';
+  const direct = first(r.rate);
+  if (isObj(direct)) return direct;
+  const wrapped = first(r.rates);
+  if (isObj(wrapped)) return isObj(first(wrapped.rate)) ? first(wrapped.rate) : wrapped;
+  return null;
+}
+// A rate's price in dollars, or null when there is none. A missing price must never read as $0.00 (Number(null) is 0), and
+// real postage is never zero or negative, so those are "no price" too.
 function money(r) {
-  const n = Number(r && (r.totalCarrierCharge != null ? r.totalCarrierCharge : r.baseCharge));
-  return Number.isFinite(n) ? Math.round(n * 100) / 100 : null;
+  if (!r || typeof r !== 'object') return null;
+  const v = r.totalCarrierCharge != null ? r.totalCarrierCharge : r.baseCharge;
+  if (v == null || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : null;
 }
 
 // A read-only look at Pitney Bowes for the boot self-check (server.js): the login, the USPS account and one price for
@@ -197,10 +215,30 @@ async function pbSelfCheck(env = process.env, fetchImpl = fetch) {
   for (const service of Object.keys(SERVICES)) {
     try {
       const q = await client.rate(buildShipment({ from, to, service, weightOz: service === 'letter' ? 1 : 8, phone: env.PB_DEFAULT_PHONE || '6502530000' }));
-      const price = money(q && (Array.isArray(q.rate) ? q.rate[0] : q.rate));
+      const price = money(rateOf(q));
       // No price found: say what the answer looked like (a rate quote holds no secrets), so the parser can be fixed from the log.
       out.push('pb_rate_' + service + (price == null ? '=NO_PRICE shape=' + JSON.stringify(q).replace(/\s+/g, ' ').slice(0, 700) : '=OK($' + price.toFixed(2) + ')'));
     } catch (e) { out.push('pb_rate_' + service + '=FAILED' + why(e)); }
+  }
+  // Rehearsal of a purchase and a refund, ONLY in the sandbox (free test labels) and only when PB_SELFTEST_BUY=on is set on
+  // the server (set it for one deploy, read the log, remove it). It says what the answers hold, never the label itself.
+  if (env.PB_SELFTEST_BUY === 'on' && cfg.mode === 'sandbox') {
+    for (const service of ['letter', 'ground']) {
+      let bought = null;
+      try {
+        const r = await client.createShipment(buildShipment({ from, to, service, weightOz: service === 'letter' ? 1 : 8, phone: env.PB_DEFAULT_PHONE || '6502530000' }), 'selftest-' + service + '-' + Date.now());
+        const l = readLabel(r);
+        bought = l.shipmentId;
+        const docs = (Array.isArray(r && r.labelLayout) ? r.labelLayout : []).map((d) => ({ type: d && d.contentType, format: d && d.fileFormat, size: d && d.size, length: d && d.contents ? String(d.contents).length : 0 }));
+        out.push('pb_buy_' + service + '=' + (l.shipmentId && l.trackingNumber && l.labelPdfBase64 && money(l.rate) != null ? 'OK' : 'INCOMPLETE')
+          + '(id=' + (l.shipmentId ? 'yes' : 'NO') + ' tracking=' + (l.trackingNumber ? 'yes' : 'NO') + ' pdf=' + (l.labelPdfBase64 ? 'yes' : 'NO') + ' price=' + money(l.rate)
+          + ' keys=' + Object.keys(r || {}).join(',') + ' labelLayout=' + JSON.stringify(docs) + ')');
+      } catch (e) { out.push('pb_buy_' + service + '=FAILED' + why(e)); }
+      if (bought && service === 'ground') {
+        try { out.push('pb_cancel_ground=OK(' + JSON.stringify(await client.cancelShipment(bought)).replace(/\s+/g, ' ').slice(0, 200) + ')'); }
+        catch (e) { out.push('pb_cancel_ground=FAILED' + why(e)); }
+      }
+    }
   }
   return out.join(' ');
 }
@@ -297,8 +335,7 @@ module.exports = function mountPostageRoutes(router, d) {
     try {
       const shipment = buildShipment({ from: from.address, to: to.address, service: b.service, weightOz: oz, phone: env.PB_DEFAULT_PHONE });
       const r = await pb().rate(shipment);
-      const rate = r && (Array.isArray(r.rate) ? r.rate[0] : r.rate || (r.rates && r.rates[0]));
-      res.json(Object.assign({ service: b.service, mode: pbConfig(env).mode }, priced(b.service, money(rate), env, await planOf(req.user.id))));
+      res.json(Object.assign({ service: b.service, mode: pbConfig(env).mode }, priced(b.service, money(rateOf(r)), env, await planOf(req.user.id))));
     } catch (err) { pbFail(res, err, 'Rate quote'); }
   });
 
@@ -330,7 +367,7 @@ module.exports = function mountPostageRoutes(router, d) {
           quoteCache.set(key, q);
           if (quoteCache.size > QUOTE_CACHE_MAX) quoteCache.delete(quoteCache.keys().next().value); // oldest first
         }
-        const p = priced(item.service, money(q.rate && (Array.isArray(q.rate.rate) ? q.rate.rate[0] : q.rate.rate)), env, plan);
+        const p = priced(item.service, money(rateOf(q.rate)), env, plan);
         return p.price == null ? { ref, ok: false, error: 'No price came back' } : Object.assign({ ref, ok: true }, p);
       } catch (err) {
         return { ref, ok: false, error: pbMessage(err, 'Quote failed, please retry') };
@@ -387,7 +424,7 @@ module.exports = function mountPostageRoutes(router, d) {
         // quote first and stop before buying a label nobody can pay for.
         if (useBalance && known != null && known < LOW_BALANCE_CENTS) {
           const q = await pb().rate(shipment);
-          const est = priced(item.service, money(q && (Array.isArray(q.rate) ? q.rate[0] : q.rate)), env, plan).price;
+          const est = priced(item.service, money(rateOf(q)), env, plan).price;
           if (est == null || cents(est) > known) {
             outOfFunds = true;
             results.push({ ref, ok: false, error: 'Not bought: balance too low' });
@@ -528,6 +565,9 @@ module.exports = function mountPostageRoutes(router, d) {
 };
 
 module.exports.pbSelfCheck = pbSelfCheck;
+module.exports.rateOf = rateOf;
+module.exports.money = money;
+module.exports.readLabel = readLabel;
 module.exports.pbConfig = pbConfig;
 module.exports.pbAddress = pbAddress;
 module.exports.buildShipment = buildShipment;
