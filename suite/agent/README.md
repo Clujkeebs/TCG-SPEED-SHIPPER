@@ -89,3 +89,14 @@ step that depend on its result wait for a new run (none of the recipes need that
 | For Sam | `docs/suite/AGENT-TODAY.md` | one page, plain words |
 
 If you add or change a file the Extension imports, add new files to `suite/extension/scripts/vendor-list.js` and run `cd suite/extension && npm run vendor`.
+
+## Order file, saving, briefing, voice (batch 3)
+| Need | File | In one line |
+|---|---|---|
+| Order file at scale | `orderfile.js` | streaming parser + counters; reads the Shipper's real columns; 10,000 invented rows in about 60 to 130 ms; summary, weekly draft and chart numbers; buyer names stay on the device |
+| Saved on the device | `persist.js` | IndexedDB behind the same store interfaces: loads on open, saves only changes, reports failures, leaves newer-version data alone. `openWorld({ idb })` in `eval/harness.js` shows the wiring |
+| Morning briefing | `briefing.js` | plain text under 150 words, deterministic, no model |
+| Voice profile | `voice.js` | derive an editable style card from 3 to 5 of the seller's own replies; drafts follow it; samples are not kept |
+| Test fakes | `fixtures/fake-idb.js`, `fixtures/shipping-export.js` | a faithful fake IndexedDB; an invented shipping export |
+
+The budget for the order file is written down in `orderfile.test.js` (10,000 rows, under 1,500 ms, under 100 MB growth).

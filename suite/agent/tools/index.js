@@ -11,6 +11,9 @@ import { validatePriceRule } from '../../shared/models.js';
 import { weeklySuggestions } from '../suggestions.js';
 import { createActTools } from './acts.js';
 import { sanitizeUntrusted } from '../untrusted.js';
+import { analyzeOrderFile } from '../orderfile.js';
+import { voiceFromMemory } from '../voice.js';
+import { morningBriefing } from '../briefing.js';
 import { POLICIES, getPolicy, searchPolicies, citation, POLICY_IDS } from '../policies.js';
 
 const str = { type: 'string' };
@@ -18,7 +21,7 @@ const int = { type: 'integer', minimum: 0 };
 
 // data: { orders, inventory, printings, rules?, now }
 export function createTools(data) {
-  const { orders, inventory, printings, rules = [DEFAULT_RULE], now, dealFeed = defaultFeed, messages = [], memory, automations } = data;
+  const { orders, inventory, printings, rules = [DEFAULT_RULE], now, dealFeed = defaultFeed, messages = [], memory, automations, names = new Map(), pending = () => 0 } = data;
   const nowIso = () => (typeof now === 'function' ? now() : now);
   const printingById = new Map(printings.map((p) => [p.id, p]));
   const cap = (n, d = 20) => Math.min(n ?? d, 100);
@@ -128,7 +131,8 @@ export function createTools(data) {
       handler: (a) => {
         const order = orders.find((o) => o.id === a.orderId);
         if (!order) throw new Error('unknown order ' + a.orderId);
-        return draftReply(order, a.buyerMessage, { sellerName: a.sellerName, now: nowIso(), tone: a.tone });
+        // an explicit tone wins; otherwise the seller's saved voice card (if any) shapes the draft
+        return draftReply(order, a.buyerMessage, { sellerName: a.sellerName, now: nowIso(), tone: a.tone, voice: a.tone ? null : voiceFromMemory(memory) });
       },
     },
     {
@@ -182,6 +186,17 @@ export function createTools(data) {
       description: 'Find supply deals (sleeves, toploaders, boxes, shelving, monitors, scanners) in the allow-listed sources. Reads a saved feed; never browses, never buys.',
       inputSchema: { type: 'object', properties: { category: { type: 'string', enum: DEAL_CATEGORIES }, maxPriceCents: int, minDiscountPct: { type: 'number', minimum: 0, maximum: 100 }, limit: { type: 'integer', minimum: 1, maximum: 50 } } },
       handler: (a) => ({ ...findDeals(dealFeed(), a), allowedSources: ALLOWED_SOURCES.map((s) => s.name) }),
+    },
+    {
+      name: 'orders.fileInsights', tier: 'read', untrusted: true,
+      description: 'Read a pasted or dropped TCGplayer shipping/order export and report: repeat buyers, top states and ZIP areas, weekday and hour pattern, average order value, orders at the $49.99 and $250 tracking thresholds, this week vs last week. Returns a weekly summary draft and chart-ready numbers. Buyer names are never returned.',
+      inputSchema: { type: 'object', required: ['csv'], properties: { csv: str, weekEnding: str } },
+      handler: async (a) => {
+        if (a.csv.length > 6000000) throw new Error('that file is too big (limit 6,000,000 characters)');
+        const r = await analyzeOrderFile(a.csv, { weekEnding: a.weekEnding });
+        for (const [k, v] of r.names) names.set(k, v); // stays on this device; never part of the result
+        return { summary: r.summary, draft: r.draft, charts: r.charts, sent: false };
+      },
     },
     {
       name: 'policy.lookup', tier: 'read',
@@ -255,6 +270,12 @@ export function createTools(data) {
     description: 'Up to five things worth doing this week, from orders and stock, each with the numbers behind it and a goal to start.',
     inputSchema: { type: 'object', properties: { limit: { type: 'integer', minimum: 1, maximum: 10 } } },
     handler: (a) => weeklySuggestions({ run, now: nowIso(), memory, limit: a.limit }),
+  });
+  tools.push({
+    name: 'briefing.morning', tier: 'read',
+    description: 'A plain-text morning briefing under 150 words: what to ship today, five things worth doing, low stock, and what is waiting for approval or a reply.',
+    inputSchema: { type: 'object', properties: {} },
+    handler: () => morningBriefing({ run, now: nowIso(), pendingApprovals: pending() }),
   });
   if (memory) tools.push(...createActTools({ inventory, printings, memory, automations }));
   return tools;

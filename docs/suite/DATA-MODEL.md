@@ -90,6 +90,10 @@ types appear only when the service has an agent, so an older panel sees no chang
 | request `agent.undo` | `{ approvalId }`. Response `{ undone: true, status }` |
 | request `agent.inbox.list` | no payload. Response `{ cards: [{ approvalId, tool, description, why, undo, expected, args }] }` |
 | request `agent.export` | `{ csv }` (a pasted or dropped Seller Portal export, at most 400,000 characters). Response `{ rows, units, columns, fixes: [{ rank, title, why, approvalId? }] }` (at most 5 fixes); each fix that changes something also arrives as an `agent.approval-needed` event |
+| request `agent.orders` | `{ csv }` (a pasted or dropped TCGplayer order/shipping export, at most 6,000,000 characters). Response `{ summary, draft, charts }`; the draft has buyer names filled in as first name + initial, on the device only |
+| request `agent.briefing` | no payload. Response `{ text, words, parts }` (plain text, at most 150 words) |
+| request `agent.voice` | `{ samples: [3 to 5 past replies] }`. Response `{ card, text }`; the card is saved in memory |
+| request `agent.voice.set` | `{ card: { ...fields to change } }`. Response `{ card, text }` |
 | request `agent.suggestions` | no payload. Response `{ weekEnding, suggestions: [{ rank, id, title, why, goal }] }` (at most 5) |
 | event `agent.plan` | `{ planId, steps: [{ text, state: todo\|doing\|done\|skipped }] }` (1 to 8 steps) |
 | event `agent.memory` | `{ items: [{ id, text }] }` |
@@ -106,3 +110,8 @@ Other records (all local to the device):
 
 **Untrusted text (2026-10-16).** Buyer messages, files, order notes and shop feeds are data, never instructions. Tools that return such text are flagged `untrusted` (the run becomes "tainted", the result reaches the model wrapped with a notice, and text is cleaned and capped); once tainted, a run cannot read or save memory or schedules (`blockedAfterUntrusted`). A Card made in a tainted run has `warning`. See `docs/suite/AGENT-EVAL.md`, "Prompt-injection red team".
 - **Policy entry** (`policies.js`): `{ id: 'LOST-1', topic, title, summary, asOf, source: { blog, blogUrl, official? }, check }`. Our own words, cited to our blog post (and the TCGplayer help article it links). Drafts cite entry ids in a seller-only block that says to check TCGplayer's current article.
+
+**Order file, voice, saved state (2026-10-16).**
+- **Order-file summary** (`orderfile.js`, `orders.fileInsights`): `{ ok, rows, orders, skipped, revenueCents, averageOrderCents, thresholds: { over20, atLeast4999, atLeast250 }, states[], zipAreas[] (first 3 digits), weekday{}, hours[24] | null, thisWeek, lastWeek, weekChangePct, weeks[], repeat: { buyers, repeatBuyers, top: [{ buyer: 'b-..', orders, spendCents }] } }`. Buyers are keys; a separate on-device table maps key to "Ada L." (first name + initial). Drafts hold `{{buyer:KEY}}` until the device fills them in.
+- **Voice card** (memory fact with key `voice.card`, value is JSON): `{ version: 1, greeting, signOff, length: short|medium|long, formality: casual|neutral|formal, exclamation, emoji }`. Only whitelisted words and settings; nothing from the sample replies is kept.
+- **Saved state** (`persist.js`): one IndexedDB object store `kv` in database `tcgss-agent-state`, one record per store (`memory`, `automations`, `inbox`, `reports`, `plans`), each `{ v: 1, data }`. A record with another `v` is left untouched. The audit trail has its own store (`tcgss-agent-audit`). The buyer-names table is never saved.

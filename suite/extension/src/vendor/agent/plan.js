@@ -106,6 +106,8 @@ const FORMAT = {
   'pricing.suggestBatch': (r) => `${r.total} cards would change price (nothing changed yet)`,
   'deals.find': (r) => `${r.total} deals found`,
   'support.draftReply': (r) => `draft ready, not sent (${r.category})`,
+  'briefing.morning': (r) => `briefing ready (${r.words} words)`,
+  'orders.fileInsights': (r) => `${r.summary.orders} orders read from your file`,
   'suggestions.weekly': (r) => `${r.suggestions.length} things worth doing`,
 };
 export const formatResult = (tool, result) => (FORMAT[tool] ? FORMAT[tool](result) : 'done');
