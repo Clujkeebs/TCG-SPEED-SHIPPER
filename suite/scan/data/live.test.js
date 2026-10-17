@@ -124,3 +124,26 @@ test('after asking several services, the last lookup is the one that failed or f
   assert.equal(s.live.lastLookup.service, 'Scryfall');
   assert.equal(s.live.lastLookup.count, 2);
 });
+
+test('One Piece lookup is OFF by default: no request, no cards, even when asked for directly', async () => {
+  const s = setup({ 'optcgapi': read('onepiece-optcgapi-ASSUMED.json') });
+  assert.deepEqual(liveUrls('onepiece', { setCode: 'OP01', number: '016' }), []); // the real flag stays false
+  assert.equal((await s.live.findAny('onepiece', { setCode: 'OP01', number: '016' })).printings.length, 0);
+  assert.equal((await s.live.findAny('', { name: 'nami' })).printings.length, 0);
+  assert.equal(s.calls.some((u) => u.includes('optcgapi')), false);
+});
+
+test('One Piece lookup, flag ON (test only), against the clearly ASSUMED fixture', async () => {
+  const flags = { onePieceLive: true };
+  assert.deepEqual(liveUrls('onepiece', { setCode: 'op01', number: '16' }, flags), ['https://optcgapi.com/api/sets/card/OP01-016/']);
+  assert.deepEqual(liveUrls('onepiece', { name: 'nami' }, flags), []); // no name search is known
+  const calls = []; const index = createIndex([]);
+  const live = createLiveLookup({ flags, fetchJson: async (u) => { calls.push(u); return read('onepiece-optcgapi-ASSUMED.json'); }, index, store: createMemoryStore(), sleep: noSleep, minGapMs: 0 });
+  const r = await live.findAny('onepiece', { setCode: 'OP01', number: '016' });
+  assert.equal(r.printings.length, 2);
+  assert.equal(r.printings.every((p) => p.game === 'onepiece' && !('tcgplayerProductId' in p)), true);
+  assert.equal(live.lastLookup.service, 'optcgapi.com');
+  assert.deepEqual(calls, ['https://optcgapi.com/api/sets/card/OP01-016/']);
+  const fixture = read('onepiece-optcgapi-ASSUMED.json');
+  assert.ok(fixture.every((row) => /NOT A REAL RESPONSE/.test(row._ASSUMED))); // the fixture says what it is
+});

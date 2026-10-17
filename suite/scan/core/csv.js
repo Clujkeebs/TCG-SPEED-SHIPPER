@@ -1,8 +1,8 @@
 // CSV for TCGplayer's Seller Portal import. The column map lives in csv-format.js (unverified until a real export arrives).
 import { formatUsd } from '../../shared/models.js';
-import { FORMAT, conditionLabel, checkHeader, splitHeader } from './csv-format.js';
+import { FORMAT, FORMATS, RULES, DEFAULT_FORMAT_KEY, getFormat, conditionLabel, checkHeader, splitHeader } from './csv-format.js';
 
-export { FORMAT, conditionLabel, checkHeader, splitHeader };
+export { FORMAT, FORMATS, RULES, DEFAULT_FORMAT_KEY, getFormat, conditionLabel, checkHeader, splitHeader };
 
 // Spreadsheets run text that starts with = + - @ (or a tab/return) as a formula. Neutralise it.
 export function safeText(value) {
@@ -18,7 +18,9 @@ export function escapeCell(value) {
 // drafts: ListingDraft[]. getPrinting(id) -> Printing | undefined.
 // The product id comes from the printing (known source) or from the draft (typed by the seller).
 // Returns { csv, listed, cards, missingId[], missingPrice[] }. Rows we cannot place are never guessed.
-export function buildCsv(drafts, getPrinting, { format = FORMAT } = {}) {
+// options.format: a format key ('tcgplayer-add' (default), 'tcgplayer-set', 'manapool') or a format object.
+export function buildCsv(drafts, getPrinting, { format: wanted = FORMAT } = {}) {
+  const format = getFormat(wanted);
   const lines = [format.columns.map((c) => escapeCell(c.header)).join(',')];
   const missingId = [];
   const missingPrice = [];
@@ -41,7 +43,7 @@ export function buildCsv(drafts, getPrinting, { format = FORMAT } = {}) {
     listed += 1;
     cards += d.quantity;
   }
-  return { csv: lines.join('\r\n') + '\r\n', listed, cards, missingId, missingPrice, formatVerified: format.verified };
+  return { csv: lines.join('\r\n') + '\r\n', listed, cards, missingId, missingPrice, formatVerified: format.verified, formatKey: format.key };
 }
 
 export { formatUsd };

@@ -52,3 +52,16 @@ test('every element the page code looks up by id exists in the page (a missing o
   assert.ok(ids.size > 50);
   for (const id of ids) assert.ok(html.includes('id="' + id + '"'), 'no element with id ' + id);
 });
+
+test('every script the app loads is on the service worker list, so the whole app works offline from the first visit', () => {
+  const sw = read('sw.js');
+  const listed = new Set([...sw.match(/const FILES = \[([\s\S]*?)\];/)[1].matchAll(/'([^']+)'/g)].map((m) => join(dir, m[1])));
+  const seen = new Set(); const stack = [join(dir, 'app.js')];
+  while (stack.length) {
+    const f = stack.pop();
+    if (seen.has(f)) continue; seen.add(f);
+    for (const m of readFileSync(f, 'utf8').matchAll(/(?:from|import\()\s*['"](\.[^'"]+)['"]/g)) stack.push(join(dirname(f), m[1]));
+  }
+  const vendorLoaded = (f) => f.includes('/vendor/'); // the 11 MB reader is cached when first used, not at install
+  for (const f of seen) assert.ok(vendorLoaded(f) || f === join(dir, 'app.js') || listed.has(f), 'not cached for offline: ' + f.replace(dir, 'public'));
+});

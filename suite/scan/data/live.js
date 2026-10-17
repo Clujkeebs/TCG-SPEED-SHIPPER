@@ -6,12 +6,14 @@
 import { normalizeScryfallCard } from './providers/scryfall.js';
 import { normalizePokemonCard } from './providers/pokemontcg.js';
 import { normalizeYgoCard } from './providers/ygoprodeck.js';
+import { normalizeOnePieceCard } from './providers/onepiece.js';
+import { FLAGS } from './flags.js';
 
 export const LIVE_GAMES = ['mtg', 'pokemon', 'yugioh'];
 const enc = encodeURIComponent;
 const words = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9' -]+/g, ' ').trim().split(/\s+/).filter(Boolean);
 
-export function liveUrls(game, { name, setCode, number } = {}) {
+export function liveUrls(game, { name, setCode, number } = {}, flags = FLAGS) {
   const n = words(name).join(' ');
   if (game === 'mtg') {
     const urls = [];
@@ -27,6 +29,8 @@ export function liveUrls(game, { name, setCode, number } = {}) {
     return parts.length ? ['https://api.pokemontcg.io/v2/cards?pageSize=24&q=' + parts.join('%20')] : [];
   }
   if (game === 'yugioh') return n ? ['https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=' + enc(n)] : [];
+  // One Piece: OFF unless the flag is on. The endpoint is as found by search and UNVERIFIED; there is no known name search.
+  if (game === 'onepiece' && flags.onePieceLive && setCode && number) return ['https://optcgapi.com/api/sets/card/' + enc(String(setCode).toUpperCase()) + '-' + enc(String(number).padStart(3, '0')) + '/'];
   return [];
 }
 
@@ -35,13 +39,17 @@ function parse(game, json, asOf) {
   if (game === 'mtg') return (json.object === 'list' ? json.data : json.object === 'card' ? [json] : []).map((c) => normalizeScryfallCard(c, { asOf }));
   if (game === 'pokemon') return (json.data || []).map((c) => normalizePokemonCard(c, { asOf }));
   if (game === 'yugioh') return (json.data || []).flatMap((c) => normalizeYgoCard(c, { asOf }));
+  if (game === 'onepiece') { // ASSUMED shape: a list of card rows (or one row); bad rows are skipped, never repaired
+    const rows = Array.isArray(json) ? json : [json];
+    return rows.flatMap((r) => { try { return [normalizeOnePieceCard(r, { asOf })]; } catch { return []; } });
+  }
   return [];
 }
 
 // fetchJson(url) -> parsed JSON, or throws. store: { load(), save(state) } for the on-device cache. index: createIndex() result.
-const SERVICE = { mtg: 'Scryfall', pokemon: 'Pokémon TCG API', yugioh: 'YGOPRODeck' };
+const SERVICE = { mtg: 'Scryfall', pokemon: 'Pokémon TCG API', yugioh: 'YGOPRODeck', onepiece: 'optcgapi.com' };
 
-export function createLiveLookup({ fetchJson, index, store, minGapMs = 120, maxCached = 5000, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), now = () => Date.now() }) {
+export function createLiveLookup({ flags = FLAGS, fetchJson, index, store, minGapMs = 120, maxCached = 5000, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), now = () => Date.now() }) {
   let lastLookup = null; let cache = {}; let last = -Infinity; let chain = Promise.resolve(); let enabled = true;
   const ready = (async () => {
     try { cache = (store && (await store.load())) || {}; } catch { cache = {}; }
@@ -76,7 +84,7 @@ export function createLiveLookup({ fetchJson, index, store, minGapMs = 120, maxC
       const out = []; const errors = [];
       if (!enabled) return { printings: out, errors };
       const rec = { at: new Date(now()).toISOString(), game, kind: clue.kind || 'search', query: [clue.name, clue.setCode, clue.number].filter(Boolean).join(' '), service: SERVICE[game], url: '', count: 0, error: '' };
-      for (const url of liveUrls(game, clue)) {
+      for (const url of liveUrls(game, clue, flags)) {
         rec.url = url;
         try {
           const json = await polite(() => fetchJson(url));
@@ -93,7 +101,8 @@ export function createLiveLookup({ fetchJson, index, store, minGapMs = 120, maxC
     },
     // Several games at once (or the chosen one). Same result shape.
     async findAny(game, clue) {
-      const games = game ? (LIVE_GAMES.includes(game) ? [game] : []) : LIVE_GAMES;
+      const allowed = flags.onePieceLive ? [...LIVE_GAMES, 'onepiece'] : LIVE_GAMES;
+      const games = game ? (allowed.includes(game) ? [game] : []) : allowed;
       const printings = []; const errors = [];
       const recs = [];
       for (const g of games) { const r = await this.find(g, clue); printings.push(...r.printings); errors.push(...r.errors); if (lastLookup) recs.push(lastLookup); }
