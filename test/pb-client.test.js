@@ -10,6 +10,10 @@ function check(name, cond, detail) { if (cond) { pass++; console.log('  PASS  ' 
 
 const resp = (status, body, headers = {}) => ({ ok: status < 300, status, headers: { get: (k) => headers[String(k).toLowerCase()] ?? null }, text: async () => JSON.stringify(body) });
 const SHIP = { toAddress: { postalCode: '60601' }, byCarrier: { service: 'FCM' } };
+const PDF = Buffer.from('%PDF-1.4 test label');
+// What fetch gives back for a label file: bytes, no JSON.
+const fileResp = (status, bytes = PDF, headers = {}) => ({ ok: status < 300, status, headers: { get: (k) => headers[String(k).toLowerCase()] ?? null }, arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.length) });
+const LABEL_LINK = 'https://prv-labels-cls.gcs.pitneycloud.com/usps/910187923/outbound/label/5ecfa0ecc6454caeb90c55d35229de90.pdf';
 
 function rig(handler) {
   const calls = [];
@@ -128,19 +132,43 @@ const isShip = (u) => u.endsWith('/shipping/api/v2/shipments');
     check('a purchase answer in the live shape still yields its price', readLabel({ shipmentId: 'S', parcelTrackingNumber: 'T', rates: [{ rate: { totalCarrierCharge: 6.24 } }] }).rate.totalCarrierCharge === 6.24);
 
     console.log('\n-- the sandbox buy and refund rehearsal (only when asked, only in the sandbox) --');
-    const fullBuy = (u, init) => (isToken(u) ? resp(200, { access_token: 'TOKEN-DO-NOT-LEAK', expires_in: 14400 })
-      : isShip(u) ? resp(200, { shipmentId: 'SB1', parcelTrackingNumber: '9400111899223197428490', rate: { totalCarrierCharge: 0.78 }, labelLayout: [{ contentType: 'BASE64', contents: 'JVBERi0xLjQ=', fileFormat: 'PDF', size: 'DOC_4X6', type: 'SHIPPING_LABEL' }] })
-      : u.endsWith('/shipments/cancel') ? resp(200, { status: 'INITIATED', totalCarrierCharge: 0.78 })
-      : gateway(u, init));
+    // Like the real gateway (Oct 17 sandbox rehearsal): the purchase answer holds a LINK to the PDF, and asking for BASE64 with a PDF is refused.
+    const buyBodies = [];
+    const answer = (id, size) => resp(200, { shipmentId: id, parcelTrackingNumber: '9400111899223197428490', rate: { totalCarrierCharge: 0.78 }, labelLayout: [{ contentType: 'URL', contents: LABEL_LINK, fileFormat: 'PDF', size, type: 'SHIPPING_LABEL' }] });
+    let fileMode = 'plain'; // what the label link does: 'plain' (a file), 'login' (wants the token), 'gone' (404)
+    const fileCalls = [];
+    const fullBuy = (u, init) => {
+      if (u === LABEL_LINK) {
+        fileCalls.push({ auth: Boolean(init.headers && init.headers.Authorization) });
+        return fileMode === 'gone' ? fileResp(404, Buffer.alloc(0)) : fileMode === 'login' && !(init.headers && init.headers.Authorization) ? fileResp(403, Buffer.alloc(0)) : fileResp(200);
+      }
+      if (isToken(u)) return resp(200, { access_token: 'TOKEN-DO-NOT-LEAK', expires_in: 14400 });
+      if (isShip(u) && init.method === 'POST') {
+        const b = JSON.parse(init.body);
+        buyBodies.push(b);
+        if (b.contentType === 'BASE64' && b.labelFormat === 'PDF') return resp(400, { errors: [{ errorCode: '1002', message: 'Invalid label file output format.' }] });
+        return answer('SB1', b.labelSize);
+      }
+      if (u.endsWith('/shipments/cancel')) return resp(200, { status: 'INITIATED', totalCarrierCharge: 0.78 });
+      return gateway(u, init);
+    };
     const buyCalls = [];
     const buyFetch = async (u, init) => { buyCalls.push({ url: u, method: init.method }); return fullBuy(u, init); };
     line = await pbSelfCheck(Object.assign({ PB_SELFTEST_BUY: 'on' }, SELF_ENV), buyFetch);
-    check('on: it buys a letter and a package label and checks the answer holds an id, a tracking number, a PDF and a price', /pb_buy_letter\[DOC_6X4\]=OK\(id=yes tracking=yes pdf=yes price=0\.78/.test(line) && /pb_buy_ground=OK\(id=yes tracking=yes pdf=yes price=0\.78/.test(line), line);
+    check('on: it buys a letter and a package label and checks the answer holds an id, a tracking number, a PDF it could fetch, and a price', /pb_buy_letter\[DOC_6X4\]=OK\(id=yes tracking=yes pdf=yes\(fetched with no login, 19 bytes\) price=0\.78/.test(line) && /pb_buy_ground=OK\(id=yes tracking=yes pdf=yes\(fetched with no login, 19 bytes\) price=0\.78/.test(line), line);
+    check('it never asks for BASE64 with a PDF (the live gateway refuses it: "Invalid label file output format")', buyBodies.length >= 2 && buyBodies.every((x) => x.contentType !== 'BASE64' && x.labelFormat === 'PDF'));
     check('it refunds the package label (letters cannot be refunded) and reports the answer', /pb_cancel_ground=OK\(\{"status":"INITIATED"/.test(line) && buyCalls.filter((c) => /cancel/.test(c.url)).length === 1);
-    check('the label itself is never in the log line', !/JVBERi0/.test(line) && !/TOKEN-DO-NOT-LEAK/.test(line));
-    const linkOnly = async (u, init) => (isShip(u) && init.method === 'POST' ? resp(200, { shipmentId: 'LK1', parcelTrackingNumber: '9400111899223197428490', rate: { totalCarrierCharge: 0.78 }, labelLayout: [{ contentType: 'URL', contents: 'https://labels.example.test/x.pdf', fileFormat: 'PDF', size: 'DOC_6X4', type: 'SHIPPING_LABEL' }] }) : fullBuy(u, init));
-    line = await pbSelfCheck(Object.assign({ PB_SELFTEST_BUY: 'on' }, SELF_ENV), linkOnly);
-    check('a purchase answer that holds only a LINK to the label is reported as INCOMPLETE ... pdf=LINK_ONLY (what the live sandbox did before we asked for the file)', /pb_buy_letter\[DOC_6X4\]=INCOMPLETE\(id=yes tracking=yes pdf=LINK_ONLY/.test(line), line);
+    check('the log line holds where labels live (host, signed or not) but never the link, the file or the token', /"host":"prv-labels-cls\.gcs\.pitneycloud\.com","query":false/.test(line) && !/outbound\/label|5ecfa0ec|JVBERi0|%PDF/.test(line) && !/TOKEN-DO-NOT-LEAK/.test(line), line);
+    fileMode = 'login'; fileCalls.length = 0;
+    line = await pbSelfCheck(Object.assign({ PB_SELFTEST_BUY: 'on' }, SELF_ENV), buyFetch);
+    check('a label link that wants a login is fetched again with the token, and the line says so', /pb_buy_letter\[DOC_6X4\]=OK\(id=yes tracking=yes pdf=yes\(fetched after login, 19 bytes\)/.test(line) && fileCalls.length === 4 && fileCalls[0].auth === false && fileCalls[1].auth === true, line + JSON.stringify(fileCalls));
+    fileMode = 'gone';
+    line = await pbSelfCheck(Object.assign({ PB_SELFTEST_BUY: 'on', PB_RETRY_BASE_MS: '1' }, SELF_ENV), buyFetch);
+    check('a label link that gives 404 is reported as INCOMPLETE ... pdf=LINK_ONLY(HTTP 404), not as a pass', /pb_buy_letter\[DOC_6X4\]=INCOMPLETE\(id=yes tracking=yes pdf=LINK_ONLY\(HTTP 404\)/.test(line), line);
+    fileMode = 'plain';
+    const inlineFile = async (u, init) => (isShip(u) && init.method === 'POST' ? resp(200, { shipmentId: 'IN1', parcelTrackingNumber: '9400111899223197428490', rate: { totalCarrierCharge: 0.78 }, labelLayout: [{ contentType: 'BASE64', contents: 'JVBERi0xLjQ=', fileFormat: 'PDF', size: 'DOC_6X4', type: 'SHIPPING_LABEL' }] }) : fullBuy(u, init));
+    line = await pbSelfCheck(Object.assign({ PB_SELFTEST_BUY: 'on' }, SELF_ENV), inlineFile);
+    check('a file that comes inline still counts (pdf=yes(inline))', /pb_buy_letter\[DOC_6X4\]=OK\(id=yes tracking=yes pdf=yes\(inline\) price=0\.78/.test(line) && !/JVBERi0/.test(line), line);
     buyCalls.length = 0;
     line = await pbSelfCheck(SELF_ENV, buyFetch);
     check('off (the default): nothing is bought', !/pb_buy/.test(line) && !buyCalls.some((c) => /shipments/.test(c.url)));
@@ -165,7 +193,7 @@ const isShip = (u) => u.endsWith('/shipping/api/v2/shipments');
       if (isShip(u) && init.method === 'POST') {
         const size = JSON.parse(init.body).labelSize;
         if (size !== 'DOC_9X4') return resp(400, { errors: [{ errorCode: '1', message: 'Invalid label paper size.' }] });
-        return resp(200, { shipmentId: 'LB1', parcelTrackingNumber: '9400111899223197428490', rate: { totalCarrierCharge: 0.78 }, labelLayout: [{ contentType: 'BASE64', contents: 'JVBERi0xLjQ=', fileFormat: 'PDF', size: 'DOC_9X4', type: 'SHIPPING_LABEL' }] });
+        return answer('LB1', 'DOC_9X4');
       }
       return fullBuy(u, init);
     };
@@ -173,6 +201,40 @@ const isShip = (u) => u.endsWith('/shipping/api/v2/shipments');
     check('the letter label size is probed in order, each refusal shown in PB\'s words, and it stops at the first size PB accepts', /pb_buy_letter\[DOC_6X4\]=FAILED\(400 Invalid label paper size\.\)/.test(line) && /pb_buy_letter\[DOC_9X4\]=OK\(id=yes/.test(line), line);
     line = await pbSelfCheck(Object.assign({ PB_SELFTEST_BUY: 'on', PB_SELFTEST_LETTER_SIZES: 'DOC_4X6, 9X4' }, SELF_ENV), sizeFetch);
     check('the sizes to try can be chosen (PB_SELFTEST_LETTER_SIZES)', /pb_buy_letter\[DOC_4X6\]=FAILED/.test(line) && /pb_buy_letter\[9X4\]=FAILED/.test(line) && !/DOC_6X4/.test(line.split('pb_buy_ground')[0]), line);
+
+    console.log('\n-- fetching the label file behind a link (a PDF label is always a link) --');
+    const fileRig = (handler) => {
+      const calls = [];
+      const client = makePbClient({ key: 'k', secret: 's', env: 'sandbox', carrierAccountId: 'acct_usps', sleep: async () => {},
+        fetchImpl: async (u, init) => { calls.push({ url: u, init }); return isToken(u) ? resp(200, { access_token: 'TOK', expires_in: 14400 }) : handler(u, init); } });
+      return { client, calls: () => calls.filter((c) => !isToken(c.url)), tokens: () => calls.filter((c) => isToken(c.url)).length };
+    };
+    let f = fileRig(() => fileResp(200));
+    let got = await f.client.fetchFile(LABEL_LINK);
+    check('a Pitney Bowes link is fetched with no credentials first; the bytes come back', got.ok && got.via === 'link' && got.bytes.equals(PDF) && f.calls().length === 1 && !f.calls()[0].init.headers.Authorization && f.tokens() === 0, JSON.stringify(f.calls().map((c) => c.url)));
+    f = fileRig((u, init) => (init.headers.Authorization ? fileResp(200) : fileResp(403, Buffer.alloc(0))));
+    got = await f.client.fetchFile(LABEL_LINK);
+    check('a 403 from a Pitney Bowes host is answered with one more try carrying the token', got.ok && got.via === 'token' && f.calls().length === 2 && f.calls()[1].init.headers.Authorization === 'Bearer TOK');
+    f = fileRig(() => fileResp(403, Buffer.alloc(0)));
+    got = await f.client.fetchFile('https://labels.example.test/x.pdf');
+    check('another host never gets the token, even when it answers 403', !got.ok && got.status === 403 && got.again === false && f.calls().length === 1 && !f.calls()[0].init.headers.Authorization && f.tokens() === 0);
+    f = fileRig(() => fileResp(200));
+    got = await f.client.fetchFile('http://prv-labels-cls.gcs.pitneycloud.com/x.pdf');
+    check('an http link is refused without any request', !got.ok && f.calls().length === 0 && /https/.test(got.reason));
+    got = await f.client.fetchFile('not a link');
+    check('junk is refused without any request', !got.ok && f.calls().length === 0);
+    f = fileRig(() => fileResp(200, PDF, { 'content-length': String(50 * 1024 * 1024) }));
+    got = await f.client.fetchFile(LABEL_LINK);
+    check('a file that says it is huge is refused (3 MB cap) before its body is read', !got.ok && /too large/.test(got.reason) && got.again === false);
+    f = fileRig(() => fileResp(200, Buffer.alloc(4 * 1024 * 1024, 1)));
+    got = await f.client.fetchFile(LABEL_LINK);
+    check('and one that turns out huge is refused too', !got.ok && /too large/.test(got.reason));
+    f = fileRig(() => fileResp(404, Buffer.alloc(0)));
+    got = await f.client.fetchFile(LABEL_LINK);
+    check('404 is "not there yet": worth trying again, and no token is sent for it', !got.ok && got.status === 404 && got.again === true && f.calls().length === 1 && f.tokens() === 0);
+    f = fileRig(() => { throw Object.assign(new Error('boom'), { name: 'TimeoutError' }); });
+    got = await f.client.fetchFile(LABEL_LINK);
+    check('a network error never throws: it says what happened and is worth trying again', !got.ok && got.again === true && /TimeoutError/.test(got.reason), JSON.stringify(got));
 
     console.log('\n-- a batch does not stampede --');
     const tokenCalls = []; const acctCalls = [];

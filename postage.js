@@ -134,8 +134,8 @@ function buildShipment({ from, to, service, weightOz, phone }) {
     labelSize: s.labelSize,
     labelType: 'SHIPPING_LABEL',
     labelFormat: 'PDF',
-    // Without this Pitney Bowes answers with a LINK to the label (seen in the Oct 17 sandbox rehearsal), which we do not store.
-    contentType: 'BASE64',
+    // No contentType on purpose: a PDF label always comes back as a LINK (BASE64 is for ZPL2, PNG and GIF only, and asking for it
+    // with a PDF is refused: "Invalid label file output format", Oct 17 sandbox rehearsal). downloadLabel fetches the link.
   };
 }
 
@@ -153,17 +153,21 @@ function readLabel(r) {
   };
 }
 
-// If Pitney Bowes sends the label as a link anyway, fetch the file once, right away (links expire): https only, a real PDF, small.
-async function downloadLabel(url, fetchImpl) {
-  if (!/^https:\/\//i.test(String(url || ''))) return null;
-  try {
-    const res = await fetchImpl(url, { signal: AbortSignal.timeout(15000) });
-    if (!res.ok) return null;
-    const buf = Buffer.from(await res.arrayBuffer());
-    if (!buf.length || buf.length > 3 * 1024 * 1024 || buf.subarray(0, 4).toString() !== '%PDF') return null;
-    return buf.toString('base64');
-  } catch (e) { return null; }
+// A PDF label arrives as a link: fetch the file right away (links expire; the file can take a moment to appear, so a "not there
+// yet" or a hiccup gets two more tries) and make sure it is a real, small PDF. Says why when it can't: { base64 } or { base64: null, why }.
+async function downloadLabel(link, client, pauses = [600, 1600]) {
+  let f = await client.fetchFile(link);
+  for (const ms of pauses) {
+    if (f.ok || !f.again) break;
+    await new Promise((r) => setTimeout(r, ms));
+    f = await client.fetchFile(link);
+  }
+  if (!f.ok) return { base64: null, why: f.reason };
+  if (!f.bytes.length || f.bytes.subarray(0, 4).toString() !== '%PDF') return { base64: null, why: 'not a PDF (' + f.bytes.length + ' bytes)' };
+  return { base64: f.bytes.toString('base64'), via: f.via, bytes: f.bytes.length };
 }
+// The pauses between download tries follow PB_RETRY_BASE_MS like the other retries (tests set it to 1 ms).
+const downloadPauses = (env) => { const b = Number(env && env.PB_RETRY_BASE_MS) || 400; return [Math.round(b * 1.5), Math.round(b * 4)]; };
 
 const TOPUP_AMOUNTS = [20, 50, 100];
 // Custom top-ups: any whole-dollar amount in this range (the cap limits the
@@ -214,6 +218,8 @@ function money(r) {
 // each service, using two public addresses. Nothing is bought, stored or refunded. It answers in short words and never
 // shows a key or a token, so a deploy's log says how the real Pitney Bowes behaves without waiting for a seller's click:
 //   "pb_mode=sandbox pb_account=OK(USPS) pb_rate_letter=OK($0.78) pb_rate_ground=FAILED(400 Invalid value for ...)"
+// Where a label link points (its host, and whether it carries a query string), without the link: enough to see where labels live.
+const linkWhere = (v) => { try { const u = new URL(String(v)); return { host: u.hostname, query: Boolean(u.search) }; } catch (e) { return { host: null }; } };
 const SELFCHECK_FROM = { name: 'TCG Speed Shipper', addr1: '1600 Amphitheatre Parkway', city: 'Mountain View', state: 'CA', zip: '94043' };
 const SELFCHECK_TO = { name: 'Self Check', addr1: '350 Fifth Avenue', city: 'New York', state: 'NY', zip: '10118' };
 async function pbSelfCheck(env = process.env, fetchImpl = fetch) {
@@ -277,9 +283,14 @@ async function pbSelfCheck(env = process.env, fetchImpl = fetch) {
           const r = await client.createShipment(ship, 'selftest-' + service + '-' + Date.now());
           const l = readLabel(r);
           bought = l.shipmentId;
-          const docs = (Array.isArray(r && r.labelLayout) ? r.labelLayout : []).map((d) => ({ type: d && d.contentType, format: d && d.fileFormat, size: d && d.size, length: d && d.contents ? String(d.contents).length : 0 }));
-          out.push(tag + '=' + (l.shipmentId && l.trackingNumber && l.labelPdfBase64 && money(l.rate) != null ? 'OK' : 'INCOMPLETE')
-            + '(id=' + (l.shipmentId ? 'yes' : 'NO') + ' tracking=' + (l.trackingNumber ? 'yes' : 'NO') + ' pdf=' + (l.labelPdfBase64 ? 'yes' : l.labelPdfUrl ? 'LINK_ONLY' : 'NO') + ' price=' + money(l.rate)
+          // A PDF label is a link: fetch it the way the buy route does and say how it went (never the link or the file itself).
+          const file = !l.labelPdfBase64 && l.labelPdfUrl ? await downloadLabel(l.labelPdfUrl, client, downloadPauses(env)) : null;
+          const docs = (Array.isArray(r && r.labelLayout) ? r.labelLayout : []).map((d) => Object.assign({ type: d && d.contentType, format: d && d.fileFormat, size: d && d.size }, linkWhere(d && d.contents)));
+          const pdf = l.labelPdfBase64 ? 'yes(inline)'
+            : file && file.base64 ? 'yes(fetched ' + (file.via === 'token' ? 'after login' : 'with no login') + ', ' + file.bytes + ' bytes)'
+              : l.labelPdfUrl ? 'LINK_ONLY(' + (file && file.why) + ')' : 'NO';
+          out.push(tag + '=' + (l.shipmentId && l.trackingNumber && /^yes/.test(pdf) && money(l.rate) != null ? 'OK' : 'INCOMPLETE')
+            + '(id=' + (l.shipmentId ? 'yes' : 'NO') + ' tracking=' + (l.trackingNumber ? 'yes' : 'NO') + ' pdf=' + pdf + ' price=' + money(l.rate)
             + ' keys=' + Object.keys(r || {}).join(',') + ' labelLayout=' + JSON.stringify(docs) + ')');
           break; // one bought label is enough
         } catch (e) { out.push(tag + '=FAILED' + why(e)); }
@@ -482,7 +493,11 @@ module.exports = function mountPostageRoutes(router, d) {
           }
         }
         const l = readLabel(await pb().createShipment(shipment));
-        if (!l.labelPdfBase64 && l.labelPdfUrl) l.labelPdfBase64 = await downloadLabel(l.labelPdfUrl, fetchImpl);
+        if (!l.labelPdfBase64 && l.labelPdfUrl) {
+          const f = await downloadLabel(l.labelPdfUrl, pb(), downloadPauses(env));
+          l.labelPdfBase64 = f.base64;
+          if (!f.base64 && logError) logError('postage', 'label file did not download:', l.shipmentId, f.why);
+        }
         if (!l.labelPdfBase64 && item.service !== 'letter') {
           // Bought but no file to print: a package label can be cancelled, so cancel it and say so rather than keep money for nothing.
           try { await pb().cancelShipment(l.shipmentId); } catch (e) { if (logError) logError('postage', 'cancel after missing label file failed:', l.shipmentId, e); }
