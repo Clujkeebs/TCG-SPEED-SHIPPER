@@ -36,8 +36,8 @@ test('rejected origins, in production and in the test build', () => {
   }
 });
 
-test('a page can call exactly two things: hello and tracking.put', () => {
-  assert.deepEqual([...MESSAGE_TYPES].sort(), ['hello', 'tracking.put']);
+test('a page can call exactly four things, all write-only: hello, tracking.put, account.link, account.unlink', () => {
+  assert.deepEqual([...MESSAGE_TYPES].sort(), ['account.link', 'account.unlink', 'hello', 'tracking.put']);
   assert.equal(validateRequest(msg(), SITE).ok, true);
 });
 

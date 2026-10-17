@@ -10,7 +10,7 @@ const manifest = JSON.parse(readFileSync(join(root, 'manifest.json'), 'utf8'));
 test('manifest is MV3 with minimal permissions', () => {
   assert.equal(manifest.manifest_version, 3);
   assert.deepEqual([...manifest.permissions].sort(), ['alarms', 'sidePanel', 'storage']);
-  assert.equal(manifest.host_permissions, undefined);
+  assert.deepEqual(manifest.host_permissions, ['https://tcgspeedshipper.com/*'], 'one site, used for the account status call');
   assert.deepEqual(manifest.optional_host_permissions, ['https://seller.tcgplayer.com/*']);
 });
 

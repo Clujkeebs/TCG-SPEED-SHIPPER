@@ -16,7 +16,8 @@ export function createPanel(transport, { labelFor = () => undefined } = {}) {
     memory: null,    // null = agent does not offer it; otherwise [{ id, text }]
     canPlan: true, canMemory: false, canInbox: false, canSuggest: false, canUndo: false, canJobs: false,
     suggestions: [], jobs: [], reports: [],
-    orders: { mode: 'practice', count: 0 } // which orders the Agent is looking at
+    orders: { mode: 'practice', count: 0 }, // which orders the Agent is looking at
+    account: null // { kind, line, openSite }: can the online assistant be used? (one plain line)
   };
   const addCard = (c) => { if (!state.items.some((i) => i.kind === 'approval' && i.id === c.approvalId)) state.items.push({ kind: 'approval', id: c.approvalId, tool: c.tool, description: c.description, rows: argRows(c.args), why: c.why, undo: c.undo, expected: c.expected, state: 'waiting' }); };
   const listeners = new Set();
@@ -86,7 +87,15 @@ export function createPanel(transport, { labelFor = () => undefined } = {}) {
       return true;
     },
     // Suggestions and jobs: read-only lookups, safe to repeat.
+    async accountStatus() {
+      const r = await callQuiet('ext.account.status');
+      const kinds = ['available', 'signed-out', 'needs-plan', 'off', 'unavailable', 'offline'];
+      if (r && kinds.includes(r.kind) && typeof r.line === 'string' && r.line.length > 0 && r.line.length <= 240) state.account = { kind: r.kind, line: r.line, openSite: r.openSite === true };
+      changed();
+      return state.account;
+    },
     async refresh() {
+      await this.accountStatus();
       if (state.canInbox) { const c = await callQuiet('agent.inbox.list'); if (c) for (const card of cleanCards(c)) addCard(card); }
       if (state.canSuggest) { const s = await call('agent.suggestions'); if (s) state.suggestions = cleanSuggestions(s); }
       const j = await callQuiet('ext.jobs.list');

@@ -86,6 +86,9 @@ if (!flags.agentPanel) {
     $('practice').textContent = s.orders.mode === 'imported'
       ? `Using your ${s.orders.count.toLocaleString('en-US')} imported orders. They stay on this computer. Stock and messages are still made up.`
       : 'Practice mode: made-up data. Nothing here is real and nothing is changed.';
+    $('account').hidden = !s.account;
+    if (s.account) $('account').textContent = s.account.line;
+    $('openSite').hidden = !(s.account && s.account.openSite);
     $('tabs').hidden = false;
     $('removeOrders').hidden = s.orders.mode !== 'imported';
     for (const b of document.querySelectorAll('#quick button')) b.disabled = s.busy || s.killed;
@@ -187,6 +190,7 @@ if (!flags.agentPanel) {
   $('goal').addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); $('form').requestSubmit(); }
   });
+  $('openSite').addEventListener('click', () => window.open('https://tcgspeedshipper.com', '_blank', 'noopener'));
   $('addDaily').addEventListener('click', () => panel.addJob('daily'));
   $('addMinute').addEventListener('click', () => panel.addJob('minute'));
   $('stop').addEventListener('click', () => panel.stop());

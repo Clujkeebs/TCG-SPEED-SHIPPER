@@ -48,6 +48,7 @@ button{min-height:36px;cursor:pointer}form textarea{width:100%;resize:vertical}
 <div role="tablist" aria-label="Sections" id="tabs" hidden><button role="tab" id="tab-assistant" aria-controls="panel-assistant" aria-selected="true" type="button">Assistant</button><button role="tab" id="tab-insights" aria-controls="panel-insights" aria-selected="false" tabindex="-1" type="button">Insights</button></div>
 <main id="body" hidden>
   <div id="panel-assistant" role="tabpanel" aria-labelledby="tab-assistant" tabindex="-1" style="display:flex;flex-direction:column;gap:10px">
+  <p id="account" class="small" role="status" hidden></p><button id="openSite" type="button" hidden>Open tcgspeedshipper.com</button>
   <section id="quick" aria-label="Quick actions"></section>
   <section id="plan" hidden><h2>Plan</h2><ol id="planlist"></ol></section>
   <section id="suggest" hidden><h2>Five things worth doing this week</h2><ol id="suglist"></ol></section>

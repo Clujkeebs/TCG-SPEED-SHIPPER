@@ -2,9 +2,12 @@
 // Pure functions, no chrome.* calls, so the same rules run in the content script, the service
 // worker and the tests. Every message is checked against an origin allow-list and a schema.
 //
-// The bridge is deliberately tiny. A web page (or a script injected into one) can call exactly two things:
-//   hello        who are you (name and version only)
-//   tracking.put hand over a batch of tracking numbers (write only)
+// The bridge is deliberately tiny. A web page (or a script injected into one) can call exactly four things, and
+// every one of them is write-only (nothing is ever read back out of the extension):
+//   hello           who are you (name and version only)
+//   tracking.put    hand over a batch of tracking numbers
+//   account.link    hand over the signed-in user's ACCESS token and its expiry (never a refresh token)
+//   account.unlink  forget it (sign-out)
 // Nothing a page can send reads anything back from the extension's storage, and nothing can write to the
 // seller's orders, inventory, listings or scans. Those never leave the device through this bridge.
 import { ALLOW_LOCALHOST } from './build-config.js';
@@ -57,10 +60,38 @@ export function checkTrackingBatch(p) {
   return null;
 }
 
+// ---- Account link: the site hands over the signed-in user's ACCESS token. It is kept in memory/session storage only,
+// used for one status call, and dropped at its expiry, on sign-out and on Clear everything.
+export const MAX_TOKEN_LENGTH = 4096;
+const JWT = /^[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}$/;
+const REFRESHY = /refresh|secret|password|session|user/i;
+
+// expiresAt: seconds (what the site's login stores) or milliseconds since 1970 -> milliseconds, or null.
+export function normalizeExpiry(v) {
+  if (!Number.isFinite(v) || v <= 0) return null;
+  if (v > 1e11 && v < 1e14) return Math.round(v); // already milliseconds
+  if (v > 1e8 && v < 1e11) return Math.round(v * 1000); // seconds
+  return null;
+}
+
+// Returns an error string or null. Exact shape: { accessToken, expiresAt }.
+export function checkAccountLink(p) {
+  if (!isObj(p)) return 'payload must be { accessToken, expiresAt }';
+  for (const k of Object.keys(p)) {
+    if (REFRESHY.test(k)) return 'send only the access token and its expiry (nothing else, never a refresh token)';
+    if (!['accessToken', 'expiresAt'].includes(k)) return 'payload must be { accessToken, expiresAt }';
+  }
+  if (typeof p.accessToken !== 'string' || p.accessToken.length > MAX_TOKEN_LENGTH || !JWT.test(p.accessToken)) return 'accessToken is not a login token';
+  if (normalizeExpiry(p.expiresAt) === null) return 'expiresAt must be a time in seconds or milliseconds';
+  return null;
+}
+
 // type -> payload check. Returns an error string or null.
 const PAYLOADS = {
   hello: (p) => (p === undefined || (isObj(p) && Object.keys(p).length === 0) ? null : 'hello takes no payload'),
-  'tracking.put': checkTrackingBatch
+  'tracking.put': checkTrackingBatch,
+  'account.link': checkAccountLink,
+  'account.unlink': (p) => (p === undefined || (isObj(p) && Object.keys(p).length === 0) ? null : 'account.unlink takes no payload')
 };
 export const MESSAGE_TYPES = Object.keys(PAYLOADS);
 
